@@ -10,6 +10,7 @@ names:
   - web-app/references/react-client.md
 tags: [contradiction, frontend, scaffold]
 cluster: "4.2"
+duplicate_of: reboot-air-141-16
 still_applies: yes
 status: Open
 resolved_by: ""

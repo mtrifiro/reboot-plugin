@@ -10,6 +10,7 @@ names:
   - python/references/rpc-refs.md
 tags: [negative-space, contradiction]
 cluster: "4.1"
+duplicate_of: student-system-02
 still_applies: no
 status: Obsolete
 resolved_by: ""

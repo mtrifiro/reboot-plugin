@@ -10,6 +10,7 @@ names:
   - python/references/testing-external-context.md
 tags: [testing, error-text, negative-space]
 cluster: "4.1"
+duplicate_of: student-sor-01
 still_applies: yes
 status: Open
 resolved_by: ""

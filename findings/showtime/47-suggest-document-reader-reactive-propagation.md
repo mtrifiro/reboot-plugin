@@ -10,6 +10,7 @@ names:
   - python/references/react-generated-client.md
 tags: [negative-space, index-gap, pattern]
 cluster: "4.1"
+duplicate_of: reboot-crm-30
 still_applies: yes
 status: Open
 resolved_by: ""

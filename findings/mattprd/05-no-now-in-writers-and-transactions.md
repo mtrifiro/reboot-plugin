@@ -11,6 +11,7 @@ names:
   - python/references/servicer-writer.md
 tags: [contradiction, negative-space, pattern]
 cluster: "E"
+duplicate_of: theater-chain-01
 still_applies: yes
 status: Open
 resolved_by: ""

@@ -10,6 +10,7 @@ names:
   - python/references/lifecycle-rbtrc.md
 tags: [cost]
 cluster: "D"
+duplicate_of: reboot-bluesky-03
 still_applies: yes
 status: Open
 resolved_by: ""

@@ -9,6 +9,7 @@ names:
   - python/references/rpc-calls.md
 tags: [auth, negative-space, pattern]
 cluster: "4.1"
+duplicate_of: cineloop-29
 still_applies: yes
 status: Open
 resolved_by: ""

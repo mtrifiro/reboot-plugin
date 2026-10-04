@@ -11,6 +11,7 @@ names:
   - python/references/testing-harness.md
 tags: [contradiction]
 cluster: "4.1"
+duplicate_of: theater-chain-04
 still_applies: yes
 status: Open
 resolved_by: ""

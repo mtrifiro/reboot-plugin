@@ -11,6 +11,7 @@ names:
   - python/references/state-collections.md
 tags: [contradiction, pattern, negative-space]
 cluster: "8.4"
+duplicate_of: theater-chain-01
 still_applies: yes
 status: Open
 resolved_by: ""

@@ -9,6 +9,7 @@ names:
   - dashboard/SKILL.md
 tags: [operations]
 cluster: "F"
+duplicate_of: reboot-air-150-12
 still_applies: yes
 status: Open
 resolved_by: ""

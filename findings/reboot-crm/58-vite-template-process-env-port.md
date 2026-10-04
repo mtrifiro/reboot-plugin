@@ -9,6 +9,7 @@ names:
   - web-app/references/react-client.md
 tags: [scaffold, frontend, error-text]
 cluster: "B"
+duplicate_of: reboot-air-141-07
 still_applies: yes
 status: Open
 resolved_by: ""

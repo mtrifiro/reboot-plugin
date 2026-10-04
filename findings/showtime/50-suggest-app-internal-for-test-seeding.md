@@ -9,6 +9,7 @@ names:
   - python/references/testing-harness.md
 tags: [seeding, testing]
 cluster: "C"
+duplicate_of: showtime-30
 still_applies: yes
 status: Open
 resolved_by: ""

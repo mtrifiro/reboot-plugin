@@ -29,6 +29,7 @@ SKILLS = ROOT / "skills"
 
 REQUIRED = ("id", "project", "source", "reboot_version", "severity", "target",
             "names", "tags", "cluster", "still_applies", "status", "resolved_by")
+OPTIONAL = ("duplicate_of",)
 ENUMS = {
     "severity": {"red", "yellow", "green", "unrated"},
     "target": {"plugin", "framework", "cloud", "bdd", "primer", "positive"},
@@ -80,8 +81,11 @@ def heading_exists(ref: str) -> bool:
     return section.lower() in headings
 
 
-def validate(item: dict) -> list[str]:
+def validate(item: dict, ids: set[str] | None = None) -> list[str]:
     errors = [f"missing {k}" for k in REQUIRED if k not in item]
+    dup = item.get("duplicate_of")
+    if dup and ids is not None and dup not in ids:
+        errors.append(f"duplicate_of target {dup!r} does not exist")
     for key, allowed in ENUMS.items():
         if key in item and item[key] not in allowed:
             errors.append(f"{key}={item[key]!r} not in {sorted(allowed)}")
@@ -116,10 +120,13 @@ def main() -> int:
             failures += 1
             continue
         item["_path"] = rel
-        for error in validate(item):
-            print(f"{rel}: {error}")
-            failures += 1
         items.append(item)
+
+    ids = {i.get("id") for i in items}
+    for item in items:
+        for error in validate(item, ids):
+            print(f"{item['_path']}: {error}")
+            failures += 1
 
     def table(title: str, counter: Counter) -> None:
         print(f"\n{title}")
@@ -129,6 +136,9 @@ def main() -> int:
     print(f"{len(items)} items across {len({i.get('project') for i in items})} projects")
     table("by target", Counter(i.get("target") for i in items))
     plugin = [i for i in items if i.get("target") == "plugin"]
+    open_plugin = [i for i in plugin if i.get("status") == "Open"]
+    print("distinct open plugin gaps: "
+          f"{sum(1 for i in open_plugin if not i.get('duplicate_of'))}")
     table("plugin items by status", Counter(i.get("status") for i in plugin))
     table("plugin items still applying at 1.6.0", Counter(i.get("still_applies") for i in plugin))
     table("plugin items by cluster", Counter(i.get("cluster") for i in plugin))

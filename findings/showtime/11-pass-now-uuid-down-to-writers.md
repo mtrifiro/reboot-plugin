@@ -9,6 +9,7 @@ names:
   - python/references/patterns-common-gotchas.md
 tags: [pattern, negative-space]
 cluster: "E"
+duplicate_of: theater-chain-01
 still_applies: unknown
 status: Open
 resolved_by: ""

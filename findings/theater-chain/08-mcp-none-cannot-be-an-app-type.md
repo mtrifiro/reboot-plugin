@@ -9,6 +9,7 @@ names:
   - run/SKILL.md
 tags: [contradiction, operations]
 cluster: "4.2"
+duplicate_of: reboot-air-141-11
 still_applies: yes
 status: Open
 resolved_by: ""

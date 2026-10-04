@@ -9,6 +9,7 @@ names:
   - run/SKILL.md
 tags: [operations, error-text]
 cluster: "F"
+duplicate_of: reboot-crm-15
 still_applies: yes
 status: Open
 resolved_by: ""

@@ -10,6 +10,7 @@ names:
   - deploy/SKILL.md
 tags: [auth, index-gap]
 cluster: "4.1"
+duplicate_of: cineloop-30
 still_applies: unknown
 status: Open
 resolved_by: ""

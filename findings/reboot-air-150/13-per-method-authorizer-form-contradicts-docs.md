@@ -9,6 +9,7 @@ names:
   - python/references/auth-custom-predicates.md
 tags: [contradiction, auth]
 cluster: "8.4"
+duplicate_of: reboot-crm-36
 still_applies: yes
 status: Open
 resolved_by: ""

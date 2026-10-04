@@ -10,6 +10,7 @@ names:
   - inspect/SKILL.md
 tags: [negative-space, operations, error-text, cost]
 cluster: "4.1"
+duplicate_of: reboot-air-141-load-02
 still_applies: yes
 status: Open
 resolved_by: ""
