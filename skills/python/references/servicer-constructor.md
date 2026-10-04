@@ -95,7 +95,8 @@ async def sign_up(
 
 `Account.open(context, id)` here is the constructor (the `open` method
 declared `factory=True`) and returns the actor reference plus the
-response (or `None` when `response=None`).
+response (or `None` when `response=None`). That nested constructor
+call carries no `context.auth`; see `servicer-authorizer.md` § Never.
 
 ## See Also
 

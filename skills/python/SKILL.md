@@ -36,7 +36,7 @@ Reference these guidelines when:
 - Implementing or modifying a Servicer
 - Calling another actor via `Service.ref(id).method(context, ...)`
 - Building a durable workflow with `WorkflowContext`, picking the right
-  primitive per `servicer-workflow.md` (Reboot calls use
+  primitive per `servicer-workflow-calls.md` (Reboot calls use
   `.per_workflow(alias)` / `.per_iteration(alias)` / `.always()`;
   external calls default to `at_least_once`, with `at_most_once` for
   the rare non-retryable call)
@@ -71,8 +71,8 @@ Reference these guidelines when:
 | 12       | Patterns   | LOW-MEDIUM | `patterns-`   |
 
 The `Workflow(...)` context method is the fourth servicer context
-type alongside reader / writer / transaction; its (large) reference
-is `servicer-workflow.md`.
+type alongside reader / writer / transaction; its reference is the
+router `servicer-workflow.md`, which sends you to six parts.
 
 ## Critical Rules
 
@@ -269,16 +269,16 @@ range), never a whole generated file.
 
 ### Building a workflow
 
-- `references/servicer-workflow.md` — **the** single, comprehensive
-  workflow reference; read it top to bottom before writing the body.
-  Covers the `@classmethod` / `WorkflowContext` declaration shape and
-  scheduling; the call-classification model that routes each call
-  to the right primitive (Reboot scope `.per_workflow(alias)` /
-  `.per_iteration(alias)` / `.always()` vs. external `at_least_once` /
-  `at_most_once`); `context.loop(...)` iteration; inline state
-  mutation via `Service.ref().<scope>.write(context, fn)`;
-  `until` / `until_changes` reactive waiting; and the declared-vs-
-  undeclared exception rule for how a workflow exits
+- `references/servicer-workflow.md` — only when you declared a
+  `Workflow`: read the router, then each part at the moment it names:
+  `servicer-workflow-declare.md` (the `@classmethod` /
+  `WorkflowContext` shape and starting it), `servicer-workflow-calls.md`
+  (classifying each call; Reboot scopes `.per_workflow(alias)` /
+  `.per_iteration(alias)` / `.always()` and inline writes),
+  `servicer-workflow-external.md` (`at_least_once` / `at_most_once`),
+  `servicer-workflow-loop.md` (`context.loop(...)`),
+  `servicer-workflow-wait.md` (`until` / `until_changes`) and
+  `servicer-workflow-exit.md` (declared vs. undeclared exceptions)
 
 ### Calling an LLM / building an AI agent
 
@@ -325,8 +325,10 @@ The `Agent` runs only inside a `WorkflowContext`, so also read the
 
 - `references/servicer-{reader,writer,transaction,workflow,constructor,authorizer}.md`
   — one per context type and the constructor / authorizer concerns.
-  `servicer-workflow.md` is the large one — see "Building a workflow"
-  above for when to reach for it
+  `servicer-workflow.md` is a router to six parts — see "Building a
+  workflow" above for when to reach for it
+- `references/lifecycle-seeding.md` — only when the app seeds data in
+  `initialize` or a script
 - `references/rpc-refs.md` — **always read**: `self.ref().state_id` vs.
   `self.state_id` (which doesn't exist) is a recurring trip
 - `references/rpc-calls.md` — **always read**: the kwargs-not-Request
@@ -385,6 +387,8 @@ with "unknown actor type."
 - `references/auth-allow-if.md` and `references/auth-built-in-predicates.md`
   — composition patterns
 - `references/auth-custom-predicates.md` — for app-specific rules
+- `references/auth-claims.md` — only when you use claims /
+  `set_claims`
 - `references/auth-external-api-calls.md` — **acting as the user at an
   external service**: capture a provider's OAuth tokens (your own
   authorize/callback HTTP endpoints → `OAuthTokenManager.store`), read
@@ -466,6 +470,8 @@ above lists the right ones grouped by task type. The full catalog:
 - `references/lifecycle-rbtrc.md`
 - `references/lifecycle-application-entry.md`
 - `references/lifecycle-initialize-hook.md`
+- `references/lifecycle-seeding.md`
+- `references/lifecycle-dev-loop.md`
 - `references/lifecycle-secrets.md`
 - `references/lifecycle-dockerfile.md`
 - `references/lifecycle-reboot-cloud.md`
@@ -483,10 +489,14 @@ above lists the right ones grouped by task type. The full catalog:
 - `references/servicer-reader.md`
 - `references/servicer-writer.md`
 - `references/servicer-transaction.md`
-- `references/servicer-workflow.md` — the single, comprehensive
-  workflow reference (declaration, call-classification, scopes,
-  `context.loop`, external `at_least_once` / `at_most_once`,
-  `until` / `until_changes`, and workflow exit semantics)
+- `references/servicer-workflow.md` — router to the six workflow
+  parts below
+- `references/servicer-workflow-declare.md`
+- `references/servicer-workflow-calls.md`
+- `references/servicer-workflow-external.md`
+- `references/servicer-workflow-loop.md`
+- `references/servicer-workflow-wait.md`
+- `references/servicer-workflow-exit.md`
 - `references/servicer-constructor.md`
 - `references/servicer-authorizer.md`
 
@@ -514,6 +524,7 @@ above lists the right ones grouped by task type. The full catalog:
 - `references/state-scalar-fields.md`
 - `references/state-collections.md`
 - `references/state-nested-models.md`
+- `references/state-actor-decomposition.md`
 
 **Auth** (`auth-`):
 
@@ -521,6 +532,7 @@ above lists the right ones grouped by task type. The full catalog:
 - `references/auth-allow-if.md`
 - `references/auth-built-in-predicates.md`
 - `references/auth-custom-predicates.md`
+- `references/auth-claims.md`
 - `references/auth-external-api-calls.md`
 
 **RPC** (`rpc-`):
@@ -555,6 +567,10 @@ above lists the right ones grouped by task type. The full catalog:
 - `references/patterns-error-handling.md`
 - `references/patterns-idempotency.md`
 - `references/patterns-common-gotchas.md`
+- `references/patterns-time-and-randomness.md`
+- `references/patterns-cross-actor-reads.md`
+- `references/patterns-react-state.md`
+- `references/patterns-load-and-benchmarking.md`
 
 ## External References
 

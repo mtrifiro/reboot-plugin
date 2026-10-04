@@ -14,8 +14,12 @@ tags: patterns, idempotency, initialize, constructor, restart
 
 The `initialize` hook runs every time the application starts. Anything it
 does must be safe to do repeatedly. Reboot's `Service.create(context, id)`
-is the canonical idempotent creation primitive: calling it on an existing
-actor is a no-op.
+is the canonical creation primitive there: each call in `initialize` has a
+persisted idempotency key, so later boots replay the stored result instead
+of running the constructor again. Outside that key, an explicit
+constructor called a second time on an existing actor raises
+`StateAlreadyConstructed`. The keying rules are in
+`lifecycle-initialize-hook.md`.
 
 **Incorrect (initialize that double-creates on every boot):**
 

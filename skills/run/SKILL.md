@@ -141,6 +141,11 @@ uv run rbt dev run --no-chaos
 `--no-chaos` disables the Chaos Monkey, a useful bug-finder that is
 confusing to a developer who cannot see the backend terminal.
 
+To reset dev state, stop the backend first, then run
+`uv run rbt dev expunge --yes` (`.rbtrc` supplies
+`--application-name`; `--yes` skips the confirmation prompt). After the backend is back up, reload
+every open browser tab.
+
 ### Frontend — both app types
 
 Run the Vite dev server from the frontend directory: `frontend/` for

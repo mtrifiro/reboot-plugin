@@ -41,6 +41,10 @@ actor) or `TransactionContext`. `transaction` methods require a
 When in doubt, call from a `transaction` context — it can call any method
 on any actor.
 
+A call made from inside a servicer carries no `context.auth`: the
+caller's identity does not travel with it (`servicer-authorizer.md`
+§ Never).
+
 ## Returns the Response Message
 
 `await ref.method(...)` returns the response `Model`. Read its

@@ -90,9 +90,13 @@ the wrapped agent.
 ## Tool Calls Are Memoized
 
 Like model calls, every tool call is wrapped in `at_least_once`
-(see `servicer-workflow.md`). On a workflow replay a
+(see `servicer-workflow-external.md`). On a workflow replay a
 previously-completed tool returns its **cached** result — the tool
-body does not run again. Two consequences:
+body does not run again. That covers replay, not effect validation:
+in development and the test harness a tool body runs twice before its
+result is memoized (1.6.0 source; see the effect-validation limit in
+`servicer-workflow-external.md`), so keep it safe to run twice. Two
+more consequences:
 
 - A tool's return value must be picklable.
 - A tool that depends on the agent's `deps` should pull them from
@@ -104,5 +108,5 @@ body does not run again. Two consequences:
 
 - `agent-pydantic-ai.md` — constructing and running the `Agent`.
 - `rpc-calls.md` — calling actor methods (`await ref.method( context, ...)`) from inside a tool.
-- `servicer-workflow.md` — the memoization primitive behind
+- `servicer-workflow-external.md` — the memoization primitive behind
   every tool call.

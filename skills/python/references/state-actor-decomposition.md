@@ -146,5 +146,7 @@ state, transient caches, per-concern workflows — moves to its own
   principle applies here.
 - `servicer-writer.md` — the serialization contract that makes this
   a runtime rule, not just hygiene.
+- `patterns-cross-actor-reads.md` — reading across the actors a split
+  produces without one subscription per actor.
 - `mcp-ui/SKILL.md` — "User and Application Types": **"front door"
   means entry point + delegation, not container.**

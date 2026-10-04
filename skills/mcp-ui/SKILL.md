@@ -69,7 +69,9 @@ Everything you read stays in the conversation and is re-sent on
 every later turn, so **read each reference at the step that needs
 it** — not all of them up front — and read each one **once**. The
 groups below are in build order, and each reference appears in
-exactly one of them — the step that needs it.
+exactly one of them — the step that needs it. Pattern references
+(`patterns-*.md`) other than the two named below are not on the
+build path; read one when its situation comes up.
 
 > **Never read `web-app/references/*` for an MCP UI.** They cover
 > the standalone browser SPA — a top-level `web/` Vite shell, the
@@ -150,12 +152,12 @@ exactly one of them — the step that needs it.
 - `python/references/rpc-calls.md` — kwargs, not Request wrappers.
 - `python/references/rpc-constructor-calls.md` —
   `Service.create(context, id)` semantics.
+- `python/references/lifecycle-seeding.md` — only when the app seeds
+  data in `initialize` or a script.
 - `python/references/servicer-workflow.md` — only when you declared
-  a `Workflow`, and then top to bottom: the `@classmethod` /
-  `WorkflowContext` declaration shape, the call-classification
-  decision tree (Reboot scopes vs. `at_least_once` vs.
-  `at_most_once`), `context.loop`, inline state writes,
-  `until` / `until_changes`, and workflow exit semantics.
+  a `Workflow`: read the router, then each part at the moment it
+  names (declaring, calling Reboot, external calls, `context.loop`,
+  `until` / `until_changes`, exit).
 - [`references/servicer-patterns.md`](references/servicer-patterns.md)
   — the MCP UI servicer shapes: `UserServicer` calling
   `<X>.create(context)`, a Workflow Servicer with `MyType.ref()`
@@ -173,6 +175,8 @@ under Key Framework Concepts):
   `python/references/auth-custom-predicates.md` — the predicate
   machinery. MCP UIs use `oauth=` for identity, so real rules are
   viable immediately.
+- `python/references/auth-claims.md` — only when you use claims /
+  `set_claims`.
 - `python/references/auth-allow-deny.md` — narrow uses of
   unconditional rules; specifically, when **not** to reach for
   `allow()`.

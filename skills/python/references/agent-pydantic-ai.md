@@ -24,6 +24,9 @@ re-execute (replay) after a restart; a raw LLM call inside one runs
 again on every replay — wasteful, non-deterministic, and billed
 twice. The Reboot `Agent` wraps each model call in `at_least_once`
 so a completed call returns its memoized `ModelResponse` on replay.
+Model calls also opt out of effect validation
+(`EffectValidation.DISABLED`, 1.6.0 source), so development does not
+bill twice either; tool calls do not opt out (`agent-tools.md`).
 
 **Incorrect (raw LLM call inside a workflow — re-runs on replay):**
 
@@ -87,7 +90,7 @@ keys and break replay. To rename, construct a new `Agent`.
 ## Running the Agent
 
 The agent runs **only inside a `WorkflowContext`** — a `Workflow(...)`
-method (see `servicer-workflow.md`). It is not usable from a reader,
+method (see `servicer-workflow-declare.md`). It is not usable from a reader,
 writer, or transaction. All four entry points take `context` first:
 
 ```python
@@ -166,7 +169,7 @@ resolve of either picks an SDK built on `httpx2`, which rejects the
 
 - `agent-tools.md` — give the agent tools with `@agent.tool` /
   `@agent.tool_plain` so it can read and mutate Reboot state.
-- `servicer-workflow.md` — the `WorkflowContext` method the agent
+- `servicer-workflow-external.md` — the `WorkflowContext` method the agent
   runs inside, and the `at_least_once` primitive it memoizes every
   model and tool call with.
 - `lifecycle-secrets.md` — managing the provider API key.

@@ -28,7 +28,8 @@ impactDescription: Workflows pulling work from a Queue is the canonical "consume
 `Item` values. Producers `enqueue` from any context; consumers `dequeue`
 from inside a `WorkflowContext` (the dequeue blocks until an item is
 available). A `try_dequeue` exists for one-shot non-blocking pulls from
-`TransactionContext`.
+`TransactionContext`. There is no `create` method (unlike `OrderedMap`);
+producers enqueue straight onto a ref.
 
 ### Methods
 
@@ -107,7 +108,9 @@ class ConsumerServicer(Consumer.Servicer):
         queue = Queue.ref(f"{context.state_id}-work")
 
         async for iteration in context.loop("Consume"):
-            response = await queue.dequeue(context, bulk=True)
+            response = await queue.per_iteration(
+                "Dequeue work",
+            ).dequeue(context, bulk=True)
             for item in response.items:
                 # `item.value`, `item.bytes`, or `item.any` —
                 # whichever was set at enqueue time.
@@ -136,6 +139,10 @@ items rather than blocking.
 `dequeue` is a `workflow` method (not a `writer`). Calling it from a
 `writer` or `transaction` is a context-type error. Set up a workflow
 that owns the consume loop, started from `initialize` or a transaction.
+From `initialize`, start it with
+`Consumer.ref(id).idempotently("Start consumer").spawn().control_loop(context)`:
+a bare `.spawn()` there raises `IdempotencyRequiredError`, and the alias
+stops each boot from starting another copy (`lifecycle-initialize-hook.md`).
 
 ## See Also
 
@@ -143,13 +150,12 @@ If you're consuming from a Queue, you're writing a workflow — load the
 workflow primitives now so you don't trip on durable-execution rules
 mid-implementation:
 
-- `servicer-workflow.md` — the single, comprehensive workflow
-  reference: `@classmethod` / `WorkflowContext` declaration and
-  scheduling the workflow's first run; `async for iteration in context.loop(...)` for the consume loop's iteration boundary;
-  inline state mutation via `Service.ref().write(context, fn)`
-  (workflows have no `self.state`); and `at_least_once` /
-  `at_most_once` for non-trivial per-item processing where you want
-  memoization across replays.
+- `servicer-workflow-declare.md` — `@classmethod` / `WorkflowContext`
+  declaration and starting the workflow's first run.
+- `servicer-workflow-loop.md` — `async for iteration in context.loop(...)`
+  for the consume loop's iteration boundary. The router
+  `servicer-workflow.md` names the parts for inline state writes and
+  per-item external calls.
 - `lifecycle-application-entry.md` — register `queue.servicers()`
   and `sorted_map_library()` (Queue's internal storage actor).
 

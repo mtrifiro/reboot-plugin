@@ -19,7 +19,7 @@ tags: servicer, writer, WriterContext, state, mutation
 > fires more than once. External calls — SMS, email, payment,
 > LLM/model — belong in a `Workflow`; the writer only
 > `schedule()`s the workflow, and the workflow picks the right
-> primitive per `servicer-workflow.md`. A writer calling another
+> primitive per `servicer-workflow-external.md`. A writer calling another
 > actor's writer is a category error.
 
 A method declared with `Writer(...)` in the API file receives a
@@ -38,7 +38,7 @@ it becomes an id or key something later addresses — see
 `self.state` mutations and in-system calls (including readers on
 other actors), and push any external work to a `Workflow` — the
 workflow picks the right primitive per
-`servicer-workflow.md`.
+`servicer-workflow-external.md`.
 
 **Incorrect (calling another actor's writer from inside a writer):**
 
@@ -96,7 +96,7 @@ inside a `Transaction`, so an external call here breaks
 transactional atomicity (the transaction may still abort and roll
 back state, but the external call already happened); writer bodies
 also re-execute under retries and effect validation. External calls
-belong in a `Workflow` (see `servicer-workflow.md` for the
+belong in a `Workflow` (see `servicer-workflow-external.md` for the
 right primitive); the writer only `schedule()`s the workflow.
 
 A writer **can** call `ref.schedule(...).method(context)` on its own actor

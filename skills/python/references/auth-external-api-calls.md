@@ -211,7 +211,7 @@ from reboot.std.oauth.v1.oauth import GOOGLE
 
 > **The outbound HTTP call MUST go in a `Workflow`.** This is the
 > framework-wide "external calls only in Workflows" rule
-> (`servicer-workflow.md`): a `Reader` / `Writer` / `Transaction`
+> (`servicer-workflow-external.md`): a `Reader` / `Writer` / `Transaction`
 > re-executes under retries and effect validation, which would re-issue
 > the API call. Wrap the call in the durability primitive that fits —
 > usually `at_least_once(...)`, or `at_most_once(...)` when a duplicate
@@ -257,7 +257,7 @@ class UserServicer(User.Servicer):
 
         # External call in a Workflow → wrap in a durability primitive;
         # `at_least_once` here (this create is safe to retry). See
-        # `servicer-workflow.md` for the decision table and imports.
+        # `servicer-workflow-external.md` for the decision table and imports.
         result = await at_least_once("create:post", context, do_create)
         return User.CreateEventResponse(ok=True, event=...)
 ```

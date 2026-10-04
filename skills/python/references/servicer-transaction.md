@@ -89,7 +89,7 @@ other transactions (a nested transaction) on other actors;
 
 An email, payment, SMS or LLM call cannot be rolled back, and a retry
 or effect-validation re-run would send it twice. Make the call in a
-`Workflow` method (primitive per `servicer-workflow.md`) and reach it
+`Workflow` method (primitive per `servicer-workflow-external.md`) and reach it
 only by scheduling:
 `await self.ref().schedule().<workflow_method>(context)`. A call to an
 in-system actor that itself schedules the external work is fine; the
@@ -201,6 +201,6 @@ in-system RPCs.
 
 ## See also
 
-- [`servicer-workflow.md`](servicer-workflow.md) — external calls and N-item loops
+- [`servicer-workflow-external.md`](servicer-workflow-external.md) — external calls and N-item loops
 - [`patterns-load-and-benchmarking.md`](patterns-load-and-benchmarking.md) — measured costs and method
 - [`rpc-refs.md`](rpc-refs.md) — refs, existence probes, IDs

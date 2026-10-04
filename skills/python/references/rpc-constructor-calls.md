@@ -76,3 +76,7 @@ await account.deposit(context, amount=100)
 # Slightly slower (extra construction):
 await Account.ref(account_id).deposit(context, amount=100)
 ```
+
+A constructor called from inside a servicer carries no `context.auth`:
+the caller's identity does not travel with it (`servicer-authorizer.md`
+§ Never).

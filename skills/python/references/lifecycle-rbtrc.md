@@ -61,7 +61,8 @@ dev run --application=backend/src/main.py
 The value passed to `dev run --application-name=<name>` keys the state
 that survives between `rbt dev run` restarts. Use the same value for
 `dev expunge --application-name=<name>` so a single command resets that
-state.
+state. Stop the backend before expunging, and pass `--yes`
+(`rbt dev expunge --yes`) to skip the confirmation prompt.
 
 ## `--application-name` vs. `--name`
 

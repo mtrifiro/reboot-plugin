@@ -190,7 +190,9 @@ uv run pytest -v -s
 ```
 
 A `@blocked` scenario is skipped, with its description as the reason,
-so it shows in the summary without failing the suite.
+so it shows in the summary without failing the suite. A run that goes
+quiet, or a test that passes alone and fails in the suite, is covered
+in `lifecycle-dev-loop.md`.
 
 ## Don't Construct Servicer Instances Directly
 

@@ -16,7 +16,9 @@ tags: react, app-tsx, hooks, useType, css-module, snake-camel, app-tsx-example, 
 > classes are all in
 > [`python/references/react-generated-client.md`](../../python/references/react-generated-client.md).
 > Read that for the shapes; this file covers what is specific to a
-> UI rendered inside an MCP host.
+> UI rendered inside an MCP host. Where client-side state lives on
+> top of those hooks is
+> [`python/references/patterns-react-state.md`](../../python/references/patterns-react-state.md).
 
 ```tsx
 import { useCounter } from "@api/<pkg>/v1/<name>_rbt_react";

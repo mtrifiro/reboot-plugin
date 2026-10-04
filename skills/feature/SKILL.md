@@ -31,6 +31,9 @@ skill's references; read them at the step that needs them:
   accessible markup the page needs, recordings.
 - `../python/references/testing-project-setup.md` — the files a
   suite needs (`reboot[dev]`, `pytest.ini`, `.gitignore`).
+- `../python/references/lifecycle-seeding.md` — only when fixtures
+  load seed data; `../python/references/lifecycle-dev-loop.md` — when
+  a run goes quiet or passes alone and fails in the suite.
 
 ## Step 1 — Propose the feature in English
 

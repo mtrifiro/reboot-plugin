@@ -47,7 +47,9 @@ def is_app_internal(*, context: ReaderContext, **kwargs):
 Returns `Ok` when the call originates from inside the same Reboot app
 (another Servicer calling this one). External clients always get
 `PermissionDenied`. This is the right gate for stdlib-style internal
-helpers.
+helpers. Such a nested call carries no `context.auth` (the caller's
+identity does not travel with it), so `has_verified_token` and
+`state_id_is_user_id` deny it; see `servicer-authorizer.md` § Never.
 
 ```python
 # The OrderedMap servicer's default:

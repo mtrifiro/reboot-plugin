@@ -105,10 +105,11 @@ Recommended sequence:
    `Development()` is a built-in fake account picker that lets
    you sign in as any identity at `/__/oauth/start`; `prod=None`
    fails fast at startup if you accidentally `rbt serve` without
-   choosing a real provider. **Omit `authorizer()`** on
-   Servicers; `rbt dev` allows the calls and logs a 60-second
-   warning naming every unauthorized method — that warning is
-   your TODO list. Do **not** paper this over with `allow()`;
+   choosing a real provider. **Write `authorizer()` rules before
+   the tests:** `rbt dev` allows calls on a Servicer with no
+   `authorizer()` (with a warning naming each method), but the
+   test harness denies them, as production does. Do **not** paper
+   this over with `allow()`;
    `allow()` means "public, unauthenticated internet endpoint"
    and survives into production.
 2. **Before `rbt serve` / Reboot Cloud:** set `prod=Google(...)`
@@ -133,7 +134,8 @@ Recommended sequence:
 
    The registered providers (everything but `Development` and
    `Anonymous`) also take `scopes=`, `claims=`, and
-   `store_tokens=`; register `/__/oauth/callback` as the redirect
+   `store_tokens=`; `Development()` takes `claims=` too, so
+   everything but `Anonymous` accepts it. Register `/__/oauth/callback` as the redirect
    URI with the provider.
 
    Add `claims=[...]` when you need identity fields such as the
@@ -200,7 +202,9 @@ Everything you read stays in the conversation and is re-sent on
 every later turn, so **read each reference at the step that needs
 it** — not all of them up front — and read each one **once**. The
 groups below are in build order, and each reference appears in
-exactly one of them — the step that needs it.
+exactly one of them — the step that needs it. Pattern references
+(`patterns-*.md`) other than the two named below are not on the
+build path; read one when its situation comes up.
 
 > **Never read `mcp-ui/references/*` for a web app.** They cover
 > the MCP frontend — `UI()` artifacts, the MCPJam inspector, the
@@ -250,24 +254,26 @@ exactly one of them — the step that needs it.
 - `python/references/rpc-calls.md` — kwargs, not Request wrappers.
 - `python/references/rpc-constructor-calls.md` —
   `Service.create(context, id)` semantics.
+- `python/references/lifecycle-seeding.md` — only when the app seeds
+  data in `initialize` or a script.
 - `python/references/servicer-workflow.md` — only when you declared
-  a `Workflow`, and then top to bottom: the `@classmethod` /
-  `WorkflowContext` declaration shape, the call-classification
-  decision tree (Reboot scopes vs. `at_least_once` vs.
-  `at_most_once`), `context.loop`, inline state writes,
-  `until` / `until_changes`, and workflow exit semantics.
+  a `Workflow`: read the router, then each part at the moment it
+  names (declaring, calling Reboot, external calls, `context.loop`,
+  `until` / `until_changes`, exit).
 
 **Before the authorizers** (browser users — see "Auth in Web Apps"
 above for the dev-vs-prod sequence):
 
 - `python/references/servicer-authorizer.md` — **start here**.
   Explains `oauth=` (the default) vs. `token_verifier=` (the
-  escape hatch for custom IdPs) and when to defer writing
-  `authorizer()` vs. write rules from day one.
+  escape hatch for custom IdPs), and why rules must exist before
+  the first test.
 - `python/references/auth-allow-if.md`,
   `python/references/auth-built-in-predicates.md`,
   `python/references/auth-custom-predicates.md` — the predicate
   machinery once you're ready to write rules.
+- `python/references/auth-claims.md` — only when you use claims /
+  `set_claims`.
 - `python/references/auth-allow-deny.md` — narrow uses of
   unconditional rules; specifically, when **not** to reach for
   `allow()`.
@@ -436,7 +442,8 @@ Before writing code, analyze the user's request:
    flattens N actors into one, prevents per-entity auth/methods,
    and forces a full rewrite when the collection grows. See
    `python/references/state-collections.md` Step 1 for the full
-   decomposition signal list.
+   decomposition signal list. Reading those actors back onto one
+   page is `python/references/patterns-cross-actor-reads.md`.
 2. **Per-user state?** If yes, declare a `User` type and route
    creation through it the same way `mcp-ui` does — the
    `User`-front-door pattern is independent of MCP. If the app is

@@ -163,13 +163,13 @@ loop iteration), use `.always().write(context, fn)`.
 **Never** wrap an inline writer in `at_least_once` / `at_most_once`
 / `.idempotently("alias")`. Inline writers are Reboot-internal and
 already durable — scope is the only knob. See
-`python/references/servicer-workflow.md`.
+`python/references/servicer-workflow-calls.md`.
 
 The inline writer's parameter must be named **`state`** — the
 runtime calls the callback as `writer(state=typed_state)`, so
 `async def make_move(s):` raises
 `TypeError: ... got an unexpected keyword argument 'state'`. See
-also `python/references/servicer-workflow.md`.
+also `python/references/servicer-workflow-calls.md`.
 
 ## Scheduling a Workflow from a Transaction
 

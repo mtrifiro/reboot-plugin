@@ -29,11 +29,10 @@ Servicer method and the isolation level applied:
   state while writing others); see `api-pydantic.md`.
 - **`Workflow(...)`** — durable, long-running, restartable. Implemented as
   a `@classmethod` (no `self.state`). Signature: `context: WorkflowContext`.
-  See `servicer-workflow.md` — the single, comprehensive workflow
-  reference — to pick the right primitive for each call (Reboot
-  scopes vs. `at_least_once` vs. `at_most_once`), plus
-  `context.loop`, state mutation via
-  `ref().<scope>.write(context, fn)`, and the rest.
+  See `servicer-workflow.md` — a router to six workflow parts — to
+  pick the right primitive for each call (Reboot scopes vs.
+  `at_least_once` vs. `at_most_once`), plus `context.loop`, state
+  mutation via `ref().<scope>.write(context, fn)`, and the rest.
 
 **Incorrect (missing factory):**
 
@@ -96,6 +95,9 @@ class AnyNameServicer(<Type>.Servicer):    # subclass this alias
         request: <Type>.<Entry>Request,   # omitted if `request=None`
     ) -> <Type>.<Entry>Response:          # `None` if `response=None`
 ```
+
+Some entry names are reserved by the ref API; the list is in
+`rpc-refs.md` § Limits.
 
 `<Entry>` is the PascalCase form of the entry name: `add_task`
 declared on `Type("TaskList", ...)` gives `TaskList.AddTaskRequest` /
@@ -253,8 +255,9 @@ work end-to-end:
   - `Reader(...)` → `servicer-reader.md`
   - `Writer(...)` → `servicer-writer.md`
   - `Transaction(...)` → `servicer-transaction.md`
-  - `Workflow(...)` → `servicer-workflow.md` (the single,
-    comprehensive workflow reference — durable primitives and all)
+  - `Workflow(...)` → `servicer-workflow.md` (the router; it names
+    which of the six workflow parts to read at each step)
   - `factory=True` → `servicer-constructor.md`
 - **Calling these methods**: `rpc-calls.md` (kwargs convention) and
   `rpc-refs.md` (`self.ref().state_id`, never `self.state_id`).
+- **What each method kind costs**: `patterns-load-and-benchmarking.md`.

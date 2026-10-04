@@ -37,7 +37,7 @@ the same version as the backend's `reboot` dependency:
 }
 ```
 
-`vite.config.ts` is the stock config with two additions, both
+`vite.config.ts` is the stock config with three additions, all
 load-bearing:
 
 ```ts
@@ -56,6 +56,10 @@ export default defineConfig({
     // though the dev server is healthy and logs no error.
     host: true,
     port: parseInt(process.env.PORT || "5173", 10),
+    // Fail loudly if the port is taken instead of silently sliding
+    // to the next one, which leaves `allowed_origins` and `.env`
+    // pointing at the wrong port.
+    strictPort: true,
   },
 });
 ```
@@ -121,7 +125,10 @@ and why a hook id must be real on every render. Do **not** open
 What is web-app-specific: the client is created by the
 `<RebootClientProvider url={...}>` above, and the signed-in user's
 handle comes from the no-argument `useUser()` (see "Sign-in and
-Sign-out" below).
+Sign-out" below). Where client-side state lives on top of those hooks
+(how many subscriptions a page opens, what to paint before the server
+answers) is
+[`python/references/patterns-react-state.md`](../../python/references/patterns-react-state.md).
 
 ## Surfacing a Typed Error to the User
 

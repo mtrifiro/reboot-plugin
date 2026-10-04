@@ -17,7 +17,7 @@ This file defines the rule categories for Reboot Python best practices. Rules ar
 ## 3. Servicer (servicer)
 
 **Impact:** HIGH
-**Description:** Implementing the generated `Servicer` base class. One reference per context type (reader, writer, transaction, workflow), plus constructor handling and authorizers. `servicer-workflow.md` is the single, comprehensive workflow reference: declaration shape, the call-classification model that routes each call to the right primitive (scope chain `.per_workflow(alias)` / `.per_iteration(alias)` / `.always()` for Reboot-internal calls; `at_least_once` as the default for external calls, with `at_most_once` for non-retryable ones), `context.loop` iteration, inline state mutation via `ref().<scope>.write(context, fn)`, `until` / `until_changes` reactive waiting, and the declared-vs-undeclared exception exit rule.
+**Description:** Implementing the generated `Servicer` base class. One reference per context type (reader, writer, transaction, workflow), plus constructor handling and authorizers. `servicer-workflow.md` is a router to six workflow parts: `servicer-workflow-declare.md` (declaration shape), `servicer-workflow-calls.md` (the call-classification model and the scope chain `.per_workflow(alias)` / `.per_iteration(alias)` / `.always()` for Reboot-internal calls, including inline state mutation via `ref().<scope>.write(context, fn)`), `servicer-workflow-external.md` (`at_least_once` as the default for external calls, with `at_most_once` for non-retryable ones), `servicer-workflow-loop.md` (`context.loop` iteration), `servicer-workflow-wait.md` (`until` / `until_changes` reactive waiting) and `servicer-workflow-exit.md` (the declared-vs-undeclared exception exit rule).
 
 ## 4. Agent (agent)
 

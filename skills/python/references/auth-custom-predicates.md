@@ -119,10 +119,11 @@ looks at `request` simply omits it and lets `**kwargs: Any` absorb
 it. That is also why `**kwargs` is mandatory — it is what keeps the
 predicate working when the runtime starts passing something new.
 
-When the body _does_ read `request`, declare it. One rule covers
-every method on the Servicer, so what arrives is a union of all of
-their request models — which is common, because restricting the
-internal-only methods means telling the methods apart:
+When the body _does_ read `request`, declare it. To give methods
+different rules, lead with `<Type>.Authorizer(<method>=rule, ...,
+_default=rule)` (`servicer-authorizer.md`) rather than telling the
+methods apart inside one predicate. A predicate shared by several
+methods receives a union of their request models:
 
 ```python
 def task_list_access(
@@ -132,9 +133,9 @@ def task_list_access(
     request: Any = None,
     **kwargs: Any,
 ) -> Authorizer.Decision:
-    # Methods only app-internal code may call.
-    if isinstance(request, (CreateRequest, AcceptTaskRequest)):
-        return errors.Ok() if context.app_internal else errors.PermissionDenied()
+    # Narrow before reading a field only one request model has.
+    if isinstance(request, AcceptTaskRequest):
+        ...
     ...
 ```
 
@@ -198,8 +199,7 @@ login" and "show 403".
 
 ## Per-Method Authorization
 
-`def authorizer(self)` returns a single rule for all methods. To gate
-methods individually, return a custom `Authorizer` subclass that
-inspects the request type or method name (the framework dispatches by
-request type). For most apps, splitting state into multiple Servicers
-with different authorizers is simpler than building a per-method rule.
+A bare rule returned from `def authorizer(self)` applies to every
+method. To gate methods individually, return
+`<Type>.Authorizer(<method>=rule, ..., _default=rule)`; see
+`servicer-authorizer.md`.

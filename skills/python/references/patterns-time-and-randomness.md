@@ -97,7 +97,7 @@ For a child `OrderedMap` or index id, derive from the owner
 cannot allocate a second index (theater-chain-01, cineloop-05).
 
 **3. Capture it in a `Workflow`** with `at_least_once`, at the cost of a
-workflow round trip. The capture code is in `servicer-workflow.md`
+workflow round trip. The capture code is in `servicer-workflow-external.md`
 (the `at_least_once` section).
 
 ### Route every clock read through one helper
@@ -157,6 +157,6 @@ in `testing-harness.md`).
 
 ## See also
 
-- [`servicer-workflow.md`](servicer-workflow.md) — `at_least_once` capture code
+- [`servicer-workflow-external.md`](servicer-workflow-external.md) — `at_least_once` capture code
 - [`patterns-idempotency.md`](patterns-idempotency.md) — retry-safe creation and aliases
 - [`scheduling-basic.md`](scheduling-basic.md) — deadlines that other viewers see

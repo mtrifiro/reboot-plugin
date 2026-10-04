@@ -63,7 +63,10 @@ actor and resume after it completes.
 A reader may call `await Service.ref(other_id).reader_method(context)` —
 the call propagates the `ReaderContext`. Calling a `Writer` or
 `Transaction` method from a reader is a category error; use a
-`Transaction` method if the work is genuinely cross-actor.
+`Transaction` method if the work is genuinely cross-actor. A subscribed
+reader re-runs when any actor it read through other readers changes
+(`patterns-cross-actor-reads.md`). The nested call carries no
+`context.auth`; see `servicer-authorizer.md` § Never.
 
 A reader of a `Bank` actor calling into per-account readers, run from a
 transaction context (which can also call readers):

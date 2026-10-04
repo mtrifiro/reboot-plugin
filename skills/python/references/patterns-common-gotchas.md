@@ -95,12 +95,12 @@ writes — must **not** happen in a `Writer` or a `Transaction`,
   invalidated.
 
 Put the external call in a `Workflow` and pick the right primitive
-per `servicer-workflow.md`. The
+per `servicer-workflow-external.md`. The
 on-demand "do it now" entry point is a `Writer`/`Transaction` that
 only **schedules** the workflow
 (`await self.ref().schedule().<workflow_method>(context)`); the
 external call itself lives in the workflow. See
-`servicer-workflow.md` and "External Calls Belong in a
+`servicer-workflow-declare.md` and "External Calls Belong in a
 Workflow, Not a Transaction" in `servicer-transaction.md`.
 
 ### 9. `initialize` Runs on Every Restart

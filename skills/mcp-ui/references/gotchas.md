@@ -153,7 +153,7 @@ The list below is what's specific to the MCP UI layer:
     `async def make_move(s):` raises
     `TypeError: ... got an unexpected keyword argument 'state'`.
     Always use `async def fn(state): ...`. (See
-    `python/references/servicer-workflow.md`.)
+    `python/references/servicer-workflow-calls.md`.)
 
 19. **`frontend/dist/mcp/<name>/index.html` is the right location** for
     the built MCP UI — that's where the MCP server's
@@ -181,7 +181,7 @@ The list below is what's specific to the MCP UI layer:
     never one that makes the model call itself. Full rationale in
     `python/references/servicer-transaction.md` (§External Side
     Effects: Transaction or Workflow?),
-    `python/references/servicer-workflow.md`, and
+    `python/references/servicer-workflow-external.md`, and
     `python/references/agent-pydantic-ai.md`.
 
 21. **Don't add `generate --react-extensions` to `.rbtrc`.** This is

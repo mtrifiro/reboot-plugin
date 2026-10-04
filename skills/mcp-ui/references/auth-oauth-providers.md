@@ -77,7 +77,10 @@ presented to the application under a different name via a mapping
 (`claims={"email": "verified-email"}`). Without `claims=` no claims
 are delivered and `set_claims` is never called. To act on the
 delivered claims, override `set_claims` in the `User.Servicer`
-(the generated default is a no-op):
+(when claims are delivered, the generated default raises
+`NotImplementedError`; `set_claims` is callable only app-internally —
+see
+[`python/references/auth-claims.md`](../../python/references/auth-claims.md)):
 
 ```python
 class UserServicer(User.Servicer):

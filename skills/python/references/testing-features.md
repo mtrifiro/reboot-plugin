@@ -79,6 +79,12 @@ def application() -> Application:
 scenarios('deposits.feature', 'withdrawals.feature')
 ```
 
+For an app with `oauth=`, the fixture's `Application(...)` needs
+`oauth=OAuth(provider=..., allowed_origins=[])`: the harness requires
+the explicit empty list, and without it every scenario fails with the
+"`OAuth` requires `allowed_origins=[...]`" error
+(`testing-web-app.md` has the browser-scenario variant).
+
 Nothing imports the built-in steps: the `reboot` package registers
 them as a pytest plugin, active whenever `reboot[dev]` is installed
 (`testing-project-setup.md` has the `pyproject.toml`). A module runs
