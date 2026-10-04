@@ -9,7 +9,7 @@ run and, with `--ceiling`, fails when a front door exceeds its budget.
 
 Two sources for the reading list, picked automatically:
 
-* frontmatter: when references carry `step:` / `applies:` / `always:`
+* frontmatter: once every reference carries `step:` / `applies:` / `always:`
   frontmatter (see skills/_template.md), the list is every reference
   with `always: true` plus every reference whose `step` is a build
   step and whose `applies` includes the front door.
@@ -100,7 +100,7 @@ def frontmatter(path: Path) -> dict:
 
 
 def all_references() -> list[Path]:
-    return sorted(SKILLS.glob("*/references/*.md"))
+    return sorted(p for p in SKILLS.glob("*/references/*.md") if not p.name.startswith("_"))
 
 
 @dataclass
@@ -232,7 +232,9 @@ def from_frontmatter(front_door: str) -> Report:
 
 
 def measure(front_door: str) -> Report:
-    uses_frontmatter = any("step" in frontmatter(p) for p in all_references())
+    # Switch only once every reference is converted; a partial switch
+    # would silently drop the unconverted files from the count.
+    uses_frontmatter = all("step" in frontmatter(p) for p in all_references())
     report = from_frontmatter(front_door) if uses_frontmatter else legacy(front_door)
     report.fixed = [
         (f"{s}/SKILL.md", words(SKILLS / s / "SKILL.md"))
