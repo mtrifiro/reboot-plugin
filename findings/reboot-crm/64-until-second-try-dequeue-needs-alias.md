@@ -11,8 +11,8 @@ names:
 tags: [negative-space, error-text]
 cluster: "4.4"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/servicer-workflow-wait.md § Never"
 ---
 
 # Inside one until, a second try_dequeue on the same queue is refused without an idempotency alias

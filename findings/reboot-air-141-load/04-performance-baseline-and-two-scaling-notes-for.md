@@ -11,8 +11,8 @@ names:
 tags: [cost, pattern, negative-space]
 cluster: "D"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/patterns-load-and-benchmarking.md § Scales as"
 ---
 
 # Performance baseline and two scaling notes for ordered-map and forall

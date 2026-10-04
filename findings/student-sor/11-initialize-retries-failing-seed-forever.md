@@ -10,8 +10,8 @@ names:
 tags: [seeding, operations, error-text]
 cluster: "C"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/lifecycle-initialize-hook.md § Limits"
 ---
 
 # initialize retries a failing seed forever with backoff, without surfacing the failure to rbt dev run

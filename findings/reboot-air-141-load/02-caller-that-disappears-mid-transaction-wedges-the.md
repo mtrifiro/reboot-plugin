@@ -11,8 +11,8 @@ names:
 tags: [negative-space, operations, error-text, cost]
 cluster: "4.1"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/servicer-transaction.md § Limits"
 ---
 
 # Caller that disappears mid-transaction wedges the actor permanently

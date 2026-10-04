@@ -11,8 +11,8 @@ tags: [seeding, testing]
 cluster: "C"
 duplicate_of: showtime-30
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/testing-harness.md § Do this"
 ---
 
 # Testing references should show app_internal=True for seeding fixtures

@@ -9,8 +9,8 @@ names: []
 tags: [pattern, frontend, cost]
 cluster: "E"
 still_applies: unknown
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/patterns-react-state.md § Do this"
 ---
 
 # Client-side last-known-state snapshot for first paint

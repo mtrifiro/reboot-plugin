@@ -12,8 +12,8 @@ names:
 tags: [negative-space, error-text, testing]
 cluster: "4.1"
 still_applies: unknown
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/testing-harness.md § Limits"
 ---
 
 # Reading an OrderedMap before its first insert aborts with StateNotConstructed, and the failed run hung the test suite

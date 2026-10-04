@@ -9,8 +9,8 @@ names: []
 tags: [seeding]
 cluster: "8.4"
 still_applies: unknown
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/lifecycle-seeding.md § Scales as"
 ---
 
 # Effect validation is visible at seed time

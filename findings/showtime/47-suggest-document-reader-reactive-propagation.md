@@ -12,8 +12,8 @@ tags: [negative-space, index-gap, pattern]
 cluster: "4.1"
 duplicate_of: reboot-crm-30
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/patterns-cross-actor-reads.md § Do this"
 ---
 
 # Document cross-actor reactive propagation for Readers

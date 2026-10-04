@@ -12,8 +12,8 @@ names:
 tags: [negative-space, contradiction, error-text]
 cluster: "4.1"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/servicer-workflow-declare.md § Never; python/references/scheduling-basic.md § Never; python/references/scheduling-recurring.md § Never"
 ---
 
 # From a workflow you must spawn(when=...), not schedule(when=...), and nothing says so

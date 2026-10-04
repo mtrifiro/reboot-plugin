@@ -11,8 +11,8 @@ names:
 tags: [seeding, auth, negative-space]
 cluster: "C"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/lifecycle-initialize-hook.md § Never"
 ---
 
 # No way for initialize to act as a particular user, so segregation of duties needed an app-internal exemption

@@ -10,8 +10,8 @@ names:
 tags: [pattern]
 cluster: "E"
 still_applies: unknown
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/patterns-cross-actor-reads.md § Do this"
 ---
 
 # Model the derived thing as derived; do not give it state (no Cart actor)

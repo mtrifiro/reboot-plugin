@@ -11,8 +11,8 @@ names:
 tags: [cost, negative-space, error-text]
 cluster: "D"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/patterns-load-and-benchmarking.md § Scales as; python/references/scheduling-basic.md § Scales as"
 ---
 
 # schedule() is a write; dev-mode write throughput is global

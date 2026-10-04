@@ -11,8 +11,8 @@ names:
 tags: [cost, pattern]
 cluster: "D"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/servicer-transaction.md § Scales as; python/references/patterns-load-and-benchmarking.md § Scales as; python/references/servicer-workflow-declare.md § Scales as"
 ---
 
 # Build batch work in a Workflow, not a transaction task chain

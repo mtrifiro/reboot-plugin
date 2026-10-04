@@ -12,8 +12,8 @@ tags: [negative-space, error-text]
 cluster: "4.1"
 duplicate_of: reboot-crm-14
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/scheduling-basic.md § Never"
 ---
 
 # Cross-actor schedule() requires a TransactionContext

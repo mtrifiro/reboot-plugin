@@ -9,8 +9,8 @@ names: []
 tags: [operations, frontend]
 cluster: "8.4"
 still_applies: unknown
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/react-generated-client.md § Errors you will see"
 ---
 
 # Log noise: effect-validation 'Still waiting' warnings and browser 'Not expecting stream to ever be done'

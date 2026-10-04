@@ -10,8 +10,8 @@ names:
 tags: [seeding, pattern]
 cluster: "C"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/api-schema-evolution.md § Do this; python/references/lifecycle-initialize-hook.md § Never"
 ---
 
 # `.idempotently("<versioned-alias>")` in initialize as a dev-state migration tool

@@ -10,8 +10,8 @@ names:
 tags: [negative-space]
 cluster: "4.1"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/scheduling-recurring.md § Limits"
 ---
 
 # A tick chain dying is silent

@@ -10,8 +10,8 @@ names:
 tags: [pattern, negative-space]
 cluster: "E"
 still_applies: unknown
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/servicer-workflow-declare.md § Limits"
 ---
 
 # One staleness window, not two (lease release)

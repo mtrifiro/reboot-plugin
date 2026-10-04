@@ -11,8 +11,8 @@ names:
 tags: [pattern]
 cluster: "E"
 still_applies: unknown
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/patterns-time-and-randomness.md § Do this"
 ---
 
 # Determinism is a design constraint: derive ids that must be re-addressed

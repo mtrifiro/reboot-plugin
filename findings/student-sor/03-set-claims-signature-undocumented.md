@@ -12,8 +12,8 @@ names:
 tags: [negative-space, auth, index-gap]
 cluster: "8.4"
 still_applies: unknown
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/auth-claims.md § Do this"
 ---
 
 # set_claims is documented with a state parameter it does not take, and claims are not covered by any reference

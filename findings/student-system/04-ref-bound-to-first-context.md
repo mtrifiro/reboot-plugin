@@ -12,8 +12,8 @@ names:
 tags: [negative-space, error-text, testing]
 cluster: "4.1"
 still_applies: unknown
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/rpc-refs.md § Never"
 ---
 
 # A ref() is bound to the first context that uses it; the rule is documented only under "concurrent callers"

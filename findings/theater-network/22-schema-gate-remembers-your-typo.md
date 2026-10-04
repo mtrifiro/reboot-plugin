@@ -11,8 +11,8 @@ names:
 tags: [operations, negative-space, error-text]
 cluster: "F"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/api-schema-evolution.md § Never; python/references/lifecycle-dev-loop.md § Never"
 ---
 
 # The schema gate remembers whatever booted, including your typo

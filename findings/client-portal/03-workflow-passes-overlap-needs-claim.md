@@ -11,8 +11,8 @@ names:
 tags: [pattern, negative-space, testing]
 cluster: "E"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/servicer-workflow-declare.md § Never"
 ---
 
 # Workflow passes overlap unless something stops them

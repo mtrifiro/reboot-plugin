@@ -10,8 +10,8 @@ names:
 tags: [seeding, error-text]
 cluster: "C"
 still_applies: unknown
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/lifecycle-seeding.md § Never"
 ---
 
 # lifecycle-initialize-hook.md: say when aliases are needed before it bites (seeding loops)

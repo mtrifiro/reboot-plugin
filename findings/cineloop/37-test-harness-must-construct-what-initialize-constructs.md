@@ -11,8 +11,8 @@ names:
 tags: [testing, seeding, error-text]
 cluster: "C"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/testing-harness.md § Do this"
 ---
 
 # A test harness has to construct what initialize constructs

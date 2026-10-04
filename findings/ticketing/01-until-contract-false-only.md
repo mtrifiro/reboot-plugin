@@ -11,8 +11,8 @@ tags: [contradiction, negative-space]
 cluster: "4.1"
 duplicate_of: reboot-crm-05
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/servicer-workflow-wait.md § Never"
 ---
 
 # Chapter 6: the until contract is stated wrongly, and the error shipped a real bug

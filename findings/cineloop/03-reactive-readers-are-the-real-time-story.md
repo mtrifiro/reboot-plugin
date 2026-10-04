@@ -11,8 +11,8 @@ names:
 tags: [pattern, frontend]
 cluster: "E"
 still_applies: unknown
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/patterns-react-state.md § Never; python/references/patterns-cross-actor-reads.md § Do this"
 ---
 
 # Reactive readers are the whole real-time story

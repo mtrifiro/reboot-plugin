@@ -10,8 +10,8 @@ names:
 tags: [cost, pattern]
 cluster: "D"
 still_applies: unknown
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/servicer-transaction.md § Limits; python/references/patterns-load-and-benchmarking.md § Never"
 ---
 
 # Size transactions for the UI, not just for correctness

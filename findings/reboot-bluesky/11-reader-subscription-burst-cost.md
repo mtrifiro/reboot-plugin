@@ -10,8 +10,8 @@ names:
 tags: [cost, pattern, frontend]
 cluster: "D"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/react-generated-client.md § Scales as; python/references/patterns-load-and-benchmarking.md § Scales as"
 ---
 
 # Reader-subscription establishment is expensive under burst

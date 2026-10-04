@@ -10,8 +10,8 @@ names:
 tags: [pattern]
 cluster: "E"
 still_applies: unknown
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/stdlib-ordered-map.md § Do this"
 ---
 
 # Index keys are an API decision (zero-padded monotonic key in an OrderedMap)

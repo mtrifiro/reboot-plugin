@@ -11,8 +11,8 @@ names:
 tags: [cost, operations, negative-space]
 cluster: "D"
 still_applies: unknown
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/patterns-load-and-benchmarking.md § Do this; python/references/servicer-workflow-external.md § Errors you will see"
 ---
 
 # Dev-mode side-effect validation re-runs your blocks, and its log lines are rate-limited

@@ -10,8 +10,8 @@ names:
 tags: [negative-space, error-text]
 cluster: "4.1"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/api-schema-evolution.md § Limits"
 ---
 
 # Deleting an unused method is a backwards-incompatible schema change

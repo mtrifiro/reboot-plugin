@@ -13,8 +13,8 @@ tags: [cost, negative-space, pattern]
 cluster: "D"
 duplicate_of: reboot-air-141-19
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/servicer-transaction.md § Never; python/references/patterns-load-and-benchmarking.md § Never; python/references/scheduling-basic.md § Never"
 ---
 
 # A transaction scheduling onto N actors is an N-party 2PC; fan out in workflows

@@ -12,8 +12,8 @@ names:
 tags: [negative-space, auth]
 cluster: "4.1"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/servicer-authorizer.md § Never"
 ---
 
 # context.auth does NOT survive a reader-calling-a-reader hop

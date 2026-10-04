@@ -10,8 +10,8 @@ names:
 tags: [negative-space, frontend]
 cluster: "4.1"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/react-generated-client.md § Limits"
 ---
 
 # Emitted TypeScript shared-model behavior unstated

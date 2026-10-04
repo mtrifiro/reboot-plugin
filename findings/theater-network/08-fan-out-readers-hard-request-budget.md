@@ -12,8 +12,8 @@ names:
 tags: [cost, pattern, negative-space]
 cluster: "D"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/patterns-cross-actor-reads.md § Do this"
 ---
 
 # Fan-out readers have a hard request budget; materialize on write

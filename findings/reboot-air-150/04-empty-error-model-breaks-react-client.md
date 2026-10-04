@@ -11,8 +11,8 @@ names:
 tags: [negative-space, frontend, error-text]
 cluster: "4.1"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/react-generated-client.md § Errors you will see"
 ---
 
 # An error Model with no fields crashes the generated React client at import

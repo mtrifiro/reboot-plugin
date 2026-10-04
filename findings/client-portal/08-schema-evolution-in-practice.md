@@ -10,8 +10,8 @@ names:
 tags: [negative-space]
 cluster: "4.1"
 still_applies: unknown
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/api-schema-evolution.md § Do this"
 ---
 
 # Schema evolution in practice (what reloads accept and reject)

@@ -10,8 +10,8 @@ names:
 tags: [negative-space, error-text, contradiction]
 cluster: "4.1"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/api-schema-evolution.md § Do this"
 ---
 
 # Editing a method's description= is a backwards-incompatible change, and nothing says so

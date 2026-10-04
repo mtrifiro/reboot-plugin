@@ -10,8 +10,8 @@ names:
 tags: [pattern, negative-space]
 cluster: "E"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/scheduling-basic.md § Limits"
 ---
 
 # Async note channels reorder: fence them with the actor's own generation

@@ -10,8 +10,8 @@ names:
 tags: [seeding, negative-space]
 cluster: "C"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/lifecycle-initialize-hook.md § Never"
 ---
 
 # initialize's auto idempotency key runs a body once EVER, not once per boot (migrations)

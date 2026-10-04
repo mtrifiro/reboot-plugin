@@ -10,8 +10,8 @@ names:
 tags: [pattern, testing]
 cluster: "E"
 still_applies: unknown
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/state-collections.md § Do this"
 ---
 
 # Correctness under contention holds and the design is why

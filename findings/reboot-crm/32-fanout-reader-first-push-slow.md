@@ -10,8 +10,8 @@ names:
 tags: [cost, negative-space]
 cluster: "D"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/patterns-load-and-benchmarking.md § Scales as"
 ---
 
 # Fan-out reader first push is slow

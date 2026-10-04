@@ -10,8 +10,8 @@ names:
 tags: [negative-space, cost, error-text]
 cluster: "4.1"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/scheduling-basic.md § Never"
 ---
 
 # Never schedule two identical-when transactions on one actor (native assert)

@@ -11,8 +11,8 @@ names:
 tags: [testing, cost, seeding]
 cluster: "D"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/lifecycle-seeding.md § Scales as"
 ---
 
 # Fixture size is a design decision, and it compounds (7m50s to 3m52s)

@@ -11,8 +11,8 @@ names:
 tags: [seeding, testing, pattern]
 cluster: "C"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/testing-harness.md § Do this"
 ---
 
 # Seed per-test minimum, not the production catalog

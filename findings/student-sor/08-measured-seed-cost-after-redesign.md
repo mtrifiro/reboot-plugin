@@ -10,8 +10,8 @@ names:
 tags: [cost, seeding, pattern]
 cluster: "D"
 still_applies: unknown
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/lifecycle-seeding.md § Scales as"
 ---
 
 # Measured seed cost after the redesign

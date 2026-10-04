@@ -10,8 +10,8 @@ names:
 tags: [negative-space, error-text, testing]
 cluster: "4.4"
 still_applies: unknown
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/testing-harness.md § Errors you will see"
 ---
 
 # A servicer missing from Application(servicers=[...]) fails at call time, saying Method not found!

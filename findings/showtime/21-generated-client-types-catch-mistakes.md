@@ -9,8 +9,8 @@ names: []
 tags: [frontend]
 cluster: "8.4"
 still_applies: unknown
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/react-generated-client.md § Do this"
 ---
 
 # Generated React client types catch real mistakes at npm run build

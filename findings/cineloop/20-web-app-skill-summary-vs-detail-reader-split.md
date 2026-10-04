@@ -10,8 +10,8 @@ names:
 tags: [negative-space, pattern, frontend]
 cluster: "4.2"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/patterns-cross-actor-reads.md § Do this"
 ---
 
 # The web-app skill should mention the summary-vs-detail reader split

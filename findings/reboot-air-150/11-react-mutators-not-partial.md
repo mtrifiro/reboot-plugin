@@ -11,8 +11,8 @@ tags: [contradiction, frontend]
 cluster: "4.1"
 duplicate_of: reboot-air-141-16
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/react-generated-client.md § Limits; python/references/react-generated-client.md § Do this"
 ---
 
 # Generated React mutation arguments are not Partial<...> as documented

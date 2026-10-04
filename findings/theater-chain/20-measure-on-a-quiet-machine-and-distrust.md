@@ -11,8 +11,8 @@ names:
 tags: [cost, testing, operations]
 cluster: "D"
 still_applies: unknown
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/patterns-load-and-benchmarking.md § Do this; python/references/testing-harness.md § Scales as"
 ---
 
 # Measure on a quiet machine and distrust a single sample

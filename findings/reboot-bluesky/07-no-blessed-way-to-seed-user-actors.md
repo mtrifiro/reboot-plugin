@@ -11,8 +11,8 @@ names:
 tags: [seeding, auth, version-drift]
 cluster: "C"
 still_applies: unknown
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/lifecycle-seeding.md § Limits"
 ---
 
 # No blessed path for seeding User-type actors

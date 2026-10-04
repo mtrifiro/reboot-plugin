@@ -11,8 +11,8 @@ names:
 tags: [cost, pattern, negative-space]
 cluster: "D"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/patterns-load-and-benchmarking.md § Scales as; python/references/state-collections.md § Scales as"
 ---
 
 # Every write persists the whole actor

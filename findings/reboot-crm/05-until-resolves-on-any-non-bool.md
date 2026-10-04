@@ -10,8 +10,8 @@ names:
 tags: [contradiction, negative-space, error-text]
 cluster: "4.1"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/servicer-workflow-wait.md § Do this; python/references/servicer-workflow-wait.md § Never"
 ---
 
 # until resolves on any non-bool result, whatever its truthiness; the reference's own example relies on the opposite

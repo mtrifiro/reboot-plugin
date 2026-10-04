@@ -10,8 +10,8 @@ names:
 tags: [negative-space, pattern, auth]
 cluster: "E"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/patterns-cross-actor-reads.md § Do this"
 ---
 
 # state-nested-models.md should cover the read-model/write-model split

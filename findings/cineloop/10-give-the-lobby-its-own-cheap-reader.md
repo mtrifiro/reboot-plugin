@@ -10,8 +10,8 @@ names:
 tags: [pattern, cost]
 cluster: "E"
 still_applies: unknown
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/patterns-cross-actor-reads.md § Do this"
 ---
 
 # Give the lobby its own cheap summary reader

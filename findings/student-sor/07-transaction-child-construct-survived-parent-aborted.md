@@ -10,8 +10,8 @@ names:
 tags: [negative-space, error-text, seeding]
 cluster: "8.4"
 still_applies: unknown
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/servicer-transaction.md § Limits"
 ---
 
 # A transaction's child construct survived while its parent did not (partial commit)

@@ -11,8 +11,8 @@ names:
 tags: [testing, seeding, negative-space, error-text]
 cluster: "4.4"
 still_applies: unknown
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/lifecycle-initialize-hook.md § Limits"
 ---
 
 # A failing initialize hook hangs rbt.up() / the test suite forever

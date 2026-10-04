@@ -11,8 +11,8 @@ names:
 tags: [pattern]
 cluster: "E"
 still_applies: unknown
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/patterns-cross-actor-reads.md § Do this; python/references/state-collections.md § Do this"
 ---
 
 # The actor boundary is the concurrency design (seats inline on one Showing)

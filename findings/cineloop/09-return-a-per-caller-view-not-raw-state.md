@@ -10,8 +10,8 @@ names:
 tags: [pattern, auth]
 cluster: "E"
 still_applies: unknown
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/patterns-cross-actor-reads.md § Do this"
 ---
 
 # Do not return raw state; return a per-caller view

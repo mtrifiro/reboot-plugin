@@ -11,8 +11,8 @@ tags: [pattern, negative-space]
 cluster: "E"
 duplicate_of: theater-chain-01
 still_applies: unknown
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/patterns-time-and-randomness.md § Do this"
 ---
 
 # Compute non-deterministic values in the transaction and pass them to writers

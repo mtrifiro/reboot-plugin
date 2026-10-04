@@ -11,8 +11,8 @@ names:
 tags: [negative-space, cost, seeding]
 cluster: "C"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/servicer-transaction.md § Limits; python/references/lifecycle-seeding.md § Never"
 ---
 
 # Twelve concurrent bulk-import transactions stalled indefinitely

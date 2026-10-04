@@ -12,8 +12,8 @@ names:
 tags: [auth, pattern]
 cluster: "E"
 still_applies: unknown
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/lifecycle-initialize-hook.md § Do this"
 ---
 
 # is_app_internal is load-bearing in more places than expected

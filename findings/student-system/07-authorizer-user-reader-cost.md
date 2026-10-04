@@ -11,8 +11,8 @@ names:
 tags: [cost, auth, negative-space]
 cluster: "D"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/servicer-authorizer.md § Scales as"
 ---
 
 # Every authorizer decision costs a reader call to User

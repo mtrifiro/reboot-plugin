@@ -9,8 +9,8 @@ names: []
 tags: [auth, cost]
 cluster: "D"
 still_applies: unknown
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/auth-claims.md § Limits"
 ---
 
 # Dev access-token TTL and claims delivery

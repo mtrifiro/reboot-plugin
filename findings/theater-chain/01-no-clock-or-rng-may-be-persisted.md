@@ -12,8 +12,8 @@ names:
 tags: [negative-space, pattern, index-gap]
 cluster: "E"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/patterns-time-and-randomness.md § Do this"
 ---
 
 # No clock or RNG may be persisted from a Writer or Transaction

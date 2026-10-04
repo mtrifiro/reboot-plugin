@@ -10,8 +10,8 @@ names:
 tags: [negative-space, cost]
 cluster: "4.1"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/servicer-transaction.md § Never"
 ---
 
 # Keep one global actor-touch order across every cross-actor transaction

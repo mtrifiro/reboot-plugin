@@ -10,8 +10,8 @@ names:
 tags: [negative-space, error-text]
 cluster: "4.1"
 still_applies: unknown
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/stdlib-ordered-map.md § Limits"
 ---
 
 # There is no way to ask whether an OrderedMap exists; a reader over a maybe-empty one catches the abort

@@ -11,8 +11,8 @@ names:
 tags: [frontend, negative-space]
 cluster: "4.1"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/react-generated-client.md § Never"
 ---
 
 # Two useFoo overloads confuse ReturnType

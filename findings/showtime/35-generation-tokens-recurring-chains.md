@@ -10,8 +10,8 @@ names:
 tags: [pattern, negative-space]
 cluster: "E"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/scheduling-recurring.md § Never"
 ---
 
 # Generation tokens make recurring chains restart-safe; the flag writer must never overwrite a live generation

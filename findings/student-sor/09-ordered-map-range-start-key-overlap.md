@@ -10,8 +10,8 @@ names:
 tags: [negative-space, contradiction]
 cluster: "8.4"
 still_applies: unknown
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/stdlib-ordered-map.md § Limits"
 ---
 
 # OrderedMap.range with a start_key returns rows from before the key at one node boundary

@@ -29,8 +29,12 @@ across actors run independently.
 
 The runtime may re-execute a writer's body — both on transient
 retries and, in development, as part of **effect validation**, which
-re-runs the body and asserts the state mutations match. So a
-writer body must be safe to run more than once: confine it to
+aborts the first run of the body, discards its effects, and runs it
+again; only the second run commits, and the two runs are never
+compared. So a writer body must be safe to run more than once (a
+clock or random value is fine when it is only displayed, a bug when
+it becomes an id or key something later addresses — see
+`patterns-time-and-randomness.md`): confine it to
 `self.state` mutations and in-system calls (including readers on
 other actors), and push any external work to a `Workflow` — the
 workflow picks the right primitive per

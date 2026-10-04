@@ -1,115 +1,90 @@
 ---
-title: Authorizers — When to Write Them, When to Skip
+title: Authorizers — When to Write Them, What They See
 impact: HIGH
-impactDescription: Whether to write `authorizer()` from day one or defer it depends on how identity is wired (`oauth=` works for both MCP and web; `token_verifier=` is the custom-IdP escape hatch)
-tags: servicer, authorizer, allow, allow_if, auth, authorizers, production, oauth, anonymous, token-verifier
+impactDescription: Rules that ignore app-internal call paths or assume identity crosses servicer calls fail minutes later, or silently compute as if nobody is signed in
+tags: servicer, authorizer, allow, allow_if, auth, authorizers, production, oauth, token-verifier, is_app_internal, context.auth, per-method
+step: auth
+applies: [mcp-ui, web-app, backend-only]
+always: false
+verified: 1.6.0
+docs: "https://docs.reboot.dev/users/authorization"
 ---
 
-## Authorizers — When to Write Them, When to Skip
+# Authorizers — When to Write Them, What They See
 
-> **Critical:** authorizer rules are evaluated against the caller's
-> **identity**. Whether identity exists during development depends on
-> how the `Application(...)` is wired. The right "when to write
-> authorizers" rule follows from that — don't sprinkle `allow()`
-> everywhere to paper over the difference.
+## When you are here
 
-A Reboot Servicer may define `def authorizer(self)` returning a rule
-instance (e.g. `allow_if(all=[has_verified_token])`). Reboot evaluates
-that rule against `context.auth` before each method call. Identity
-comes from one of two sources on `Application(...)`:
+You are deciding whether a servicer needs `def authorizer(self)` yet,
+and writing it. Reboot evaluates the returned rule against
+`context.auth` before each method call. Predicate details live in
+`auth-built-in-predicates.md` / `auth-custom-predicates.md`; `allow()`
+misuse in `auth-allow-deny.md`; identity claims in `auth-claims.md`.
 
-| Identity source on `Application(...)`                                                                                            | When identity is available                                                                                                   | Implication for authorizer rules                                                              |
-| -------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| `oauth=OAuth(provider=<OAuthProviderSelector>)` (e.g. `OAuth(provider=OAuthProviderByEnvironment(dev=Development(), prod=...))`) | **Always** — every caller gets a verified `context.auth.user_id` (a `dev-{hash}` under `Development()`), in dev and in prod. | Write real `allow_if(...)` rules **from day one**. They work in dev exactly as in production. |
-| `token_verifier=<TokenVerifier>`                                                                                                 | **Only when the verifier is wired** — typically requires integrating an external IdP (Auth0, Firebase, JWT issuer, …).       | Until the verifier is in place, no caller has identity. Defer rules (see below).              |
-| Neither                                                                                                                          | Never.                                                                                                                       | All rules that need identity will fail.                                                       |
+## Do this
 
-`Development()` (the typical `dev` arm, wired via
-`oauth=OAuth(provider=OAuthProviderByEnvironment(dev=Development(), prod=...))`) is a
-real OAuth provider that shows a fake account-picker sign-in UI and
-mints a stable `dev-{hash}` user ID per chosen identity — no external
-IdP, but `context.auth.user_id` is populated and predicates like
-`has_verified_token` and `state_id_is_user_id` work correctly. This is
-what makes "write real authorizers from day one" viable for apps that
-don't need an external IdP.
+### When to write it
 
-## What Happens Without `authorizer()`
+Identity comes from `Application(...)`:
 
-If a Servicer doesn't define `authorizer()`, Reboot's fallback depends
-on the runtime mode:
+| Identity source on `Application(...)` | When callers have identity | Rule |
+| --- | --- | --- |
+| `oauth=OAuth(provider=OAuthProviderByEnvironment(dev=Development(), prod=...))` (any OAuth provider) | **Always**: every caller gets a verified `context.auth.user_id` (`dev-{hash}` under `Development()`) | Write real `allow_if(...)` rules **from day one**, on every servicer |
+| `token_verifier=<TokenVerifier>` | Only once the verifier is wired to an external IdP | Rules may wait for the verifier, but not past the first harness test |
+| Neither | Never | Every identity rule fails |
 
-| Mode                       | Behavior when `authorizer()` is missing                                              |
-| -------------------------- | ------------------------------------------------------------------------------------ |
-| `rbt dev`                  | Call is **allowed**, with a `WARNING` log every ~60s naming the unauthorized method. |
-| `rbt serve` / Reboot Cloud | Call is **denied** (`PermissionDenied`).                                             |
-| Servicer for a `User` type | Always enforced (`state_id_is_user_id` + `is_app_internal`), **including in dev**.   |
+`Development()` is a real OAuth provider: a fake account-picker
+sign-in that mints a stable `dev-{hash}` per identity, so
+`has_verified_token` and `state_id_is_user_id` behave as in
+production. One OAuth server serves browsers (`rbt_session` cookie)
+and MCP clients (`Authorization: Bearer`), so day-one rules are the
+default for **both** MCP UIs and web apps.
 
-So "skip the authorizer in dev" is a real option — but only sensible
-when you couldn't have written a meaningful rule yet anyway (no
-identity available).
+Without `authorizer()`:
 
-## When to Write Authorizers from Day One vs. Defer
+| Mode | Missing `authorizer()` |
+| --- | --- |
+| `rbt dev` | **Allowed**, with a `*** <Type>.<Method> IS MISSING AUTHORIZATION ***` warning at most once a minute |
+| `Reboot()` test harness | **Denied** (`PermissionDenied`), as in production |
+| `rbt serve` / Reboot Cloud | **Denied** (`PermissionDenied`) |
+| Servicer for the `User` type | Always enforced (`state_id_is_user_id` or `is_app_internal`), **including in dev** |
 
-- **`Application(oauth=...)` (any OAuth provider, including `Development()`)** —
-  identity is wired by construction. **Write `authorizer()` on every
-  Servicer up front**, using `allow_if(...)` with predicates like
-  `has_verified_token` and `state_id_is_user_id`. The rules execute
-  identically in dev and prod; no second pass before shipping. This
-  is the typical and recommended pattern for **both** MCP UIs
-  and standalone web apps — the same OAuth server serves both
-  frontends, browsers via a `rbt_session` cookie and MCP clients via
-  `Authorization: Bearer`.
-- **`Application(token_verifier=...)` before the verifier is wired** —
-  the escape hatch for custom IdPs the built-in `oauth=` providers
-  don't cover. Fine to **omit `authorizer()` during early
-  development** while standing up the verifier; the dev-mode warning
-  serves as the TODO list for what still needs rules. Wire the
-  verifier and add real `allow_if(...)` rules before `rbt serve` /
-  cloud.
-- **`User`-type Servicers** — usually don't need a custom
-  `authorizer()` at all. The framework's default
-  (`state_id_is_user_id` + `is_app_internal`) is production-worthy.
+App-internal calls pass the missing-authorizer default in every mode.
+Because the harness denies, "defer until the verifier is wired" ends at
+the first test, and the dev warning is only a TODO list. `User`
+servicers usually need no `authorizer()`: the default is
+production-worthy, and inside one `self.ref().state_id` is the user's
+ID even when `context.auth` is `None`.
 
-## Don't Default to `allow()` Everywhere
+### Before writing a rule: list the tokenless call paths
 
-`allow()` is an unconditional rule that permits every caller from
-the public internet. It is not a "safe default" — it's an explicit
-"this endpoint is public, unauthenticated" declaration. See
-`auth-allow-deny.md` for the narrow legitimate uses and the
-anti-patterns the agent should refuse.
+None of these fail at startup; each fails the first time it runs. If
+any answer is yes, the rule needs `is_app_internal` in an
+`any=[...]`:
 
-## When You DO Define `authorizer()` — Return an Instance, Not a Class
+1. Does `initialize` call this servicer? (`InitializeContext` is
+   app-internal.)
+2. Does anything `schedule()` a method on this actor, including itself?
+3. Does another servicer call this one, from a reader, writer,
+   transaction, workflow or nested constructor?
 
-The single most common bug when writing one: returning the function
-itself instead of calling it.
+### Shape
 
 ```python
-# Wrong — returns the function reference, not a rule:
-def authorizer(self):
-    return allow
-
-# Right — constructs a rule instance:
-def authorizer(self):
-    return allow()
-```
-
-## Canonical Shapes
-
-**App using `oauth=` (write real rules from day one):**
-
-```python
-from reboot.aio.auth.authorizers import allow_if, state_id_is_user_id
+from reboot.aio.auth.authorizers import (
+    allow_if, has_verified_token, is_app_internal, state_id_is_user_id,
+)
 from reboot.aio.contexts import ReaderContext
 
 
 class CounterServicer(Counter.Servicer):
 
     def authorizer(self):
-        # Only the user whose ID matches this Counter's state ID may
-        # call its methods. An `oauth=` provider (e.g. via
-        # `OAuthProviderByEnvironment`) ensures every caller has a
-        # `user_id`.
-        return allow_if(all=[state_id_is_user_id])
+        # Rule per method; unlisted methods use `_default`.
+        return Counter.Authorizer(
+            value=allow_if(any=[has_verified_token, is_app_internal]),
+            reset=allow_if(all=[is_app_internal]),
+            _default=allow_if(any=[state_id_is_user_id, is_app_internal]),
+        )
 
     async def value(
         self, context: ReaderContext,
@@ -117,22 +92,70 @@ class CounterServicer(Counter.Servicer):
         return Counter.ValueResponse(value=self.state.value)
 ```
 
-**App using `token_verifier=` before the verifier is wired (defer):**
+Every generated type has `<Type>.Authorizer(<method>=rule, ...,
+_default=rule)` (snake or Camel method names). A bare rule returned
+from `authorizer()` is wrapped as `<Type>.Authorizer(_default=rule)`
+and applies to every method. If you omit `_default`, it is
+`allow_if(all=[is_app_internal])` (for `User`:
+`state_id_is_user_id` or `is_app_internal`), so a method added later
+is internal-only until named. `grep -n "class .*Authorizer("
+api/<pkg>/v1/<name>_rbt.py` shows the parameters.
 
-```python
-class CatalogServicer(Catalog.Servicer):
-    # No `authorizer()` yet — `rbt dev` allows and warns; this is
-    # the TODO list for what needs a real rule before `rbt serve`.
+## Never
 
-    async def list(
-        self, context: ReaderContext,
-    ) -> Catalog.ListResponse:
-        return Catalog.ListResponse(items=self.state.items)
-```
+- `return allow` — returns the function, not a rule. `return allow()`.
+- `allow()` as a "safe default" — it declares the method public and
+  unauthenticated (`auth-allow-deny.md`).
+- Assume the caller's identity reaches an actor your servicer calls.
+  A call from inside any servicer is app-internal and carries **no**
+  bearer token: inside it `context.auth` is `None` (1.6.0 source: the
+  generated stub deliberately does not forward the caller's token).
+  A rule of only `has_verified_token` / `state_id_is_user_id` denies
+  the call (`Unauthenticated`); anything derived from `context.auth`
+  (a "mine" flag, per-user count, owner stamp, audit entry) silently
+  computes as if nobody is signed in. Pass the user ID as a request
+  field, and trust it only when `context.auth is None and
+  context.app_internal`; otherwise use `context.auth.user_id`.
+- Gate per-method rules by `isinstance(request, ...)` in one predicate
+  — methods declared `request=None`, or sharing a request model,
+  cannot get their own rule. Use `<Type>.Authorizer(method=...)`.
+- Omit `authorizer()` on an `oauth=` app "until later" — the harness
+  denies every external call to it.
+- Treat a `PermissionDenied` from `allow_if(any=[has_verified_token,
+  is_app_internal])` as "signed in but forbidden" — an anonymous caller
+  also gets `PermissionDenied`, because `is_app_internal`'s denial wins
+  the aggregation (`auth-allow-if.md`).
 
-## One Authorizer per Servicer
+## Limits
 
-`def authorizer(self)` returns a single rule that applies to every
-method on the Servicer. Per-method differentiation (e.g. allow reads
-but gate writes) requires a custom authorizer subclass — see
-`auth-custom-predicates.md`.
+- One `authorizer()` per servicer; per-method differentiation is the
+  `<Type>.Authorizer(...)` constructor, not separate servicers.
+- The authorizer runs in its own `ReaderContext` before the method
+  body; it receives the actor's `state` (except for constructors) and
+  the typed `request`.
+- `User.set_claims` is app-internal only, checked before any
+  authorizer, so no rule (not even `allow()`) exposes it
+  (`auth-claims.md`).
+
+## Scales as
+
+- A predicate that reads another actor (e.g. roles on `User` via
+  `User.ref(user_id).profile(context)`) costs one reader RPC per
+  authorized call, readers included; it doubled a page's round trips
+  (student-system-07, 1.5.0). Prefer facts on the authorized actor's
+  own `state` (the rule receives it), or claims stored on `User` when
+  only `User` methods need them.
+
+## Errors you will see
+
+| Error text (stable prefix) | Meaning | Fix |
+| --- | --- | --- |
+| `aborted with 'PermissionDenied': You are not authorized to call` | No rule allowed the caller; in the harness/prod, often a servicer with no `authorizer()` | Write the rule; add `is_app_internal` for internal paths |
+| `aborted with 'Unauthenticated': You are not authorized to call` | A rule needed identity and the call carried none, typically a servicer-to-servicer call | Add `is_app_internal` to the rule; pass identity in the request |
+| `IS MISSING AUTHORIZATION` | `rbt dev` allowed a call to a servicer with no `authorizer()` | Write the rule before testing |
+
+## See also
+
+- [`auth-built-in-predicates.md`](auth-built-in-predicates.md) — what each predicate checks
+- [`auth-custom-predicates.md`](auth-custom-predicates.md) — writing your own predicates
+- [`testing-harness.md`](testing-harness.md) — app-internal and impersonated test contexts

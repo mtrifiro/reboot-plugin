@@ -7,7 +7,8 @@ tag, and the list of open plugin items per skill/reference.
 
 A `Resolved` item must have a `resolved_by` of the form
 "<path under skills/> § <section heading>", and that heading must exist
-in that file; an item tagged `contradiction` must name two sections.
+in that file; an item tagged `contradiction` that names two or more files must
+resolve to sections in at least two files.
 
 Usage:
     tools/findings.py               # summary; exit 1 on schema errors
@@ -99,7 +100,10 @@ def validate(item: dict, ids: set[str] | None = None) -> list[str]:
         for ref in refs:
             if not heading_exists(ref):
                 errors.append(f"resolved_by points at a missing section: {ref!r}")
-        if "contradiction" in item.get("tags", []) and len(refs) < 2:
+        # A contradiction between two files must show both now agree; one
+        # between a file and the runtime is closed by fixing that file.
+        if ("contradiction" in item.get("tags", []) and len(item.get("names", [])) > 1
+                and len({r.split("§")[0].strip() for r in refs}) < 2):
             errors.append("contradiction resolved without naming both sections")
     return errors
 

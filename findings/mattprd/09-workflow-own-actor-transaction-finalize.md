@@ -10,8 +10,8 @@ names:
 tags: [pattern, negative-space]
 cluster: "E"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/servicer-workflow-calls.md § Do this"
 ---
 
 # Undocumented but load-bearing: workflow -> own-actor transaction for idempotent multi-actor finalization

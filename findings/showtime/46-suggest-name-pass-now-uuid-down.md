@@ -10,8 +10,8 @@ names:
 tags: [pattern, negative-space]
 cluster: "E"
 still_applies: unknown
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/patterns-time-and-randomness.md § Do this"
 ---
 
 # patterns-common-gotchas could name the 'pass now/uuid down' pattern

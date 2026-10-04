@@ -10,8 +10,8 @@ names:
 tags: [negative-space, cost]
 cluster: "4.1"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/servicer-workflow-calls.md § Never"
 ---
 
 # Workflows: gather writers, never gather transactions

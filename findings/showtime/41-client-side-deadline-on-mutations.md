@@ -11,8 +11,8 @@ names:
 tags: [pattern, frontend, operations]
 cluster: "E"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/patterns-react-state.md § Do this"
 ---
 
 # Always put a client-side deadline on mutations in a dev-loop UI

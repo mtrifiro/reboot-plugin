@@ -11,8 +11,8 @@ names:
 tags: [seeding, pattern]
 cluster: "C"
 still_applies: unknown
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/api-schema-evolution.md § Do this; python/references/lifecycle-initialize-hook.md § Do this"
 ---
 
 # A new index needs a backfill, and the dashboard is where you notice

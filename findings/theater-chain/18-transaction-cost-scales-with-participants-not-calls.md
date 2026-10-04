@@ -11,8 +11,8 @@ tags: [cost, testing]
 cluster: "D"
 duplicate_of: reboot-air-141-19
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/servicer-transaction.md § Scales as; python/references/patterns-load-and-benchmarking.md § Scales as"
 ---
 
 # Transaction cost scales with participants not calls

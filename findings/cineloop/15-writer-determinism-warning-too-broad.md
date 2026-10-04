@@ -11,8 +11,8 @@ names:
 tags: [negative-space]
 cluster: "E"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/scheduling-recurring.md § Limits"
 ---
 
 # scheduling-recurring.md determinism warning is too broad

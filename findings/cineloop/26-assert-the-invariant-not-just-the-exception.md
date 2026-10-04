@@ -10,8 +10,8 @@ names:
 tags: [testing, pattern]
 cluster: "E"
 still_applies: unknown
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/testing-harness.md § Do this"
 ---
 
 # Assert the invariant, not just the exception

@@ -7,13 +7,12 @@ severity: unrated
 target: plugin
 names:
   - python/references/react-generated-client.md
-  - web-app/references/react-client.md
 tags: [contradiction, frontend, scaffold]
 cluster: "4.2"
 duplicate_of: reboot-air-141-16
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/react-generated-client.md § Limits; python/references/react-generated-client.md § Do this"
 ---
 
 # Generated React mutators require every request field; the reference says they are partial
@@ -27,3 +26,5 @@ resolved_by: ""
 **Where in the skills.** `python/references/react-generated-client.md` (lines ~42-68).
 
 **Checked at 1.6.0.** `python/references/react-generated-client.md` lines 42-68 still say mutation arguments are `Partial<Method>Request`.
+
+**Resolution note.** `web-app/references/react-client.md` makes no claim that requests are partial (grep, 2026-10-04), so the fix in `react-generated-client.md` closes the contradiction.

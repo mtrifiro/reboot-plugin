@@ -12,8 +12,8 @@ tags: [negative-space, error-text]
 cluster: "4.1"
 duplicate_of: reboot-crm-10
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/api-schema-evolution.md § Do this"
 ---
 
 # Editing a method's description is a schema change

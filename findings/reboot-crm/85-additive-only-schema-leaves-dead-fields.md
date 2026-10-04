@@ -11,8 +11,8 @@ names:
 tags: [negative-space, pattern]
 cluster: "4.1"
 still_applies: unknown
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/api-schema-evolution.md § Do this"
 ---
 
 # Additive-only schema change leaves dead fields and methods that read as live (compounds with the zero-default rule)

@@ -150,7 +150,7 @@ def scan(path: Path) -> list[Finding]:
             line = re.sub(r"^(\$\s+|.*?/bin/)", "", line)
             # Comments (shell / Dockerfile / layout trees) mention rbt in prose.
             line = re.sub(r"(^|\s)#.*$", "", line).strip()
-            m = re.search(r"(?:^|[\s;&|(])rbt\s+(.+)", line)
+            m = re.search(r"(?:^|[\s;&|(])rbt\s+(?![=.(:])(.+)", line)  # not `rbt = Reboot()`
             if m:
                 emit(m.group(1), lineno, block_incorrect)
             elif is_rbtrc_line(line):

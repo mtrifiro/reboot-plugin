@@ -11,8 +11,8 @@ names:
 tags: [cost, seeding]
 cluster: "D"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/patterns-load-and-benchmarking.md § Do this; python/references/lifecycle-seeding.md § Scales as"
 ---
 
 # Dev-mode transactions cost about 1.5 s each, so a realistic seed needs bulk methods

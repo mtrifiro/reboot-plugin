@@ -11,8 +11,8 @@ names:
 tags: [negative-space, pattern, frontend, cost]
 cluster: "D"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/patterns-cross-actor-reads.md § Do this"
 ---
 
 # Transitive reactivity is real but undocumented

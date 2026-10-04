@@ -11,8 +11,8 @@ names:
 tags: [auth, negative-space, index-gap]
 cluster: "4.1"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/auth-claims.md § Limits"
 ---
 
 # User.set_claims is web-callable under the default User rule

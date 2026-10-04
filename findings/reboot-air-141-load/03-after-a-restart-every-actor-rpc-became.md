@@ -9,8 +9,8 @@ names: []
 tags: [cost, operations]
 cluster: "D"
 still_applies: unknown
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/patterns-load-and-benchmarking.md § Never"
 ---
 
 # After a restart every actor RPC became about 50x slower

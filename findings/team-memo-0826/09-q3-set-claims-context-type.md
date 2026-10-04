@@ -12,8 +12,8 @@ tags: [auth, negative-space]
 cluster: "8.4"
 duplicate_of: student-sor-03
 still_applies: unknown
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/auth-claims.md § Do this"
 ---
 
 # set_claims context type

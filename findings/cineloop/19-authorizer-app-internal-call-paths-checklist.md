@@ -11,8 +11,8 @@ names:
 tags: [negative-space, auth]
 cluster: "4.1"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/servicer-authorizer.md § Do this"
 ---
 
 # Give authorizer() an app-internal call-paths checklist

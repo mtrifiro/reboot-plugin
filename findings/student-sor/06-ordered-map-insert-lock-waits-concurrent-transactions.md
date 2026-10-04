@@ -10,8 +10,8 @@ names:
 tags: [negative-space, cost, contradiction, error-text]
 cluster: "D"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/stdlib-ordered-map.md § Scales as"
 ---
 
 # Lock waits on OrderedMap inserts from concurrent transactions: throughput one sixth of sequential

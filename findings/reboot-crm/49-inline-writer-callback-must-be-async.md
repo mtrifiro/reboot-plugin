@@ -10,8 +10,8 @@ names:
 tags: [error-text, negative-space]
 cluster: "4.4"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/servicer-workflow-calls.md § Never"
 ---
 
 # An inline writer's callback must be a coroutine, and the error does not say so

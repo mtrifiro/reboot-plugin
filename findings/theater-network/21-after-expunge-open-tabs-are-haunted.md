@@ -11,8 +11,8 @@ names:
 tags: [operations, frontend]
 cluster: "F"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/lifecycle-dev-loop.md § Never"
 ---
 
 # After an expunge, open tabs are haunted; reload them

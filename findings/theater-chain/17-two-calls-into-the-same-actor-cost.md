@@ -10,8 +10,8 @@ names:
 tags: [cost, pattern]
 cluster: "D"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/servicer-transaction.md § Never; python/references/patterns-load-and-benchmarking.md § Scales as"
 ---
 
 # Two calls into the same actor cost about 10x under load

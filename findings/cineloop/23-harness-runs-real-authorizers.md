@@ -11,8 +11,8 @@ names:
 tags: [testing, auth]
 cluster: "E"
 still_applies: unknown
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/testing-harness.md § Do this"
 ---
 
 # The test harness runs the real authorizers

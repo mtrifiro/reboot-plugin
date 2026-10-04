@@ -11,8 +11,8 @@ names:
 tags: [testing, operations]
 cluster: "8.4"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/lifecycle-dev-loop.md § Do this"
 ---
 
 # Debugging discipline that actually worked

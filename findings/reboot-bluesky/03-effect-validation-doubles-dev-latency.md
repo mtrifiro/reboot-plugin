@@ -11,8 +11,8 @@ names:
 tags: [cost]
 cluster: "D"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/patterns-load-and-benchmarking.md § Scales as; python/references/lifecycle-seeding.md § Scales as"
 ---
 
 # Effect validation doubles dev-mode mutation latency, silently

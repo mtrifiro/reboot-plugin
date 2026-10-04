@@ -11,8 +11,8 @@ names:
 tags: [testing, pattern]
 cluster: "E"
 still_applies: unknown
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/patterns-time-and-randomness.md § Do this; python/references/testing-harness.md § Never"
 ---
 
 # Patch the clock, not the servicer (one module-level _now())

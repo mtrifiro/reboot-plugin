@@ -12,8 +12,8 @@ names:
 tags: [negative-space, pattern, frontend]
 cluster: "E"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/patterns-cross-actor-reads.md § Do this"
 ---
 
 # Document: reactive means it must be a real mutation

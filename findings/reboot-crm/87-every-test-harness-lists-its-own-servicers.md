@@ -10,8 +10,8 @@ names:
 tags: [testing, scaffold, pattern]
 cluster: "B"
 still_applies: unknown
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/testing-harness.md § Do this"
 ---
 
 # Every test harness lists its own servicers

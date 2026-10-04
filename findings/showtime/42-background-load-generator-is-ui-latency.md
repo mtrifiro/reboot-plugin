@@ -10,8 +10,8 @@ names:
 tags: [cost, pattern]
 cluster: "D"
 still_applies: unknown
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/servicer-transaction.md § Scales as; python/references/patterns-load-and-benchmarking.md § Never"
 ---
 
 # A background load generator becomes UI latency

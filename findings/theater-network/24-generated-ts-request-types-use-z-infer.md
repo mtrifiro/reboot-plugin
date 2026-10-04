@@ -11,8 +11,8 @@ tags: [frontend, version-drift]
 cluster: "8.4"
 duplicate_of: reboot-air-141-16
 still_applies: unknown
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/react-generated-client.md § Limits"
 ---
 
 # Generated TS request types use z.infer where z.input belongs

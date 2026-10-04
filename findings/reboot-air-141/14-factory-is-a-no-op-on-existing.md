@@ -13,8 +13,8 @@ names:
 tags: [contradiction, negative-space, error-text]
 cluster: "4.1"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/api-schema-evolution.md § Do this; python/references/state-collections.md § Never"
 ---
 
 # Factory is a no-op on existing actor so new ID field is never back-filled

@@ -11,8 +11,8 @@ names:
 tags: [cost, pattern, negative-space]
 cluster: "D"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/patterns-cross-actor-reads.md § Do this"
 ---
 
 # A reader that fans out to readers that fan out is unusable under effect validation

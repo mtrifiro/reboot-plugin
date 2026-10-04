@@ -10,8 +10,8 @@ names:
 tags: [negative-space, error-text, version-drift]
 cluster: "4.4"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/servicer-workflow-wait.md § Never"
 ---
 
 # An until result is memoized with its type, so changing the callable's return type poisons a running workflow forever

@@ -12,8 +12,8 @@ tags: [cost]
 cluster: "D"
 duplicate_of: reboot-bluesky-03
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/patterns-load-and-benchmarking.md § Scales as"
 ---
 
 # Effect validation cost in dev

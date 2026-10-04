@@ -1,45 +1,39 @@
 ---
 title: Spin Up Tests with the `Reboot()` Harness
 impact: MEDIUM
-impactDescription: Without the harness, Servicer methods can't be exercised end-to-end
-tags: testing, Reboot, harness, IsolatedAsyncioTestCase, setup, authorizer, libraries, impersonation, bearer-token, oauth, token-verifier
+impactDescription: Without the harness, Servicer methods can't be exercised end-to-end; with it misconfigured, tests hang, fail at call time, or test a different application
+tags: testing, Reboot, harness, IsolatedAsyncioTestCase, setup, authorizer, libraries, impersonation, bearer-token, oauth, token-verifier, app_internal, fixture, initialize
+step: tests
+applies: [mcp-ui, web-app, backend-only]
+always: false
+verified: 1.6.0
+docs: ""
 ---
 
-## Spin Up Tests with the `Reboot()` Harness
+# Spin Up Tests with the `Reboot()` Harness
 
-> **Critical:** don't construct Servicer instances directly — that
-> bypasses identity, context, and persistence. Use `Reboot()` +
-> `rbt.up(Application(...))` + `rbt.create_external_context(...)`,
-> then call methods through `Service.ref(id).method(context, ...)`.
+## When you are here
 
-Reboot ships an in-process test harness at `reboot.aio.tests.Reboot`.
-The scenarios of a feature file run on it through `reboot.bdd`
-([testing-features.md](testing-features.md)), which is where an
-application's behavior is tested; the `application` fixture a test
-module defines is the `Application(...)` the patterns below pass to
-`rbt.up(...)`. Use the harness directly, from a
-`unittest.IsolatedAsyncioTestCase`, for what a scenario cannot say:
-crashing the application mid-method and bringing it back
-([testing-failure-recovery.md](testing-failure-recovery.md)). Pytest
-discovers `IsolatedAsyncioTestCase` subclasses automatically — see
-[testing-project-setup.md](testing-project-setup.md) for the
-project-level wiring.
+You are writing a test that boots the application in-process. Reboot
+ships the harness at `reboot.aio.tests.Reboot`. A feature file's
+scenarios run on it through `reboot.bdd`, and that is where an
+application's behaviour is tested ([`testing-features.md`](testing-features.md)).
+The test module's `application` fixture is the `Application(...)`
+passed to `rbt.up(...)` below. Use the harness directly from a
+`unittest.IsolatedAsyncioTestCase` for what a scenario cannot say,
+such as crashing the application mid-method
+([`testing-failure-recovery.md`](testing-failure-recovery.md)). Pytest
+discovers these classes automatically. Project wiring is covered in
+[`testing-project-setup.md`](testing-project-setup.md).
 
-**Incorrect (calling Servicer methods directly without a harness):**
-
-```python
-# DON'T — there's no actor identity, no context, no persistence.
-servicer = ChatRoomServicer()
-await servicer.send(...)
-```
-
-**Correct (the minimal template):**
+## Do this
 
 ```python
 import unittest
 from chat_room.v1.chat_room_rbt import ChatRoom
 from chat_room_servicer import ChatRoomServicer
 from reboot.aio.applications import Application
+from reboot.aio.external import ExternalContext  # for type hints
 from reboot.aio.tests import Reboot
 
 
@@ -64,266 +58,123 @@ class TestChatRoom(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(response.messages, ["Hello, World"])
 ```
 
-## Pattern: Setup → Up → Run → Teardown
+Put `up()` in `asyncSetUp` when every test uses the same
+`Application`, or in each test when configurations differ. The
+harness exercises the full RPC path: production's context-type rules,
+error semantics and serialization. If a test passes, the
+wiring is correct, and it catches contract bugs that a manual
+click-through takes minutes to surface.
 
-- `Reboot()` constructs the harness.
-- `await rbt.start()` boots the in-process runtime.
-- `await rbt.up(Application(...))` launches the application; pass it
-  the same Servicers and stdlib `libraries=[...]` you'd pass in
-  production.
-- `await rbt.stop()` tears it all down.
-
-You can move `rbt.up(...)` into `asyncSetUp` if every test in the
-class uses the same `Application` configuration (cleaner) or keep
-it in each test method if different tests need different
-configurations (more explicit).
-
-## Multi-Servicer Applications
-
-Production apps usually have several servicers. Register all of them
-in one `Application(...)` so cross-actor calls work:
+**Register what `main.py` registers.** Pass the same `servicers=`,
+the stdlib `libraries=[...]` (`OrderedMap`, `Queue`, … need theirs,
+see `stdlib-*.md`), `legacy_grpc_servicers=[...]` for plain-gRPC
+servicers in a mixed app, and the production `initialize=`. Import them
+from one registry (`SERVICERS`, `libraries()`) that `main.py` and
+every harness share, so no test file misses a new type:
 
 ```python
 await self.rbt.up(
     Application(
-        servicers=[
-            BankServicerWithAuthorizer,
-            AccountServicerWithNoInterestAndAuthorizer,
-            CustomerServicer,
-        ],
-        libraries=[sorted_map_library()],
+        servicers=SERVICERS,
+        libraries=libraries(),
+        initialize=initialize,   # or a test-sized seed, below
     )
 )
 ```
 
-Things to know:
+**Construct what `initialize` constructs.** Every singleton
+`initialize` creates (chain, ledger, settings actor) must exist in the
+test too. Either pass the production `initialize=`, or call the same
+parameterised seed function with less data
+([`lifecycle-seeding.md`](lifecycle-seeding.md)).
 
-- **`libraries=[...]`** — stdlib state types like `OrderedMap` /
-  `SortedMap` / `Queue` need their library registered, exactly as
-  in `main.py`. See `stdlib-*.md`.
-- **`legacy_grpc_servicers=[...]`** — for mixed pydantic + plain
-  gRPC apps, listing the plain-gRPC servicers alongside the
-  `servicers=[...]` pydantic ones.
-- **`initialize=<async fn>`** — runs the same one-shot bootstrap
-  hook your `main.py` would run (e.g. creating a singleton state):
+**Seed and call internal methods with an app-internal context.**
+Methods whose rule is `is_app_internal()` (seed methods, and methods
+only scheduled tasks or other actors call) are unreachable from user
+contexts. Use
+`self.rbt.create_external_context(name="internal", app_internal=True)`.
+This is the test-side equivalent of `initialize`, and it is also how
+to drive a scheduled method directly instead of waiting for it. It
+impersonates the *application*, so never reuse it for calls that
+should be attributed to a user.
 
-  ```python
-  async def _initialize(context) -> None:
-      await CouponBook.create(context, COUPON_BOOK_ID)
-
-  await self.rbt.up(
-      Application(
-          servicers=[...],
-          initialize=_initialize,
-      )
-  )
-  ```
-
-## Test Against the Real Authorizers — Impersonate, Don't Disable
-
-The harness runs production-mode authorization, and that's the
-point: register the **real** servicers — the exact classes `main.py`
-registers — and give each test context a real, verified identity. A
-test that only passes with authorization disabled proves nothing
-about the application the user actually runs; the agent's
-`authorizer()` code would ship untested.
-
-The rule of thumb: identity in tests comes from the harness —
-`up()` always backs the application under test with a test OAuth
-provider — and tests **never** touch the authorizers.
-
-`await rbt.create_external_context_as(name, user_id)` builds a
-context carrying a real, verified identity for `user_id`,
-exercising the production authorizer end-to-end:
+**Test against the real authorizers: impersonate, don't disable.**
+The harness runs production-mode authorization, even though
+`rbt dev run` only warns about a missing `authorizer()`. Register the
+real servicers and give each test context a verified identity:
 
 ```python
-from reboot.aio.tests import Reboot
-from servicers.food import APPLICATION_SERVICERS, UserServicer
-
-
-class TestFoodOrder(unittest.IsolatedAsyncioTestCase):
-
-    async def asyncSetUp(self) -> None:
-        self.rbt = Reboot()
-        await self.rbt.start()
-        await self.rbt.up(
-            Application(
-                # The REAL servicers, with their REAL authorizers.
-                servicers=APPLICATION_SERVICERS,
-            ),
-        )
-        self.user_id = "test-user"
-        self.context = await self.rbt.create_external_context_as(
-            name=f"test-{self.id()}",
-            user_id=self.user_id,
-        )
+self.context = await self.rbt.create_external_context_as(
+    name=f"test-{self.id()}",
+    user_id="test-user",
+)
 ```
 
-When a test needs the raw token itself (e.g. to set an
-`Authorization:` header),
-`rbt.make_valid_oauth_access_token(user_id=...)` mints one.
+`rbt.make_valid_oauth_access_token(user_id=...)` mints the raw token
+for an `Authorization:` header. A denial means the test context lacks
+the right identity (fix the test) or the authorizer has a bug (the
+test caught it). Don't weaken the authorizer. A negative auth test uses a second context with a
+different `user_id` and asserts the call aborts
+([`testing-external-context.md`](testing-external-context.md)).
 
-If a call is denied under the real authorizer, either the context is
-missing the right identity (fix the test, see below), or the
-authorizer has a bug — which is exactly what the test just caught.
-Don't react by weakening the authorizer.
+**Identity wiring.** Leave `oauth=` out of a test's `Application(...)`,
+whatever the app type. `up()` then installs a test OAuth provider, so
+`create_external_context_as` works with no wiring. That provider
+rejects the browser sign-in flow, so tests impersonate instead.
 
-Negative auth tests use a **second** context with a different
-`user_id` and assert that calls from it are aborted. See
-[testing-external-context.md](testing-external-context.md) for
-asserting on aborts.
+- If the app has a production `token_verifier=`, keep it. Impersonation
+  tokens verify first, and a bearer that a test builds by hand still
+  flows through the app's verifier.
+- If the app needs no identity (no `User` type, no identity rules), a
+  plain `create_external_context(name=...)` is fine.
+- To test an OAuth sign-in flow itself, pass the provider explicitly:
+  `oauth=OAuth(provider=OAuthProviderForTest(<provider>))`, with
+  `OAuthProviderForTest` from `reboot.aio.tests` and `OAuth` from
+  `reboot.aio.auth.oauth`. Any `OAuth(...)` you pass needs
+  `allowed_origins=` (`[]` for backend-only), because the harness is
+  not `rbt dev run`.
 
-## Identity Wiring in Tests
-
-Omit `oauth=` in a test's `Application(...)`, whatever the app type:
-`up()` always backs the application under test with a test OAuth
-provider, so `await rbt.create_external_context_as(name, user_id)`
-works with no identity wiring at all. That provider rejects the
-browser sign-in flow itself — tests impersonate instead of signing
-in.
-
-- **App with a production `token_verifier=`** (e.g. a web app
-  verifying an external IdP's tokens): keep the `token_verifier=`
-  exactly as in production. The test harness's OAuth server verifies
-  the impersonation tokens `create_external_context_as` mints,
-  regardless of the app's own `token_verifier=`; a custom bearer a
-  test constructs by hand still flows through the app's verifier.
-- **No identity needed** (app has no `User` type and no rules that
-  need identity): a plain `create_external_context(name=...)`
-  without a bearer token is fine.
-- **Tests of an OAuth sign-in flow itself** (e.g. of a custom
-  `OAuthProvider`): the one exception — pass that provider
-  explicitly, via `oauth=OAuth(provider=OAuthProviderForTest( <provider>))` — `OAuthProviderForTest` from `reboot.aio.tests`,
-  `OAuth` from `reboot.aio.auth.oauth`.
-
-## App-Internal-Only Methods
-
-Methods whose rule is `is_app_internal()` are reachable only from
-inside the application (e.g. other servicers), not from external
-callers. To call one from a test, create a context with
-`create_external_context(name=..., app_internal=True)`. Keep that
-context separate from user contexts: it impersonates the
-_application_, not a user, so don't reuse it for calls that should
-be attributed to a user.
-
-## Auto-Construct Under Auth
-
-If a state type has a real authorizer that gates its constructor —
-typically the case for `User`-shaped front-door types — the framework
-calls `_authenticated` to create the state for an authenticated user
-whenever a token is minted for them. `create_external_context_as(...)`
-and `make_valid_oauth_access_token(...)` mint a token, so they
-construct the `User` as a side effect and most tests need no manual
-setup. To construct the state for a user no context was created for,
-call `_authenticated` directly with an app-internal context:
+**Auto-construct under auth.** Minting a token
+(`create_external_context_as`, `make_valid_oauth_access_token`) calls
+`_authenticated`, which constructs the user's `User`-shaped state. If no token was minted,
+the first call into `User.ref(user_id)` aborts as unconstructed. To
+construct one for a user with no context, or to deliver claims to
+`set_claims`:
 
 ```python
 await UserServicer._authenticated(
     self.rbt.create_external_context(name="internal", app_internal=True),
     state_id=self.user_id,
 )
-```
-
-Symptom if you forget: the first call into `User.ref(self.user_id)`
-aborts because the state was never constructed.
-
-To exercise a servicer's `set_claims`, deliver identity claims the
-way a real sign-in does — pass `claims=` to
-`make_valid_oauth_access_token` (or to `_authenticated` directly):
-
-```python
 token = await self.rbt.make_valid_oauth_access_token(
-    user_id=self.user_id,
-    claims={"email": "alice@example.com"},
+    user_id=self.user_id, claims={"email": "alice@example.com"},
 )
 ```
 
-## Last Resort: Permissive Authorizers
-
-It is possible to subclass a servicer and override `authorizer()` to
-`allow()` for the test suite only. **Don't reach for this** — it
-tests a different application: the one with no authorization. With
-impersonation (above) just as easy to set up, the legitimate uses
-are narrow, e.g. exercising the pure behavior of a state type whose
-authorization rules are themselves covered by other tests. If you do
-use it, say why in a comment, and keep at least one test that runs
-the real authorizers.
-
-Subclassing a servicer to mock **non-auth** behavior (e.g. replacing
-a method that calls an external service) is fine — see
-[testing-external-context.md](testing-external-context.md). The line
-is `authorizer()`: overriding it discards the very code the tests
-exist to protect.
-
-## Use a Unique Actor ID per Test
-
-Each test should pick its own actor IDs (e.g.
-`f"test-room-{self.id()}"`, or just embed `self.id()` in the
-external-context `name`). The harness is fresh per test, but using
-`self.id()` keeps trace output identifiable.
-
-## Tests Are Real End-to-End
-
-The harness exercises the full RPC path — not Servicer instances
-directly. That means the same context-type rules, error semantics,
-and serialization apply. If a test passes, the wiring is correct.
-This is exactly why "write tests for each user story before
-handing the app off" is in the `mcp-ui` and `web-app` build
-flows: the tests catch contract bugs that a manual click-through
-won't surface for several minutes.
-
-## Asserting a Typed Error — and Keeping `mypy` Happy
-
-A method that declares `errors=[QuotaExceededError, ...]` raises
-`<Type>.<Method>Aborted` whose `.error` is the typed error. Two
-things trip people up:
-
-1. The generated `Aborted` type is per-method:
-   `TaskList.AddTaskAborted`, not a bare `Aborted`.
-2. `.error` is typed as a **union** of your declared errors plus
-   every framework error (`Cancelled`, `PermissionDenied`,
-   `Unknown`, …). `mypy` therefore rejects `error.limit` with
-   `Item "PermissionDenied" of "QuotaExceededError | Cancelled | ..." has no attribute "limit"` until you narrow it.
+**Assert a typed error, and narrow it for `mypy`.** The `Aborted` type
+is per method (`TaskList.AddTaskAborted`). Its `.error` is a union of
+your declared errors and every framework error, so narrow it with
+`assert isinstance`. `assertIsInstance` checks at runtime but does not
+narrow for `mypy`.
 
 ```python
 with self.assertRaises(TaskList.AddTaskAborted) as caught:
     await TaskList.ref(list_id).add_task(alice, title="one too many")
-
 error = caught.exception.error
 assert isinstance(error, QuotaExceededError)  # Narrows the union.
 self.assertEqual(error.limit, 10)
 ```
 
-`unittest`'s `assertIsInstance` checks at runtime but does **not**
-narrow for `mypy`; a plain `assert isinstance(...)` does both. Use
-the `assert` form, or pair the two.
-
-## Racing Two Mutations in One Test
-
-A concurrency test issues both calls at once and asserts exactly one
-survives. Two rules make it work:
-
-- **One external context per concurrent caller.** Contexts are not
-  safe to use from two places at once, and a `ref()` is bound to
-  the context that first used it (`MixedContextsError`). Create a
-  second context for the same user id when a single user races
-  themselves from two sessions.
-- **Gather with `return_exceptions=True`**, then partition — the
-  loser raises, and letting `gather` propagate it would hide the
-  winner.
-
-- **Set up a state where exactly one call can succeed.** Two
-  concurrent calls that are both individually legal both succeed —
-  that tests nothing. The test needs a rule that only one of them
-  can satisfy: the last slot under a quota, the last item in stock,
-  a balance that covers one of the two transfers.
+**Race two mutations.** Use one external context per concurrent
+caller, and a second context for the same user id when a user races
+themselves. Set up a state where exactly one call can succeed (the
+last slot under a quota). Gather with `return_exceptions=True` and
+partition the results. Then **assert the invariant**, not just the
+exception:
 
 ```python
-# Precondition: the rule allows 10 open tasks, and 9 already exist,
-# so exactly one of the two racing calls below can be allowed.
-for i in range(9):
+for i in range(9):  # quota is 10; exactly one racer can win
     await TaskList.ref(list_a).add_task(self.alice, title=f"t{i}")
-
 alice2 = await self.rbt.create_external_context_as(
     name=f"alice2-{self.id()}", user_id=ALICE,
 )
@@ -335,19 +186,78 @@ results = await asyncio.gather(
 failures = [r for r in results if isinstance(r, BaseException)]
 self.assertEqual(len(results) - len(failures), 1)
 self.assertIsInstance(failures[0], TaskList.AddTaskAborted)
-
-# And the invariant actually held — not just "one call raised".
 profile = await User.ref(ALICE).profile(self.alice)
 self.assertEqual(profile.open_task_count, 10)
 ```
 
-Assert the invariant, not only the exception. A test that checks
-"one of them failed" passes even if the winner corrupted the
-counter on the way through.
+"Exactly one wins" holds only if the invariant goes through one actor,
+or one transaction covering every actor involved.
 
-Reboot serializes writers on the same actor and rolls transactions
-back all-or-nothing, so routing the shared invariant (a counter, a
-quota, a balance) through **one** actor is what makes "exactly one
-wins" true. If the invariant is spread across two actors with no
-transaction covering both, the race is genuinely lossy and no test
-setup will fix it.
+## Never
+
+- **Calling servicer instances directly** (`ChatRoomServicer().send(...)`).
+  There is no identity, context, persistence or authorization, so it
+  tests nothing.
+- **Overriding `authorizer()` to `allow()` for the suite.** That tests
+  a different application. The legitimate use is narrow: pure
+  behaviour of a type whose rules are covered by other tests. Say why
+  in a comment, and keep at least one test on the real authorizers.
+  Subclassing to mock *non-auth* behaviour is fine, such as an external
+  call or the clock. Route every wall-clock read through one
+  module-level `_now()` and patch that.
+- **Reusing a context after asserting a denial.** A `PermissionDenied`
+  is an undeclared abort, so the context is now uncertain, and the
+  next mutation from it raises `IdempotencyUncertainError`. Use a
+  throwaway context for each call expected to be denied (student-sor,
+  1.5.0).
+- **Holding a `ref()` across two contexts**, even serially. A
+  `WeakReference` is bound to the first context that uses it. Hold ids,
+  and call `Type.ref(id)` inline for each call.
+- **Reusing actor ids across tests.** Embed `self.id()` in actor ids
+  and context names. The harness is fresh per test, but this keeps
+  traces identifiable.
+
+## Limits
+
+- **A failing `initialize` makes `up()` hang**, because it is retried
+  forever. Pytest captures the retry warnings, so the run looks hung.
+  Rerun with `pytest -s` ([`lifecycle-dev-loop.md`](lifecycle-dev-loop.md)).
+- A servicer missing from `servicers=` is not caught at `up()`. The
+  application starts, and the first call to that type fails with
+  `Method not found!`.
+- Effect validation is **on** in the harness by default. It re-runs
+  writer and transaction bodies, so mutation-heavy tests pay roughly
+  double, and call counters are inflated. Turn it off only for counting
+  or benchmarking:
+  `rbt.up(..., effect_validation=EffectValidation.DISABLED)`, with
+  `EffectValidation` from `reboot.aio.contexts`.
+- Parallel harness runs (`pytest -n auto`/`-n4`) have hung silently,
+  at zero CPU with no output (reboot-crm, 1.6.0, cause unexplained).
+  Give each run a timeout. Fall back to `-n0`.
+
+## Scales as
+
+- Each test boots and tears down a runtime, about 2 s even with
+  nothing seeded. A full production seed per test can add about 30 s.
+  Size the fixture to the assertion ([`lifecycle-seeding.md`](lifecycle-seeding.md)).
+- Benchmark in the harness, before and after in the same process, with
+  effect validation disabled. Check machine load first, and distrust a
+  single sample (theater-chain, 1.4.1).
+
+## Errors you will see
+
+| Error text (stable prefix) | Meaning | Fix |
+| --- | --- | --- |
+| `StateNotConstructed { requires_constructor: true }` | The test reached an actor that production's `initialize` constructs | Pass `initialize=`, or construct it in the fixture |
+| `aborted with 'PermissionDenied': You are not authorized to call` | The harness enforces real authorizers, or a user context called an internal method | Impersonate with `create_external_context_as`, or use `app_internal=True` for internal calls |
+| `StatusCode.UNIMPLEMENTED details = "Method not found!"` | The type's servicer is missing from this harness's `servicers=` | Register it, ideally from a shared registry |
+| `IdempotencyUncertainError: Because we don't know if the mutation` | The context was reused after a denied or failed mutation | Use a fresh context for each expected failure |
+| `has previously been used by a different` (`MixedContextsError`) | One `ref()` was used with two contexts | `Type.ref(id)` per call |
+| `` `OAuth` requires `allowed_origins=[...]` to be set explicitly in production `` | A test passed `OAuth(...)` with no `allowed_origins` | Omit `oauth=`, or pass `allowed_origins=[]` |
+| `ValueError: This application is already up` | `up()` was called twice | `await rbt.down()` first, and see [`testing-failure-recovery.md`](testing-failure-recovery.md) |
+
+## See also
+
+- [`testing-features.md`](testing-features.md): where behaviour is specified
+- [`lifecycle-seeding.md`](lifecycle-seeding.md): test-sized parameterised seeds
+- [`lifecycle-dev-loop.md`](lifecycle-dev-loop.md): debugging hangs and silent runs

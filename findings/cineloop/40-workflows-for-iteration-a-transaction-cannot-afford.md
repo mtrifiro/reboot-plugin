@@ -11,8 +11,8 @@ names:
 tags: [cost, pattern]
 cluster: "D"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/servicer-transaction.md § Never; python/references/patterns-load-and-benchmarking.md § Never; python/references/servicer-workflow-declare.md § Scales as"
 ---
 
 # Workflows are for iteration a transaction cannot afford (Reset All over 48 showings)
