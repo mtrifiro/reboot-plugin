@@ -96,3 +96,28 @@ testing 72, operations 66, cost 60, contradiction 50.
   against the same README; borderline calls (framework vs plugin, primer
   vs plugin) are noted in the import reports and worth a human pass.
 - 34 plugin items have `still_applies: unknown`.
+
+---
+
+# After Phase 1 (2026-10-04)
+
+| Measure | Baseline | After Phase 1 |
+| --- | ---: | ---: |
+| References in the template | 0 / 64 | 25 / 77 |
+| mcp-ui minimal path | 48,306 | 50,685 (+2,379) |
+| mcp-ui, every listed reference | 65,444 | 62,131 (−3,313) |
+| web-app minimal path | 37,127 | 39,543 (+2,416) |
+| Open plugin findings (distinct gaps) | 213 (163) | 79 distinct |
+| Findings resolved | 1 | 140 |
+| CLI / symbol drift | 0 / 3 defects | 0 / 3 defects (unchanged; Phase 0 items) |
+
+The minimal path grew. Phase 1 adds the facts the findings showed were
+missing (Never / Limits / Errors rows), and the always-read references
+it touched grew to hold them (`rpc-refs` 418→1,080,
+`servicer-transaction` 887→1,285, `react-generated-client` 699→1,506,
+`lifecycle-initialize-hook` 544→1,423). `state-collections` shrank
+2,440→1,489. The 8,106-word workflow reference became a 355-word router
+plus six parts read on demand, which is why the "every listed" total
+fell. The proposal expects the minimal path to come down in Phase 3
+(one build spine instead of two half-copied builders) and Phase 2 (each
+reference in exactly one step), not here.
