@@ -302,6 +302,17 @@ def main() -> int:
                 path.write_text(after, encoding="utf-8")
 
     errors, warnings = check_invariants(refs, LISTED)
+    # A file marked `always` must appear in an `always` region for each of
+    # its front doors, or no build would ever be told to read it.
+    always_hosts = set()
+    for path in sorted(SKILLS.glob("*/SKILL.md")):
+        for m in BLOCK.finditer(path.read_text(encoding="utf-8")):
+            if m.group("kind") == "always":
+                always_hosts.add(parse_args(m.group("args")).get("front-door"))
+    for fd in FRONT_DOORS:
+        if always_list(refs, fd) and fd not in always_hosts:
+            errors.append(f"{fd}: references are marked always but no SKILL.md has an "
+                          f"'always front-door={fd}' region to list them")
     for e in sorted(set(DUPLICATE_ERRORS)):
         warnings.append(f"error text in more than one file's table: {e[:80]}")
     for e in errors:

@@ -186,11 +186,6 @@ by tools/gen-index.py. Edit the frontmatter, not the lists. -->
 > [mcp-ui/references/auth-oauth-providers.md](../mcp-ui/references/auth-oauth-providers.md),
 > which is frontend-neutral: read it when you pick a real provider.
 
-**Before any code** (every build):
-
-<!-- generated:start always front-door=web-app -->
-<!-- generated:end -->
-
 **Before the API definition:**
 
 <!-- generated:start reading-list front-door=web-app step=api -->

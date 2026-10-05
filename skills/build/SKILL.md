@@ -195,7 +195,7 @@ fails, say so in a sentence and keep building.
 
 ### Step 1 — API definition
 
-Read "Before any code" and "Before the API definition". Name the project
+Read "Before the API definition". Name the project
 once, in the design: kebab-case `<project>` (`todo-list`) and snake_case
 `<app>` (`todo_list`), the API package and module; `<app>` also names
 the `.mypy.ini` ignore stanza (`[mypy-<app>.v1.<app>_rbt]`), imports and

@@ -268,11 +268,6 @@ range), never a whole generated file.
 by tools/gen-index.py. Edit the frontmatter, not the lists. MCP UIs
 and Web Apps read their builder skill's lists instead. -->
 
-### Before any code
-
-<!-- generated:start always front-door=backend-only -->
-<!-- generated:end -->
-
 ### Defining the API
 
 <!-- generated:start reading-list front-door=backend-only step=api -->

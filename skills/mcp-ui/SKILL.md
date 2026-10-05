@@ -212,11 +212,6 @@ by tools/gen-index.py. Edit the frontmatter, not the lists. -->
 > [`references/react-scaffolding.md`](references/react-scaffolding.md)
 > and [`references/react-app-tsx.md`](references/react-app-tsx.md).
 
-**Before any code** (every build):
-
-<!-- generated:start always front-door=mcp-ui -->
-<!-- generated:end -->
-
 **Before the API definition:**
 
 <!-- generated:start reading-list front-door=mcp-ui step=api -->
