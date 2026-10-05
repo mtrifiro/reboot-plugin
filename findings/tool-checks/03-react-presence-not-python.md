@@ -10,8 +10,8 @@ names:
 tags: [version-drift, frontend]
 cluster: "A"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/stdlib-presence.md § Do this"
 ---
 
 # `stdlib-presence.md` gives the React hooks a Python-style module path

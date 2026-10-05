@@ -10,8 +10,8 @@ names:
 tags: [operations, error-text]
 cluster: "F"
 still_applies: unknown
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "dashboard/SKILL.md § Known issues"
 ---
 
 # The dashboard's call-graph analysis is stale after a restart, and blames the wrong thing

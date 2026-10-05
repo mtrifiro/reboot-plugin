@@ -7,8 +7,10 @@ allowed-tools: Bash, Read, Write, Glob, Grep, Edit
 
 # app — Build a Reboot Application
 
-Decide which kind of Reboot application the user wants to build and
-defer to the matching skill.
+Decide which kind of Reboot application the user wants to build — its
+**front door** — then build it with the shared
+[`build` skill](../build/SKILL.md) together with the matching
+front-door skill (`mcp-ui`, `web-app`, or both).
 
 ## Routing
 
@@ -88,20 +90,28 @@ chat-y", **ask**.
 
 1. **Verbatim MCP UI trigger present** → say one sentence
    ("Building this as a Reboot MCP UI."), then load the
-   [`mcp-ui` skill](../mcp-ui/SKILL.md) and follow it from the
-   top, with the user's description as input.
+   [`build` skill](../build/SKILL.md) and the
+   [`mcp-ui` skill](../mcp-ui/SKILL.md), and follow `build` from the
+   top with the user's description as input, taking the `mcp-ui:`
+   branches and `mcp-ui`'s reading lists.
 2. **Verbatim web-app trigger present** → say one sentence
    ("Building this as a Reboot Web App."), then load the
-   [`web-app` skill](../web-app/SKILL.md) and follow it from the
-   top, with the user's description as input.
+   [`build` skill](../build/SKILL.md) and the
+   [`web-app` skill](../web-app/SKILL.md), and follow `build` from
+   the top with the user's description as input, taking the
+   `web-app:` branches and `web-app`'s reading lists.
 3. **Both triggers present, or explicit "I want both"** → say one
    sentence ("Building this as a dual-frontend Reboot app — both
    MCP and standalone web."), then load the
+   [`build` skill](../build/SKILL.md), the
    [`mcp-ui` skill](../mcp-ui/SKILL.md) _and_ the
-   [`web-app` skill](../web-app/SKILL.md), and follow them
-   together. The backend `Application(oauth=...)` is configured
-   once and serves both frontends; a single `User` actor per
-   upstream identity is shared.
+   [`web-app` skill](../web-app/SKILL.md), and follow `build` taking
+   both branches at each step. The backend `Application(oauth=...)` is
+   configured once and serves both frontends; a single `User` actor
+   per upstream identity is shared. A user signed in on one frontend
+   is signed in on both: the OAuth server's `/authorize`
+   short-circuits when the browser already carries a session cookie,
+   and `/callback` sets that cookie on every flow.
 
 4. **Otherwise (default)** → **ask the user** the question below
    (present the options and wait for their answer). This is
@@ -121,9 +131,9 @@ chat-y", **ask**.
    ```
 
    Then route on the answer per steps 1–3. **"Both" loads both
-   skills**: `mcp-ui` for the MCP-specific additions and
-   `web-app` for the standalone browser frontend, layered on the
-   shared `oauth=...` configured in the backend.
+   front-door skills** beside `build`: `mcp-ui` for the MCP-specific
+   additions and `web-app` for the standalone browser frontend,
+   layered on the shared `oauth=...` configured in the backend.
 
    > **Critical — this step is non-skippable, including in "auto" /
    > "autonomous" / "don't ask" modes.** A user-level preference to
@@ -180,11 +190,10 @@ chat-y", **ask**.
 
 Whichever route, each capability of the app is agreed on in plain
 English and written down as a `@wip` feature file before its API
-exists, per the [`feature` skill](../feature/SKILL.md); the build
-flows of both routes start there.
+exists, per the [`feature` skill](../feature/SKILL.md); the `build`
+flow starts there.
 
-Both `mcp-ui` and `web-app` layer on top of the [`python`
-skill](../python/SKILL.md) for Reboot backend mechanics. You don't need
-to load `python` here — those skills load it themselves. A
-dual-frontend app loads both, but they share a single `python`
-layer underneath, so reference files aren't double-loaded.
+The `python` skill's references hold the Reboot backend mechanics;
+the front-door skills' reading lists name the ones each build step
+needs, so don't load `python/SKILL.md` itself for an MCP UI or Web
+App. A dual-frontend app reads both lists, but each reference once.

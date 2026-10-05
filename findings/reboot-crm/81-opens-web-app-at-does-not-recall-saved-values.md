@@ -10,8 +10,8 @@ names:
 tags: [testing, frontend]
 cluster: "4.1"
 still_applies: unknown
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/testing-web-app.md § Never"
 ---
 
 # opens the web app at takes its path as written, while every other web step recalls saved values

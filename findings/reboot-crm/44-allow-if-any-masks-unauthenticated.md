@@ -11,8 +11,8 @@ names:
 tags: [auth, contradiction, error-text]
 cluster: "4.1"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/auth-allow-if.md § Never; python/references/servicer-authorizer.md § Never"
 ---
 
 # allow_if(any=[is_app_internal, has_verified_token]) reports PermissionDenied to anonymous callers

@@ -13,8 +13,8 @@ tags: [contradiction, pattern, negative-space]
 cluster: "8.4"
 duplicate_of: theater-chain-01
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/servicer-writer.md § Limits; python/references/patterns-time-and-randomness.md § Do this"
 ---
 
 # Persisting wall-clock values from writers/transactions passed effect validation; the plugin says it shouldn't

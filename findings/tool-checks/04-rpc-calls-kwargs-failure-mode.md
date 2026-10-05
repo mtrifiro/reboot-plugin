@@ -10,8 +10,8 @@ names:
 tags: [contradiction]
 cluster: "4.1"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/rpc-calls.md § Never"
 ---
 
 # How a Request-wrapper call fails is stated two ways

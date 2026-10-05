@@ -2,8 +2,8 @@
 title: Track Online Subscribers with `Presence`
 impact: MEDIUM
 impactDescription: Connection-aware UIs need a durable presence model; rolling your own duplicates this
-tags: stdlib, Presence, Subscriber, MousePosition, online, connected
-summary: "`Presence` registry and `Subscriber` connection tracking (plus `MousePosition`) for who-is-online UIs; registering the servicers, the connection lifecycle, React hooks in `reboot.std.react.presence`."
+tags: stdlib, Presence, Subscriber, MousePosition, online, connected, usePresenceContext, MouseTracker
+summary: "`Presence` registry and `Subscriber` connection tracking (plus `MousePosition`) for who-is-online UIs: register `presence.servicers()`; in React wrap the tree in `<Presence>` from `@reboot-dev/reboot-std-react/presence`."
 step: servicer
 applies: [mcp-ui, web-app, backend-only]
 always: false
@@ -12,57 +12,25 @@ verified: 1.6.0
 docs: ""
 ---
 
-## Track Online Subscribers with `Presence`
+# Track Online Subscribers with `Presence`
 
-> **Critical:** `presence.servicers()` returns three Servicers
-> (`PresenceServicer, SubscriberServicer, MousePositionServicer`).
-> Connection lifecycle uses a long-lived `Subscriber.connect` reader
-> RPC plus a `wait_for_disconnect` workflow that fires when the RPC
-> is cancelled — don't roll your own ping/pong.
+## When you are here
 
-The `reboot.std.presence` package provides three cooperating servicers
-for tracking which subscribers (e.g. browser tabs) are currently
-connected to your application:
+You need a who-is-online list (participants in a room, tabs on a
+document) or collaborative cursors. The stdlib ships three cooperating
+types for this, all importable from `reboot.std.presence.v1.presence`:
 
-- **`Subscriber`** — represents one user/tab. Tracks connection toggle
-  count.
-- **`Presence`** — registry of currently-present subscribers for some
+- **`Subscriber`** — one user/tab; counts live connections (`toggles`).
+- **`Presence`** — the set of currently present subscriber IDs for one
   scope (e.g. a chat room).
-- **`MousePosition`** — optional per-subscriber mouse position, useful
-  for collaborative cursors.
+- **`MousePosition`** — optional per-subscriber cursor position.
 
-### Methods
+Do not hand-roll ping/pong: connection lifetime is a long-lived
+`Subscriber.connect` reader whose cancellation the framework observes.
 
-`Subscriber` (`reboot.std.presence.subscriber.v1.subscriber`):
+## Do this
 
-| Method                | Type     | Notes                                               |
-| --------------------- | -------- | --------------------------------------------------- |
-| `create`              | writer   | construct                                           |
-| `connect`             | reader   | long-lived RPC; resolves when client disconnects    |
-| `toggle`              | writer   | bump on connect; schedules `wait_for_disconnect`    |
-| `status`              | reader   | currently-connected?                                |
-| `wait_for_disconnect` | workflow | observes `connect` cancellation, decrements toggles |
-
-`Presence` (`reboot.std.presence.v1.presence`):
-
-| Method      | Type     | Notes                                               |
-| ----------- | -------- | --------------------------------------------------- |
-| `subscribe` | writer   | mark a subscriber as present in this presence scope |
-| `list`      | reader   | current `subscriber_ids`                            |
-| `watch`     | workflow | auto-removes a subscriber when it disconnects       |
-
-`MousePosition`
-(`reboot.std.presence.mouse_tracker.v1.mouse_position`):
-
-| Method     | Type                               |
-| ---------- | ---------------------------------- |
-| `update`   | writer (`left: int32, top: int32`) |
-| `position` | reader                             |
-
-### Register the Servicers
-
-`presence.servicers()` returns
-`[PresenceServicer, SubscriberServicer, MousePositionServicer]`:
+### Register the servicers
 
 ```python
 from reboot.std.presence.v1 import presence
@@ -74,32 +42,135 @@ async def main():
     ).run()
 ```
 
-### Connection Lifecycle
+`presence.servicers()` returns
+`[PresenceServicer, SubscriberServicer, MousePositionServicer]`. There
+is no `presence_library()` at 1.6.0.
 
-The intended dance, per the type's docs:
+### Methods (1.6.0 proto)
 
-1. Client `Subscriber.create(context, subscriber_id)` — once.
-2. Client opens a long-lived `Subscriber.ref(id).connect(context)`
-   reader RPC; this stays open as long as the client is connected.
-3. Client `Subscriber.ref(id).toggle(context)` to mark itself as live;
-   this schedules the `wait_for_disconnect` workflow that watches the
-   `connect` call.
-4. App-level scope: `Presence.ref(scope_id).subscribe(context, subscriber_id=...)` — also schedules `Presence.watch(...)` which
-   auto-cleans on disconnect.
+| Type | Method | Kind | Request fields |
+| --- | --- | --- | --- |
+| `Subscriber` | `create` | writer | — |
+| `Subscriber` | `connect` | reader | `nonce` — long-lived; returns only when cancelled |
+| `Subscriber` | `toggle` | writer | `nonce` — bumps `toggles`, schedules `wait_for_disconnect` |
+| `Subscriber` | `status` | reader | — → `present` (`toggles > 0`) |
+| `Subscriber` | `wait_for_disconnect` | workflow | `nonce` — waits for `connect` to end, then decrements `toggles` |
+| `Presence` | `create` | writer | — |
+| `Presence` | `subscribe` | writer | `subscriber_id` — adds it, schedules `watch` |
+| `Presence` | `list` | reader | — → `subscriber_ids` |
+| `Presence` | `watch` | workflow | `subscriber_id` — removes it once `status` is no longer present |
+| `MousePosition` | `update` | writer | `left`, `top` (int32) |
+| `MousePosition` | `position` | reader | — → `left`, `top` |
 
-When the client closes the tab, the `connect` RPC is cancelled. The
-`wait_for_disconnect` workflow notices and decrements `toggles`;
-`Presence.watch` notices and removes the subscriber from the present
-list.
+### Connection lifecycle
 
-### React Hooks Live in `reboot.std.react.presence`
+The order the 1.6.0 React component uses (and any client must follow):
 
-For browser-side integration, `reboot.std.react.presence` provides React
-hooks that wrap this protocol. Server-side Python code should use the
-servicer-level API above; client-side TS uses the React hook.
+1. `Subscriber.ref(subscriber_id).create(context)` — once; `connect`
+   is a reader and needs the actor to exist.
+2. Pick a fresh `nonce` (a UUID) and open
+   `Subscriber.ref(subscriber_id).connect(context, nonce=nonce)`. It
+   stays open while the client is connected.
+3. Concurrently, `Subscriber.ref(subscriber_id).toggle(context, nonce=nonce)`.
+   If `connect` hasn't registered yet it aborts `NotFound`; retry.
+4. `Presence.ref(scope_id).subscribe(context, subscriber_id=subscriber_id)`.
 
-### Building on Top
+When the client goes away the `connect` call is cancelled;
+`wait_for_disconnect` decrements `toggles` and `Presence.watch` removes
+the subscriber from `subscriber_ids`. To reconnect, repeat from step 2
+with a new nonce.
 
-Treat the presence servicers as a foundation: your app's "channel" or
-"room" actor calls `Presence.ref(channel_id).subscribe(context, subscriber_id=...)` and `Presence.ref(channel_id).list(context)` to
-render the participant list.
+### React
+
+`@reboot-dev/reboot-std-react` (npm, 1.6.0) wraps that whole protocol:
+
+```tsx
+import {
+  MouseTracker,
+  Presence,
+  usePresenceContext,
+} from "@reboot-dev/reboot-std-react/presence";
+
+function Room({ roomId, me }: { roomId: string; me: string }) {
+  return (
+    <Presence id={roomId} subscriberId={me}>
+      <Participants />
+    </Presence>
+  );
+}
+
+function Participants() {
+  const { subscriberId, subscriberIds } = usePresenceContext();
+  return <ul>{subscriberIds.map((id) => <li key={id}>{id}</li>)}</ul>;
+}
+```
+
+`<MouseTracker arrow={<Cursor />}>…</MouseTracker>` (inside
+`<Presence>`) publishes this subscriber's cursor and renders everyone
+else's. The generated per-type hooks `usePresence`, `useSubscriber`
+and `useMousePosition` are in `@reboot-dev/reboot-std-api` under
+`presence/v1/presence_rbt_react.js`,
+`presence/subscriber/v1/subscriber_rbt_react.js` and
+`presence/mouse_tracker/v1/mouse_position_rbt_react.js`.
+
+### Building on top
+
+Your app's room/channel actor calls
+`Presence.ref(channel_id).subscribe(context, subscriber_id=...)` and
+`Presence.ref(channel_id).list(context)` to render participants.
+Server-side Python uses the servicer API above; browser code uses the
+React package.
+
+## Never
+
+- `from reboot.std.presence.subscriber.v1.subscriber import Subscriber`
+  or `...mouse_tracker.v1.mouse_position` — those are proto package
+  names, not Python modules (`ModuleNotFoundError`). Import all three
+  types from `reboot.std.presence.v1.presence`.
+- `import reboot.std.react.presence` — no such module. The React side
+  is the npm package `@reboot-dev/reboot-std-react/presence`.
+- `Subscriber.create(context, subscriber_id)` — `create` is a plain
+  writer, not a constructor, so there is no class-level form. Use
+  `Subscriber.ref(subscriber_id).create(context)`.
+- Calling `presence.subscribe` before the subscriber has toggled — it
+  aborts `FailedPrecondition` because `status` is not yet present.
+- Reusing a `nonce` for a second `connect` while the first is open —
+  it aborts `AlreadyExists`.
+- Rolling your own heartbeat / ping-pong presence — use this protocol.
+
+## Limits
+
+- All three servicers' `authorizer()` returns `allow()` at 1.6.0: any
+  caller can create, toggle, subscribe or update. Put a stricter check
+  in your own room actor if membership matters.
+- Disconnect tracking lives in process memory (`_disconnect_events` on
+  the servicer class). A `toggle` must reach the same server process
+  that holds its `connect`, which the long-lived call and the generated
+  client arrange.
+- `MousePosition.update` sets `context.sync = False`: positions trade
+  durability for speed and may be lost on a crash.
+- `@reboot-dev/reboot-std-react@1.6.0` imports `uuid` but does not list
+  it in its `dependencies`; install `uuid` in the frontend if the
+  bundler cannot resolve it.
+- The React component retries `connect` with no backoff (a TODO in the
+  1.6.0 source).
+
+## Scales as
+
+- Not measured. Each connected tab holds one open `connect` call and
+  one `wait_for_disconnect` workflow; each `subscribe` adds one `watch`
+  workflow per (scope, subscriber).
+
+## Errors you will see
+
+| Error text (stable prefix) | Meaning | Fix |
+| --- | --- | --- |
+| `ModuleNotFoundError: No module named 'reboot.std.presence.subscriber'` | Imported a proto package path | Import from `reboot.std.presence.v1.presence` |
+| `ModuleNotFoundError: No module named 'reboot.std.react'` | Treated the React hooks as Python | Use `@reboot-dev/reboot-std-react/presence` in TS |
+| `` `usePresenceContext` must be used within `Presence` `` | Hook called outside `<Presence>` | Wrap the tree in `<Presence id=… subscriberId=…>` |
+
+## See also
+
+- [`lifecycle-application-entry.md`](lifecycle-application-entry.md) — where `servicers=` is assembled
+- [`react-generated-client.md`](react-generated-client.md) — how generated React hooks behave
+- [`servicer-workflow-wait.md`](servicer-workflow-wait.md) — the `until` behind `watch`

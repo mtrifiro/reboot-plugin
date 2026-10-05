@@ -11,8 +11,8 @@ names:
 tags: [testing, negative-space, error-text]
 cluster: "4.1"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/testing-features.md § Never"
 ---
 
 # A saved value inside quotes is silently the literal text, and the failure surfaces somewhere else

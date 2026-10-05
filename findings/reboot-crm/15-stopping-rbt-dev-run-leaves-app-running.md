@@ -10,8 +10,8 @@ names:
 tags: [operations, negative-space, error-text]
 cluster: "F"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "run/references/stop-restart-reset.md § Do this"
 ---
 
 # Stopping rbt dev run leaves the application running (orphans keep serving; test harness leaks Envoys too)

@@ -11,8 +11,8 @@ names:
 tags: [operations, error-text]
 cluster: "F"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "run/references/stop-restart-reset.md § Reset dev state (expunge)"
 ---
 
 # Dev-state hygiene: expunge incompatible dev state; do not race two dev runs

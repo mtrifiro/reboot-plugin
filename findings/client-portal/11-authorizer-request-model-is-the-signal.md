@@ -11,8 +11,8 @@ names:
 tags: [auth, negative-space]
 cluster: "4.1"
 still_applies: unknown
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/auth-custom-predicates.md § Limits"
 ---
 
 # Authorizers: the request model is the signal (fail closed, request=None lands on the member path)

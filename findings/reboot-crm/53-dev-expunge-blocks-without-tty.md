@@ -12,8 +12,8 @@ names:
 tags: [operations, error-text]
 cluster: "F"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/lifecycle-rbtrc.md § Never; run/references/stop-restart-reset.md § Reset dev state (expunge)"
 ---
 
 # rbt dev expunge blocks forever without a tty

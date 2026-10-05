@@ -11,8 +11,8 @@ names:
 tags: [testing, scaffold, auth, error-text]
 cluster: "B"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/testing-project-setup.md § Errors you will see"
 ---
 
 # OAuth(...) needs allowed_origins in the test harness, but the backend-only fixture template does not show it

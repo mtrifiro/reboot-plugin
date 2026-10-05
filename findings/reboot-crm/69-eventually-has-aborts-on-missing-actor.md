@@ -10,8 +10,8 @@ names:
 tags: [testing, error-text]
 cluster: "4.1"
 still_applies: unknown
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/testing-features.md § Limits"
 ---
 
 # eventually has aborts on an actor that does not exist yet

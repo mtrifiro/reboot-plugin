@@ -10,8 +10,8 @@ names:
 tags: [testing]
 cluster: "E"
 still_applies: unknown
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/testing-features.md § Never"
 ---
 
 # Tests found a real bug in my test, not my code (assert against API output, not remembered constants)

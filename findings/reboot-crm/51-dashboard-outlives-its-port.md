@@ -10,8 +10,8 @@ names:
 tags: [operations]
 cluster: "F"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "dashboard/SKILL.md § Known issues"
 ---
 
 # rbt dashboard can outlive its own port

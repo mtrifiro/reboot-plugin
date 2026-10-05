@@ -11,8 +11,8 @@ names:
 tags: [operations, error-text]
 cluster: "4.4"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/lifecycle-reboot-cloud.md § Limits; deploy/SKILL.md § Step 2 — Deploy the backend to Reboot Cloud"
 ---
 
 # rbt cloud up only looks for /var/run/docker.sock, which stock Docker Desktop on macOS does not create

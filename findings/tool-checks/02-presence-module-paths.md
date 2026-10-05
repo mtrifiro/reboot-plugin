@@ -10,8 +10,8 @@ names:
 tags: [version-drift]
 cluster: "A"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/stdlib-presence.md § Never"
 ---
 
 # `stdlib-presence.md` names Python modules that do not exist

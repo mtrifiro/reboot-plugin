@@ -3,7 +3,7 @@ title: Give the Agent Tools with `@agent.tool` and `@agent.tool_plain`
 impact: HIGH
 impactDescription: Tools are how an LLM agent reads and mutates Reboot state; the wrong signature won't receive the `WorkflowContext`
 tags: agent, llm, tools, pydantic-ai, workflow
-summary: "Tools take `WorkflowContext` first and `RunContext` second, or they never see Reboot state; `@agent.tool_plain` for state-free tools; register at construction; tool calls are memoized."
+summary: "Tools take `WorkflowContext` first and `RunContext` second, or they never see Reboot state; `@agent.tool_plain` for state-free tools; tool calls are memoized but run twice under effect validation."
 step: servicer
 applies: [mcp-ui, web-app, backend-only]
 always: false
@@ -12,33 +12,17 @@ verified: 1.6.0
 docs: ""
 ---
 
-## Give the Agent Tools with `@agent.tool` and `@agent.tool_plain`
+# Give the Agent Tools with `@agent.tool` and `@agent.tool_plain`
 
-> **Critical:** an `@agent.tool` function takes a **`WorkflowContext`
-> first** and a pydantic_ai `RunContext[Deps]` **second**, then its
-> own arguments — that is how a tool reaches Reboot actors (call
-> `Service.ref(id).method(context, ...)` with the `WorkflowContext`).
-> Use `@agent.tool_plain` for a pure tool that touches no Reboot
-> state. Every tool call is memoized via `at_least_once`, so a
-> workflow replay returns the cached result instead of re-running
-> the tool.
+## When you are here
 
-Tools let the LLM read and mutate your application's state during a
-run. Register them on a Reboot `Agent` exactly as you would on a
-`pydantic_ai.Agent` — except an `@agent.tool` function gets the
-durable `WorkflowContext` as its **first** parameter.
+You have a Reboot `Agent` (`agent-pydantic-ai.md`) and the model needs
+to read or change application state during a run. Register tools as on
+a `pydantic_ai.Agent`, except that an `@agent.tool` function receives
+the durable `WorkflowContext` as its first parameter. That context is
+how a tool reaches Reboot actors.
 
-**Incorrect (raw pydantic_ai tool signature — no `WorkflowContext`,
-so it cannot call Reboot actors):**
-
-```python
-@agent.tool
-async def get_page(run: RunContext[Deps], page_id: str) -> dict:
-    # No `WorkflowContext` — there is no way to call `Page.ref(...)`.
-    ...
-```
-
-**Correct (`WorkflowContext` first, `RunContext` second):**
+## Do this
 
 ```python
 from pydantic_ai import RunContext
@@ -55,31 +39,24 @@ async def get_page(
     page_id: str,
 ) -> dict:
     """Read a page's title and content."""
-    # The `WorkflowContext` is what lets the tool reach a Reboot
-    # actor — calls flow through the same durable envelope.
+    # The `WorkflowContext` reaches Reboot actors through the same
+    # durable envelope as the rest of the workflow.
     state = await Page.ref(page_id).get(context)
     return {"title": state.title, "content": state.content}
-```
 
-## `@agent.tool_plain` for State-Free Tools
 
-A tool that needs neither a `WorkflowContext` nor a `RunContext`
-(no Reboot actors, no agent deps) uses `@agent.tool_plain`:
-
-```python
 @agent.tool_plain
 async def add(x: int, y: int) -> int:
+    # No Reboot actors, no agent deps: `tool_plain`.
     return x + y
 ```
 
-It still flows through Reboot's memoization envelope — the function
-body just runs unchanged.
+Both decorators accept the parametrized form (`@agent.tool(retries=2)`).
+Agent deps come from `run.deps`.
 
-## Registering Tools at Construction
-
-Tools can also be passed when constructing the agent. `tools=` takes
-plain tool functions; `toolsets=` takes pydantic_ai toolsets
-(including `MCPServer` instances):
+Tools can also be passed at construction: `tools=` takes plain tool
+functions, `toolsets=` takes pydantic_ai toolsets (including
+`MCPServer` instances):
 
 ```python
 agent = Agent(
@@ -90,30 +67,48 @@ agent = Agent(
 )
 ```
 
-Tools registered via `@agent.tool` / `@agent.tool_plain` **after**
-`Agent.wrap(...)` are also picked up — no need to register them on
-the wrapped agent.
+Tools added with `@agent.tool` / `@agent.tool_plain` after
+`Agent.wrap(...)` are picked up too; no need to register them on the
+wrapped agent.
 
-## Tool Calls Are Memoized
+## Never
 
-Like model calls, every tool call is wrapped in `at_least_once`
-(see `servicer-workflow-external.md`). On a workflow replay a
-previously-completed tool returns its **cached** result — the tool
-body does not run again. That covers replay, not effect validation:
-in development and the test harness a tool body runs twice before its
-result is memoized (1.6.0 source; see the effect-validation limit in
-`servicer-workflow-external.md`), so keep it safe to run twice. Two
-more consequences:
+- `async def get_page(run: RunContext[Deps], page_id: str)` under
+  `@agent.tool` — the raw pydantic_ai signature has no
+  `WorkflowContext`, so the tool cannot call `Page.ref(...)`. Put
+  `context: WorkflowContext` first, `RunContext` second.
+- A tool body that is unsafe to run twice (charges a card, sends an
+  email, appends without a key) — in development and the test harness
+  it does run twice; see Limits.
+- Per-run `toolsets=` built from local closures — they cannot pickle
+  and raise `UserError`; define tool functions at module scope.
+- Returning a value that cannot be pickled — the memoized result is
+  pickled.
 
-- A tool's return value must be picklable.
-- A tool that depends on the agent's `deps` should pull them from
-  `run.deps` (the `RunContext`), and any per-run `toolsets=` you
-  pass to `agent.run(...)` must reference module-scope functions —
-  local closures cannot be pickled and raise `UserError`.
+## Limits
 
-## Related
+- Every tool call runs inside `at_least_once` (alias
+  `"Tool call for step #<n>"`), so on a workflow replay a completed
+  tool returns its cached result without running the body.
+- That covers replay, not effect validation. Unlike the agent's model
+  calls, tool calls keep effect validation on (1.6.0 source): under
+  `rbt dev run` and the test harness the body runs twice and the second
+  result is memoized. The tool has no per-call opt-out; keep it
+  idempotent, or make the expensive or side-effecting work its own
+  workflow step outside the tool. The effect-validation rule itself is
+  in `servicer-workflow-external.md`.
 
-- `agent-pydantic-ai.md` — constructing and running the `Agent`.
-- `rpc-calls.md` — calling actor methods (`await ref.method( context, ...)`) from inside a tool.
-- `servicer-workflow-external.md` — the memoization primitive behind
-  every tool call.
+## Scales as
+
+- Not measured. Each tool call is one memoized step; its first
+  execution costs whatever the body does (twice in development).
+
+## Errors you will see
+
+None known.
+
+## See also
+
+- [`agent-pydantic-ai.md`](agent-pydantic-ai.md) — constructing and running the `Agent`
+- [`rpc-calls.md`](rpc-calls.md) — calling actor methods inside a tool
+- [`servicer-workflow-external.md`](servicer-workflow-external.md) — `at_least_once` and effect validation

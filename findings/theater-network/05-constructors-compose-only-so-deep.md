@@ -11,8 +11,8 @@ names:
 tags: [negative-space]
 cluster: "4.1"
 still_applies: unknown
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/servicer-constructor.md § Limits"
 ---
 
 # Constructors compose only so deep

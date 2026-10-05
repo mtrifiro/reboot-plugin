@@ -11,8 +11,8 @@ tags: [contradiction, negative-space]
 cluster: "4.1"
 duplicate_of: showtime-32
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/rpc-constructor-calls.md § Never"
 ---
 
 # rpc-constructor-calls.md says use Service.create for factory-less types, but codegen emits none

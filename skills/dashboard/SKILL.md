@@ -1,6 +1,6 @@
 ---
 name: dashboard
-description: Start the Reboot developer dashboard (`rbt dashboard`) for a project and open it in the browser. Puts the minimum files in place (a `pyproject.toml` depending on `reboot[dev]`, a `.rbtrc`, the API directory), starts the dashboard in a background shell if one is not already serving, and opens its URL once. Use this while BUILDING an app — the dashboard watches the API directory from before anything is running, so the developer watches the API take shape as it is written. Not for running an app; `rbt dev run` manages its dashboard itself once the app exists (see the run skill).
+description: Start the Reboot developer dashboard (`rbt dashboard`) for a project and open it in the browser. Puts the minimum files in place (a `pyproject.toml` depending on `reboot[dev]`, a `.rbtrc`, the API directory), starts the dashboard in a background shell if one is not already serving, and opens its URL once. Use this while BUILDING an app — the dashboard watches the API directory from before anything is running, so the developer watches the API take shape as it is written. Not for running an app (see the run skill). `rbt dev run` does not start a dashboard: it only finds one already serving on `--dashboard-port` (default 9871), so start this one whenever the developer wants the dashboard, before or after the app runs.
 argument-hint: [<project-directory>]
 allowed-tools: Bash, Read, Write, Glob, Grep, Edit
 ---
@@ -28,8 +28,10 @@ and `web-app` skills do, right before the API is written) or when
 the user asks for the dashboard while an app is being built.
 
 > This skill **starts the dashboard**, nothing else. It does not run
-> the application — that is the [run skill](../run/SKILL.md), and
-> `rbt dev run` looks after its own dashboard once the app exists.
+> the application — that is the [run skill](../run/SKILL.md).
+> `rbt dev run` does not start a dashboard; it only finds one
+> already serving on its `--dashboard-port` (default 9871), so this
+> skill is also how to get a dashboard next to a running app.
 > The dashboard is optional: if any step below fails, tell the user
 > the dashboard is not available and carry on with whatever you were
 > building. Do not stop the build to debug it.
@@ -93,13 +95,24 @@ wherever its page is. Probe it:
 curl -sf -o /dev/null --max-time 2 http://127.0.0.1:9871/
 ```
 
-If that succeeds, a dashboard is already up — do not start a second
-one. Surface the URL and stop.
+If that succeeds, a dashboard is up — but check that it is **this
+project's**. With two projects on one machine, 9871 belongs to
+whichever dashboard started first, and nothing warns that you are
+looking at the other project's API (student-sor, 1.5.0). Find the
+dashboard processes and their working directories:
 
-(If port 9871 is held by something that is _not_ this project's
-dashboard — rare — start on another port with `--port=<port>`, and
-remember that a later `rbt dev run` then needs
-`--dashboard-port=<port>` to find it.)
+```sh
+pgrep -fl "rbt dashboard"
+lsof -a -d cwd -p <pid>
+```
+
+If one runs from this project root, surface the URL and stop. If
+not, start this project's on another port with `--port=<port>`; a
+later `rbt dev run` then needs `--dashboard-port=<port>` to find it.
+
+If `pgrep` finds this project's `rbt dashboard` but the probe fails,
+the dashboard has outlived its port (reboot-crm, 1.6.0): stop that
+process and start a fresh one.
 
 ## Step 4 — Start the dashboard
 
@@ -112,6 +125,13 @@ uv run rbt dashboard
 It takes the API directory from the `generate <dir>` line in
 `.rbtrc` (Step 2), spelled relative to the project root — that is how
 file names are shown in the dashboard.
+
+`rbt dashboard` takes only `--config`, `--default-config`,
+`--working-directory` and `--port` (1.6.0). There is no flag to stop
+it opening a browser: `rbt dev run --no-open-dashboard` makes one
+easy to assume, but a guess such as `--no-open-browser` fails with
+`unrecognized arguments` (exit 2), which in a background shell reads
+as the dashboard failing to start.
 
 It prints `Your dashboard is at http://127.0.0.1:9871/`
 immediately and keeps running; wait until the probe from Step 3
@@ -141,3 +161,16 @@ re-open the page yourself on reloads or restarts.
 Then tell the user the dashboard is up and what it is for — e.g.
 "Developer dashboard (watch the API as I build it) at
 http://127.0.0.1:9871/" — and get on with the build.
+
+## Known issues
+
+| Error / symptom | Meaning | Fix |
+| --- | --- | --- |
+| Call Graph shows `0 calls` and "Your application imports generated code that does not exist yet ... Run `rbt generate`" although the generated code exists; one orphaned `node .../langserver.index.js` per analysis | The dashboard's pyright child was orphaned and its shutdown hung (1.5.0). The 1.6.0 source starts pyright in its own process group and kills the group on shutdown, so this should not recur | `pkill -f langserver.index.js`; the graph then publishes |
+| Same banner, status `CODE NOT CHECKED YET`, and the dashboard log shows `RuntimeError: pyright exited` / `WatchCode' failed with SystemAborted` | Pyright ran out of Node heap on a large generated tree; the banner blames the generated code wrongly (reboot-crm, 1.6.0) | Start with `NODE_OPTIONS="--max-old-space-size=12288" uv run rbt dashboard` |
+| "code checked at" an old time, deleted methods still drawn, or "Your API files changed since the generated code was written" right after `rbt generate` | Stale analysis after a dashboard restart (reboot-crm, 1.6.0) | Run `uv run rbt generate` once more |
+| Dashboard log keeps retrying an old app address (`WatchApi` ... `Connection refused`) after an expunge and restart | The dashboard's watch tasks outlived the app they watched (reboot-crm, 1.6.0) | Stop the dashboard, delete `.rbt/dashboard`, start it again |
+| Probe on 9871 succeeds but the page shows another project's API | Port collision: another project's dashboard got 9871 first | Step 3: start this one with `--port=<port>` |
+| Tab shows "live" off; a fresh `rbt dev run` finds no dashboard; `rbt dashboard` processes still running | The dashboard outlived its 9871 listener (reboot-crm, 1.6.0) | Stop it and start a fresh one |
+| Next start fails with `cannot bind ... Address already in use` on 9871 | A killed dashboard left its Envoy holding the port (student-system, 1.5.0) | `lsof -t -iTCP:9871 -sTCP:LISTEN \| xargs kill`, after checking the holder (see the [run skill](../run/SKILL.md) § "Stop, restart, reset") |
+| `rbt: error: unrecognized arguments` | A flag `rbt dashboard` does not take (e.g. `--no-open-browser`, `--api-directory`) | Use only the four flags in Step 4 |

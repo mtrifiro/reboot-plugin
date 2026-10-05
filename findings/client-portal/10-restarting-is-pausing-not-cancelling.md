@@ -11,8 +11,8 @@ names:
 tags: [operations, negative-space]
 cluster: "F"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "run/references/stop-restart-reset.md § Restart"
 ---
 
 # Restarting is pausing, not cancelling

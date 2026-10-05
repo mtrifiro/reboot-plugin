@@ -12,8 +12,8 @@ tags: [operations, negative-space, error-text]
 cluster: "F"
 duplicate_of: reboot-crm-15
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "run/references/stop-restart-reset.md § Do this"
 ---
 
 # Envoy outlives both rbt dev run and rbt dashboard, then blocks the port

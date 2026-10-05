@@ -11,8 +11,8 @@ names:
 tags: [contradiction, auth, negative-space]
 cluster: "4.1"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/auth-allow-if.md § Never; python/references/auth-custom-predicates.md § Never"
 ---
 
 # allow_if does not nest, and the generated authorizer wants a differently-typed rule than the reference describes

@@ -11,8 +11,8 @@ names:
 tags: [scaffold]
 cluster: "B"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/lifecycle-project-setup.md § Do this"
 ---
 
 # gitignore template is chat-app-shaped

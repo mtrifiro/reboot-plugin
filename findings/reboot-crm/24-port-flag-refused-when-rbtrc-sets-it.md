@@ -10,8 +10,8 @@ names:
 tags: [operations, error-text]
 cluster: "F"
 still_applies: unknown
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/lifecycle-rbtrc.md § Limits; run/SKILL.md § Before starting: is the port free?"
 ---
 
 # --port on the command line is refused when .rbtrc sets it

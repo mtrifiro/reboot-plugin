@@ -12,8 +12,8 @@ names:
 tags: [testing, negative-space]
 cluster: "8.4"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/testing-features.md § Never; feature/SKILL.md § Step 4 — Iterate on the scenarios with the user"
 ---
 
 # The feature files run, but the rules they carry mostly do not (a Rule: with no Scenario: stays green)

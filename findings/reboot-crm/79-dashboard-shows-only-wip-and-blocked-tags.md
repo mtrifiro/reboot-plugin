@@ -11,8 +11,8 @@ names:
 tags: [testing, operations]
 cluster: "8.4"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/testing-features.md § Limits"
 ---
 
 # The dashboard marks and filters two tags; a suite's own tags are invisible there

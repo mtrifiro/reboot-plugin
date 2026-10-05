@@ -11,8 +11,8 @@ names:
 tags: [negative-space, error-text, index-gap]
 cluster: "4.1"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/stdlib-queue.md § Never"
 ---
 
 # A stdlib Queue needs no create, unlike an OrderedMap

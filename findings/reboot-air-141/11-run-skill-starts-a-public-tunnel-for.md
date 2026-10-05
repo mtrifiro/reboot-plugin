@@ -10,8 +10,8 @@ names:
 tags: [contradiction, operations]
 cluster: "4.2"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "run/SKILL.md § Tunnel — MCP branch only"
 ---
 
 # run skill starts a public tunnel for Web Apps

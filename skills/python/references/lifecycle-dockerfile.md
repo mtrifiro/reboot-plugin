@@ -11,26 +11,30 @@ verified: 1.6.0
 docs: ""
 ---
 
-## Write a Reboot Cloud Dockerfile
+# Write a Reboot Cloud Dockerfile
 
-> **Critical:** three non-negotiables.
-> (1) Base image is `ghcr.io/reboot-dev/reboot-base:<version>` with
-> `<version>` matching the `reboot==<version>` pin in `pyproject.toml`
-> / `requirements.lock`. (The version literal appears in exactly one
-> place — the canonical Dockerfile below — so `make versions` can
-> rewrite it.)
-> (2) `CMD ["rbt", "serve", "run"]` — never `rbt dev run` in a Cloud
-> image. All production flags live in `.rbtrc`'s `serve run` lines
-> (see [`lifecycle-rbtrc.md`](lifecycle-rbtrc.md)).
-> (3) Layer order is load-bearing: deps → schema + `.rbtrc` →
-> `rbt generate` → (optional) web build → `backend/src/` → `CMD`.
+## When you are here
 
-## Canonical Backend-Only Dockerfile
+You are about to run `rbt cloud up` (or build an image for a
+self-hosted `rbt serve`) and need the project-root `Dockerfile` and
+`.dockerignore`. The deploy commands are in
+[`lifecycle-reboot-cloud.md`](lifecycle-reboot-cloud.md); the `.rbtrc`
+format is in [`lifecycle-rbtrc.md`](lifecycle-rbtrc.md).
 
-For a Reboot Python app that does not bundle a web frontend (the
-backend is the API server; any UI is deployed separately). Matches
-[the `reboot-hello` example](https://github.com/reboot-dev/reboot-hello/blob/main/Dockerfile)
-verbatim:
+## Do this
+
+Three non-negotiables: the base image is
+`ghcr.io/reboot-dev/reboot-base:<version>` with `<version>` equal to the
+`reboot==<version>` pin; `CMD ["rbt", "serve", "run"]` with every
+production flag in `.rbtrc`; and layer order deps → schema + `.rbtrc`
+→ `rbt generate` → (optional) frontend build → `backend/src/` → `CMD`.
+
+### Backend-only
+
+Verbatim from
+[the `reboot-hello` example](https://github.com/reboot-dev/reboot-hello/blob/main/Dockerfile).
+The version literal appears only here, so `make versions` can rewrite
+it:
 
 ```dockerfile
 FROM ghcr.io/reboot-dev/reboot-base:1.6.0
@@ -58,15 +62,10 @@ COPY backend/src/ backend/src/
 CMD ["rbt", "serve", "run"]
 ```
 
-Four blocks: install deps from the lockfile, copy schemas + config and
-run `rbt generate`, copy backend source, then run `rbt serve run` —
-which reads everything else it needs from `.rbtrc`.
+### With a bundled frontend (MCP UIs)
 
-## Adding a Bundled Web Frontend (MCP UIs)
-
-For an MCP or chat-style app where the Reboot backend is also the
-static web server for an embedded UI artifact, add two layers between
-`rbt generate` and the final `COPY backend/src/`:
+When the Reboot backend also serves the embedded UI's static files, add
+two layers:
 
 ```dockerfile
 # After `COPY .rbtrc`, before `RUN rbt generate`:
@@ -83,35 +82,11 @@ RUN cd frontend && npm ci && npm run build
 # Then the existing `COPY backend/src/ backend/src/` and `CMD ...`.
 ```
 
-`COPY frontend/` lands **before** `RUN rbt generate` on purpose: the
-generator writes fresh React bindings into `frontend/api/`, and if `frontend/`
-were copied after, any stale local `frontend/api/` from a previous run
-would clobber the freshly generated copy.
+`COPY frontend/` comes **before** `RUN rbt generate`: the generator
+writes fresh bindings into `frontend/api/`, and copying `frontend/`
+afterwards would clobber them with any stale local copy.
 
-## Why the Layering Matters
-
-Docker rebuilds from the first changed `COPY`/`RUN` downwards. Order
-layers least- to most-frequently-changing:
-
-1. `COPY requirements.lock requirements.txt` + `RUN pip install` —
-   rebuilt only when dependencies change.
-2. `COPY api/` + `COPY .rbtrc` + (for MCP) `COPY frontend/` — rebuilt when
-   the API schema or `.rbtrc` (or web sources) change.
-3. `RUN rbt generate` — runs whenever the previous layer changes.
-4. (For MCP) `RUN cd frontend && npm ci && npm run build` — frontend build.
-5. `COPY backend/src/` — rebuilt on every backend edit.
-6. `CMD ["rbt", "serve", "run"]` — never invalidated.
-
-A change to `backend/src/main.py` should only trigger steps 5 and 6.
-Putting `COPY backend/src/` near the top defeats the cache and makes
-every deploy reinstall dependencies.
-
-## `.rbtrc` Carries the Production Config, Not the Dockerfile
-
-`rbt serve run` reads its flags from `.rbtrc` (see
-[`lifecycle-rbtrc.md`](lifecycle-rbtrc.md)). The Dockerfile's `CMD` is
-exactly `["rbt", "serve", "run"]` with no extra arguments. The
-production lines that need to be in `.rbtrc` for a Cloud deploy:
+### The production lines in `.rbtrc`
 
 ```sh
 # Tell `rbt serve` this is a Python application.
@@ -131,16 +106,11 @@ serve run --application-name=<app>
 serve run --tls=external
 ```
 
-Do not duplicate these on the `CMD` line — splitting truth across
-`.rbtrc` and the Dockerfile makes the next deploy hard to debug.
+### `.dockerignore`
 
-## `.dockerignore`
-
-Keep the build context small and the image clean. Two variants
-matching the two Dockerfile patterns above; both derived from
-[the `reboot-agent-wiki` example's `.dockerignore`](https://github.com/reboot-dev/reboot-agent-wiki/blob/main/.dockerignore).
-
-**Backend-only** (no `frontend/` content makes it into the image):
+Derived from
+[the `reboot-agent-wiki` example](https://github.com/reboot-dev/reboot-agent-wiki/blob/main/.dockerignore).
+Backend-only:
 
 ```gitignore
 # Python runtime caches and venv — rebuilt inside the image.
@@ -173,63 +143,59 @@ web/
 README.md
 ```
 
-**Bundled-web (MCP UI)** — keep `frontend/` sources the in-image
-`npm ci && npm run build` needs, drop everything else under `frontend/`:
+Bundled frontend: the same file, with `web/` replaced by these lines
+so the sources `npm ci && npm run build` needs stay in the context:
 
 ```gitignore
-# Python runtime caches and venv — rebuilt inside the image.
-.venv/
-__pycache__/
-*.py[cod]
-.mypy_cache/
-.pytest_cache/
-
-# Reboot runtime state (dev-only).
-.rbt/
-
 # Generated code — regenerated inside the image.
-backend/api/
 frontend/api/
 
 # Node deps + build output — rebuilt inside the image.
 frontend/node_modules/
 frontend/dist/
-
-# VCS.
-.git/
-.gitignore
-
-# Editor / OS.
-.vscode/
-.idea/
-*.swp
-.DS_Store
-
-# Local-only files.
-README.md
 ```
 
-## Common Gotchas
+## Never
 
-- `CMD ["rbt", "dev", "run"]` in a Cloud image. Dev defaults (no
-  `--tls=external`, dev-mode auth warnings, watcher loops) are wrong
-  for production. Always `serve run`.
-- Base image version drifts from the `reboot==` pin. The base image
-  bakes in a specific `rbt` CLI and runtime — a mismatch surfaces as
-  obscure protocol or codegen errors on first deploy.
-- Running `rbt generate` **before** `COPY frontend/` (for the bundled-web
-  variant). The fresh `frontend/api/` bindings get clobbered by the stale
-  local copy when `frontend/` is finally copied in. Follow the example's
-  order.
-- Putting production flags on the `CMD` line instead of in `.rbtrc`'s
-  `serve run` config. It works, but truth is now split across two
-  files and the next person who edits one of them won't know about
-  the other.
-- Hand-rolling a non-Reboot base image. Re-installing the `rbt` CLI
-  correctly (matching version, correct binary location, system deps)
-  is non-trivial. Use `ghcr.io/reboot-dev/reboot-base:<version>`.
-- Missing `--application-name=<app>` in `.rbtrc`'s `serve run` line.
-  Cloud uses it to identify the app across deploys; without it the
-  first `rbt cloud up` succeeds but state-persistence semantics get
-  surprising (`--name` is the deprecated alias and still warns — see
-  [`lifecycle-rbtrc.md`](lifecycle-rbtrc.md)).
+- **`CMD ["rbt", "dev", "run"]` in a Cloud image** — dev defaults (no
+  `--tls=external`, dev-mode auth, watcher loops) are wrong for
+  production. Always `serve run`.
+- **A base image version different from the `reboot==` pin** — the
+  image bakes in a specific `rbt` CLI and runtime; a mismatch surfaces
+  as obscure protocol or codegen errors on first deploy.
+- **`RUN rbt generate` before `COPY frontend/`** (bundled variant) —
+  the stale local `frontend/api/` overwrites the fresh bindings.
+- **Production flags on the `CMD` line** — it works, but truth is
+  split across two files. `CMD` is exactly `["rbt", "serve", "run"]`.
+- **A hand-rolled non-Reboot base image** — reinstalling the `rbt`
+  CLI correctly (version, binary location, system deps) is
+  non-trivial. Use `reboot-base`.
+- **No `serve run --application-name=<app>`** — Cloud uses it to
+  identify the app across deploys; without it the first `cloud up`
+  works but state persistence gets surprising. (`--name` is the
+  deprecated alias and warns.)
+- **`COPY backend/src/` near the top** — every backend edit then
+  reinstalls dependencies.
+
+## Limits
+
+- Docker rebuilds from the first changed `COPY`/`RUN` down. In the
+  layout above a `backend/src/` edit rebuilds only the last `COPY`
+  and `CMD`; an `api/` or `.rbtrc` edit reruns `rbt generate` and
+  everything after it; a lockfile change reinstalls dependencies.
+
+## Scales as
+
+- Not measured.
+
+## Errors you will see
+
+| Error text (stable prefix) | Meaning | Fix |
+| --- | --- | --- |
+| `Could not find Dockerfile '...'` | `rbt cloud up` looked for `./Dockerfile` (or `--dockerfile=`) and found nothing | Add it at the project root, or pass `--dockerfile=` |
+
+## See also
+
+- [`lifecycle-reboot-cloud.md`](lifecycle-reboot-cloud.md) — `rbt cloud up` and friends
+- [`lifecycle-rbtrc.md`](lifecycle-rbtrc.md) — `serve run` line syntax
+- [`../../deploy/SKILL.md`](../../deploy/SKILL.md) — end-to-end production deploy

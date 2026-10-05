@@ -11,8 +11,8 @@ tags: [operations, error-text]
 cluster: "F"
 duplicate_of: reboot-crm-15
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "run/references/stop-restart-reset.md § Do this"
 ---
 
 # Stopping a Reboot app means more than killing rbt dev run (orphans hold the RocksDB lock)

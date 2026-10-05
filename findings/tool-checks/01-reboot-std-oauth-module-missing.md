@@ -41,3 +41,15 @@ upstream), or the references name where `oauth_library` actually lives.
 
 **Checked at 1.6.0.** Found by `tools/check-symbols.py`. Not verified on
 Linux wheels; check whether this is platform-specific before filing.
+
+**Phase 3 follow-up (2026-10-04).** Also absent from the PyPI
+`manylinux_2_34_x86_64` 1.6.0 wheel (its `RECORD` has no
+`reboot/std/oauth/`; aarch64 not checked), so it is not
+platform-specific. `Application._require_oauth_libraries`
+(`reboot/aio/applications.py:727,984`) imports the module whenever a
+provider sets `store_tokens=True`, so from the source such an app should
+fail at startup with `ModuleNotFoundError` (read, not run). Of the three
+documented ways to call an external API as the user, the two built on
+`OAuthTokenManager` cannot work at 1.6.0; the `Ciphertext` path does.
+The references now say so in Limits / Errors. **Target: file upstream
+as a packaging bug** — the plugin can only document it.

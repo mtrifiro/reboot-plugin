@@ -10,8 +10,8 @@ names:
 tags: [contradiction, error-text, negative-space]
 cluster: "4.1"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/state-scalar-fields.md § Never; python/references/api-pydantic.md § Limits"
 ---
 
 # A model field cannot be bytes, though the reference lists its default; the refusal is an empty message

@@ -2,8 +2,8 @@
 title: Set Up a Reboot Python Project
 impact: CRITICAL
 impactDescription: Project won't build or run without the right files in place
-tags: project-setup, pyproject, python-version, dependencies, layout
-summary: "Canonical layout, `pyproject.toml`, the required `.gitignore` and project-root `.mypy.ini` (without it type-checking is useless), no `__init__.py` anywhere, generated code under `backend/`."
+tags: project-setup, pyproject, python-version, dependencies, layout, gitignore, mypy, template
+summary: "Copy `build/templates/<front-door>/`: layout, `pyproject.toml`, `.gitignore`, `.mypy.ini`. No `__init__.py`; never edit `*_rbt.py`; mypy sees `self.state` as `Any` — use typed locals."
 step: shell
 applies: [mcp-ui, web-app, backend-only]
 always: false
@@ -11,225 +11,149 @@ verified: 1.6.0
 docs: ""
 ---
 
-## Set Up a Reboot Python Project
+# Set Up a Reboot Python Project
 
-> **Critical:** the `api/` directory holds pydantic API definition
-> files (`.py`); generated `*_rbt.py` lives under `backend/api/`.
-> Never hand-edit a generated file. No `__init__.py` anywhere — not
-> in `api/`, not under `backend/`.
+## When you are here
 
-A Reboot Python project has a fixed top-level layout. The CLI (`rbt`) reads
-`.rbtrc` from the project root, `rbt generate` writes generated code into
-`backend/<output>/`, and the application entry point lives in
-`backend/src/main.py`.
+You are creating a Reboot Python project, or checking one's layout,
+dependencies, `.gitignore` or type-check config. The `.rbtrc` format
+is [`lifecycle-rbtrc.md`](lifecycle-rbtrc.md); the test layout and
+`pytest.ini` are [`testing-project-setup.md`](testing-project-setup.md);
+front-door deltas are `mcp-ui/references/project-shell.md` and
+`web-app/references/react-client.md`.
 
-**Incorrect (project missing required files / nonstandard layout):**
+## Do this
 
-```
-my-app/
-  src/
-    server.py        # arbitrary entry point
-  schemas/           # nonstandard API definition location
-    api.py
+Copy the template for the front door; do not retype the files:
+
+```sh
+<plugin>/skills/build/templates/copy.sh <mcp-ui|web-app> . <project> <app> "<Title>"
 ```
 
-**Correct (canonical layout, matches the [`reboot-bank-pydantic`](https://github.com/reboot-dev/reboot-bank-pydantic) example):**
+A backend-only project copies `web-app` and deletes `web/` and the
+`web/` lines of `.rbtrc` and `.gitignore`. The placeholders and every
+file are listed in
+[`build/templates/README.md`](../../build/templates/README.md). The
+layout it produces:
 
 ```
-my-app/
-  .rbtrc                 # required: per-project rbt CLI config
-  .gitignore             # required: see below
-  .mypy.ini              # required: type-check config (see below)
-  pyproject.toml         # required: Python deps
-  api/                   # API definition root (referenced from .rbtrc)
-    <pkg>/v1/<name>.py
+<project>/
+  .python-version .rbtrc .gitignore .mypy.ini pytest.ini pyproject.toml
+  api/<app>/v1/<app>.py          # hand-written pydantic API (`generate api/`)
   backend/
-    api/                 # rbt generate --python output
-    src/
-      main.py            # application entry
-      <name>_servicer.py # one Servicer per state machine
-    tests/
-      <name>_servicer_test.py
+    api/                         # `rbt generate --python` output, git-ignored
+    src/main.py                  # application entry
+    src/servicers/<app>.py       # servicers
+  tests/<capability>.feature, tests/<app>_test.py
+  frontend/ (mcp-ui) or web/ (web-app)
 ```
 
-## `pyproject.toml`
+Why the shell files are shaped the way they are:
 
-Reboot supports Python 3.10+. The only required runtime dependency is
-`reboot`; a development environment always installs the `reboot[dev]`
-extra as well, which is what the tests (`reboot.bdd`) and the
-dashboard's Features page run on. Use `uv` or `pip` — Reboot doesn't
-care.
+- **`pyproject.toml`** — `reboot==1.6.0` is the only runtime
+  dependency; the `dev` group adds `reboot[dev]==1.6.0` (what
+  `reboot.bdd` and the dashboard run on; `rbt dashboard` refuses to
+  start without it, `rbt dev run` warns), `mypy`, `pytest`,
+  `types-protobuf`. `name` and `version` are required (`uv` refuses to
+  sync without them). There is **no `[build-system]` table**: that
+  makes it a virtual `uv` project, so `uv sync` installs the
+  dependencies and the default `dev` group into `.venv` without
+  building the app. An application packaged for `rbt serve` installs
+  plain `reboot`. An LLM provider SDK comes as an extra,
+  `reboot[anthropic]==1.6.0` ([`agent-pydantic-ai.md`](agent-pydantic-ai.md)).
+- **`.gitignore`** — `.rbt/` (dev state), the generated `backend/api/`
+  and React output (`frontend/api/` or `web/src/api/`), `.env`,
+  `*.recordings/`, the venv and caches, `node_modules/` and the
+  frontend build. Each front door's template names its own frontend
+  paths; keep them matching `.rbtrc`'s `generate --react=`. Because
+  generated code is ignored, a fresh clone (and CI) runs
+  `rbt generate` before anything imports or type-checks;
+  `rbt dev run` regenerates on its own.
+- **`.mypy.ini`** — generated modules and servicers have no
+  `__init__.py`, so `mypy_path = tests:backend/src:backend/api:api`
+  plus `explicit_package_bases` is what lets mypy resolve
+  `from <app>.v1.<app>_rbt import ...`. The project-root `api` entry
+  resolves the hand-written API module, and the ignore stanza names
+  only the generated module (`[mypy-<app>.v1.<app>_rbt]`). A blanket
+  `[mypy-<app>.v1.*]` or a missing `api` entry makes every import from
+  the API module `Any` while mypy still says "Success". Add one stanza
+  per API module.
 
-```toml
-[project]
-name = "my-app"
-version = "0.1.0"
-requires-python = ">= 3.10"
-dependencies = [
-    "reboot==1.6.0",
-]
+### Type-check what you write
 
-[dependency-groups]
-dev = [
-    "reboot[dev]==1.6.0",
-    "mypy==1.18.1",
-    "pytest>=7.4.2",
-    "types-protobuf>=4.24.0.20240129",
-]
-```
-
-`reboot[dev]` pins the same version as `reboot`; it adds the packages
-`reboot.bdd` and the dashboard need, and `rbt dashboard` refuses to
-start without it (`rbt dev run` warns). An application packaged for
-`rbt serve` installs plain `reboot` and carries none of it.
-
-An LLM provider SDK for `reboot.agents` also comes as an extra of
-`reboot` (`reboot[anthropic]==1.6.0` in `dependencies`), so it resolves
-at the version that works with the Pydantic AI release `reboot` pins;
-see `agent-pydantic-ai.md`.
-
-`name` and `version` are required — `uv` refuses to sync without them.
-There is **no `[build-system]` table**: that tells `uv` this is a
-virtual (non-package) project — it installs the dependencies into
-`.venv` but never tries to build/install the app itself. `uv sync`
-installs the runtime deps plus the `dev` group (a uv default group)
-in one shot; then `uv run mypy backend/ tests/` and `uv run pytest` use
-that environment.
-
-If an older project still has a `[tool.rye]` table (`dev-dependencies`,
-`virtual = true`, `managed = true`), migrate it to this shape: move the
-dev dependencies into `[dependency-groups].dev` (dropping any `reboot`
-entry duplicated from the runtime deps), delete the `[tool.rye]` table,
-add `name`/`version`, and replace `requirements*.lock` with `uv lock`.
-
-## `.gitignore` — Keep Generated Files and Local State Out of Git (required)
-
-Create a project-root `.gitignore` when scaffolding the project.
-Reboot projects produce artifacts that must never be committed:
-`rbt dev run` persists application state under `.rbt/`, `rbt generate` output is recreated from the API definitions on every run,
-`.env` holds secrets (see `lifecycle-secrets.md`), and running the
-tests records every browser scenario (see `testing-web-app.md`).
-
-```gitignore
-# Reboot dev-server state.
-.rbt/
-
-# Generated code; recreated by `rbt generate`.
-backend/api/
-frontend/api/
-
-# Secrets; see `lifecycle-secrets.md`.
-.env
-
-# Recordings of browser scenarios, made by running the tests.
-*.recordings/
-
-# Python virtual environment and caches.
-.venv/
-__pycache__/
-*.py[cod]
-.mypy_cache/
-.pytest_cache/
-
-# Frontend dependencies and build output (projects with a frontend).
-node_modules/
-frontend/dist/
-```
-
-Because the generated `backend/api/` (and `frontend/api/`) is
-git-ignored, a fresh clone must run `rbt generate` before anything
-imports or type-checks. `rbt dev run` regenerates automatically; CI
-must run `rbt generate` explicitly.
-
-## `.mypy.ini` — Type-Check Config (required)
-
-Reboot generated modules (`backend/api/<pkg>/<v>/<name>_rbt.py`) and
-your servicer code (`backend/src/`) have **no `__init__.py`** —
-`protoc` doesn't emit them — so mypy can't resolve imports like
-`from chat_room.v1.chat_room_rbt import ChatRoom` out of the box. A
-project-root `.mypy.ini` fixes this by adding the source roots to
-`mypy_path` and turning on `explicit_package_bases`. Without it,
-`mypy backend/ tests/` fails with bogus "module not found" errors and the
-type-check is useless. Create it at the project root, substituting
-your API package name for `<pkg>` in the last stanza:
-
-```ini
-# .mypy.ini — documented at
-#   https://mypy.readthedocs.io/en/stable/config_file.html
-[mypy]
-warn_unused_configs = True
-
-# Find modules in our source tree (and tests). Since `protoc` doesn't
-# generate `__init__.py` files, treat these as explicit package bases:
-#   https://mypy.readthedocs.io/en/stable/running_mypy.html#mapping-file-paths-to-modules
-mypy_path = tests:backend/src:backend/api:api
-explicit_package_bases = True
-
-# Stricter than the default, but cheap to adhere to and high value.
-check_untyped_defs = True
-strict_equality = True
-
-# gRPC stubs ship incomplete type info; don't flag them.
-[mypy-google.api.*]
-ignore_missing_imports = True
-[mypy-google.rpc.*]
-ignore_missing_imports = True
-[mypy-grpc.*]
-ignore_missing_imports = True
-[mypy-grpc_status.*]
-ignore_missing_imports = True
-
-# The generated `*_rbt.py` for your API package is not hand-written;
-# don't type-check it (you never edit it anyway). Repeat per package.
-# Name the generated module specifically — a blanket `<pkg>.v1.*`
-# would also silence your own `api/<pkg>/v1/<name>.py`, and with it
-# every state and request model your code is annotated with.
-[mypy-<pkg>.v1.<name>_rbt]
-ignore_errors = True
-ignore_missing_imports = True
-```
-
-**Both details in that file are load-bearing.** The project-root
-`api/` entry in `mypy_path` is what lets mypy resolve the
-hand-written pydantic API module, and the narrow ignore stanza is
-what stops it being silenced again. Get either wrong and
-`from <pkg>.v1.<name> import <X>State` quietly resolves to `Any`:
-mypy still reports "Success", but every annotation mentioning a
-state or request model checks nothing, and a misspelled field on
-`state` sails through to a test failure. A quick way to confirm the
-config is live: add a bogus attribute access on a state model and
-check that mypy reports `has no attribute`.
-
-## Always Type-Check What You Write
-
-After writing or changing any Python in `backend/`, run mypy from the
-project root and fix every error before considering the work done —
-the same way you'd run the tests. The generated `*_rbt.py` stubs are
-fully typed, so mypy catches the mistakes that pass a glance (a field
-set to the wrong type, a missing or misspelled keyword argument, a
-method called with the wrong context type, a response field that
-doesn't exist):
+After any Python change in `backend/`, run from the project root and
+fix every error; a green mypy plus a passing `uv run pytest` is the
+bar for done:
 
 ```bash
-uv run mypy backend/   # or `mypy backend/ tests/`
+uv run mypy backend/ tests/
 ```
 
-A green mypy run plus passing `uv run pytest` (see
-`testing-project-setup.md`) is the bar for "done."
+mypy checks the request/response classes and the hand-written models,
+but **not `self.state` or the generated request types inside a
+servicer**: the generated `_rbt.py` declares `State` (and each
+`<Method>Request`) as `typing.cast(type, ...)`, which mypy reads as
+`Any`. `reveal_type(self.state)` prints `Revealed type is "Any"`, and
+a misspelled field passes. Bind the hand-written models to typed
+locals where it matters:
 
-## Do Not Create `__init__.py` — Anywhere
+```python
+from <app>.v1.<app> import CounterState, IncrementRequest
 
-Adding `__init__.py` inside `api/` will confuse `rbt generate`'s
-package detection. The `backend/` tree (`backend/api/`,
-`backend/src/`) and `tests/` don't need them either: the
-`.mypy.ini` above resolves imports via `explicit_package_bases`, and
-at runtime the interpreter resolves them via the `PYTHONPATH` that
-`rbt` sets up. Resist the packaging reflex ("a directory of modules
-should be a package") — a Reboot project contains no hand-written
-`__init__.py` at all.
+    async def increment(self, context, request: Counter.IncrementRequest) -> None:
+        state: CounterState = self.state
+        req: IncrementRequest = request
+        state.value += req.amount   # now `state.valeu` is an error
+```
 
-## Generated Code Lives Under `backend/`
+To confirm the config is live, `reveal_type` a typed local (it must
+name your class) or misspell a field on one (mypy must report
+`has no attribute`). A bogus attribute on `self.state` proves nothing.
 
-`rbt generate` is configured in `.rbtrc` (see `lifecycle-rbtrc.md`). The
-output goes into `backend/api/<pkg>/<v>/<name>_rbt.py`. Treat that file as
-read-only — every regen overwrites it.
+## Never
+
+- `__init__.py` anywhere — not in `api/` (it confuses `rbt generate`'s
+  package detection), not under `backend/` or `tests/`. mypy resolves
+  imports through `explicit_package_bases`, pytest through
+  `pytest.ini`, and `rbt` sets the runtime `PYTHONPATH`.
+- Hand-editing `backend/api/<app>/v1/<app>_rbt.py` (or anything under
+  `frontend/api/` / `web/src/api/`): every `rbt generate` overwrites
+  it. Change the API definition instead.
+- Committing generated code or `.rbt/`. If it is tracked,
+  `git rm -r --cached backend/api frontend/api`.
+- A nonstandard layout (an entry point other than `backend/src/main.py`,
+  API definitions outside `api/`): `.rbtrc`, the template and every
+  reference assume the canonical one.
+- A `[tool.rye]` table: migrate dev dependencies into
+  `[dependency-groups].dev`, drop the duplicated `reboot`, add
+  `name`/`version`, and replace `requirements*.lock` with `uv lock`.
+
+## Limits
+
+- Python 3.10+; the template pins `.python-version` to `3.12`, the
+  highest `bin/rbt` supports.
+- `reboot` and `reboot[dev]` (and the frontend's `@reboot-dev/*`) pin
+  the same exact version as the `rbt` CLI; a mismatch makes the
+  application refuse to start (`upgrade` skill).
+- mypy does not type `self.state` or generated request types (above);
+  verified at 1.6.0.
+
+## Scales as
+
+- `uv run mypy backend/ tests/` on the template takes seconds; the
+  test suite takes minutes on a real app, so type-check first.
+  Generated `_rbt.py` grows with the API (about 14,000 lines for the
+  two-type template at 1.6.0) and is skipped by the ignore stanza.
+
+## Errors you will see
+
+| Error text (stable prefix) | Meaning | Fix |
+| --- | --- | --- |
+| `Revealed type is "Any"` | `reveal_type(self.state)`: the generated alias is opaque to mypy | Annotate a typed local with the hand-written model |
+| `Library stubs not installed for "grpc"` | mypy ran without the project-root `.mypy.ini` (observed at 1.6.0: it then checks the generated code) | Run from the project root with the template's `.mypy.ini` |
+
+## See also
+
+- [`lifecycle-rbtrc.md`](lifecycle-rbtrc.md) — the `.rbtrc` format
+- [`testing-project-setup.md`](testing-project-setup.md) — `pytest.ini` and test layout
+- [`build/templates/README.md`](../../build/templates/README.md) — every template file explained

@@ -11,68 +11,194 @@ allowed-tools: Bash, Read, Write, Glob, Grep, Edit
 > newer Reboot is available, the [upgrade skill](../upgrade/SKILL.md)
 > says how and when to react.
 
-Build complete Reboot MCP UIs from a user description.
+**Follow [`../build/SKILL.md`](../build/SKILL.md)** — the design phase,
+state model assessment, build steps and update flow every Reboot app
+shares. This skill holds what differs for an MCP UI: the `User`-type
+front door, MCP tool exposure (`mcp=`), the `UI()` method type,
+`oauth=` provider selection, example prompts, the nested
+`frontend/mcp/<name>/` bundles, the setup wizard and MCPJam, and the
+reading list for each build step. Backend mechanics are the `python`
+skill's references, reached through the lists below. A dual-frontend app (MCP plus a browser SPA, one backend) also
+loads the [`web-app` skill](../web-app/SKILL.md); see the
+[`app` skill](../app/SKILL.md) for what they share.
 
-> **Reads from `python`.** This skill is the MCP-App + React
-> layer on top of the Reboot Python framework. Anything about
-> Servicers, Reboot contexts, refs, scheduling primitives,
-> backend LLM / agent calls, error types, the testing harness,
-> the `.rbtrc` shape, or pydantic API defaults belongs in
-> `python` — load those references for those concerns. This
-> skill covers what's _specific_ to MCP Chat
-> Apps: the `User`-type front door, MCP tool exposure, the `UI()`
-> method type, the React/Vite scaffolding, and the cross-cutting
-> rules unique to that layer.
-
-> **Dual-frontend apps are supported.** A single app can serve both
-> an MCP front door _and_ a standalone browser SPA from the same
-> backend; they share `oauth=...`, the same `User` per upstream
-> identity, and the same servicer code. For the standalone SPA
-> piece, also load the
-> [web-app skill](../web-app/SKILL.md). A user who signs in on
-> one frontend is signed in on both (cross-frontend SSO): the OAuth
-> server's `/authorize` short-circuits when the browser already
-> carries a session cookie, and `/callback` sets that cookie
-> on every flow.
-
-## Installation
-
-Install the plugin (works for both Claude Code and Codex):
-
-```bash
-curl -fsSL https://reboot.dev/install.sh | bash
-```
-
-This installs the skills for whichever of Claude Code / Codex you
-have, then restart your agent so the skills load. See the plugin
-README for the manual install, team auto-enable, and the Codex
-`skill-installer` routes.
+Install: `curl -fsSL https://reboot.dev/install.sh | bash`, then
+restart the agent.
 
 ## When to Use
 
-- Building a new Reboot MCP UI from a description
-- Adding features, state, or UI to an existing Reboot MCP UI
-- Modifying state model, methods, or React UI in a Reboot MCP UI
-- Running an existing Reboot MCP UI — e.g. at the start of a
-  new session. This needs no design or build phase: load the
-  [`run` skill](../run/SKILL.md), which detects the app type,
-  starts the backend and frontend, and opens the setup wizard (from
-  which the user can launch MCPJam on demand).
+- Building or changing a Reboot MCP UI.
+- Running an existing MCP UI needs no design or build phase: load
+  the [`run` skill](../run/SKILL.md). State survives restarts because
+  `.rbtrc` has `dev run --application-name=<name>`.
+
+## Key Concepts (MCP UI–specific)
+
+### `User` and Application Types
+
+- **`User`** is the AI's front door for **creating and locating**
+  application-type instances — entry point and delegation, not a
+  container for all state. It holds identity and the **IDs** of what
+  it owns; its methods are `Transaction`s that create instances and
+  `Reader`s that locate their IDs (directly or via indexes). `User`-scoped UIs
+  (a dashboard over the whole user, a global browser) live here.
+- **Application types** (`Counter`, `Person`, `Task`) hold the entity
+  state and are constructed by a `create` Writer with `factory=True`
+  (the MCP UI spelling of a constructor; mechanics in
+  `python/references/servicer-constructor.md`). **Once an entity
+  exists, everything specific to it — Readers, Writers, UIs — lives on
+  its own `Type`**, never on `User`: the AI passes the entity ID to the
+  tool, and the generated `use<Type>()` hook resolves the same ID with
+  no arguments.
+
+**UI Placement.** Ask of each UI: is the AI passing in an entity ID,
+or is the UI about the user as a whole? Per-entity UIs (`show_person`,
+`edit_task`) go on the entity's `Type` with `request=None`; putting
+one on `User` with the ID in a `request=<Model>` field is the most
+common scaffolding mistake (`references/api-method-types.md`, "UI
+Placement"). The second most common is letting `User` accrete
+unrelated concerns (auth/session, persona, background-engine config, a
+UI cache) — writers on one actor serialize, so a login contends with a
+persona edit; split each into its own `Type`
+(`python/references/state-actor-decomposition.md`). The `UserServicer`
++ `<X>.create(context)` pattern is in `references/servicer-patterns.md`.
+
+### Tool Exposure — `mcp=`
+
+Every method declares its MCP exposure explicitly:
+
+- **`mcp=Tool()`** — an AI-callable tool. Required on every method,
+  `User` methods included, that the AI should call.
+- **`mcp=None`** — hidden from the AI: human-only actions, or to cut
+  context bloat.
+- **`Tool(name="...", title="...")`** — override the tool name or add
+  a human-readable title — its only fields in 1.6.0. Tools carry no
+  MCP annotations (`readOnlyHint`, …), so a host such as Claude asks
+  permission before every call, `Reader`s included; "Always allow" is
+  per tool and there is no app-side workaround.
+
+All MCP surface is declared in the API file — no `@mcp.tool()`
+decorators.
+
+### `UI()` and the Method Types
+
+`Reader` / `Writer` / `Transaction` / `Workflow` behave exactly as
+`python/references/api-methods.md` describes. The MCP UI adds:
+
+- **`UI()`** — opens a React UI inside the MCP client. Takes
+  `request=` (a config `Model` or `None`), `path=` (web dir relative to
+  the project root), `title=`, `description=`. **No servicer
+  implementation** — the React app _is_ the implementation. When
+  `request=` is a `Model`, its fields become props on the component.
+
+### Auth — `oauth=` Provider Selection
+
+Providers, rules before the first test, the `User` default rule and
+`allowed_origins` are build Step 4. Specific to MCP UIs:
+
+- In an MCP app the `oauth=` principal **is** the user, and there is
+  no middle ground: either every user signs in through this OAuth
+  flow, or the app has no per-user auth at all.
+- Provider details, the `/__/oauth/callback` URL and switching costs:
+  `references/auth-oauth-providers.md`; no shipped provider fits
+  (self-hosted Keycloak, internal SSO): `references/auth-custom-oauth-provider.md`.
+- **Acting as the user at the provider.** `Google` / `GitHub` /
+  `Auth0` can request extra `scopes=[...]` and capture the provider's
+  own tokens (`store_tokens=True` — with `Auth0`, an Auth0 token, not
+  the upstream Google one). They are stored encrypted, read back with
+  `OAuthTokenManager.ref(GOOGLE).fetch(context, user_id=context.state_id)`,
+  and the outbound call goes inside a `Workflow`. Shortcut:
+  `references/auth-store-tokens.md`; full recipe:
+  `python/references/auth-external-api-calls.md`.
+
+### Example Prompts (Root-Page Wizard)
+
+Every MCP UI ships **example prompts** — the named chat scenarios the
+root-page wizard offers so a fresh user has something to click the
+moment the app boots. Not optional.
+
+`ExamplePrompt(title=..., prompts=[...])` from `reboot.application`:
+`title` is a short label and the identity key (same title replaces an
+entry); `prompts` is an **ordered sequence** of messages sent one per
+turn, walking a real flow through the tools (create → act → view).
+Write ~3 covering the main user stories, phrased as a real user talks.
+**Make them show the UI**: the `UI()` components are why this is an
+MCP **App**, so each example ends on (or passes through) a natural
+"show me / open / view …" turn that makes the AI pick a `UI()` tool —
+like the counter example's "…and show me the counter" — and every
+`UI()` method is reached by at least one example. They live in
+`backend/src/example_prompts.py`, passed to
+`Application(example_prompts=...)`; shapes and a worked set in
+`references/project-shell.md` (`mcp-ui-counter` is canonical).
+
+### Setup Wizard and MCPJam
+
+The handoff is the **setup wizard at the backend root
+(`http://localhost:9991`)**, not the `/mcp` URL: it connects an MCP
+client (Claude, ChatGPT, MCPJam, …) and completes OAuth. Surface it and
+open it once at first startup, as the `run` skill directs. Do **not**
+start the MCPJam inspector yourself — it launches on demand from the
+wizard. Bare `rbt dev run` / `npm run dev` print only the
+API/MCP/inspect URLs and drop the wizard hint.
+
+## Project Structure
+
+```
+<project>/
+├── .python-version
+├── .rbtrc                   # Line-based config (NOT YAML!)
+├── .mypy.ini                # Type-check config (python skill)
+├── pyproject.toml           # Python deps (uv)
+├── pytest.ini               # testpaths: tests; pythonpath: backend/src backend/api api
+├── api/
+│   └── <pkg>/v1/
+│       └── <name>.py        # API definition
+├── backend/
+│   └── src/
+│       ├── main.py          # Application entrypoint
+│       ├── example_prompts.py  # Wizard example prompts
+│       └── servicers/
+│           └── <name>.py    # Servicer implementation
+├── tests/
+│   ├── <capability>.feature  # One feature per capability
+│   └── <name>_test.py       # `application` fixture + `scenarios(...)`
+└── frontend/
+    ├── package.json
+    ├── build.mjs            # Discovers + builds every UI
+    ├── tsconfig.json
+    ├── tsconfig.app.json
+    ├── tsconfig.node.json
+    ├── vite.config.ts       # Nested output: dist/mcp/<name>/index.html
+    ├── api/                 # Generated React bindings (rbt generate)
+    ├── mcp/
+    │   └── <ui-name>/
+    │       ├── index.html
+    │       ├── index.css        # Theme variables
+    │       ├── main.tsx         # RebootClientProvider entry
+    │       ├── App.tsx          # React component
+    │       └── App.module.css
+    └── web/                 # Optional standalone browser SPA
+        ├── index.html
+        └── src/
+            ├── main.tsx
+            └── App.tsx
+```
+
+Starting files: `../build/templates/mcp-ui/`. Each UI builds to
+`frontend/dist/mcp/<ui-name>/index.html`, where the host discovers it;
+flattening that output breaks discovery.
 
 ## Which References to Read, and When
 
-The backend mechanics live in the `python` skill's references; the
-MCP-UI-specific shape on top of them lives in this skill's own
-`references/`. Neither set is restated inline below.
+Each group below is what to read at one step of the build flow in
+[`../build/SKILL.md`](../build/SKILL.md). The backend mechanics live in
+the `python` skill's references; the MCP-UI-specific shape on top of
+them lives in this skill's own `references/`.
 
-Everything you read stays in the conversation and is re-sent on
-every later turn, so **read each reference at the step that needs
-it** — not all of them up front — and read each one **once**. The
-groups below are in build order; each reference appears in exactly
-one of them. A line ending *Only when …* is skipped unless that is
-true of your app. Pattern references (`patterns-*.md`) are not on
-the build path; read one when its situation comes up (catalog in
-the `python` skill).
+Read each at its step, once, one per tool call; each reference
+appears in exactly one group. Pattern references (`patterns-*.md`)
+are off the build path; read one when its situation comes up
+(catalog in the `python` skill).
 
 <!-- The lists below are generated from each reference's frontmatter
 by tools/gen-index.py. Edit the frontmatter, not the lists. -->
@@ -89,7 +215,6 @@ by tools/gen-index.py. Edit the frontmatter, not the lists. -->
 **Before any code** (every build):
 
 <!-- generated:start always front-door=mcp-ui -->
-- `python/references/patterns-common-gotchas.md` — The consolidated trip list: line-based `.rbtrc`, `--application-name`, no `__init__.py`, kwargs not Request wrappers, `self.ref().state_id`, zero defaults, `MixedContextsError`, the auto-constructed `User`.
 <!-- generated:end -->
 
 **Before the API definition:**
@@ -98,8 +223,7 @@ by tools/gen-index.py. Edit the frontmatter, not the lists. -->
 - `references/api-method-types.md` — Every method, `Workflow` included, needs explicit `mcp=Tool()` or `mcp=None`; put an entity's `UI()` on that entity's Type, never on `User` with an ID in `request=`; `factory=True` on `create`.
 - `python/references/api-methods.md` — Which factory (`Reader`, `Writer`, `Transaction`, `Workflow`) and the servicer signature and context type each obliges; `factory=True` marks creation; `errors=`, `description=` and the required `mcp=`.
 - `python/references/api-pydantic.md` — Every `Field` needs a tag and a zero-value default (non-zero is rejected at import time); wire declarations through `API(...)`; generated Request/Response names come from the method name, not the class.
-- `references/gotchas.md` — The numbered MCP UI trip list: camelCase bindings, required `mcp=`, `--default-config=hmr`, `MyType.ref()` not `cls.ref()` in workflows, Optional nested Models, inline writer parameter named `state`.
-- `references/api-state-shapes.md` — `list[Item]` only for bounded sub-records without identity; a single nested `Model` must be `Optional[X] = Field(tag=N, default=None)`, hydrated in factory `create`; never nest state Models.
+- `references/api-state-shapes.md` — `list[Item]` only for bounded sub-records without identity, with index-checked CRUD Writers; a single nested `Model` is `Optional` and hydrated in factory `create`; never nest state Models.
 - `python/references/state-actor-decomposition.md` — Split a Type whose fields cluster by unrelated concern (auth, persona, background engine, cache) into separate Types, or its writers serialize and `User` becomes a God actor.
 - `python/references/state-collections.md` — Decide whether each "list of X" item is its own state Type (usually yes), then pick `list[Sub]`, `list[str]` of IDs, or an `OrderedMap`; never `list[Entity]` on a parent.
 - `python/references/state-nested-models.md` — Group related fields into nested non-state `Model`s instead of parallel flat names, and mutate them in place; never put a state `Model` inside another state `Model`.
@@ -113,22 +237,22 @@ by tools/gen-index.py. Edit the frontmatter, not the lists. -->
 
 <!-- generated:start reading-list front-door=mcp-ui step=shell -->
 - `python/references/lifecycle-application-entry.md` — An `async def main()` that awaits `Application(servicers=[...], initialize=...).run()`; pass servicer classes, not instances; register stdlib libraries alongside your servicers.
-- `python/references/lifecycle-project-setup.md` — Canonical layout, `pyproject.toml`, the required `.gitignore` and project-root `.mypy.ini` (without it type-checking is useless), no `__init__.py` anywhere, generated code under `backend/`.
+- `python/references/lifecycle-project-setup.md` — Copy `build/templates/<front-door>/`: layout, `pyproject.toml`, `.gitignore`, `.mypy.ini`. No `__init__.py`; never edit `*_rbt.py`; mypy sees `self.state` as `Any` — use typed locals.
 - `python/references/lifecycle-rbtrc.md` — `.rbtrc` is line-based `<subcommand> <flag>`, not YAML; `--application-name` (not `--name`) persists state; `--env-file` for secrets; `serve run` lines for production; named configs.
-- `references/project-shell.md` — MCP UI shell deltas: `.rbtrc` HMR and dist configs (`--default-config=hmr`), `pyproject.toml` extras, the `main.py` shape, and `example_prompts.py` wired into `Application(example_prompts=...)`.
+- `references/project-shell.md` — Copy `build/templates/mcp-ui/`: `.rbtrc` with `--default-config=hmr` and `:hmr`/`:dist` configs, no `--react-extensions`; `main.py` with `oauth=` and `example_prompts=`.
 - `python/references/lifecycle-secrets.md` — only when the app needs secrets (API keys, OAuth client secrets).
 <!-- generated:end -->
 
 **Before the servicer:**
 
 <!-- generated:start reading-list front-door=mcp-ui step=servicer -->
-- `references/servicer-patterns.md` — `UserServicer` front door calling `<X>.create(context)`; in workflows `MyType.ref()`, not `cls.ref()` / `self.ref()`; scoped inline writers; `.schedule()` a workflow from a Transaction, never await it.
+- `references/servicer-patterns.md` — `UserServicer.create_<X>` Transaction calls `<X>.create(context)` and returns `state_id`; `.schedule()` a workflow from it, never await; workflow bodies use `MyType.ref()`, `spawn()`, `state`-named inline writers.
 - `python/references/lifecycle-initialize-hook.md` — Each `initialize` call runs once in the app's lifetime, not per boot, so a migration needs a new alias; create singletons here, not in `__init__`; failures retry forever.
-- `python/references/rpc-calls.md` — Pass kwargs, never a Request wrapper: `await ref.deposit(context, amount=10)`; the context type must match the method; constructors return `(ref, response)`; `asyncio.gather` for concurrency.
-- `python/references/servicer-constructor.md` — Set initial state in the constructor method, branching on `context.constructor`, never in `__init__`; callers use `Service.create`; calling constructors from `initialize` and from a Transaction.
-- `python/references/servicer-reader.md` — The reader signature must match the API file; never mutate `self.state`; readers run concurrently and may call other actors, read-only.
-- `python/references/servicer-writer.md` — A writer mutates `self.state` on one actor only, never calling another actor's writer; errors roll back the mutation; writers may return no response.
-- `python/references/rpc-constructor-calls.md` — Call constructors as `<X>.create(context, id, ...)` or `<X>.<Ctor>(...)`, never `<X>.ref(id).<ctor>(...)`, which skips creation semantics; `create` is idempotent; reuse the returned ref.
+- `python/references/rpc-calls.md` — Pass kwargs: `await ref.deposit(context, amount=10)`; writers and transactions can't be called from a WriterContext, even your own; caller identity does not travel; writer cycles deadlock.
+- `python/references/servicer-constructor.md` — Set initial state in the `factory=True` method, never in `__init__`; a constructor runs once per actor (a second call aborts `StateAlreadyConstructed`); declare `Transaction(factory=True)` if it may construct others.
+- `python/references/servicer-reader.md` — The reader signature must match the API file; mutating `self.state` is silently discarded; readers may call other readers, and a subscribed reader re-runs when any actor it read changes.
+- `python/references/servicer-writer.md` — A writer mutates `self.state` on one actor only: no writes to other actors, no external calls, schedule only on itself; errors roll back the mutation; writers may return no response.
+- `python/references/rpc-constructor-calls.md` — Call constructors as `<X>.<ctor>(context, id, ...)`, never through `.ref(id)`; `create` exists only if a factory is named that; outside a replayed key a second call aborts.
 - `python/references/rpc-refs.md` — `self.ref().state_id`, never `self.state_id`; IDs are caller-supplied strings; checking whether an actor exists without hitting `StateNotConstructed`; `self.ref().schedule(...)`; reserved method names.
 - `python/references/servicer-workflow.md` — only when you declared a `Workflow`.
 - `python/references/agent-pydantic-ai.md` — only when the backend calls an LLM.
@@ -147,16 +271,16 @@ by tools/gen-index.py. Edit the frontmatter, not the lists. -->
 - `python/references/stdlib-item.md` — only when using the stdlib `Item` value envelope.
 <!-- generated:end -->
 
-**Before the authorizers** (write rules from day one — see "Auth"
-under Key Framework Concepts):
+**Before the authorizers** (build Step 4 — real rules on every
+servicer before the first test):
 
 <!-- generated:start reading-list front-door=mcp-ui step=auth -->
-- `python/references/auth-allow-deny.md` — `allow()` only for genuinely public endpoints, never to silence dev auth warnings or for "internal-only" methods; `deny()` locks a method out; return an instance; one authorizer per servicer.
-- `python/references/auth-allow-if.md` — `allow_if(all=[...])` or `allow_if(any=[...])`, never both; `all` evaluates in order and short-circuits, so cheap predicates go first; how the decisions aggregate.
+- `python/references/auth-allow-deny.md` — `allow()` only for genuinely public endpoints, never to silence dev warnings, pass tests, or mark "internal-only" methods; `deny()` locks a method out; return an instance.
+- `python/references/auth-allow-if.md` — `allow_if(all=[...])` or `allow_if(any=[...])`, never both, never nested; `all` short-circuits in order; `is_app_internal` in `any` turns anonymous callers' `Unauthenticated` into `PermissionDenied`.
 - `python/references/auth-built-in-predicates.md` — `has_verified_token`, `is_app_internal` and `state_id_is_user_id` and their common compositions; a self-scheduled workflow needs `is_app_internal`; predicates always take `**kwargs`.
 - `references/auth-oauth-providers.md` — The launch provider fixes the user-ID namespace, so switching later strands user state; `OAuthProviderByEnvironment(dev=Development(), prod=Google(...))`, credentials as secrets, the `/__/oauth/callback` URL.
 - `python/references/servicer-authorizer.md` — Write real rules on every servicer before the first test; list the tokenless call paths first; identity does not cross servicer calls; `oauth=` vs. the `token_verifier=` escape hatch.
-- `python/references/auth-custom-predicates.md` — Keyword-only predicates ending in `**kwargs`, annotated or `mypy` fails; sync or async; order by cost in `all`; return `PermissionDenied` vs. `Unauthenticated` correctly; per-method rules.
+- `python/references/auth-custom-predicates.md` — Per-method rules via `<Type>.Authorizer(method=rule, _default=rule)`; keyword-only predicates ending in `**kwargs`, annotated or `mypy` fails; check `context.app_internal` first; `PermissionDenied` vs. `Unauthenticated`.
 - `python/references/auth-external-api-calls.md` — only when calling an external service's API as the user.
 - `references/auth-store-tokens.md` — only when the app acts as the user at its own identity provider's API.
 - `python/references/stdlib-oauth-tokens.md` — only when storing a user's OAuth tokens for an external service.
@@ -167,8 +291,8 @@ under Key Framework Concepts):
 **Before the frontend:**
 
 <!-- generated:start reading-list front-door=mcp-ui step=frontend -->
-- `references/react-scaffolding.md` — Copy `vite.config.ts` exactly: flattening output breaks UI discovery at `frontend/dist/mcp/<name>/index.html`. Plus `package.json`, `build.mjs`, split tsconfigs, `index.css`, per-UI `index.html` / `main.tsx`.
-- `references/react-app-tsx.md` — Zero-arg `use<Type>()` resolves the actor from the tool-call target; camelCase fields; the full Counter `App.tsx` + CSS module; one composing reader with cursor pagination for many actors.
+- `references/react-scaffolding.md` — Copy `build/templates/mcp-ui/frontend/`; `vite.config.ts` exactly: flattening output breaks UI discovery at `frontend/dist/mcp/<name>/index.html`. `npm install` before the second `rbt generate`.
+- `references/react-app-tsx.md` — No-id `use<Type>()` returns `{ <type>, isLoading }` resolved from the tool-call target — render a child once the handle exists; import `@api/<pkg>/v1/<name>_rbt_react`; composing reader for many actors.
 - `python/references/react-generated-client.md` — What `rbt generate --react=` emits: `use<Type>()` overloads, three-field reader returns, mutations resolving to `{ response, aborted }` instead of throwing, typed errors, snake-to-camel naming.
 - `references/pop-out-to-web-app.md` — only when a widget needs a "pop out into the web app" button.
 <!-- generated:end -->
@@ -176,9 +300,9 @@ under Key Framework Concepts):
 **Before the tests:**
 
 <!-- generated:start reading-list front-door=mcp-ui step=tests -->
-- `python/references/patterns-idempotency.md` — What `IdempotencyUncertainError` means and when a retry needs an idempotency key; idempotent `create` / `initialize` calls, `context.constructor` for set-once fields, UUIDv7 for insertable records.
+- `python/references/patterns-idempotency.md` — What `IdempotencyUncertainError` means and when a retry needs an idempotency key; replayed calls return the first run's response; idempotent `create` / `initialize`; UUIDv7 for insertable records.
 - `python/references/testing-features.md` — The built-in steps' exact spelling (who calls, `creates` / `does`, saved values, `eventually`, aborts, tasks), `@wip` / `@blocked`, feature / rule / scenario shape, custom steps, mocks.
-- `python/references/testing-project-setup.md` — `tests/` layout, `pytest.ini` with three paths so generated `_rbt` modules import, `reboot[dev]` dev-deps, git-ignored recordings, `uv run pytest`; never construct servicers directly.
+- `python/references/testing-project-setup.md` — `tests/` layout; the template's `pytest.ini` (three paths, or generated `_rbt` imports fail) and fixture (`allowed_origins=[]`); `reboot[dev]`, no `pytest-asyncio`; never construct servicers directly.
 - `python/references/testing-external-context.md` — only when writing custom steps or harness tests.
 - `python/references/testing-failure-recovery.md` — only when the app has a spawned task, a `Workflow`, or scheduled work.
 - `python/references/testing-harness.md` — only when writing custom steps.
@@ -190,569 +314,5 @@ The order of work around the feature files (agree in English, tag
 **Before running the app:** the [`run` skill](../run/SKILL.md).
 
 If you find yourself grepping the framework's installed source or a
-generated file to answer a question, the next section is for you —
-do not explore it in the main conversation.
-
-## Never Read Generated or Installed Source in the Main Thread
-
-`*_rbt.py`, `*_rbt_react.ts`, `site-packages/`, `node_modules/`,
-and codegen templates run to tens of thousands of lines. Every one
-you open is re-sent on every remaining turn, which makes reading
-them the most expensive way in the system to learn a fact.
-
-The generated surfaces you actually need are written out in these
-references — the React client in
-`python/references/react-generated-client.md`, the backend shapes in
-the rest of `python/references/`. Use them.
-
-If something genuinely isn't covered, bound the output hard: a
-targeted `grep -n … | head -40`, or `sed -n '<start>,<end>p'` over
-a known range. Never a whole generated file, never an unbounded
-recursive grep.
-
-## Workflow: Settle the Design, Then Build
-
-**Always settle the design before writing code.** The state model
-is the foundation — getting entities, field types, or method types
-wrong means regenerating everything across 12+ files.
-
-### Design Phase
-
-1. Analyze the user's description using the State Model Assessment
-   below.
-2. State the design you are about to build:
-   - `User` type and its methods (the MCP front door for creating new
-     application-type instances and locating existing ones).
-   - Application types: state shape (fields, types, tags).
-   - Method map: which operations, which method type
-     (Reader/Writer/Transaction/Workflow), which get `UI()`.
-   - Tool surface: what the AI will see as callable tools.
-   - Example prompts: the ~3 named chat scenarios the root-page
-     wizard will offer, each a sequence of messages exercising a
-     main user story — and most of them ending on a turn that
-     renders a `UI()` component, not just a tool call (see
-     "Example Prompts" under Key Framework Concepts).
-3. Then execute the Step-by-Step Build Flow.
-
-For updates to existing apps, still work the design first: read
-current state, state the changes, then modify.
-
-### Writing the Design for a Human Reader
-
-The design is read by a **human who has not read the skill files**.
-They are judging the design — entities, collections, methods,
-auth — not verifying that you followed the skill. Write so it
-stands on its own.
-
-**Don't quote skill-internal terms** when presenting the design.
-They mean nothing outside this skill:
-
-- `Shape A` / `Shape B` / `Shape C` — name the actual data
-  structure: `list[Sub]` of inline sub-records, `list[str]` of
-  foreign state IDs, `OrderedMap` of foreign state IDs.
-- "non-state `Model`" — say "a flat sub-record that lives and
-  dies with the parent" or "no identity of its own", in domain
-  terms.
-- `Gotcha #N` and filenames like `state-collections.md` /
-  `api-state-shapes.md` / `gotchas.md` — drop the citation; if
-  the rule matters to the design, explain it inline.
-- `factory=True`, `Field(tag=N)`, raw pydantic spellings — fine
-  to mention briefly when the spelling itself is the design
-  decision, but never as the explanation.
-
-**For every design choice, give the what + the why.** The _what_
-is the concrete data structure or method type. The _why_ is a
-one-clause reason rooted in the user's domain ("grows without
-bound, so we need pagination"; "no methods or auth of its own,
-so it lives inline").
-
-**Examples.**
-
-Collection shape reasoning — BAD, uses skill-internal terms:
-
-> `people_index_id: str` — ID of an OrderedMap actor that
-> holds this user's Persons (Shape C from state-collections.md
-> — unbounded; PRM is explicitly called out as a Shape C case).
-
-Collection shape reasoning — GOOD:
-
-> `people_index_id: str` — points to an OrderedMap that holds
-> this user's Persons. An OrderedMap (rather than an inline
-> list) because a PRM grows without bound and the UI will
-> paginate / sort by recency.
-
-Nested model reasoning — BAD, uses skill-internal terms:
-
-> Relationship and Event are non-state Models — Shape A.
-
-Nested model reasoning — GOOD:
-
-> Relationship and Event live inline on Person as
-> `list[Relationship]` / `list[Event]`. They don't get their
-> own state actors because they have no lifecycle, methods, or
-> auth independent of the Person they belong to.
-
-**Escape hatch.** When the precise type name _is_ what the reader
-needs to see ("I'm proposing `OrderedMap` here, not `list[str]`"),
-name the type — but pair it with the plain-English reason in the
-same sentence. The rule is "no bare jargon", not "no technical
-terms".
-
-## State Model Assessment
-
-Before writing code, analyze the user's request:
-
-1. **Application types — decompose aggressively.** List every
-   distinct entity the user is going to add / edit / list / find
-   over time (people, posts, tasks, events, documents, accounts,
-   …). **Each entity becomes its own `Type` with its own state**,
-   even when "each User only has a few of them". Anything you can
-   imagine the user `add`-ing / `remove`-ing / `find`-ing by name
-   has its own identity and belongs in its own actor. The default
-   wrong move is packing everything into `User`'s state as
-   `list[Person]` (or `list[Post]`, `list[Task]`, …) — that
-   flattens N actors into one, prevents per-entity auth/methods,
-   and forces a full rewrite when the collection grows. A
-   collection your app **syncs or scrapes from an external
-   system** (a GitHub repo's issues, a mailbox, an RSS feed) is an
-   entity collection too — and unbounded by definition — even
-   though the user never "adds" to it directly. See
-   `python/references/state-collections.md` Step 1 for the full
-   decomposition signal list.
-2. **Container shape for each collection.** Once an entity is its
-   own `Type`, the parent (typically `User`) stores **references**,
-   not objects. Three shapes (full table + worked PRM example in
-   `python/references/state-collections.md`):
-
-   - `list[Sub]` of non-state `Model`s — for bounded sub-records
-     that genuinely belong with the parent (line items on an Order,
-     tags on a Post). NOT for entity collections.
-   - `list[str]` of foreign state IDs — when the collection of
-     entity IDs is bounded (low hundreds, occasionally low
-     thousands) and you always read it whole.
-   - `OrderedMap` of foreign state IDs — when the collection
-     grows without bound, needs pagination, range queries, or
-     ordered iteration. The default choice for any "list of
-     things the user keeps adding to" (people in a PRM, posts
-     on a blog, messages in a thread) and for anything synced
-     from an external source (a repo's issues, a mailbox).
-
-   **Boundedness is a domain fact, not a number you pick.** If you
-   catch yourself adding a size cap (`MAX_ITEMS = 40`) so a
-   collection counts as "bounded" and qualifies for `list[Sub]` or
-   `list[str]`, it is unbounded — use `OrderedMap`. Externally-
-   synced collections are always `OrderedMap`. The boundedness
-   guard in `python/references/state-collections.md` has the full
-   rule.
-
-3. **User methods**: How does the AI create instances of application
-   types? Each gets a `Transaction` on `User` that calls
-   `<Type>.create(context)`, then registers the new ID in the
-   appropriate container (Shape B or C above).
-4. **State shape (per type)**: Fields, types — lists, nested
-   objects, primitives. Each gets `Field(tag=N)`. **Nested `Model`
-   sub-objects** owned 1:1 by a parent state must be
-   `Optional[X] = Field(tag=N, default=None)` and hydrated in the
-   parent's factory `create` Writer (Gotcha #13); non-Optional
-   `Model`-typed fields reject `default=` / `default_factory=`.
-   Full rules + examples in
-   [`references/api-state-shapes.md`](references/api-state-shapes.md).
-5. **Operations**: Map to the right method type:
-   - `Reader` — read-only queries.
-   - `Writer` — single-state mutations.
-   - `Transaction` — multi-state atomic operations (e.g. transfer
-     between two accounts, or User creating an application-type
-     instance).
-   - `Workflow` — long-running control flows with loops, scheduling,
-     and idempotency helpers.
-6. **Tool surface**: Which operations need explicit tool exposure
-   (`mcp=Tool()`)? Default Servicer methods to `mcp=Tool()` if the
-   AI should call them, `mcp=None` otherwise.
-7. **UI placement** — for each UI in the app: **is the AI passing
-   in an entity ID for this UI to operate on, or is the UI about
-   the user as a whole?** Per-entity UIs (`show_person`,
-   `edit_task`, `view_document`) go on the entity's own `Type`
-   with `request=None` — the AI's tool-call target becomes the
-   actor ID automatically, and the generated `use<Type>()` hook
-   resolves it with no arguments. User-scoped UIs (a dashboard,
-   a global browser) go on `User`. Putting a per-entity UI on
-   `User` with the entity ID inside a `request=<Model>` field is
-   an antipattern; see "UI Placement" in
-   [`references/api-method-types.md`](references/api-method-types.md).
-8. **Identity**: Single default instance vs. multiple instances?
-9. **Cross-state coordination**: Does any operation touch multiple
-   state instances? If yes, use `Transaction`.
-
-## When Correct Decomposition Fights the UI
-
-The React references in this skill show **one `use<Type>()`
-subscription per UI** — one hook, one actor, one live feed. That
-is the easy, documented path, and it quietly pressures you to
-flatten an entity collection into `list[Item]` on a single actor
-just so the dashboard can read it in one subscription.
-
-**Resolve the tension the other way: the data model wins.** When
-a collection is its own entity type (Assessment step 1) or
-unbounded (step 2, Shape C), keep it decomposed — one actor per
-item, an `OrderedMap` index on the parent — even though that is
-more than one actor. Do **not** collapse the model to fit the
-single-subscription pattern. A demo-correct `list[Item]` that
-must be torn apart the moment a real data source is pointed at it
-is the exact failure this skill exists to prevent.
-
-The UI still gets its single subscription. Add a **composing
-reader** on the front-door type: a `Reader` that ranges the
-parent's `OrderedMap` for one page of IDs, reads each item actor,
-and returns a page of fully-hydrated objects plus a `next_cursor`.
-The React UI subscribes to that one reader and pages by cursor —
-the fan-out across item actors happens server-side, inside the
-reader. The composing-reader pattern (backend reader + React
-subscription) is in
-[`references/react-app-tsx.md`](references/react-app-tsx.md);
-Shape C is in `python/references/state-collections.md`.
-
-## Key Framework Concepts (MCP UI–specific)
-
-### `User` and Application Types
-
-Every MCP UI has a `User` type and one or more application types:
-
-- **`User`** is the AI's front door for **creating and locating**
-  application-type instances. **"Front door" means entry point +
-  delegation, not container for all application state.** `User`
-  holds identity (e.g. display name) and **IDs of the concern-
-  specific actors it owns**; per-concern state (auth/session,
-  background-engine config, persona config, transient caches) lives
-  on its own `Type` and is referenced by ID from `User`. Typical
-  `User` methods are `Transaction`s that create application-type
-  instances, or `Reader`s that locate existing instances' IDs —
-  either directly or via indexes whose IDs are stored on `User`.
-  `User`-scoped UIs (a dashboard spanning the whole user, a global
-  browser) also live here.
-- **Application types** (e.g. `Counter`, `Person`, `Task`) hold
-  most of the actual entity state. They typically need a `create`
-  Writer with `factory=True` for construction. **Once an entity exists,
-  anything specific to that entity — Readers, Writers, UIs —
-  lives on that entity's `Type`**, never on `User`. The actor
-  ID is then implicit in every call: the AI passes the entity
-  ID to the tool, and the generated `use<Type>()` React hook
-  auto-resolves the same ID with no arguments.
-
-The most common scaffolding mistake is putting a per-entity UI
-(e.g. `show_person`) on `User` with the entity ID stuffed into a
-`request=<Model>` field. Don't — see "UI Placement" in
-[`references/api-method-types.md`](references/api-method-types.md).
-
-A second, equally common mistake is letting `User`'s state accrete
-unrelated concerns — auth/session fields alongside persona config
-alongside a background engine's configuration alongside a UI cache.
-That turns the front door into a God actor and, because writers on
-the same actor serialize, makes a login step contend with a persona
-edit and a background workflow's state writes. Split each concern
-into its own `Type` and have `User` reference it by ID. The signals
-that warn you are accreting concerns, and the split pattern, are in
-`python/references/state-actor-decomposition.md`.
-
-Full pydantic shape in
-[`references/api-method-types.md`](references/api-method-types.md);
-the `UserServicer` + `<X>.create(context)` pattern in
-[`references/servicer-patterns.md`](references/servicer-patterns.md).
-
-### Tool Exposure Control
-
-Every method must explicitly declare its MCP exposure:
-
-- **`mcp=Tool()`** — expose the method as an AI-callable tool.
-  Required on every method (including `User` methods) the AI should
-  be able to call.
-- **`mcp=None`** — hide the method from the AI. Use for human-only
-  actions or to reduce context bloat.
-- **`Tool(name="...", title="...")`** — override the default tool
-  name or add a human-readable title.
-
-### Method Types
-
-The `Reader` / `Writer` / `Transaction` / `Workflow` markers come from
-`reboot.api` and behave exactly as `python`'s `api-methods.md`
-describes (each fixes the Servicer's context type). The MCP UI
-adds one more:
-
-- **`UI()`** — opens a React UI inside the MCP client. Takes
-  `request=` (config type or `None`), `path=` (web dir relative to
-  project root), `title=`, `description=`. **No servicer
-  implementation needed** — the React app _is_ the implementation.
-  When `request=` is a `Model`, its fields become props on the React
-  component.
-
-`factory=True` on an application type's `create` Writer is the
-MCP UI spelling of a constructor (see `python`'s
-`servicer-constructor.md` for the underlying mechanic).
-
-### Auth: `oauth=` Provider Selection and Real Authorizers from Day One
-
-MCP UIs wire identity via `Application(oauth=...)`: what you pass
-there stands primarily for **identity** — it determines who
-`context.auth.user_id` says the caller is, and in an MCP app that
-principal is the user. There's no middle ground: either every user
-signs in through this OAuth flow, or the app has no per-user auth at
-all. The slot takes an `OAuth`, whose `provider` is an
-`OAuthProviderSelector`. The typical shape is
-`oauth=OAuth(provider=OAuthProviderByEnvironment(dev=Development(), prod=Google(...)))`:
-under `rbt dev` you get `Development()` — a real provider that shows a
-fake account picker and issues every caller a verified, stable
-`dev-{hash}` `context.auth.user_id`, no external IdP — while every other
-environment (`rbt serve`, Reboot Cloud, or anything unrecognized) gets
-the real provider. Both arms are required; either may be `None`, and a
-selected `None` arm makes the app **fail to start** with a clear
-message, so you can't silently ship without sensible auth.
-Servicer-side code doesn't change between providers. (In unit tests,
-omit `oauth=` entirely — the test harness supplies a test OAuth
-provider.)
-
-> **Choose your production provider deliberately.** See
-> [`references/auth-oauth-providers.md`](references/auth-oauth-providers.md).
-> Each provider issues user IDs in its own namespace, so switching
-> providers after launch strands every user-keyed piece of state.
-> `Development` is dev-only — replace it before shipping — and don't
-> launch on a throwaway like `Anonymous` planning to "upgrade later";
-> do it **before** real users have state. `Google` / `GitHub` give you
-> a user id and nothing more; if the app needs **user management**
-> (profiles, password resets, MFA, blocking users), use `Auth0`. If no
-> shipped provider fits (self-hosted Keycloak, internal SSO), write
-> your own — see
-> [`references/auth-custom-oauth-provider.md`](references/auth-custom-oauth-provider.md).
-
-Consequences for authorizers:
-
-- **Write `authorizer()` on every Servicer from day one.** Don't
-  defer it "until prod." Identity is wired the same in dev and prod,
-  so production-shaped rules (`allow_if(all=[state_id_is_user_id])`,
-  `allow_if(all=[has_verified_token])`, etc.) work immediately.
-- **Don't use `allow()` as a default.** It declares "this endpoint
-  is public on the internet, no identity required" — not what you
-  want for app-state methods.
-- **`User`-type Servicers don't need a custom `authorizer()`.** The
-  framework's default rule (`state_id_is_user_id` + `is_app_internal`)
-  is production-worthy already.
-- **Application-type Servicers (`Counter`, `TodoList`, …)** typically
-  use `allow_if(all=[state_id_is_user_id])` when the state belongs to
-  one user, or compose other predicates (`has_verified_token`,
-  custom) when state is shared.
-
-Backend mechanics — predicate composition, custom predicates, the
-function-vs-instance footgun — live in `python/references/auth-*.md`
-and `python/references/servicer-authorizer.md`. The MCP UI delta
-is just **which mode you're in**: `oauth=` + real rules from day one.
-
-**Acting on the user's behalf at the provider.** Beyond identity,
-`Google` / `GitHub` / `Auth0` can request extra OAuth `scopes=[...]` and
-capture the provider's tokens (`store_tokens=True`) so the app can call
-that provider's API as the signed-in user (their calendar, repos, etc.).
-Reboot stores the **provider's own** tokens only — with `Auth0` that's
-an Auth0 token, not the upstream Google token a brokered sign-in went
-through. The tokens are stored encrypted and read back with
-`OAuthTokenManager.ref(GOOGLE).fetch(context, user_id=context.state_id)`,
-and the outbound call goes **inside a `Workflow`**. The MCP UI
-`store_tokens=True` shortcut is in
-[`references/auth-store-tokens.md`](references/auth-store-tokens.md);
-the full read-path and in-`Workflow` call recipe (shared with web apps)
-is in
-[`python/references/auth-external-api-calls.md`](../python/references/auth-external-api-calls.md).
-
-### Declarative, Not Decorator
-
-All MCP surface is defined in the API file. `main.py` is minimal. No
-`@mcp.tool()` decorators.
-
-### State Is Durable
-
-State survives restarts. `dev run --application-name=<name>` in
-`.rbtrc` (see [`references/project-shell.md`](references/project-shell.md))
-is what makes that work.
-
-### Example Prompts (Root-Page Wizard)
-
-Every MCP UI ships **example prompts** — short, named chat
-scenarios the root-page wizard shows users so they can try the app
-the moment it boots, without having to invent a first message. They
-are not optional polish: a fresh user landing on the wizard with no
-suggested prompts has nothing to click, so always author a set.
-
-An example prompt is an `ExamplePrompt(title=..., prompts=[...])`
-(imported from `reboot.application`). The `title` is a short label
-(and the identity key — same title replaces an existing entry); the
-`prompts` are an **ordered sequence** of chat messages the user sends
-one per turn, walking a real end-to-end flow through the app's MCP
-tools (create something → act on it → view the result), not one
-isolated message. Write ~3 examples that together cover the app's
-main user stories, phrased the way a real user would talk to the
-chat client.
-
-**Make the prompts show the UI, not just call tools.** The embedded
-React UIs (the `UI()` methods) are the whole reason this is an MCP
-**App** and not a plain MCP server — a flow that only calls
-tool-only methods and never renders a component demos the boring
-half. Every example should end on (or pass through) a turn that
-triggers a `UI()` method — phrase that turn as a natural "show me
-/ open / view ..." request so the AI picks the UI tool. In the counter
-example, the "…and show me the counter" / "show me the wins counter"
-turns are exactly this: they resolve to the `Counter` UI and render the
-live component, not just a text reply. When you write the set, look at
-the method map from the design: for each `UI()` method, make sure at
-least one example drives the user to it.
-
-They live in `backend/src/example_prompts.py` and are passed to
-`Application(example_prompts=...)` in `main.py`. Full file shapes and
-a worked set are in
-[`references/project-shell.md`](references/project-shell.md); the
-`mcp-ui-counter` example is the canonical reference.
-
-## Project Structure
-
-```
-<project>/
-├── .python-version          # "3.10"
-├── .rbtrc                   # Line-based config (NOT YAML!)
-├── .mypy.ini                # Type-check config (python skill)
-├── pyproject.toml           # Python deps (uv)
-├── api/
-│   └── <pkg>/v1/
-│       └── <name>.py        # API definition
-├── pytest.ini               # testpaths: tests; pythonpath: backend/src backend/api api
-├── backend/
-│   └── src/
-│       ├── main.py          # Application entrypoint
-│       ├── example_prompts.py  # Wizard example prompts
-│       └── servicers/
-│           └── <name>.py    # Servicer implementation
-├── tests/
-│   ├── <capability>.feature  # One feature per capability
-│   └── <name>_test.py       # `application` fixture + `scenarios(...)`
-└── frontend/
-    ├── package.json
-    ├── build.mjs            # Discovers + builds every UI
-    ├── tsconfig.json
-    ├── tsconfig.app.json
-    ├── tsconfig.node.json
-    ├── vite.config.ts
-    ├── api/                 # Generated React bindings (rbt generate)
-    ├── mcp/
-    │   └── <ui-name>/
-    │       ├── index.html
-    │       ├── index.css        # Theme variables
-    │       ├── main.tsx         # RebootClientProvider entry
-    │       ├── App.tsx          # React component
-    │       └── App.module.css
-    └── web/                 # Optional standalone browser SPA
-        ├── index.html
-        └── src/
-            ├── main.tsx
-            └── App.tsx
-```
-
-## Step-by-Step Build Flow
-
-**All commands run from the application directory.**
-
-1. Create `.python-version`, `pyproject.toml`, `.rbtrc`, and
-   `.mypy.ini` — see
-   [`references/project-shell.md`](references/project-shell.md);
-   the `.mypy.ini` template lives in
-   `python/references/lifecycle-project-setup.md`.
-2. `uv sync`.
-3. Start the developer dashboard — load the
-   [`dashboard` skill](../dashboard/SKILL.md) and follow it — so
-   the user can watch the API take shape while you write it. If it
-   fails to come up, say so in one sentence and keep building; do
-   not stop to debug it.
-4. Write API definition (`api/<pkg>/v1/<name>.py`) — see
-   [`references/api-method-types.md`](references/api-method-types.md)
-   and [`references/api-state-shapes.md`](references/api-state-shapes.md);
-   field-level pydantic rules in
-   `python/references/api-pydantic.md`.
-5. `uv run rbt generate`. Don't read what it wrote: the signature
-   your servicer must match is in `python/references/api-methods.md`
-   ("The Servicer Signature Each Declaration Obliges").
-6. Write servicer (`backend/src/servicers/<name>.py`) — see
-   [`references/servicer-patterns.md`](references/servicer-patterns.md);
-   context-type rules in `python/references/servicer-*.md`.
-7. Write `backend/src/example_prompts.py` (the wizard's example
-   prompts) and `main.py` (which imports them and passes
-   `example_prompts=` to `Application`) — see
-   [`references/project-shell.md`](references/project-shell.md) and
-   `python/references/lifecycle-application-entry.md`.
-8. `npm create @reboot-dev/ui`.
-9. `cd frontend && npm install`.
-10. `uv run rbt generate` (React bindings need `node_modules`).
-11. Customize React UIs — see
-    [`references/react-scaffolding.md`](references/react-scaffolding.md)
-    for the `frontend/` shell and
-    [`references/react-app-tsx.md`](references/react-app-tsx.md) for
-    `App.tsx` patterns.
-12. `cd frontend && npm run build`.
-13. **Write and run the scenarios of every feature before handing
-    the app off.** Each feature file from the design phase (the
-    [`feature` skill](../feature/SKILL.md)) gets its scenarios now:
-    every action the user should be able to _do_ through the MCP
-    tool surface ("create a new todo list", "add an item and see it
-    listed", "rename a list") is a scenario in the built-in steps
-    of `python/references/testing-features.md`, calling the
-    methods the tools call. Every step names who calls; a user is
-    declared with `"alice" is an authenticated user`, which is how
-    the real authorizers get exercised: register the **real**
-    servicers and never subclass one to weaken its `authorizer()`.
-    Let factories make ids up. Tag what cannot pass yet `@blocked`
-    with its reason; leave `@wip` where work continues. Run
-    `uv run pytest` and fix anything that fails.
-    Then type-check: run `uv run mypy backend/ tests/` from the project
-    root and fix every error (config and rationale in
-    `python/references/lifecycle-project-setup.md`). Do not
-    proceed to the next step until every scenario passes (or is
-    `@blocked` with a reason) and mypy is green — together they
-    are what catches contract bugs before the user sees them in
-    MCPJam. Point the user at the dashboard's Features page to
-    review the features.
-14. Run the app — load the [`run` skill](../run/SKILL.md) and
-    follow it. It is the single canonical "start the app"
-    procedure: it detects the app type, makes sure dependencies
-    and secrets are in place, and starts the backend and
-    frontend. **The handoff for an MCP UI is the setup wizard,
-    not the `/mcp` URL.** The backend serves an interactive
-    **setup wizard at its root (`http://localhost:9991`)** — the
-    page that connects an MCP client (Claude, ChatGPT, MCPJam, …)
-    and completes OAuth. As the run skill directs, surface that
-    URL to the user and open it once at first startup. Do **not**
-    start the MCPJam inspector as part of running the app — it
-    launches on demand, only if the user picks it in the wizard.
-    Don't bypass the run skill by invoking `rbt dev run` /
-    `npm run dev` by hand: those bare commands print only the
-    API/MCP/inspect URLs, dropping the wizard hint the user
-    actually needs.
-
-## Update Flow
-
-When modifying an existing app:
-
-1. Read `.rbtrc`, API definition, servicer, `main.py`.
-2. Assess state model changes. If the app has persisted state or
-   has been deployed, read
-   `python/references/api-schema-evolution.md` to understand the
-   rules you must follow for API schema evolution.
-3. Update API definition → re-run `uv run rbt generate`.
-4. Update servicer methods.
-5. Update React components.
-6. When the change adds a new user-facing capability, add or update
-   an example prompt in `backend/src/example_prompts.py` so the
-   wizard surfaces the new flow.
-7. Re-verify the backend: run `uv run mypy backend/ tests/` from the
-   project root and `uv run pytest`; fix every
-   error and failure before handing back.
-8. If the app isn't already running, bring it up with the
-   [`run` skill](../run/SKILL.md). If it is already running under
-   `rbt dev run`, the `--watch` globs reload it automatically — no
-   restart needed. Editing `.env` likewise triggers a restart, so
-   a new or changed secret is re-read by `--env-file` without a
-   manual relaunch.
-
-Specific patterns and file shapes live in the references above —
-read them on demand based on what's changing.
+generated file to answer a question, stop: build's "Never Read
+Generated or Installed Source in the Main Thread" is for you.

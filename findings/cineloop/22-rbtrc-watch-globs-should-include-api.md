@@ -10,8 +10,8 @@ names:
 tags: [scaffold, negative-space]
 cluster: "B"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/lifecycle-rbtrc.md § Do this"
 ---
 
 # Minor: .rbtrc watch globs should include api/

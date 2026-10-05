@@ -12,8 +12,8 @@ tags: [pattern, negative-space]
 cluster: "4.1"
 duplicate_of: reboot-crm-14
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/servicer-writer.md § Never"
 ---
 
 # A writer can schedule only on itself, so every type grows the same hand_in workflow

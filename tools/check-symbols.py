@@ -165,7 +165,9 @@ def main() -> int:
     version = reboot_version()
     result = subprocess.run(
         [str(UV), "run", "--no-project", "--quiet", f"--python={PYTHON}",
-         f"--with=reboot[{EXTRAS}]=={version}", "python", "-c", CHECKER],
+         f"--with=reboot[{EXTRAS}]=={version}",
+         # reboot.bdd.web imports playwright, which the extras don't pull in.
+         "--with=playwright", "python", "-c", CHECKER],
         input=json.dumps(payload), capture_output=True, text=True, timeout=600,
     )
     if result.returncode != 0:

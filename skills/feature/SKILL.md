@@ -92,7 +92,12 @@ application it runs against, or create the module
 (`testing-features.md` shows the minimal one). If the project has
 no test suite yet, set one up per `testing-project-setup.md`, which
 includes `reboot[dev]` in the dev dependencies and `*.recordings/`
-in `.gitignore`.
+in `.gitignore`. When scenarios need data to exist first, seed the
+minimum each one needs, per test, not the production catalog: call
+the seed function `initialize` calls with less data, through an
+app-internal context, and construct what production's `initialize`
+constructs
+([`lifecycle-seeding.md`](../python/references/lifecycle-seeding.md)).
 
 If the dashboard is running (the `dashboard` skill), the feature
 shows up on its Features page at once, marked as work in progress.
@@ -100,9 +105,10 @@ Tell the user it is there.
 
 ## Step 3 — Build the feature
 
-Change the API, the servicers, and the frontend with the `python`
-skill and, for the frontend, the `web-app` or `mcp-ui` skill. Two
-rules of theirs matter most here:
+Change the API, the servicers, and the frontend by the
+[`build` skill](../build/SKILL.md)'s flow with your front-door skill
+(`web-app` or `mcp-ui`), or with the `python` skill for backend-only
+work. Two rules matter most here:
 
 - **Every property gets a `description=`** on its `Field(...)`,
   saying what the value means (`api-pydantic.md`). The dashboard
@@ -126,6 +132,13 @@ run it. Concretely:
 - **Let a factory make the id up**: `"alice" creates an `Account`via`open``and`the resulting state id is saved as "account
   id"`, then `<account id>`. Give an id only when it means something
   to the application (a user id, a singleton the code refers to).
+- **Recall a saved value bare**: `scope_id=<account id>` passes the
+  saved value; `scope_id="<account id>"` passes the literal text
+  `<account id>` and fails somewhere else, usually as
+  `StateNotConstructed`.
+- **Give every rule at least one scenario**: a `Rule:` with prose and
+  no `Scenario:` under it is read by the developer and the dashboard
+  and checked by nothing, so it stays green while false.
 - **Move `@wip` down as scenarios land**: once a rule or scenario
   is written, put `@wip` on it and take it off the feature, so the
   dashboard shows exactly what is still being worked on.

@@ -11,8 +11,8 @@ names:
 tags: [error-text, version-drift, operations]
 cluster: "4.4"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/lifecycle-rbtrc.md § Errors you will see; run/references/stop-restart-reset.md § Errors you will see"
 ---
 
 # 'Address already in use' is reported as an internal Reboot/Envoy bug; run skill names a nonexistent port knob

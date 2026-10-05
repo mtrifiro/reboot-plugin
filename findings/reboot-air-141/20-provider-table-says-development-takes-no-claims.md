@@ -11,8 +11,8 @@ tags: [auth, negative-space]
 cluster: "4.1"
 duplicate_of: reboot-air-141-load-01
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "web-app/SKILL.md § Auth in Web Apps"
 ---
 
 # Provider table says Development takes no claims= but it does

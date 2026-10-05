@@ -10,8 +10,8 @@ names:
 tags: [scaffold, version-drift, frontend]
 cluster: "B"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "web-app/references/react-client.md § Never"
 ---
 
 # Frontend scaffolding notes: React 19 tsconfigs, bufbuild, exclude

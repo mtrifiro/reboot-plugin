@@ -10,8 +10,8 @@ names:
 tags: [testing, negative-space, scaffold]
 cluster: "8.4"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/lifecycle-project-setup.md § Do this"
 ---
 
 # mypy silently checks nothing on self.state and the smoke test misses it

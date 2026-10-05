@@ -10,8 +10,8 @@ names:
 tags: [testing, index-gap]
 cluster: "4.1"
 still_applies: unknown
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/testing-features.md § Limits"
 ---
 
 # A scenario cannot derive a value from a saved one

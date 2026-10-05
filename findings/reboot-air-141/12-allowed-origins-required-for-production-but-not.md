@@ -12,8 +12,8 @@ tags: [auth, index-gap]
 cluster: "4.1"
 duplicate_of: cineloop-30
 still_applies: unknown
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "web-app/SKILL.md § Auth in Web Apps; build/SKILL.md § Step 4 — Authorizers"
 ---
 
 # allowed_origins required for production but not in web-app skill

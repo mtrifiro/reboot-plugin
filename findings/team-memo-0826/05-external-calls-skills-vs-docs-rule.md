@@ -12,8 +12,8 @@ names:
 tags: [contradiction]
 cluster: "8.4"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/servicer-writer.md § When you are here; python/references/servicer-transaction.md § When you are here"
 ---
 
 # Skills and docs give different rules for where external calls belong

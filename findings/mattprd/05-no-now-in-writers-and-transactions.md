@@ -13,8 +13,8 @@ tags: [contradiction, negative-space, pattern]
 cluster: "E"
 duplicate_of: theater-chain-01
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/servicer-writer.md § Limits; python/references/patterns-time-and-randomness.md § Do this"
 ---
 
 # No sanctioned 'now' in writers/transactions; timestamps must come from the client

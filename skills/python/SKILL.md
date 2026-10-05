@@ -12,6 +12,11 @@ metadata:
 
 # Reboot Python Best Practices
 
+> **Building an MCP UI or Web App?** Follow
+> [`../build/SKILL.md`](../build/SKILL.md) and your front-door skill
+> instead; this skill is the reference catalog and the entry point
+> for backend-only work.
+
 > **Version notices:** if `rbt` reports a version mismatch or that a
 > newer Reboot is available, the [upgrade skill](../upgrade/SKILL.md)
 > says how and when to react.
@@ -78,10 +83,10 @@ from reboot.aio.contexts import ReaderContext, WriterContext
 
 
 class ChatRoomServicer(ChatRoom.Servicer):
-    # No `authorizer()` defined — fine for `rbt dev` (the runtime
-    # warns and allows). Before going to production, add a
-    # `TokenVerifier` and a real `authorizer()` rule (see
-    # references/servicer-authorizer.md).
+    # No `authorizer()` yet: `rbt dev` warns and allows, but the
+    # `Reboot()` test harness, `rbt serve` and Reboot Cloud deny
+    # every external call. Write a real rule before the first test
+    # (references/servicer-authorizer.md).
 
     async def messages(
         self,
@@ -248,7 +253,9 @@ true of your app.
 
 Everything you read stays in the conversation and is re-sent on every
 later turn, so read a reference at the step that needs it rather than
-all of them up front, and read each one **once**. That cost is also
+all of them up front, read each one **once**, and read **one per tool
+call** (`cat`-ing several at once can exceed the tool's output limit
+and be cut off). That cost is also
 why generated and installed source — `*_rbt.py`, `*_rbt_react.ts`,
 `site-packages/`, `node_modules/`, codegen templates — is the most
 expensive place in the system to learn a fact: the shapes worth
@@ -264,7 +271,6 @@ and Web Apps read their builder skill's lists instead. -->
 ### Before any code
 
 <!-- generated:start always front-door=backend-only -->
-- `references/patterns-common-gotchas.md` — The consolidated trip list: line-based `.rbtrc`, `--application-name`, no `__init__.py`, kwargs not Request wrappers, `self.ref().state_id`, zero defaults, `MixedContextsError`, the auto-constructed `User`.
 <!-- generated:end -->
 
 ### Defining the API
@@ -284,7 +290,7 @@ and Web Apps read their builder skill's lists instead. -->
 
 <!-- generated:start reading-list front-door=backend-only step=shell -->
 - `references/lifecycle-application-entry.md` — An `async def main()` that awaits `Application(servicers=[...], initialize=...).run()`; pass servicer classes, not instances; register stdlib libraries alongside your servicers.
-- `references/lifecycle-project-setup.md` — Canonical layout, `pyproject.toml`, the required `.gitignore` and project-root `.mypy.ini` (without it type-checking is useless), no `__init__.py` anywhere, generated code under `backend/`.
+- `references/lifecycle-project-setup.md` — Copy `build/templates/<front-door>/`: layout, `pyproject.toml`, `.gitignore`, `.mypy.ini`. No `__init__.py`; never edit `*_rbt.py`; mypy sees `self.state` as `Any` — use typed locals.
 - `references/lifecycle-rbtrc.md` — `.rbtrc` is line-based `<subcommand> <flag>`, not YAML; `--application-name` (not `--name`) persists state; `--env-file` for secrets; `serve run` lines for production; named configs.
 - `references/lifecycle-secrets.md` — only when the app needs secrets (API keys, OAuth client secrets).
 <!-- generated:end -->
@@ -293,11 +299,11 @@ and Web Apps read their builder skill's lists instead. -->
 
 <!-- generated:start reading-list front-door=backend-only step=servicer -->
 - `references/lifecycle-initialize-hook.md` — Each `initialize` call runs once in the app's lifetime, not per boot, so a migration needs a new alias; create singletons here, not in `__init__`; failures retry forever.
-- `references/rpc-calls.md` — Pass kwargs, never a Request wrapper: `await ref.deposit(context, amount=10)`; the context type must match the method; constructors return `(ref, response)`; `asyncio.gather` for concurrency.
-- `references/servicer-constructor.md` — Set initial state in the constructor method, branching on `context.constructor`, never in `__init__`; callers use `Service.create`; calling constructors from `initialize` and from a Transaction.
-- `references/servicer-reader.md` — The reader signature must match the API file; never mutate `self.state`; readers run concurrently and may call other actors, read-only.
-- `references/servicer-writer.md` — A writer mutates `self.state` on one actor only, never calling another actor's writer; errors roll back the mutation; writers may return no response.
-- `references/rpc-constructor-calls.md` — Call constructors as `<X>.create(context, id, ...)` or `<X>.<Ctor>(...)`, never `<X>.ref(id).<ctor>(...)`, which skips creation semantics; `create` is idempotent; reuse the returned ref.
+- `references/rpc-calls.md` — Pass kwargs: `await ref.deposit(context, amount=10)`; writers and transactions can't be called from a WriterContext, even your own; caller identity does not travel; writer cycles deadlock.
+- `references/servicer-constructor.md` — Set initial state in the `factory=True` method, never in `__init__`; a constructor runs once per actor (a second call aborts `StateAlreadyConstructed`); declare `Transaction(factory=True)` if it may construct others.
+- `references/servicer-reader.md` — The reader signature must match the API file; mutating `self.state` is silently discarded; readers may call other readers, and a subscribed reader re-runs when any actor it read changes.
+- `references/servicer-writer.md` — A writer mutates `self.state` on one actor only: no writes to other actors, no external calls, schedule only on itself; errors roll back the mutation; writers may return no response.
+- `references/rpc-constructor-calls.md` — Call constructors as `<X>.<ctor>(context, id, ...)`, never through `.ref(id)`; `create` exists only if a factory is named that; outside a replayed key a second call aborts.
 - `references/rpc-refs.md` — `self.ref().state_id`, never `self.state_id`; IDs are caller-supplied strings; checking whether an actor exists without hitting `StateNotConstructed`; `self.ref().schedule(...)`; reserved method names.
 - `references/servicer-workflow.md` — only when you declared a `Workflow`.
 - `references/agent-pydantic-ai.md` — only when the backend calls an LLM.
@@ -335,8 +341,10 @@ and forfeits durability, ordering, and concurrency guarantees:
 
 Each stdlib reference also lists its library registration —
 forgetting `<thing>_library()` and the stdlib actor's
-`<thing>.servicers()` in your `Application(...)` fails at boot
-with "unknown actor type."
+`<thing>.servicers()` in your `Application(...)` fails when the
+type is first called (an unknown state type), not at startup; only a
+library whose dependency library is missing fails at startup with
+`Missing required libraries: …`.
 
 Backend LLM calls — chat completions, AI agents, tool-using
 assistants — go through the durable `reboot.agents.pydantic_ai.Agent`,
@@ -347,11 +355,11 @@ on every workflow replay. Read `agent-pydantic-ai.md` before writing agent code.
 ### Authorization
 
 <!-- generated:start reading-list front-door=backend-only step=auth -->
-- `references/auth-allow-deny.md` — `allow()` only for genuinely public endpoints, never to silence dev auth warnings or for "internal-only" methods; `deny()` locks a method out; return an instance; one authorizer per servicer.
-- `references/auth-allow-if.md` — `allow_if(all=[...])` or `allow_if(any=[...])`, never both; `all` evaluates in order and short-circuits, so cheap predicates go first; how the decisions aggregate.
+- `references/auth-allow-deny.md` — `allow()` only for genuinely public endpoints, never to silence dev warnings, pass tests, or mark "internal-only" methods; `deny()` locks a method out; return an instance.
+- `references/auth-allow-if.md` — `allow_if(all=[...])` or `allow_if(any=[...])`, never both, never nested; `all` short-circuits in order; `is_app_internal` in `any` turns anonymous callers' `Unauthenticated` into `PermissionDenied`.
 - `references/auth-built-in-predicates.md` — `has_verified_token`, `is_app_internal` and `state_id_is_user_id` and their common compositions; a self-scheduled workflow needs `is_app_internal`; predicates always take `**kwargs`.
 - `references/servicer-authorizer.md` — Write real rules on every servicer before the first test; list the tokenless call paths first; identity does not cross servicer calls; `oauth=` vs. the `token_verifier=` escape hatch.
-- `references/auth-custom-predicates.md` — Keyword-only predicates ending in `**kwargs`, annotated or `mypy` fails; sync or async; order by cost in `all`; return `PermissionDenied` vs. `Unauthenticated` correctly; per-method rules.
+- `references/auth-custom-predicates.md` — Per-method rules via `<Type>.Authorizer(method=rule, _default=rule)`; keyword-only predicates ending in `**kwargs`, annotated or `mypy` fails; check `context.app_internal` first; `PermissionDenied` vs. `Unauthenticated`.
 - `references/auth-external-api-calls.md` — only when calling an external service's API as the user.
 - `references/stdlib-oauth-tokens.md` — only when storing a user's OAuth tokens for an external service.
 <!-- generated:end -->
@@ -364,9 +372,9 @@ feature in English, tag it `@wip`, iterate on scenarios) is the
 [`feature` skill](../feature/SKILL.md).
 
 <!-- generated:start reading-list front-door=backend-only step=tests -->
-- `references/patterns-idempotency.md` — What `IdempotencyUncertainError` means and when a retry needs an idempotency key; idempotent `create` / `initialize` calls, `context.constructor` for set-once fields, UUIDv7 for insertable records.
+- `references/patterns-idempotency.md` — What `IdempotencyUncertainError` means and when a retry needs an idempotency key; replayed calls return the first run's response; idempotent `create` / `initialize`; UUIDv7 for insertable records.
 - `references/testing-features.md` — The built-in steps' exact spelling (who calls, `creates` / `does`, saved values, `eventually`, aborts, tasks), `@wip` / `@blocked`, feature / rule / scenario shape, custom steps, mocks.
-- `references/testing-project-setup.md` — `tests/` layout, `pytest.ini` with three paths so generated `_rbt` modules import, `reboot[dev]` dev-deps, git-ignored recordings, `uv run pytest`; never construct servicers directly.
+- `references/testing-project-setup.md` — `tests/` layout; the template's `pytest.ini` (three paths, or generated `_rbt` imports fail) and fixture (`allowed_origins=[]`); `reboot[dev]`, no `pytest-asyncio`; never construct servicers directly.
 - `references/testing-external-context.md` — only when writing custom steps or harness tests.
 - `references/testing-failure-recovery.md` — only when the app has a spawned task, a `Workflow`, or scheduled work.
 - `references/testing-harness.md` — only when writing custom steps.
@@ -481,7 +489,7 @@ the lists above say when. The full catalog:
 - `references/testing-web-app.md` — Drive the Web App from Scenarios
 
 **Patterns**
-- `references/patterns-common-gotchas.md` — Common Reboot Python Gotchas
+- `references/patterns-common-gotchas.md` — Every "Never" in One List
 - `references/patterns-cross-actor-reads.md` — Cross-Actor Reads and Reader Shape
 - `references/patterns-error-handling.md` — Error Handling Patterns
 - `references/patterns-idempotency.md` — Make Constructor and `initialize` Calls Idempotent

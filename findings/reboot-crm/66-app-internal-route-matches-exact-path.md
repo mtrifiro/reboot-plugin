@@ -10,8 +10,8 @@ names:
 tags: [auth, negative-space]
 cluster: "4.1"
 still_applies: unknown
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/auth-external-api-calls.md § Never"
 ---
 
 # app_internal=True on an HTTP route matches the request's exact path, so a templated route silently gets an anonymous context

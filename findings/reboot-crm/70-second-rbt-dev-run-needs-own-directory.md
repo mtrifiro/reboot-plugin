@@ -11,8 +11,8 @@ names:
 tags: [operations, negative-space, error-text]
 cluster: "F"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/lifecycle-rbtrc.md § Limits; run/references/stop-restart-reset.md § Never"
 ---
 
 # A second rbt dev run of the same app needs its own directory

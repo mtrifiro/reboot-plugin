@@ -162,7 +162,10 @@ from inside a transaction; use it for seeds and batch writes.
 - `await OrderedMap.create(context, map_id)` — the class has no
   `create`; use `OrderedMap.ref(map_id).create(context)`.
 - Omitting `ordered_map_library()` from `Application(libraries=[...])` —
-  fails at runtime with an unknown actor type.
+  fails at runtime, when the map is first called, with an unknown
+  state type error (and at startup with `Missing required libraries:
+  reboot.std.collections.ordered_map.v1.ordered_map` when a library that needs it, e.g. `Ciphertext`, is
+  registered).
 - `OrderedMap.ref(f"{self.ref().state_id}-drafts")` — persist the ID
   as a field (`state-collections.md`).
 - Calling `insert` / `create` / `remove` from a `Writer` — they take a

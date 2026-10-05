@@ -12,8 +12,8 @@ names:
 tags: [auth, negative-space, frontend]
 cluster: "4.2"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "web-app/references/react-client.md § Never"
 ---
 
 # allowed_origins=[...] is required for production (not in web-app skill)

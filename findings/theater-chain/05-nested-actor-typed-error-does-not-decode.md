@@ -11,8 +11,8 @@ names:
 tags: [negative-space, error-text]
 cluster: "4.1"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/patterns-error-handling.md § Do this"
 ---
 
 # Nested actor typed error does not decode at the outer caller

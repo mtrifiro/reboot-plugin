@@ -11,8 +11,8 @@ names:
 tags: [frontend, scaffold, builder-drift]
 cluster: "4.2"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "web-app/references/react-client.md § Never"
 ---
 
 # Do not ship a web app on Vite's default port (5173); set strictPort

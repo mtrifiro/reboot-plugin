@@ -36,12 +36,10 @@ async def control_loop(
     request: ControlLoopRequest,
 ):
     channel = Channel.ref(request.channel_id)
-    pub_sub = PubSub.ref(f"{request.channel_id}-pub-sub")
+    topic = Topic.ref(f"{request.channel_id}-messages")
     queue = Queue.ref(f"{context.state_id}-messages-queue")
 
-    await pub_sub.subscribe(
-        context, topic="messages", queue_id=queue.state_id,
-    )
+    await topic.subscribe(context, queue_id=queue.state_id)
 
     async for iteration in context.loop("Control loop"):
         dequeue = await queue.dequeue(context, bulk=True)

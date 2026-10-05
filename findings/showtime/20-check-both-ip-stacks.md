@@ -10,8 +10,8 @@ names:
 tags: [operations]
 cluster: "F"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "run/SKILL.md § Before starting: is the port free?"
 ---
 
 # Check both IP stacks before handing out a dev URL

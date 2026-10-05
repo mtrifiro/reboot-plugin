@@ -62,6 +62,27 @@ The canonical backend-deploy procedure is
 `python/references/lifecycle-secrets.md` for secrets). Follow it.
 Production readiness checks that commonly bite at this point:
 
+- **Docker Desktop on macOS.** `rbt cloud up` pushes with
+  `docker --config <temporary dir> push`, which drops Docker
+  Desktop's active `desktop-linux` context and falls back to
+  `/var/run/docker.sock` (1.6.0 source). Stock Docker Desktop does
+  not create that socket, so the push fails with `failed to connect
+  to the docker API at unix:///var/run/docker.sock`. Export
+  `DOCKER_HOST="unix://$HOME/.docker/run/docker.sock"` before
+  `rbt cloud up` (reboot-crm, 1.6.0).
+- **Secrets come after the first `up`.** `rbt cloud secret set`
+  before the application exists fails with "Organization '...' does
+  not have an application named '...'". So the first `rbt cloud up`
+  creates the app, which is unhealthy if it cannot start without its
+  secrets (e.g. `prod=Google(...)` with no client id). Then run
+  `rbt cloud secret set` with every secret at once; that rolls the
+  app out again (see `python/references/lifecycle-secrets.md`).
+  Secrets survive `rbt cloud down --expunge`, so this bites only on
+  creation (reboot-crm, 1.6.0).
+- **Pass `--organization` on every `rbt cloud` command.** Without it,
+  `rbt cloud down` answers "User '...' does not have an application
+  named '...'" for an app that exists (reboot-crm, 1.6.0).
+
 - **A real OAuth provider.** `Development()` is dev-only; the
   `prod=` provider must be set
   (`mcp-ui/references/auth-oauth-providers.md` has the
@@ -219,6 +240,16 @@ and domain stay put.
 
 ## Step 6 — Verify
 
+`rbt cloud up` exits 0 before the new revision serves:
+`/__/inspect` returned 503 for about thirty seconds after it
+(reboot-crm, 1.6.0). CORS headers are already correct during that
+window, because the proxy answers before the app. Poll until it is
+up before checking anything else:
+
+```sh
+until curl -sf -o /dev/null "https://<application-id>.<cell>.rbt.cloud:9991/__/inspect"; do sleep 5; done
+```
+
 1. **Static serving:** `curl -sSI https://app.example.com/`
    returns 200 with `content-type: text/html`; a deep route
    (`curl -sSI https://app.example.com/some/route`) also returns
@@ -256,6 +287,11 @@ and domain stay put.
 - **Sign-in fails with an invalid-redirect error:** same cause —
   the frontend origin isn't on `allowed_origins`, so
   `/__/oauth/start` refuses the `return_to`.
+- **503 right after `rbt cloud up`, with correct CORS headers:**
+  still rolling out; wait (Step 6).
+- **Local Safari sign-in fails with `Missing pending-flow cookie`:**
+  a dev-only problem, not this one; see the
+  [run skill](../run/SKILL.md) § "Known issues".
 - **Signed-in session doesn't survive a reload in
   Safari/Firefox:** those browsers' tracking prevention can strip
   the cross-site session cookie that silent session restoration

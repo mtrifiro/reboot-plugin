@@ -10,8 +10,8 @@ names:
 tags: [operations]
 cluster: "F"
 still_applies: unknown
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "run/SKILL.md § Before starting: is the port free?"
 ---
 
 # Starting the local loop is five manual steps

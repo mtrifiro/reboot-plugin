@@ -11,8 +11,8 @@ names:
 tags: [scaffold, index-gap]
 cluster: "B"
 still_applies: unknown
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/testing-project-setup.md § Do this"
 ---
 
 # backend/.pytest.ini in layout diagram has no contents nearby

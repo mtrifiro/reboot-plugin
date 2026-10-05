@@ -3,7 +3,7 @@ title: Call LLMs via the Reboot `Agent`, Never a Raw SDK
 impact: HIGH
 impactDescription: A raw LLM call re-hits the provider on every workflow replay — wasteful, non-deterministic, double-billed
 tags: agent, llm, pydantic-ai, workflow, memoize, durable
-summary: "Never call a raw LLM SDK, which re-bills on every replay; use `reboot.agents.pydantic_ai.Agent` with a stable `name=`, run it in a `WorkflowContext`, `variant=` for repeats; streaming is drained."
+summary: "Never call a raw LLM SDK or put a model call in a writer/transaction; use `reboot.agents.pydantic_ai.Agent` with a stable `name=` inside a `Workflow`, `variant=` for repeats; streaming is drained."
 step: servicer
 applies: [mcp-ui, web-app, backend-only]
 always: false
@@ -12,44 +12,19 @@ verified: 1.6.0
 docs: ""
 ---
 
-## Call LLMs via the Reboot `Agent`, Never a Raw SDK
+# Call LLMs via the Reboot `Agent`, Never a Raw SDK
 
-> **Critical:** backend LLM calls go through
-> `reboot.agents.pydantic_ai.Agent` — a durable, drop-in wrapper
-> over `pydantic_ai.Agent`. It runs **only inside a
-> `WorkflowContext`**, requires a unique stable `name=`, and takes
-> the `WorkflowContext` as the **first positional argument** to
-> `run` / `iter` / `run_stream` / `run_stream_events` (raw
-> pydantic_ai takes the prompt first). Each model call — and each
-> tool call — is memoized via `at_least_once`, so a workflow
-> replay returns the cached response instead of re-hitting (and
-> re-billing) the provider.
+## When you are here
 
-When a Reboot app needs to talk to an LLM, do **not** reach for the
-`anthropic` / `openai` SDK or a bare `pydantic_ai.Agent`. Workflows
-re-execute (replay) after a restart; a raw LLM call inside one runs
-again on every replay — wasteful, non-deterministic, and billed
-twice. The Reboot `Agent` wraps each model call in `at_least_once`
-so a completed call returns its memoized `ModelResponse` on replay.
-Model calls also opt out of effect validation
-(`EffectValidation.DISABLED`, 1.6.0 source), so development does not
-bill twice either; tool calls do not opt out (`agent-tools.md`).
+The backend calls a model (to summarize, rank, classify, generate,
+chat). Backend LLM calls go through `reboot.agents.pydantic_ai.Agent`,
+a durable drop-in wrapper over `pydantic_ai.Agent`, run inside a
+`Workflow` method. Each model call is memoized with `at_least_once`, so
+a workflow replay returns the stored `ModelResponse` instead of
+re-hitting and re-billing the provider. Giving the agent tools is
+`agent-tools.md`.
 
-**Incorrect (raw LLM call inside a workflow — re-runs on replay):**
-
-```python
-import anthropic
-
-@classmethod
-async def summarize(cls, context: WorkflowContext) -> None:
-    # Re-hits Anthropic — and re-bills — every time the workflow
-    # replays. The response also varies run to run, breaking
-    # deterministic replay.
-    client = anthropic.Anthropic()
-    response = client.messages.create(model="...", messages=[...])
-```
-
-**Correct (durable Reboot `Agent`):**
+## Do this
 
 ```python
 from reboot.agents.pydantic_ai import Agent
@@ -73,32 +48,13 @@ async def summarize(cls, context: WorkflowContext) -> None:
     summary = result.output
 ```
 
-## Constructing the Agent
+To adopt an existing agent: `Agent.wrap(pydantic_ai.Agent(..., name="librarian"))`.
+Constructor arguments are `pydantic_ai.Agent`'s, plus the required
+`name=`, which scopes every memoization key for the agent's model and
+tool calls; it must be unique and stable.
 
-Two ways to build one, both at **module scope**:
-
-```python
-from reboot.agents.pydantic_ai import Agent
-
-# Directly — same arguments as `pydantic_ai.Agent`, plus `name=`.
-agent = Agent("anthropic:claude-sonnet-4-6", name="librarian")
-
-# Or adopt an already-built `pydantic_ai.Agent`.
-import pydantic_ai
-agent = Agent.wrap(pydantic_ai.Agent(..., name="librarian"))
-```
-
-`name=` is **required** and must be unique and stable: it scopes
-every memoization key for the agent's model and tool calls.
-Constructing without it raises `UserError`; the `name` setter
-raises after construction — changing it would silently shift the
-keys and break replay. To rename, construct a new `Agent`.
-
-## Running the Agent
-
-The agent runs **only inside a `WorkflowContext`** — a `Workflow(...)`
-method (see `servicer-workflow-declare.md`). It is not usable from a reader,
-writer, or transaction. All four entry points take `context` first:
+All four entry points take the `WorkflowContext` first (raw
+pydantic_ai takes the prompt first):
 
 ```python
 result = await agent.run(context, "prompt")          # one-shot
@@ -107,76 +63,104 @@ async with agent.run_stream(context, "prompt") as s: ...
 async for event in agent.run_stream_events(context, "prompt"): ...
 ```
 
-- Passing the prompt first (the raw-pydantic_ai habit) raises a
-  `UserError` naming the fix.
-- `run_sync` / `run_stream_sync` raise — Reboot is async-only; use
-  `await agent.run(...)`.
-- **Nested runs are rejected**: you cannot start an `agent.run`
-  while another is already active (e.g. from inside a tool).
+An on-demand "do it now" method (an MCP tool, a button) is a
+`Writer`/`Transaction` that only schedules the workflow
+(`await self.ref().schedule().summarize(context)`), never one that
+makes the model call itself.
 
-## Distinguish Repeated Runs with `variant=`
-
-Within one workflow method — or one control-loop iteration — every
-`agent.run` must be uniquely identifiable by its `(user_prompt, variant, message_history)`. Two indistinguishable calls raise
-`UserError: Duplicate agent run`. Pass a distinct `variant=` to
-differentiate repeated or parallel calls:
+Within one workflow method, or one `context.loop` iteration, every run
+must be distinguishable by `(user_prompt, variant, message_history)`.
+Repeat a prompt with a distinct `variant=`:
 
 ```python
 first = await agent.run(context, "Draft a title.")
-# Same prompt again in the same scope — needs a `variant`.
 second = await agent.run(context, "Draft a title.", variant="retry")
 ```
 
-Identical calls in **different** loop iterations are fine — each
-iteration is a fresh scope.
+Identical runs in different loop iterations are fine; each iteration
+is a fresh scope.
 
-## Streaming Is Drained, Not Token-by-Token
+### Dependency
 
-`run_stream`, `run_stream_events`, and `iter` work, but the
-underlying model call is fully drained and memoized inside
-`at_least_once`: events/chunks arrive in a single batch once the
-model finishes, not token-by-token. True incremental streaming is
-incompatible with deterministic replay.
-
-## Replay-Safety Notes
-
-- `parallel_execution_mode` defaults to the replay-safe
-  `parallel_ordered_events`. The pydantic_ai default `'parallel'`
-  is rejected at construction — its completion-order events are
-  non-deterministic across replays.
-- On replay the agent compares a snapshot of its configuration
-  (instructions, model, per-run kwargs) against the original run
-  and logs a `*** POSSIBLE NON-DETERMINISM! ***` warning if
-  anything changed — a hint that memoized responses may be stale.
-- Per-run `toolsets=` / `output_type=` must be picklable: define
-  any tool functions and output classes at **module scope**, not
-  as local closures.
-
-## Dependency
-
-Add the `anthropic` extra to the project's `reboot` requirement in
-`pyproject.toml`, keeping the version pin (see
-`lifecycle-project-setup.md`):
+Add the `anthropic` extra to the `reboot` requirement, keeping the pin
+(`lifecycle-project-setup.md`):
 
 ```toml
 dependencies = [
     "reboot[anthropic]==1.6.0",
-    # ...
 ]
 ```
 
-`reboot` already pins `pydantic-ai-slim`; the extra adds the
-Anthropic SDK at the version that works with it. Do **not** add
-`pydantic-ai-slim[anthropic]` or `anthropic` yourself: a fresh
-resolve of either picks an SDK built on `httpx2`, which rejects the
-`httpx` client Pydantic AI hands it, and every model call fails with
-"Invalid `http_client` argument".
+`reboot` already pins `pydantic-ai-slim`; the extra adds the Anthropic
+SDK at a version that works with it.
 
-## Related
+## Never
 
-- `agent-tools.md` — give the agent tools with `@agent.tool` /
-  `@agent.tool_plain` so it can read and mutate Reboot state.
-- `servicer-workflow-external.md` — the `WorkflowContext` method the agent
-  runs inside, and the `at_least_once` primitive it memoizes every
-  model and tool call with.
-- `lifecycle-secrets.md` — managing the provider API key.
+- `anthropic.Anthropic().messages.create(...)` or a bare
+  `pydantic_ai.Agent` in a workflow — it runs again on every replay,
+  re-bills, and returns a different answer, breaking deterministic
+  replay.
+- A model call in a `Transaction` or `Writer` — Reboot retries
+  transactions, so one logical request is billed several times, and
+  nothing memoizes it. The `Agent` refuses any non-workflow context.
+- `agent.run("prompt")` (prompt first) — raises `UserError` naming the
+  fix.
+- `run_sync` / `run_stream_sync` — raise; Reboot is async-only.
+- Starting an agent run from inside another (e.g. from a tool) —
+  nested runs raise `UserError`.
+- Setting `agent.name` after construction — raises; it would shift
+  every memoization key. Construct a new `Agent` to rename.
+- `parallel_execution_mode="parallel"` (pydantic_ai's default) —
+  rejected at construction; its completion-order events differ across
+  replays. The Reboot default `"parallel_ordered_events"` and
+  `"sequential"` are the accepted values.
+- Adding `pydantic-ai-slim[anthropic]` or `anthropic` to
+  `pyproject.toml` yourself — a fresh resolve picks an SDK built on
+  `httpx2`, which rejects the `httpx` client Pydantic AI hands it.
+- Tool functions or `output_type` classes defined as local closures and
+  passed per run — they must pickle; define them at module scope.
+
+## Limits
+
+- Runs only in a `WorkflowContext`; unusable from readers, writers and
+  transactions.
+- Streaming is drained, not token-by-token: `run_stream`,
+  `run_stream_events` and `iter` work, but the model call is drained
+  and memoized inside `at_least_once`, so chunks arrive in one batch
+  when the model finishes. A chat UI shows nothing until then (~30–60 s
+  for a long document, mattprd at 1.4.1); there is no sanctioned
+  side channel for partial output at 1.6.0.
+- Model calls pass `effect_validation=EffectValidation.DISABLED`
+  (1.6.0 source), so development and the test harness do not call the
+  provider twice. Tool calls do not opt out (`agent-tools.md`). The
+  no-re-billing promise above covers replay plus this opt-out, not
+  every call your workflow makes around the agent.
+- On replay the agent compares its configuration snapshot
+  (instructions, model, per-run kwargs) with the original run and logs
+  `*** POSSIBLE NON-DETERMINISM! ***` if anything changed; memoized
+  responses may then be stale.
+- Per-run `toolsets=` / `output_type=` must be picklable.
+
+## Scales as
+
+- One provider call per model step on first execution; zero on replay
+  (memoized). Tool-using runs make one model call per step plus tool
+  calls (framework design).
+
+## Errors you will see
+
+| Error text (stable prefix) | Meaning | Fix |
+| --- | --- | --- |
+| `` `Agent.run` requires `context: WorkflowContext` as its first positional argument `` | Called from a non-workflow context, or prompt passed first | Move the call into a `Workflow`; pass `context` first |
+| `` An agent needs to have a unique `name` in order to be used with Reboot `` | Constructed without `name=` | Add a stable `name=` |
+| `Duplicate agent run:` | Two indistinguishable runs in one method / iteration | Pass a distinct `variant=` |
+| `Nested agent runs are not supported` | A run started inside another | Restructure; call sequentially |
+| `` `Agent.run_sync` is not supported `` | Sync entry point | `await agent.run(context, ...)` |
+| `` `parallel_execution_mode='parallel'` is not supported on a Reboot `Agent` `` | pydantic_ai default mode | Omit it, or `"sequential"` |
+| ``Invalid `http_client` argument`` | Hand-added `anthropic` resolved an `httpx2` SDK | Use `reboot[anthropic]==1.6.0` only |
+
+## See also
+
+- [`agent-tools.md`](agent-tools.md) — tools that read and mutate state
+- [`servicer-workflow-external.md`](servicer-workflow-external.md) — `at_least_once` and effect validation
+- [`servicer-workflow-declare.md`](servicer-workflow-declare.md) — declaring and scheduling the workflow

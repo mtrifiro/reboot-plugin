@@ -10,8 +10,8 @@ names:
 tags: [testing, frontend, negative-space]
 cluster: "4.1"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/testing-web-app.md § Do this"
 ---
 
 # The web steps' roles are a closed list, and menuitemcheckbox is not in it

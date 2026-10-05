@@ -10,8 +10,8 @@ names:
 tags: [error-text, negative-space]
 cluster: "4.4"
 still_applies: unknown
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/api-pydantic.md § Errors you will see"
 ---
 
 # Nested Model fields: the error names the fix only halfway

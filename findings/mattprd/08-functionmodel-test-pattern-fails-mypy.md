@@ -10,8 +10,8 @@ names:
 tags: [testing, scaffold]
 cluster: "4.1"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/testing-external-context.md § Do this"
 ---
 
 # The documented test pattern for swapping agent models fails mypy

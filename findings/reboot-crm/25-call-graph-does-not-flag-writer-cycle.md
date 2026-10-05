@@ -11,8 +11,8 @@ names:
 tags: [negative-space, pattern, cost]
 cluster: "4.1"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/state-actor-decomposition.md § Never; python/references/rpc-calls.md § Never"
 ---
 
 # The call graph does not flag the cross-actor writer cycle that deadlocks two ordinary requests

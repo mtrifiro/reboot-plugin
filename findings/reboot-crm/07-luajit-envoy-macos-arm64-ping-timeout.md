@@ -10,8 +10,8 @@ names:
 tags: [operations, cost, error-text]
 cluster: "F"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "run/references/stop-restart-reset.md § Errors you will see"
 ---
 
 # LuaJIT in Envoy on macOS arm64 pins Envoy for ~10 minutes after every restart; every fan-out then dies with Unavailable: ping timeout

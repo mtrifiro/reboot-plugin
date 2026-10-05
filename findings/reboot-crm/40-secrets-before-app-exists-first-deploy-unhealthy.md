@@ -12,8 +12,8 @@ names:
 tags: [operations, auth, error-text, negative-space]
 cluster: "4.1"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/lifecycle-secrets.md § Limits; deploy/SKILL.md § Step 2 — Deploy the backend to Reboot Cloud"
 ---
 
 # Secrets cannot be set before an application exists, but some apps cannot start without them

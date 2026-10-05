@@ -10,8 +10,8 @@ names:
 tags: [negative-space, error-text, scaffold]
 cluster: "4.1"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/api-pydantic.md § Limits"
 ---
 
 # A model shared between two API packages generates Python that does not import it, and rbt generate reports success

@@ -11,8 +11,8 @@ names:
 tags: [seeding, error-text, pattern]
 cluster: "C"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/stdlib-queue.md § Do this"
 ---
 
 # Spawning from initialize needs an idempotency alias, which the consumer-loop example omits

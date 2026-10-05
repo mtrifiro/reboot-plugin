@@ -10,8 +10,8 @@ names:
 tags: [testing, frontend, negative-space]
 cluster: "8.4"
 still_applies: unknown
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/testing-web-app.md § Limits"
 ---
 
 # A user who opens the web app twice leaves a video the dashboard names page@<guid>

@@ -10,8 +10,8 @@ names:
 tags: [testing, frontend, negative-space, error-text]
 cluster: "4.1"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/testing-web-app.md § Do this"
 ---
 
 # The same control has two different names, depending on the step

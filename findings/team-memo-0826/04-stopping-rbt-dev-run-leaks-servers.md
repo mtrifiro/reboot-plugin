@@ -12,8 +12,8 @@ tags: [operations]
 cluster: "F"
 duplicate_of: reboot-crm-15
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "run/references/stop-restart-reset.md § Do this"
 ---
 
 # Stopping the rbt dev run CLI leaks the application's server processes

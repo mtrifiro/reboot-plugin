@@ -11,8 +11,8 @@ names:
 tags: [contradiction, auth, negative-space]
 cluster: "4.1"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/servicer-authorizer.md § Do this; python/references/auth-custom-predicates.md § Do this"
 ---
 
 # servicer-authorizer.md says per-method rules need a custom subclass; the generated <Type>.Authorizer already takes one rule per method

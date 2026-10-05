@@ -10,8 +10,8 @@ names:
 tags: [contradiction, operations]
 cluster: "4.2"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "run/SKILL.md § Step 2 — Detect the app type"
 ---
 
 # run skill web-app detection rule is unsatisfiable

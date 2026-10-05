@@ -13,8 +13,8 @@ tags: [contradiction, auth, testing]
 cluster: "4.2"
 duplicate_of: theater-chain-04
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "web-app/SKILL.md § Auth in Web Apps; python/references/servicer-authorizer.md § Do this; python/references/auth-allow-deny.md § Do this; build/SKILL.md § Step 4 — Authorizers"
 ---
 
 # Defer-the-authorizer advice contradicts the test step

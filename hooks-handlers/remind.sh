@@ -128,6 +128,8 @@ writing its API or code, and iterate on its scenarios with the user.
 - Before hand-rolling a primitive (maps, queues, pub/sub, presence,
 encryption), check Reboot's standard library: the `stdlib-*.md`
 references in the `python` skill.
+- Read one reference per tool call — several in one `cat` can exceed
+the tool output limit and get silently truncated.
 - Deploys and dev-loop restarts are slow; never use repeated deploys
 or restarts to discover how Reboot behaves. After two failed attempts
 at the same goal, stop, read the relevant skill reference, and explain

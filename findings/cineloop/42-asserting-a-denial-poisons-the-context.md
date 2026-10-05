@@ -12,8 +12,8 @@ tags: [testing, error-text, negative-space]
 cluster: "4.1"
 duplicate_of: student-sor-01
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/testing-external-context.md § Never; python/references/patterns-idempotency.md § Do this"
 ---
 
 # Asserting a denial poisons the context; asserting a declared error does not

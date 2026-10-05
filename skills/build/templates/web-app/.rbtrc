@@ -1,0 +1,37 @@
+# `.rbtrc` is line-based: `<subcommand> <flag>`, not YAML.
+# See `python/references/lifecycle-rbtrc.md`.
+
+# Find API definitions in 'api/'. `rbt dev run` also regenerates
+# and restarts when a file under 'api/' changes (`--generate-watch`
+# is on by default), so 'api/' needs no `--watch` line.
+generate api/
+
+# Tell `rbt generate` where to put generated files.
+generate --python=backend/api/
+generate --react=web/src/api
+generate --web=web/src/api
+
+# Watch source files during `rbt dev run`.
+dev run --watch=backend/api/**/*.py
+dev run --watch=backend/src/**/*.py
+
+# Tell `rbt` that this is a Python application.
+dev run --python
+
+# Save state between `rbt dev run` restarts.
+dev run --application-name=__project__
+dev expunge --application-name=__project__
+
+# Load secrets from a git-ignored env file. Put one KEY=VALUE line
+# per secret in `.env`. See `python/references/lifecycle-secrets.md`.
+dev run --env-file=.env
+
+# Run the application!
+dev run --application=backend/src/main.py
+
+# Production config used by `rbt serve run` (and so by Reboot Cloud).
+# The SPA is published separately (see the `deploy` skill).
+serve run --python
+serve run --application=backend/src/main.py
+serve run --application-name=__project__
+serve run --tls=external

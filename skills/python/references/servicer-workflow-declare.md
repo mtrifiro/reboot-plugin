@@ -65,7 +65,7 @@ with `Chatbot.ref().<scope>.write(context, fn)`
 ([`servicer-workflow-calls.md`](servicer-workflow-calls.md)). Use
 `context.state_id` for the actor's id. `response=None` is common:
 effects are observed through state, so the method returns `-> None`
-with no `return` (cross-method rule in `api-pydantic.md`).
+with no `return` (cross-method rule in `api-methods.md`).
 
 ### Starting it
 
@@ -118,6 +118,10 @@ workflow spawns more than once.
 
 ## Never
 
+- `cls.ref()` or `self.ref()` inside the workflow — `cls` is the
+  generated `BaseServicer`, whose `ref` is an instance method, and a
+  classmethod has no `self`. Use the state class from `<name>_rbt`:
+  `MyType.ref()` (no argument picks up `context.state_id`).
 - `async def wf(self, context: WriterContext, …)` — an instance method
   with a non-workflow context. Use `@classmethod`, `cls`,
   `WorkflowContext`.
@@ -170,6 +174,7 @@ workflow spawns more than once.
 | --- | --- | --- |
 | `Message type "rbt.v1alpha1.WorkflowMethodOptions" has no field named "constructor"` | `factory=True` on a `Workflow` | Factory writer/transaction schedules it |
 | `TypeError: reboot.aio.contexts.WorkflowContext is not an instance or subclass of one of the expected type(s): ['reboot.aio.contexts.TransactionContext']` | `schedule()` called from a workflow | `spawn(when=…)` |
+| `TypeError: <YourType>BaseServicer.ref() missing 1 required positional argument: 'self'` | `cls.ref()` in a workflow | `MyType.ref()` |
 | `is a workflow and must be scheduled from a 'WriterContext' via` | Writer/transaction called a workflow directly | `self.ref().schedule().wf(context, …)` |
 | `` `ref()` called without a `state_id` can only be used within a Workflow. `` | `Type.ref()` with no id outside a workflow | `self.ref()` or `Type.ref(id)` |
 

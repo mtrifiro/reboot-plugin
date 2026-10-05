@@ -10,8 +10,8 @@ names:
 tags: [negative-space]
 cluster: "8.4"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/rpc-calls.md § Do this"
 ---
 
 # Nothing in the references names the base Context type

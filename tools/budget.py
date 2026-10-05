@@ -46,6 +46,12 @@ FIXED_SKILLS = {
     "web-app": ["app", "web-app", "python", "feature", "run"],
     "backend-only": ["python", "feature", "run"],
 }
+# Once the shared build spine exists, MCP UI and Web App builds read it
+# and their front-door delta instead of the python skill.
+SPINE_SKILLS = {
+    "mcp-ui": ["app", "build", "mcp-ui", "feature", "run"],
+    "web-app": ["app", "build", "web-app", "feature", "run"],
+}
 
 LEGACY_FRONT_DOORS = ("mcp-ui", "web-app")
 
@@ -243,10 +249,10 @@ def measure(front_door: str) -> Report:
         report = Report(front_door, "legacy (no list)")
     else:
         report = from_frontmatter(front_door) if uses_frontmatter else legacy(front_door)
-    report.fixed = [
-        (f"{s}/SKILL.md", words(SKILLS / s / "SKILL.md"))
-        for s in FIXED_SKILLS[front_door]
-    ]
+    skills = FIXED_SKILLS[front_door]
+    if (SKILLS / "build" / "SKILL.md").exists() and front_door in SPINE_SKILLS:
+        skills = SPINE_SKILLS[front_door]
+    report.fixed = [(f"{s}/SKILL.md", words(SKILLS / s / "SKILL.md")) for s in skills]
     return report
 
 

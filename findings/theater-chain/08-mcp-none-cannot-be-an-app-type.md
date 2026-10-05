@@ -11,8 +11,8 @@ tags: [contradiction, operations]
 cluster: "4.2"
 duplicate_of: reboot-air-141-11
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "run/SKILL.md § Step 2 — Detect the app type"
 ---
 
 # mcp=None cannot be an app-type signal and tunnel is MCP-only

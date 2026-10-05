@@ -58,7 +58,9 @@ type name to pass to `--type`, then `state list` to find the
 Both flags match `rbt export` / `rbt import` (see
 `../python/references/lifecycle-reboot-cloud.md`).
 
-- `--application-url` is the app's API URL — **not** the `/__/inspect`
+- `--application-url` is **required on every command**, local dev
+  included; there is no default from `.rbtrc` or the dev port (1.6.0
+  `--help`). It is the app's API URL — **not** the `/__/inspect`
   page URL. It is the address printed as **"Your API is available
   at:"** when the app starts.
   - **Local dev:** the URL `rbt dev run` prints (e.g.
@@ -70,7 +72,11 @@ Both flags match `rbt export` / `rbt import` (see
   - **Local dev:** defaults to `dev`, so you can omit it.
   - **Reboot Cloud:** required — pass the value you set for
     `SECRET_REBOOT_ADMIN_TOKEN` (see
-    `../python/references/lifecycle-secrets.md`).
+    `../python/references/lifecycle-secrets.md`). It can also come
+    from the `REBOOT_ADMIN_CREDENTIAL` environment variable. Instead
+    of an admin credential, a `*.rbt.cloud` URL also accepts
+    `--api-key` (or `REBOOT_CLOUD_API_KEY`), the Reboot Cloud API key
+    (1.6.0 `--help`).
 
 ### Examples
 
@@ -110,3 +116,14 @@ rbt inspect state get \
   `jq`, etc.
 - **Web equivalent.** The `/__/inspect` page (linked from `rbt dev run` and `rbt cloud up` output) shows the same state plus recent
   calls in a browser; `rbt inspect` is the CLI counterpart.
+
+## Known issues
+
+| Error / symptom | Meaning | Fix |
+| --- | --- | --- |
+| `error: the following arguments are required: --application-url` | Every `rbt inspect` command needs the URL, even against local dev | Pass `--application-url=http://localhost:<port>` (the URL `rbt dev run` prints) |
+| `expected --type=VALUE, missing '=VALUE'` | `--type` (and the other flags) take only the `=` form | Write `--type=<full.Type.Name>` |
+| `Unknown state reference`, or an actor you seeded is missing | You are asking a different application (wrong port or `--application-name`), or orphaned processes from an earlier `rbt dev run` hold another generation of state (1.4.1) | Check the URL; stop every process per the [run skill](../run/SKILL.md) § "Stop, restart, reset" and start once |
+| A repeated field prints as `{"items": [...]}` in one place and as a plain array in another | Inconsistent output shape for lists (reboot-crm, 1.6.0) | Handle both shapes in scripts (`jq 'if type == "object" then .items else . end'`) |
+| An `OrderedMap` shows only an id | The map actor holds a root id; its keys and values live in a `Node` actor (client-portal, 1.6.0) | Run `state get` again on the node id |
+| A call hangs with `Timed out waiting 30.0s to acquire exclusive lock` | Something holds the actor's lock. `rbt inspect` cannot show locks or who holds them: it has only `type list`, `state list` and `state get` (1.6.0) | See [`../python/references/servicer-transaction.md`](../python/references/servicer-transaction.md); a caller that vanished mid-transaction keeps the lock until the app restarts |

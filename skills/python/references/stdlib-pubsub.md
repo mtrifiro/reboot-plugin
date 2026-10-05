@@ -3,7 +3,7 @@ title: Use `Topic` for Publish/Subscribe Fan-Out to Queues
 impact: MEDIUM
 impactDescription: Pub/sub fan-out without `Topic` requires hand-rolling broadcast and per-subscriber buffers
 tags: stdlib, Topic, pubsub, publish, subscribe, broker, fan-out
-summary: "`Topic` fans published `Item`s out to subscribed `Queue`s: register the library, subscribe, publish, consume on the queue side; one topic per logical channel."
+summary: "`Topic` fans published `Item`s out to subscribed `Queue`s: register the library, subscribe a queue first (items published with no subscriber are dropped), publish, consume on the queue side."
 step: servicer
 applies: [mcp-ui, web-app, backend-only]
 always: false
@@ -12,49 +12,28 @@ verified: 1.6.0
 docs: ""
 ---
 
-## Use `Topic` for Publish/Subscribe Fan-Out to Queues
+# Use `Topic` for Publish/Subscribe Fan-Out to Queues
 
-> **Critical:** A `Topic` is only half of pub/sub — **`publish`
-> alone delivers nothing**. The broker fans items out to
-> registered subscriber Queues; with no subscribers, items
-> accumulate in the topic and reach nobody. Build BOTH sides:
->
-> - **Producer:** `await Topic.ref(<id>).publish(context, value=…)`.
-> - **Consumer:** each subscriber owns its own `Queue` actor,
->   registers it via
->   `await Topic.ref(<id>).subscribe(context, queue_id=<their-id>)`,
->   and pulls items in a workflow with
->   `await Queue.ref(<their-id>).dequeue(context, bulk=True)`.
->
-> Other implementation rules:
->
-> - `Topic` is built on `Queue`, which is in turn backed by an
->   internal stdlib sorted-map actor — register
->   `pubsub.servicers()` (transitively pulls Queue's servicers)
->   AND `sorted_map_library()`.
-> - The internal `broker` workflow auto-schedules on first
->   publish/subscribe — don't start it manually.
-> - Subscribers must consume from their **own** `Queue`, never
->   from the topic directly.
+## When you are here
 
-`Topic` (`reboot.std.pubsub.v1.pubsub`) implements pub/sub on top of
-`Queue`. Publishers `publish` items to the topic; subscribers register a
-`Queue` actor as a destination and pull items from that queue. A
-background `Broker` workflow inside the topic moves items from the
-topic's buffer into each subscriber's queue.
+One producer's items must reach several consumers. `Topic`
+(`reboot.std.pubsub.v1.pubsub`) is pub/sub built on `Queue`: publishers
+`publish` to the topic; each subscriber owns a `Queue` it registered
+with `subscribe`; an internal `broker` workflow copies every published
+item into every subscribed queue. `publish` alone delivers nothing:
+build both sides. The consumer loop itself is `stdlib-queue.md`.
+
+## Do this
 
 ### Methods
 
-| Method      | Type     | Notes                                                                   |
-| ----------- | -------- | ----------------------------------------------------------------------- |
-| `publish`   | writer   | one of `value` / `bytes` / `any` (single) or `items: list[Item]` (bulk) |
-| `subscribe` | writer   | `queue_id: str` — the `Queue` actor that will receive items             |
-| `broker`    | workflow | internal; auto-scheduled on first publish/subscribe                     |
+| Method | Kind | Notes |
+| --- | --- | --- |
+| `publish` | writer | exactly one of `value` / `bytes` / `any` (single) or `items: list[Item]` (bulk) |
+| `subscribe` | writer | `queue_id: str` — the `Queue` that will receive items; repeating it is a no-op |
+| `broker` | workflow | internal; scheduled by the first `publish` or `subscribe` |
 
-### Register the Library
-
-`Topic` is built on `Queue`, which is itself backed by an internal
-stdlib sorted-map actor:
+### Register
 
 ```python
 from reboot.std.pubsub.v1 import pubsub
@@ -68,13 +47,13 @@ async def main():
     ).run()
 ```
 
-`pubsub.servicers()` returns `[TopicServicer] + queue.servicers()`, so
-you don't need to add `queue.servicers()` separately. The
-`sorted_map_library()` registration is the only place you mention
-the backing sorted-map actor — for a user-facing sorted key/value
-collection, use `OrderedMap` (see `stdlib-ordered-map.md`).
+`pubsub.servicers()` returns `[TopicServicer] + queue.servicers()`
+(which already includes the sorted-map servicer; duplicates are
+deduplicated). The library form, which takes an `authorizer=`, needs
+its whole chain:
+`libraries=[pubsub_library(...), queue_library(), sorted_map_library()]`.
 
-### Subscribe a Queue to a Topic
+### Subscribe a queue, then publish
 
 ```python
 from reboot.std.collections.queue.v1.queue import Queue
@@ -86,30 +65,19 @@ class SubscriberServicer(Subscriber.Servicer):
     async def attach(
         self, context: WriterContext, request: AttachRequest,
     ) -> AttachResponse:
+        # A Queue needs no create; subscribing its ID is enough.
         queue_id = f"{self.ref().state_id}-inbox"
-        # Make sure the destination queue exists, then subscribe it.
         await Topic.ref(request.topic_id).subscribe(
             context, queue_id=queue_id,
         )
         return AttachResponse()
-```
 
-Each subscriber owns its own `Queue` actor; the topic's broker copies
-each published item into every subscriber's queue.
 
-### Publish
-
-```python
+# Producer side, from any writer / transaction / workflow:
 await Topic.ref(topic_id).publish(context, value=some_value)
 ```
 
-Single-item publishes accept exactly one of `value`, `bytes`, or `any`.
-Bulk publishes pass `items=[Item(...), Item(...)]`.
-
-### Consume from the Subscriber Side
-
-Each subscriber pulls from its own queue using the `Queue.dequeue`
-workflow pattern (see `stdlib-queue.md`):
+### Consume on the subscriber side
 
 ```python
 @classmethod
@@ -118,20 +86,55 @@ async def control_loop(
 ):
     queue = Queue.ref(f"{context.state_id}-inbox")
     async for iteration in context.loop("Consume"):
-        batch = await queue.dequeue(context, bulk=True)
+        batch = await queue.per_iteration("Dequeue inbox").dequeue(
+            context, bulk=True,
+        )
         for item in batch.items:
             ...
 ```
 
-### Broker Is Internal
+Use one stable topic ID per logical channel (e.g. `f"{room_id}-events"`);
+publishers and subscribers must agree on it.
 
-The first `publish` or `subscribe` schedules the topic's `broker`
-workflow if it isn't already running. You don't need to start it
-manually. The broker reads accumulated items from the topic's state and
-fans them out to subscribed queues.
+## Never
 
-### One Topic Per Logical Channel
+- Publishing with no consumer side — nothing reads the topic itself.
+- Consuming from the topic directly — each subscriber consumes from its
+  **own** `Queue`.
+- Starting `broker` yourself — the first `publish`/`subscribe`
+  schedules it.
+- `PubSub.ref(...)` or `subscribe(context, topic=..., queue_id=...)` —
+  the 1.6.0 type is `Topic`, and `subscribe` takes only `queue_id`; the
+  topic is the actor ID.
 
-A `Topic.ref(...)` is identified by a string ID. Use a stable ID per
-logical channel (e.g. `f"{room_id}-events"`); subscribers and publishers
-must agree on it.
+## Limits
+
+- Items published while no queue is subscribed are dropped: the broker
+  takes every buffered item and enqueues it to the queues subscribed at
+  that moment (1.6.0 source). Subscribe before publishing anything that
+  matters.
+- Delivery to each queue is one `Queue.enqueue` per broker iteration,
+  run concurrently across queues.
+- There is no `unsubscribe` method at 1.6.0.
+- `TopicServicer`'s default authorizer is `allow()` (anyone may publish
+  or subscribe), unlike `Queue`'s app-internal default. Pass
+  `pubsub_library(authorizer=...)` to restrict it.
+- `publish` takes exactly one of `value`, `bytes`, `any`, `items`;
+  anything else raises `TypeError` (`stdlib-item.md`).
+
+## Scales as
+
+- Not measured. Each broker iteration writes every buffered item into
+  every subscribed queue, so cost grows with items × subscribers.
+
+## Errors you will see
+
+| Error text (stable prefix) | Meaning | Fix |
+| --- | --- | --- |
+| `Missing required libraries: reboot.std.collections.queue.v1.queue` | `pubsub_library()` without `queue_library()` | Add `queue_library()` and `sorted_map_library()` |
+
+## See also
+
+- [`stdlib-queue.md`](stdlib-queue.md) — the subscriber's consume loop
+- [`stdlib-item.md`](stdlib-item.md) — the published value envelope
+- [`servicer-workflow-loop.md`](servicer-workflow-loop.md) — per-iteration scope in loops

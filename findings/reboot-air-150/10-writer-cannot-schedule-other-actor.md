@@ -13,7 +13,7 @@ cluster: "4.1"
 duplicate_of: reboot-crm-14
 still_applies: yes
 status: Resolved
-resolved_by: "python/references/scheduling-basic.md § Do this; python/references/servicer-writer.md § Writer Scope Is Mutating One Actor"
+resolved_by: "python/references/scheduling-basic.md § Do this; python/references/servicer-writer.md § Never"
 ---
 
 # A writer cannot schedule work on another actor (only a transaction can); the reference implies otherwise

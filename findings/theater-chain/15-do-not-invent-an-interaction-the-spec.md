@@ -10,8 +10,8 @@ names:
 tags: [pattern]
 cluster: "G"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "build/SKILL.md § Design Phase"
 ---
 
 # Do not invent an interaction the spec did not ask for

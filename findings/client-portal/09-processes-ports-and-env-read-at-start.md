@@ -12,8 +12,8 @@ names:
 tags: [operations, index-gap]
 cluster: "F"
 still_applies: unknown
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "run/SKILL.md § Step 4 — Secrets: the git-ignored env file"
 ---
 
 # Processes, ports, and what reads what (.env read only at process start)

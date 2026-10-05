@@ -2,7 +2,7 @@
 title: Deploy on Reboot Cloud
 impact: MEDIUM
 impactDescription: Production deployment target — needed when an app graduates beyond `rbt dev run` or a single-machine `rbt serve`.
-tags: deploy, cloud, rbt-cloud, scaling, secrets, dockerfile, api-key
+tags: deploy, cloud, rbt-cloud, scaling, secrets, dockerfile, api-key, docker
 summary: "`rbt cloud up` / `down`, secrets, logs and getting access; when Cloud beats `rbt serve`; calls the dev server let through are `PermissionDenied` on Cloud."
 step: deploy
 applies: [mcp-ui, web-app, backend-only]
@@ -11,62 +11,45 @@ verified: 1.6.0
 docs: ""
 ---
 
-## Deploy on Reboot Cloud
+# Deploy on Reboot Cloud
 
-> **What it is:** Reboot Cloud is the easiest place to deploy a
-> Reboot application. It takes a Dockerfile, builds and pushes the
-> image to a managed registry, then runs the app with automatic
-> partitioning across a cluster of machines — horizontal scaling
-> and high-availability failover (~seconds) come built-in,
-> backed by Reboot's transactional safety guarantees.
+## When you are here
 
-Reboot Cloud is the hosted deployment target for Reboot apps. The
-alternative is `rbt serve` on your own infrastructure (EBS or
-EFS); that runs on a **single machine** and can only scale
-vertically. Reboot Cloud scales out: it shards an app's state
-machines across the cluster automatically, so the same code that
-ran under `rbt dev run` keeps working at multi-machine scale
-without sharding logic in user code.
+The app works under `rbt dev run` and is going to production. Reboot
+Cloud takes the project's Dockerfile, builds and pushes the image to a
+managed registry, and runs the app partitioned across a cluster, with
+horizontal scaling and failover in seconds. The Dockerfile is
+[`lifecycle-dockerfile.md`](lifecycle-dockerfile.md); secrets are
+[`lifecycle-secrets.md`](lifecycle-secrets.md); publishing a web
+frontend and `allowed_origins` are the
+[`deploy` skill](../../deploy/SKILL.md).
 
-## When to Reach for Cloud vs. `rbt serve`
+## Do this
 
-| Feature                | `rbt serve` (EBS)        | `rbt serve` (EFS) | Reboot Cloud  |
-| ---------------------- | ------------------------ | ----------------- | ------------- |
-| Physical backups       | Yes                      | Yes               | Yes           |
-| Replication            | Within availability zone | Within region     | Within region |
-| HA failover            | ~minutes                 | ~seconds          | ~seconds      |
-| Vertical scaling       | Yes                      | Yes               | Yes           |
-| **Horizontal scaling** | **No**                   | **No**            | **Yes**       |
+### Cloud or `rbt serve`
 
-Pick `rbt serve` when one machine is enough and you want full
-control of the host. Pick Reboot Cloud when you want a managed
-deployment, need to scale beyond a single machine, or just want
-the shortest path from `rbt dev run` to production.
+| Feature | `rbt serve` (EBS) | `rbt serve` (EFS) | Reboot Cloud |
+| --- | --- | --- | --- |
+| Physical backups | Yes | Yes | Yes |
+| Replication | Within availability zone | Within region | Within region |
+| HA failover | ~minutes | ~seconds | ~seconds |
+| Vertical scaling | Yes | Yes | Yes |
+| **Horizontal scaling** | **No** | **No** | **Yes** |
 
-## Getting Access
+`rbt serve` runs on one machine you control. Cloud shards the app's
+state machines across a cluster with no sharding logic in user code.
+Enterprises with strict compliance needs can run Cloud on their own
+Kubernetes cluster (ask via the Discord community or
+[`docs.reboot.dev`](https://docs.reboot.dev)).
 
-Sign up at [`cloud.reboot.dev`](https://cloud.reboot.dev/), and create
-an API key. Export it as `REBOOT_CLOUD_API_KEY` and run `rbt cloud up` to
-get your application running in production! Every `rbt cloud`
-subcommand reads the API key from the `REBOOT_CLOUD_API_KEY` environment
-variable, which is preferred over passing `--api-key` on the command
-line: a value passed on the command line — even via `--api-key=$VAR` —
-is visible in the host's process listing (e.g. `ps`), whereas the
-environment variable is not.
+### Access
 
-For organizations with strict compliance requirements, Reboot
-Cloud can also be deployed onto an enterprise-owned Kubernetes
-cluster — same managed runtime, self-hosted control plane.
-Contact Reboot via the Discord community or
-[`docs.reboot.dev`](https://docs.reboot.dev) to set that up.
+Sign up at [`cloud.reboot.dev`](https://cloud.reboot.dev/), create an
+API key, and export it as `REBOOT_CLOUD_API_KEY`. Every `rbt cloud`
+subcommand reads it from there. Prefer that to `--api-key`: a
+command-line value, even `--api-key=$VAR`, is visible in `ps`.
 
-## Deploying: `rbt cloud up`
-
-The app needs a `Dockerfile` at the project root that builds the
-backend image — see
-[`lifecycle-dockerfile.md`](lifecycle-dockerfile.md) for the
-canonical layout. `rbt cloud up` builds it, pushes it to Reboot's
-managed registry, and rolls out a new revision:
+### Deploy: `rbt cloud up`
 
 ```sh
 export REBOOT_CLOUD_API_KEY=<your-key>
@@ -76,21 +59,17 @@ rbt cloud up \
   --size=xsmall
 ```
 
-- `--application-name` names the app inside your organization;
-  the same value is used to refer to it on later `cloud`
-  subcommands. (`--name` is a deprecated alias and prints a
-  warning — write `--application-name` in fresh scripts.)
-- `--organization` is required the **first** time an app is
-  created; once it exists, subsequent `up` calls can omit it.
-  Creating an app requires a valid payment method on the
-  organization.
-- `--size` picks the application footprint: `xsmall` (default),
-  `small`, `medium`, `large`, `xlarge`.
-- `--dockerfile=./Dockerfile` (default) picks the Dockerfile.
-  `--docker-build-arg=KEY=VALUE` (repeatable) forwards build
-  args.
+- `--application-name` names the app inside the organization; later
+  `cloud` subcommands use the same value.
+- `--organization` — pass it on **every** `rbt cloud` command. Without
+  it the app is looked up under your user, not the organization, and
+  a new app cannot be created without it. Creating an app needs a
+  valid payment method on the organization.
+- `--size`: `xsmall` (default), `small`, `medium`, `large`, `xlarge`.
+- `--dockerfile=./Dockerfile` (default); `--docker-build-arg=KEY=VALUE`
+  (repeatable) forwards build args.
 
-On success, `rbt cloud up` prints three URLs:
+On success it prints three URLs:
 
 ```text
   Your API is available at:      https://<application-id>.prod1.rbt.cloud:9991
@@ -98,42 +77,87 @@ On success, `rbt cloud up` prints three URLs:
   You can inspect your state at: https://<application-id>.prod1.rbt.cloud:9991/__/inspect
 ```
 
-The `__/inspect` page is the production equivalent of the inspect
-page `rbt dev run` exposes locally — it shows live state and
-recent calls. For the same state from the terminal (scriptable,
-pipeable), use `rbt inspect` against this app's API URL — see the
-[inspect skill](../../inspect/SKILL.md).
+`/__/inspect` is the production twin of the local inspect page. For the
+same state from the terminal, run `rbt inspect` against the API URL
+([inspect skill](../../inspect/SKILL.md)). To update, run `rbt cloud
+up` again: it rolls a new revision forward.
 
-## Secrets: `rbt cloud secret set/list/delete`
+### Secrets, logs, teardown
 
-Cloud secrets are delivered to the app as environment variables via
-`rbt cloud secret set/list/delete`. `lifecycle-secrets.md` is the
-canonical doc — it covers the full command shape (including batching
-every secret into one `set` so the backend rolls out only once, and
-why no follow-up `rbt cloud up` is needed), the reserved
-`REBOOT_*`/`RBT_*` names, and how the app reads the values
-(`os.environ["KEY"]`).
+- **Secrets**: `rbt cloud secret set/list/delete` —
+  [`lifecycle-secrets.md`](lifecycle-secrets.md). Run the first `up`
+  before the first `secret set`.
+- **Logs**: `rbt cloud logs` streams the app's logs; `--follow` tails,
+  `--revisions=` filters by revision.
+- **Teardown**: `rbt cloud down --application-name=... --organization=...
+  --expunge` deletes the application's state (see Limits).
 
-## Logs: `rbt cloud logs`
+### Auth
 
-`rbt cloud logs` streams application logs from the cluster.
-Supports filtering by revision and `--follow` for tailing.
+Every externally reachable method needs an authorizer before deploying.
+Calls without one are **denied** (`PermissionDenied`) on Cloud, as under
+`rbt serve`; `rbt dev run` allows them with a 60-second warning, so the
+gap shows only on first deploy. See
+[`servicer-authorizer.md`](servicer-authorizer.md) and
+[`auth-allow-if.md`](auth-allow-if.md).
 
-## Tearing Down: `rbt cloud down`
+## Never
 
-`rbt cloud down` retires a revision (and, with the right flags,
-the whole application). Use it when an app is no longer needed
-or to roll back a bad revision; for routine updates, just run
-`rbt cloud up` again — it creates a new revision and rolls
-forward.
+- **`rbt cloud down` to roll back or pause** — at 1.6.0 it always
+  expunges state; `--no-expunge` is refused. Roll forward with
+  another `rbt cloud up`.
+- **`rbt cloud down --expunge` to change size** — resizing is
+  non-destructive (see Limits).
+- **Dropping `--organization` after the first deploy** — the command
+  then reports that the application does not exist.
+- **`--api-key=<key>` on the command line** — use
+  `REBOOT_CLOUD_API_KEY`.
 
-## Auth Implications
+## Limits
 
-Before deploying to Reboot Cloud, every externally reachable
-Servicer method needs an authorizer — calls without one are
-**denied** (`PermissionDenied`) under `rbt cloud up`, exactly
-like under `rbt serve`. (Under `rbt dev run` they're allowed with
-a 60-second warning, so the gap only shows up on first deploy.)
-See [`servicer-authorizer.md`](servicer-authorizer.md),
-[`auth-allow-if.md`](auth-allow-if.md), and the surrounding
-`auth-*` references for the predicate machinery.
+- **`rbt cloud down` always deletes state** at 1.6.0 (source: it fails
+  without `--expunge`). Secrets survive it
+  ([`lifecycle-secrets.md`](lifecycle-secrets.md)). The only way to
+  keep data across it, or across a breaking-change expunge, is
+  `rbt export` / `rbt import` (`rbt export --help`); the
+  [inspect skill](../../inspect/SKILL.md) mentions them.
+- **Changing `--size` keeps state**: `rbt cloud up` at a new size rolls
+  a new revision forward like any redeploy (confirmed by Reboot,
+  reboot-crm).
+- **`rbt cloud up` returns before the app serves**: `/__/inspect`
+  answered 503 for about 30 seconds after `up` exited 0. A 503 that
+  carries `access-control-allow-origin` means "still rolling out", not
+  "misconfigured" (reboot-crm, 1.6.0).
+- **The image push needs `/var/run/docker.sock`**. Stock Docker Desktop
+  on macOS does not create it (its socket is
+  `~/.docker/run/docker.sock`), so the push fails even though `docker`
+  works. Before `rbt cloud up`:
+  `export DOCKER_HOST="unix://$HOME/.docker/run/docker.sock"`
+  (reboot-crm, 1.6.0).
+- **An `oauth=` app needs `allowed_origins`** in production; the
+  default is refused at boot. The [`deploy` skill](../../deploy/SKILL.md)
+  covers what to list.
+
+## Scales as
+
+- Horizontal: Cloud partitions actors across machines automatically;
+  `rbt serve` scales only vertically (framework design).
+
+## Errors you will see
+
+| Error text (stable prefix) | Meaning | Fix |
+| --- | --- | --- |
+| `--organization=... is required for new applications` | `cloud up` without `--organization`, for a new app or for an org app looked up under your user | Add `--organization=<org>` |
+| `User '...' does not have an application named '...'. If the application belongs to an organization, try adding --organization=<name>.` | `--organization` left off `down` / `logs` / `secret`; the app exists | Add `--organization=<org>` |
+| `Currently all applications brought down are expunged.` | `rbt cloud down --no-expunge` | There is no non-destructive down; export first if you need the data |
+| `Organization '...' does not have a valid payment method.` | Creating an app on an org with no payment method | Add one at `cloud.reboot.dev` |
+| `push failed: failed to connect to the docker API at unix:///var/run/docker.sock` | macOS Docker Desktop socket is elsewhere | `export DOCKER_HOST="unix://$HOME/.docker/run/docker.sock"` |
+| `Could not deploy revision` | The new revision failed to start; its logs follow | Fix the cause in the logs and `up` again |
+| `` `OAuth` requires `allowed_origins=[...]` to be set explicitly in production `` | `oauth=` with no `allowed_origins` outside `rbt dev run` | List the SPA's origin, or `allowed_origins=[]` for same-origin only |
+| `PermissionDenied` | A method with no authorizer, allowed in dev, denied here | Add an authorizer |
+
+## See also
+
+- [`lifecycle-dockerfile.md`](lifecycle-dockerfile.md) — the image `up` builds
+- [`lifecycle-secrets.md`](lifecycle-secrets.md) — Cloud secrets and ordering
+- [`../../deploy/SKILL.md`](../../deploy/SKILL.md) — frontend, domain, `allowed_origins`

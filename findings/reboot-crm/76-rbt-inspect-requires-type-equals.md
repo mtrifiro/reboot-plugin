@@ -10,8 +10,8 @@ names:
 tags: [operations, error-text]
 cluster: "F"
 still_applies: no
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "inspect/SKILL.md § Known issues"
 ---
 
 # rbt inspect insists on --type=VALUE

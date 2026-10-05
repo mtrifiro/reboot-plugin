@@ -85,7 +85,7 @@ other transactions (a nested transaction) on other actors;
 `asyncio.gather` parallelizes the round trips of independent calls
 (`Service.forall(ids)` fans one method out; `rpc-forall.md`).
 `response=None` is valid: the method returns `-> None` with no
-`return` (see `api-pydantic.md`).
+`return` (see `api-methods.md`).
 
 ### External calls: schedule a workflow
 

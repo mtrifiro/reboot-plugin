@@ -149,3 +149,38 @@ don't need. `servicer-transaction.md` became conditional ("only when
 you declared a `Transaction`", as the old list's wording said),
 which saved 1,285. Phase 3's shared build spine is the place to stop
 python/SKILL.md re-listing what the builders list.
+
+---
+
+# After Phase 3 (2026-10-04)
+
+All 77 references are in the template. `skills/build/SKILL.md` is the
+shared design-and-build flow; `mcp-ui` and `web-app` hold only what
+differs. Starter files are real files under `skills/build/templates/`,
+and `tools/templates-smoke.sh` builds both front doors from them
+(generate, npm build, mypy, pytest). The two hand-written gotcha lists
+are dissolved into the references' Never sections;
+`patterns-common-gotchas.md` is a generated, on-demand digest of them.
+`run` decides app type by directory, tunnels only MCP UIs, and links a
+stop/restart/reset reference.
+
+| Measure | Baseline | After Phase 2 | After Phase 3 |
+| --- | ---: | ---: | ---: |
+| mcp-ui minimal path | 48,306 | 51,553 | **42,897** (−11% vs baseline) |
+| web-app minimal path | 37,127 | 41,352 | **39,094** (+5% vs baseline) |
+| backend-only minimal path | — | 30,052 | 29,885 |
+| References in the template | 0 / 64 | 25 / 77 | 77 / 77 |
+| Distinct open plugin gaps | 163 | 80 | **12** |
+| Plugin findings resolved | 1 | 140 | 200 |
+| Symbol drift | 3 defects | 3 | 1 (framework packaging bug, tool-checks-01) |
+
+The 30,000-word target is not met. What is left on the mcp-ui path is
+about thirty references of 800–2,400 words each (largest:
+`testing-features` 2,363, `react-generated-client` 1,531,
+`state-collections` 1,518, `lifecycle-initialize-hook` 1,452) plus
+11,675 words of SKILL.md (`build` 3,741). There is no single file left
+to split; the remaining cut means shortening many references or making
+more of them conditional. web-app grew against the baseline because it
+now reads references only mcp-ui used to list (`state-actor-decomposition`,
+the Never/Limits/Errors content every reference gained) — the cost of
+the facts the findings showed were missing.

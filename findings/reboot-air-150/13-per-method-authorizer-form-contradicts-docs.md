@@ -11,8 +11,8 @@ tags: [contradiction, auth]
 cluster: "8.4"
 duplicate_of: reboot-crm-36
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/auth-custom-predicates.md § Do this; python/references/servicer-authorizer.md § Do this"
 ---
 
 # Per-method authorizer rules are documented upstream, but the plugin's reference says they need a custom subclass

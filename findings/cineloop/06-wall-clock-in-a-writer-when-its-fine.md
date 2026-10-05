@@ -11,8 +11,8 @@ names:
 tags: [pattern, contradiction]
 cluster: "E"
 still_applies: unknown
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/servicer-writer.md § Limits; python/references/patterns-time-and-randomness.md § Do this"
 ---
 
 # Wall-clock in a writer: when it is actually fine (observed vs addressed)

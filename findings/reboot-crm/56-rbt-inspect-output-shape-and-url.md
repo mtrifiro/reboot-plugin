@@ -10,8 +10,8 @@ names:
 tags: [operations]
 cluster: "F"
 still_applies: unknown
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "inspect/SKILL.md § Known issues"
 ---
 
 # rbt inspect output shape and required --application-url

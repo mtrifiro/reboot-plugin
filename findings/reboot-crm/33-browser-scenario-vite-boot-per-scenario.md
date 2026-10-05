@@ -10,8 +10,8 @@ names:
 tags: [testing, cost, frontend]
 cluster: "D"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/testing-web-app.md § Limits"
 ---
 
 # Every browser scenario pays a full Vite boot, because the backend URL is baked in at spawn

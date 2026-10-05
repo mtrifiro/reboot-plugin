@@ -35,7 +35,7 @@ the data is expunged.
 | Add a field with a (zero-value) default | yes |
 | Rename a field, keeping its `tag` | yes (data is keyed by tag) |
 | Rename a request/response `Model` class | yes (names are internal) |
-| Change a method between `Writer` and `Transaction` | yes, if other options (e.g. `factory=True`) are unchanged |
+| Change a method between `Writer` and `Transaction` | yes, if other options are unchanged; on a `factory=True` constructor see Limits (observed refused at 1.6.0) |
 | Change a `Transaction`'s `mode=` | yes |
 | Add or remove declared `errors=` | yes |
 | Change `mcp=` options (add/remove/modify `Tool()`) | yes |

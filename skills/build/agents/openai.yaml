@@ -1,0 +1,4 @@
+interface:
+  display_name: "Reboot Build"
+  short_description: "The shared design-and-build flow for Reboot apps (with mcp-ui or web-app)"
+  default_prompt: "Use Reboot Build with the mcp-ui or web-app skill to design and build a Reboot app."

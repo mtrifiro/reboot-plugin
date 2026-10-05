@@ -13,8 +13,8 @@ tags: [contradiction, negative-space, pattern]
 cluster: "E"
 duplicate_of: student-system-08
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/servicer-writer.md § Limits; python/references/patterns-time-and-randomness.md § Do this"
 ---
 
 # Randomness in writer and transaction bodies: what is the contract?

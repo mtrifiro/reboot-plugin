@@ -10,8 +10,8 @@ names:
 tags: [testing, frontend, error-text]
 cluster: "4.1"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/testing-web-app.md § Never"
 ---
 
 # Ambiguous text lookups: the When/Then split of 'saves the text of the element' is unstated

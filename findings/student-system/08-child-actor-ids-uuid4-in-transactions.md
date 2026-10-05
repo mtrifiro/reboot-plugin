@@ -12,8 +12,8 @@ names:
 tags: [negative-space, pattern, contradiction]
 cluster: "4.1"
 still_applies: unknown
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/servicer-writer.md § Limits; python/references/patterns-time-and-randomness.md § Do this"
 ---
 
 # Child-actor ids come from uuid4() inside transactions; effect validation never objected

@@ -10,8 +10,8 @@ names:
 tags: [operations, negative-space]
 cluster: "4.1"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/lifecycle-reboot-cloud.md § Limits"
 ---
 
 # Nothing says whether resizing an application keeps its state

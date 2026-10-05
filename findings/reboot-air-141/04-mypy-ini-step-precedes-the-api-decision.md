@@ -10,8 +10,8 @@ names:
 tags: [scaffold]
 cluster: "4.2"
 still_applies: unknown
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "build/SKILL.md § Step 1 — API definition; build/SKILL.md § Step 2 — Project shell"
 ---
 
 # mypy.ini step precedes the API decision it depends on

@@ -11,8 +11,8 @@ names:
 tags: [contradiction, error-text, negative-space]
 cluster: "4.1"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/servicer-constructor.md § Never; python/references/rpc-constructor-calls.md § Never"
 ---
 
 # A constructor called from a workflow on an actor that exists raises StateAlreadyConstructed

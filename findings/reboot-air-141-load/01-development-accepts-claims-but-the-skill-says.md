@@ -10,8 +10,8 @@ names:
 tags: [auth, negative-space]
 cluster: "4.1"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "web-app/SKILL.md § Auth in Web Apps"
 ---
 
 # Development accepts claims= but the skill says it does not

@@ -11,8 +11,8 @@ tags: [operations]
 cluster: "F"
 duplicate_of: reboot-air-150-12
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "dashboard/SKILL.md § Known issues"
 ---
 
 # Dashboard Call Graph empty until the Pyright child is killed

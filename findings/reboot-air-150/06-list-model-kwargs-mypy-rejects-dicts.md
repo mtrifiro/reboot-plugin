@@ -10,8 +10,8 @@ names:
 tags: [negative-space, testing]
 cluster: "8.4"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/rpc-calls.md § Never"
 ---
 
 # Kwargs typed as list[Model] reject plain dicts under mypy but accept them at runtime

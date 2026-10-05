@@ -2,8 +2,8 @@
 title: Lay Out a Reboot Backend Test Suite
 impact: MEDIUM
 impactDescription: Without `reboot[dev]`, the pytest paths, and the git-ignore, the built-in steps are missing, generated `_rbt` modules can't be imported, and recordings get committed
-tags: testing, pytest, layout, pyproject, conftest, uv, reboot-dev, gitignore, recordings
-summary: "`tests/` layout, `pytest.ini` with three paths so generated `_rbt` modules import, `reboot[dev]` dev-deps, git-ignored recordings, `uv run pytest`; never construct servicers directly."
+tags: testing, pytest, layout, pyproject, conftest, uv, reboot-dev, gitignore, recordings, template
+summary: "`tests/` layout; the template's `pytest.ini` (three paths, or generated `_rbt` imports fail) and fixture (`allowed_origins=[]`); `reboot[dev]`, no `pytest-asyncio`; never construct servicers directly."
 step: tests
 applies: [mcp-ui, web-app, backend-only]
 always: false
@@ -11,100 +11,75 @@ verified: 1.6.0
 docs: ""
 ---
 
-## Lay Out a Reboot Backend Test Suite
+# Lay Out a Reboot Backend Test Suite
 
-> **Critical:** a Reboot application's tests are Gherkin `.feature`
-> files in `tests/` at the project root, run by `reboot.bdd` through
-> `pytest`.
-> The built-in steps come with the `reboot[dev]` extra, which a
-> development environment always installs; without it the scenarios
-> have no steps and `rbt dashboard` refuses to start. No
-> `pytest-asyncio`: `reboot.bdd` and `IsolatedAsyncioTestCase` run
-> `async def` code on their own.
+## When you are here
 
-This reference covers the project-level scaffolding every Reboot
-backend test suite shares. Writing the scenarios is
-[testing-features.md](testing-features.md); driving the web app from
-them is [testing-web-app.md](testing-web-app.md); the harness and
-context patterns a custom step or a harness test uses are
-[testing-harness.md](testing-harness.md) and
-[testing-external-context.md](testing-external-context.md).
+You are setting up, or adding to, the test suite of a Reboot app:
+where feature files and test modules go, `pytest.ini`, dev
+dependencies, `conftest.py`, and how to run it. A Reboot app's tests
+are Gherkin `.feature` files in `tests/` at the project root, run by
+`reboot.bdd` through `pytest`. Writing scenarios is
+[testing-features.md](testing-features.md); browser scenarios are
+[testing-web-app.md](testing-web-app.md); harness tests are
+[testing-harness.md](testing-harness.md).
 
-## Where Tests Live
+## Do this
 
-**One `.feature` file per capability, one test module per
-application configuration**, in `tests/` at the project root, next
-to `api/` and `backend/`. The tests are the application's, not the
-backend's: a scenario that opens the web app drives the frontend too.
+The template (`build/templates/<front-door>/`, see
+[`build/templates/README.md`](../../build/templates/README.md)) ships
+`pytest.ini`, one feature and one test module that pass. Grow it in
+this shape:
 
 ```
 <app>/
-├── api/                      # `*.py` pydantic API definitions.
-├── backend/
-│   ├── api/                  # Generated `_rbt` modules.
-│   └── src/
-│       └── servicers/
-│           └── chat_room.py
+├── api/                      # pydantic API definitions
+├── backend/api/              # generated `_rbt` modules
+├── backend/src/servicers/    # servicers
 ├── tests/
-│   ├── posting.feature           # One feature per capability.
+│   ├── posting.feature           # one feature per capability
 │   ├── moderation.feature
-│   ├── chat_room_test.py         # `application` fixture + `scenarios(...)`.
-│   ├── web_test.py               # The scenarios that open the web app.
-│   ├── posting.recordings/       # Made by running; git-ignored.
-│   └── conftest.py               # Optional, see below.
-├── .gitignore                # Includes `*.recordings/`.
-├── pytest.ini                # `testpaths` and `pythonpath`, see below.
+│   ├── chat_room_test.py         # `application` fixture + `scenarios(...)`
+│   ├── web_test.py               # the scenarios that open the web app
+│   ├── posting.recordings/       # made by running; git-ignored
+│   └── conftest.py               # only when needed, see below
+├── .gitignore                # includes `*.recordings/`
+├── pytest.ini
 └── pyproject.toml
 ```
 
-- A feature file is named for the activity (`transfers.feature`),
-  not for a state type.
-- A test module ends in `_test.py` so `pytest` picks it up, defines
-  the `application` fixture returning the `Application(...)` its
-  scenarios run against, and calls `scenarios('a.feature', 'b.feature')` from `reboot.bdd`. One module per way of configuring
-  the application: with authorizers, with a scheduled job turned
-  off, with a scripted LLM, with the web app served. The minimal
-  module is in [testing-features.md](testing-features.md).
-- A crash-and-recover test
-  ([testing-failure-recovery.md](testing-failure-recovery.md)) is
-  an `IsolatedAsyncioTestCase` in its own `_test.py` module.
+- **A feature file** is named for the activity (`transfers.feature`),
+  not a state type.
+- **A test module** ends in `_test.py`, defines the `application`
+  fixture returning the `Application(...)` its scenarios run against,
+  and calls `scenarios('a.feature', 'b.feature')`. One module per
+  application configuration (with authorizers, a job turned off, a
+  scripted LLM, the web app served). Copy `tests/<app>_test.py`: for
+  an app with `oauth=`, its fixture passes
+  `OAuth(provider=OAuthProviderByEnvironment(dev=development,
+  prod=development), allowed_origins=[])`, because the harness is
+  neither `rbt dev run` nor `rbt serve`.
+- **A crash-and-recover test**
+  ([testing-failure-recovery.md](testing-failure-recovery.md)) is an
+  `IsolatedAsyncioTestCase` in its own `_test.py` module.
 
-## `pytest.ini` — Make Generated Modules Importable
+**`pytest.ini`** (copy it) sets `testpaths = tests` so a bare `pytest`
+runs the suite, and `pythonpath` to `backend/src` (servicers),
+`backend/api` (generated `_rbt` modules) and `api` (the hand-written
+API module, imported as `from <pkg>.v1.<name> import SomeError`).
+Leave `api` out and the suite fails at import with a
+`ModuleNotFoundError` that looks like a codegen failure.
 
-Generated Reboot modules live under `backend/api/` and your servicer
-code under `backend/src/`. Tests `import` from both —
-e.g. `from chat_room.v1.chat_room_rbt import ChatRoom` resolves into
-`backend/api/` and `from chat_room_servicer import ChatRoomServicer`
-resolves into `backend/src/`. A project-root `pytest.ini` puts both
-on the `pythonpath` so neither needs a `pip install -e .`, and names
-the test directory so a bare `pytest` runs the suite:
+**Dev dependencies** are in the template's `pyproject.toml`:
+`reboot[dev]` at the same pin as `reboot` (it registers the built-in
+steps as a pytest plugin, so no module imports them), `pytest`,
+`mypy`. Scenarios that open the web app add `playwright>=1.55.0` and
+`pytest-playwright>=0.7.1`, then `uv run playwright install chromium`
+once. `uv sync` installs the `dev` group by default;
+`[tool.uv.dev-dependencies]` is an accepted alias for the list.
 
-```ini
-# pytest.ini
-[pytest]
-testpaths = tests
-pythonpath =
-  backend/src
-  backend/api
-  api
-```
-
-**Three entries, not two.** `backend/src` and `backend/api` cover
-your servicers and the generated `_rbt` modules, but tests also
-import the hand-written API definition itself — the typed errors and
-models — as `from <pkg>.v1.<name> import QuotaExceededError`, and
-that module lives in the project-root `api/` directory. Leave `api`
-out and the suite fails at import with
-`ModuleNotFoundError: No module named '<pkg>.v1.<name>'`, which
-looks like a codegen failure but is a path problem.
-
-## `conftest.py` — Only When Needed
-
-Most Reboot apps don't need a `conftest.py`. Add one only when a
-module imported by tests **eagerly** instantiates something that
-requires an environment variable — typically an LLM provider that
-constructs a client at import time. Set a placeholder so the import
-succeeds; tests must still mock the real call before any RPC fires:
+**`conftest.py`** only when a module imported by tests eagerly needs
+an environment variable (typically an LLM client built at import):
 
 ```python
 # tests/conftest.py
@@ -113,102 +88,67 @@ import os
 os.environ.setdefault("ANTHROPIC_API_KEY", "test-placeholder")
 ```
 
-Put a fixture here only when several test modules share it. A
-stand-in for a model or a dependency is an autouse fixture in the
-one test module whose scenarios use it, since a module's scenarios
-share its fixtures ([testing-features.md](testing-features.md)).
+Tests must still mock the real call. A stand-in shared by one
+module's scenarios is an autouse fixture in that module.
 
-## Dev Dependencies
-
-Add `reboot[dev]`, at the same pin as `reboot`, and `pytest` to the
-dev-dependency section of your `pyproject.toml`. An application
-whose scenarios open its web app also needs `playwright` and
-`pytest-playwright` (and `uv run playwright install chromium`
-once). Do **not** add `pytest-asyncio`: `reboot.bdd` runs its steps
-on the harness's event loop, `IsolatedAsyncioTestCase` handles its
-own, and `pytest-asyncio` conflicts with both.
-
-```toml
-# pyproject.toml
-[project]
-name = "my-app"
-version = "0.1.0"
-requires-python = ">= 3.10"
-dependencies = [
-    "reboot==<your-pinned-version>",
-]
-
-[dependency-groups]
-dev = [
-    "reboot[dev]==<your-pinned-version>",
-    "mypy==<pinned>",
-    "pytest>=7.4.2",
-    "playwright>=1.55.0",           # Only with web app scenarios.
-    "pytest-playwright>=0.7.1",     # Only with web app scenarios.
-    "types-protobuf>=4.24.0.20240129",
-]
-```
-
-`reboot[dev]` carries what `reboot.bdd` and the dashboard's Features
-page run on, and registers the built-in steps as a pytest plugin, so
-no test module imports them. `uv sync` installs the `dev` group by
-default (it's a uv default group), so `uv run pytest`,
-`uv run mypy backend/ tests/`, and `uv run rbt dashboard` just work.
-`[tool.uv.dev-dependencies]` is an accepted alias for the same list.
-An application packaged for `rbt serve` installs plain `reboot`.
-
-## `.gitignore` — Recordings Are Made, Not Committed
-
-Running a scenario that opens the web app records a video and
-screenshots into `<feature>.recordings/` beside the feature file
-([testing-web-app.md](testing-web-app.md)). The project-root
-`.gitignore` (template in
-[lifecycle-project-setup.md](lifecycle-project-setup.md)) must have:
-
-```gitignore
-# Recordings of browser scenarios, made by running the tests.
-*.recordings/
-```
-
-Check that line is present whenever adding the first web app
-scenario to a project.
-
-## Running Tests
-
-From the application root:
+**Run** from the project root:
 
 ```bash
-# Whole suite.
-uv run pytest
-
-# One test module (the feature files it runs).
-uv run pytest tests/chat_room_test.py
-
-# One scenario, by (part of) its name.
-uv run pytest -k "posts a message"
-
-# What is being worked on, or everything but.
-uv run pytest -m wip
-uv run pytest -m "not wip"
-
-# Verbose, with print() output flowing to the terminal.
-uv run pytest -v -s
+uv run pytest                           # whole suite
+uv run pytest tests/chat_room_test.py   # one module
+uv run pytest -k "posts a message"      # one scenario by name
+uv run pytest -m wip                    # or -m "not wip"
+uv run pytest -v -s                     # with print() output
 ```
 
-A `@blocked` scenario is skipped, with its description as the reason,
-so it shows in the summary without failing the suite. A run that goes
-quiet, or a test that passes alone and fails in the suite, is covered
-in `lifecycle-dev-loop.md`.
+A `@blocked` scenario is skipped with its description as the reason.
+A run that goes quiet, or a test that passes alone and fails in the
+suite: `lifecycle-dev-loop.md`.
 
-## Don't Construct Servicer Instances Directly
+## Never
 
-The #1 trap for new Reboot test authors is calling
-`ChatRoomServicer().send(...)` directly, in a custom step or a
-harness test. That bypasses identity, context, persistence, and
-authorization — it tests literally nothing the framework does. The
-built-in steps call through the application; a custom step does the
-same with `world.context(user)` and
-`Service.ref(id).method(context, ...)`
-([testing-features.md](testing-features.md)), and a harness test
-with `rbt.create_external_context(...)`
-([testing-harness.md](testing-harness.md)).
+- `ChatRoomServicer().send(...)` in a custom step or harness test — it
+  bypasses identity, context, persistence and authorization. Call
+  through the application: `world.context(user)` and
+  `Service.ref(id).method(context, ...)` in a custom step
+  ([testing-features.md](testing-features.md)),
+  `rbt.create_external_context(...)` in a harness test.
+- `pytest-asyncio` in the dev dependencies: `reboot.bdd` runs steps on
+  the harness's loop and `IsolatedAsyncioTestCase` on its own;
+  `pytest-asyncio` conflicts with both.
+- `oauth=OAuth(provider=...)` in a fixture without `allowed_origins`:
+  every scenario fails (error below).
+- Tests under `backend/tests/` with a `backend/.pytest.ini`: tests are
+  the application's, in root `tests/`, with the root `pytest.ini`.
+- Committing `*.recordings/`; check the `.gitignore` line when adding
+  the first web app scenario.
+
+## Limits
+
+- Several `Reboot()` harness applications on one machine (pytest-xdist
+  `-n auto`, `-n4`) hung silently at 1.6.0 in one large suite: workers
+  at zero CPU, no error, no timeout; never explained. One test module
+  per application is the unit of parallelism; `-n0` (serial) is the
+  fallback, and `pytest-timeout` turns a hang into a failure.
+- Most apps need no `conftest.py`; a fixture there is shared by every
+  module.
+
+## Scales as
+
+- Suite time is dominated by application start-up per module and the
+  number of scenarios; splitting into one application per module took
+  one suite from 13 minutes to about 2 with `-n auto` (observed at
+  1.6.0, before the hang above returned).
+
+## Errors you will see
+
+| Error text (stable prefix) | Meaning | Fix |
+| --- | --- | --- |
+| `` `OAuth` requires `allowed_origins=[...]` to be set explicitly in production `` | The fixture's `OAuth(...)` has no `allowed_origins`; the harness counts as production | `allowed_origins=[]`, or `[frontend.origin]` for browser scenarios |
+| `ModuleNotFoundError: No module named '<pkg>.v1.<name>'` | `api` missing from `pytest.ini`'s `pythonpath` | Copy the template's `pytest.ini` |
+
+## See also
+
+- [testing-features.md](testing-features.md) — writing the scenarios
+- [testing-web-app.md](testing-web-app.md) — browser scenarios and the `frontend` fixture
+- [`build/templates/README.md`](../../build/templates/README.md) — every template file explained

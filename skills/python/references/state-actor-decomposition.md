@@ -2,7 +2,7 @@
 title: Split a State Type That Holds Multiple Concerns
 impact: HIGH
 impactDescription: One actor holding many unrelated concerns serializes all writers across them and turns the front door into a God actor.
-tags: state, decomposition, responsibility, actors, front-door, serialization, contention
+tags: state, decomposition, responsibility, actors, front-door, serialization, contention, deadlock, cycle, ownership
 summary: "Split a Type whose fields cluster by unrelated concern (auth, persona, background engine, cache) into separate Types, or its writers serialize and `User` becomes a God actor."
 step: api
 applies: [mcp-ui, web-app, backend-only]
@@ -11,77 +11,38 @@ verified: 1.6.0
 docs: ""
 ---
 
-## Split a State Type That Holds Multiple Concerns
+# Split a State Type That Holds Multiple Concerns
 
-> **Critical:** one state `Type` should hold **one concern**. When a
-> single actor has accreted multiple unrelated responsibilities —
-> auth/session fields alongside persona config alongside background-
-> engine config alongside a UI cache — split each concern into its
-> own state `Type` and have the front-door actor reference them by
-> ID. Beyond hygiene, this is a **runtime** rule: writers on the same
-> actor serialize (see `servicer-writer.md`), so unrelated concerns
-> stacked on one actor create false contention that a concern-based
-> split removes entirely.
+## When you are here
 
-`state-collections.md` covers decomposing **collections of entities**
-into their own `Type`s. This file covers the orthogonal decomposition:
-**a single actor whose state has accreted multiple unrelated
-concerns** — split it by concern, regardless of whether any field is
-a collection.
+One state `Type` (often the front-door `User`) has accreted several
+unrelated responsibilities, or you are about to add one more. One
+`Type` should hold **one concern**. This is a runtime rule, not
+hygiene: writers on one actor serialize (`servicer-writer.md`), so
+unrelated concerns on one actor contend for nothing. Splitting a
+**collection** of entities into per-item actors is the orthogonal
+decomposition, in [`state-collections.md`](state-collections.md).
 
-### Signals That You Should Split
+## Do this
 
-If a single state `Type` shows any of the following, it's holding
-more than one concern and should be split:
+### Signals that a `Type` holds more than one concern
 
-- **Fields fall into clusters that don't move together.** The auth
-  cluster (phone, session token, login phase) churns at login; the
-  persona cluster (display name, persona notes) churns when the user
-  edits their profile; the engine cluster (monitoring active, poll
-  interval, watched IDs) churns when configuration changes. A single
-  reader rarely needs all three together.
-- **A background workflow's state writes contend with on-demand
-  user actions.** The monitor workflow writing "last scanned at"
-  serializes against the user editing their persona. Different
-  concerns, same actor, false contention.
-- **You catch yourself prefixing fields to disambiguate concerns**
-  (`monitoring_active`, `monitoring_poll_interval`,
-  `monitoring_chat_ids`). The prefix is the concern asking to be its
-  own `Type`.
-- **The method list on the Servicer crosses ~15 and groups by
-  prefix** (`start_login`, `complete_login`, `set_persona`,
-  `start_monitoring`, `stop_monitoring`, `scan_once`, …). Each
-  prefix group is a separate concern.
-- **A "transient" cache field** — a picker snapshot, a draft
-  scratchpad, a UI hint — sits next to durable business state on the
-  same actor. Caches have a different lifecycle and a different read
-  pattern; promote them to their own `Type` (or a stdlib `Item`).
+- **Field clusters that don't move together.** Auth (phone, session
+  token, login phase) churns at login; persona (display name, notes)
+  when the profile is edited; engine config (monitoring active, poll
+  interval, watched IDs) when configuration changes. No single reader
+  needs all three.
+- **A background workflow's writes contend with user actions** — the
+  monitor writing "last scanned at" serializes against a persona edit.
+- **Prefixed fields** (`monitoring_active`, `monitoring_poll_interval`,
+  `monitoring_chat_ids`): the prefix is a concern asking to be a `Type`.
+- **More than ~15 methods grouping by prefix** (`start_login`,
+  `complete_login`, `set_persona`, `start_monitoring`, `scan_once`, …).
+- **A transient cache** (picker snapshot, draft, UI hint) next to
+  durable business state: different lifecycle and read pattern; give it
+  its own `Type` or a stdlib `Item`.
 
-### Why It Matters in Reboot Specifically
-
-Two reasons, one per layer:
-
-1. **Writers on the same actor serialize.** This is the explicit
-   contract in `servicer-writer.md`: "writers on the same actor are
-   serialized; writers across actors run independently." A login
-   step, a persona edit, a monitoring-config change, and a
-   background workflow's state writes all queueing on one `User`
-   actor is false contention — splitting by concern across multiple
-   `Type`s lets them run independently with no application-level
-   change.
-2. **The front-door framing degenerates without this rule.** Chat
-   apps and similar Reboot apps use a `User` `Type` as the AI's
-   entry point. "Front door" means **entry point + delegation**, not
-   _container for all application state_ — see the `mcp-ui` skill's
-   "User and Application Types" section. Without responsibility
-   decomposition, every new feature lands on `User` and the actor
-   becomes a God actor.
-
-### How to Split
-
-Keep the front-door actor as the entry point and the **owner of IDs
-of concern-specific actors**. Each concern becomes its own `Type`
-with the fields and methods that belong to that concern:
+### Split: the front door owns IDs, each concern is a `Type`
 
 ```python
 class TelegramSessionState(Model):
@@ -106,8 +67,8 @@ class UserState(Model):
     monitoring_manager_id: str = Field(tag=3, default="")
 ```
 
-The `User` constructor allocates IDs once and calls each concern's
-`create`:
+The front door's constructor is a `Transaction(factory=True)` that
+creates each concern actor once and stores its ID:
 
 ```python
 class UserServicer(User.Servicer):
@@ -123,36 +84,65 @@ class UserServicer(User.Servicer):
             self.state.monitoring_manager_id = manager.state_id
 ```
 
-Per-concern methods then live on the concern's own `Type` — login
-flows on `TelegramSession`, the `monitor` workflow on
-`MonitoringManager` — and only the cross-concern orchestration stays
-on `User`.
+Per-concern methods live on the concern's `Type` (login on
+`TelegramSession`, the `monitor` workflow on `MonitoringManager`).
+The front door keeps only: identity fields naming the actor itself,
+the IDs of the concern actors it owns, and front-door methods —
+typically `Transaction`s that locate or create concern actors and
+return their IDs, plus user-scoped UI. "Front door" means entry point
+plus delegation, not container for all state (`mcp-ui` skill, "User
+and Application Types").
 
-### What Stays on the Front Door
+### Each fact has one owner
 
-The front-door `Type` keeps:
+After a split, every fact (an account's domain, a seat holder's name)
+must be written by exactly one `Type`. If two types each hold and
+write a copy, delete the copy that has no reader, or make one type
+the owner and have the other read it.
 
-- **Identity fields** that name the actor itself (e.g. the user's
-  display name).
-- **References (IDs)** to concern-specific actors it owns.
-- **Front-door methods** — typically `Transaction`s that locate or
-  create concern-specific actors and return their IDs, and any
-  user-scoped UI (`dashboard`, `home`).
+## Never
 
-Everything else — auth/session, configuration, background-engine
-state, transient caches, per-concern workflows — moves to its own
-`Type`.
+- Declare a constructor that may ever create another actor as a
+  `Writer(factory=True)` — a writer cannot call another actor, and the
+  later change to `Transaction` has been refused over persisted state
+  (`api-schema-evolution.md` § Limits). Start with
+  `Transaction(mode=Exclusive(), factory=True)`.
+- Build a **writer cycle**: a transaction on `A` that writes `B`, while
+  a transaction on `B` writes `A` (e.g. `Contact.update` writes the
+  account's copy of a name while `Account.set_contact_role` holds the
+  account and writes the contact). Two ordinary concurrent requests
+  deadlock; no single-request test reproduces it. The cycle usually
+  means a duplicated fact: delete the copy (see above) rather than
+  invert the call.
+- Put a new feature on `User` because it is the entry point — that is
+  how the God actor grows.
 
-### See Also
+## Limits
 
-- `state-collections.md` — the orthogonal decomposition (per-item:
-  promote each item in a collection to its own `Type`).
-- `state-nested-models.md` — the rule against nesting state `Model`s
-  inside state `Model`s; the same "store the ID, not the object"
-  principle applies here.
-- `servicer-writer.md` — the serialization contract that makes this
-  a runtime rule, not just hygiene.
-- `patterns-cross-actor-reads.md` — reading across the actors a split
-  produces without one subscription per actor.
-- `mcp-ui/SKILL.md` — "User and Application Types": **"front door"
-  means entry point + delegation, not container.**
+- Nothing reports a writer cycle: `rbt generate`, `mypy` and the
+  dashboard call graph (which draws it) stay silent (observed at
+  1.6.0). A reach-back through a workflow (`A` → `B`'s workflow →
+  `.per_workflow` write to `A`) runs as its own later transaction and is
+  not a cycle, though it greps the same.
+- A factory `Transaction` that constructs another actor, itself called
+  from another transaction, works at least two levels deep with no
+  special handling (observed at 1.6.0).
+
+## Scales as
+
+- Writers on one actor serialize; writers on different actors run
+  independently (`servicer-writer.md`). A split by concern removes
+  contention between concerns with no other application change.
+- Every write persists the whole actor (`state-collections.md` §
+  Scales as), so a cache or engine field written often makes every
+  write to its neighbours more expensive.
+
+## Errors you will see
+
+None known.
+
+## See also
+
+- [`state-collections.md`](state-collections.md) — per-item decomposition of collections
+- [`state-nested-models.md`](state-nested-models.md) — store the ID, not the object
+- [`patterns-cross-actor-reads.md`](patterns-cross-actor-reads.md) — reading across the split actors

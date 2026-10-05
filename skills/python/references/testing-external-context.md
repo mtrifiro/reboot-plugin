@@ -2,7 +2,7 @@
 title: Drive Tests with `create_external_context`, Assert, Wait, and Mock
 impact: MEDIUM
 impactDescription: Tests can't call into the application, observe errors, or wait for workflows without these patterns
-tags: testing, external-context, RPC, harness, aborted, errors, mocking, workflows, user-stories
+tags: testing, external-context, RPC, harness, aborted, errors, mocking, workflows, user-stories, idempotency
 summary: "`create_external_context` with a unique name per test; asserting `<Method>Aborted`, live updates with `reactively()`, waiting on spawned tasks and workflows, mocking external services and LLMs."
 step: tests
 applies: [mcp-ui, web-app, backend-only]
@@ -12,54 +12,23 @@ verified: 1.6.0
 docs: ""
 ---
 
-## Drive Tests with `create_external_context`
+# Drive Tests with `create_external_context`, Assert, Wait, and Mock
 
-> **Critical:** never instantiate `ReaderContext`/`WriterContext`/etc.
-> directly — those are runtime-managed. Use
-> `rbt.create_external_context(name=...)` and pass it as the
-> `context=` argument to actor method calls. One context can drive
-> many calls in a single test.
+## When you are here
 
-A test invokes the application using a context created by
-`rbt.create_external_context(name=...)`. That context plays the
-role of an outside caller — it can invoke any servicer method
-just like a real client.
+You are writing Python that calls the application from a test: a
+custom step body, or an `IsolatedAsyncioTestCase` on the `Reboot()`
+harness. A user-observable behavior belongs in a feature file
+([`testing-features.md`](testing-features.md)); the harness setup
+(`self.rbt`, `up()`, impersonation) is
+[`testing-harness.md`](testing-harness.md).
 
-**Incorrect (constructing a context by hand):**
+## Do this
 
-```python
-# Don't try to instantiate ReaderContext etc. directly — those
-# types are managed by the runtime.
-ctx = ReaderContext(...)  # not a public construction path.
-```
-
-**Correct:**
-
-```python
-context = self.rbt.create_external_context(name=f"test-{self.id()}")
-chat_room = ChatRoom.ref("testing-chat-room")
-
-await chat_room.send(context, message="Hello, World")
-
-response = await chat_room.messages(context)
-self.assertEqual(response.messages, ["Hello, World"])
-```
-
-To satisfy real authorizers (e.g. an MCP-style app where the
-production authorizer is `state_id_is_user_id`), impersonate a user
-with `await rbt.create_external_context_as(name, user_id)` — see
-"Test Against the Real Authorizers" in
-[testing-harness.md](testing-harness.md). Don't bypass authorization
-by weakening `authorizer()` in tests.
-
-## `name` Should Be Unique per Test
-
-Pass a name that ties back to the test (e.g. `f"test-{self.id()}"`)
-so the tracing output of failing tests is identifiable.
-
-## One Context, Many Calls
-
-A single external context can drive many calls in one test:
+A test calls the app through a context from
+`rbt.create_external_context(name=...)`, passed as `context` to actor
+method calls. It plays an outside caller, can call any method
+(transactions included), and can drive many calls:
 
 ```python
 async def test_chat_room(self) -> None:
@@ -70,60 +39,29 @@ async def test_chat_room(self) -> None:
 
     await chat_room.send(context, message="Hello, World")
     await chat_room.send(context, message="Hello, Reboot!")
-    await chat_room.send(context, message="Hello, Peace of Mind!")
 
     response = await chat_room.messages(context)
-    self.assertEqual(
-        response.messages,
-        [
-            "Hello, World",
-            "Hello, Reboot!",
-            "Hello, Peace of Mind!",
-        ],
-    )
+    self.assertEqual(response.messages, ["Hello, World", "Hello, Reboot!"])
 ```
 
-## External Context Can Initiate Transactions
-
-External contexts can call `transaction` methods directly — no
-in-app caller needed. This makes them suitable for testing
-cross-actor flows like a transfer between two `Account` actors.
-
-## Multiple Contexts for Multi-User Tests
-
-To test that a different user cannot touch another user's state,
-create a **second** context with a different `user_id`:
+Name the context after the test (`f"test-{self.id()}"`) so a failing
+test's trace is identifiable. To satisfy real authorizers, call as a
+user: `await self.rbt.create_external_context_as(name, user_id)` (after
+`up()`). A second user is a second context:
 
 ```python
 other_context = await self.rbt.create_external_context_as(
     name=f"other-{self.id()}",
     user_id="other-user",
 )
-other_cart = Cart.ref(cart.state_id)
-
 with self.assertRaises(Aborted):
-    await other_cart.get_cart(other_context)
+    await Cart.ref(cart.state_id).get_cart(other_context)
 ```
 
-## Asserting on Aborted Methods
+### Asserting an abort
 
-Reboot translates `errors_pb2.Aborted` + a typed error model into a
-generated `<Service>.<Method>Aborted` exception whose `.error`
-attribute is the original error model. Two equivalent shapes for
-asserting on it:
-
-**`try`/`except` (explicit error-model check):**
-
-```python
-try:
-    await account.withdraw(context, amount=50.50)
-    raise Exception("Expected `OverdraftError` to be thrown")
-except Account.WithdrawAborted as aborted:
-    assert isinstance(aborted.error, OverdraftError)
-    self.assertEqual(aborted.error.amount, 50.50)
-```
-
-**`self.assertRaises` (cleaner, also asserts on the error model):**
+A declared error surfaces as the generated `<Service>.<Method>Aborted`,
+whose `.error` is the error model:
 
 ```python
 with self.assertRaises(Cart.CheckoutAborted) as cm:
@@ -135,36 +73,24 @@ with self.assertRaises(Cart.CheckoutAborted) as cm:
 self.assertIsInstance(cm.exception.error, InvalidCoupon)
 ```
 
-For "anything goes wrong" assertions (e.g. authorization denied,
-where you only care that the call failed), assert on
-`reboot.aio.aborted.Aborted` instead:
+`try` / `except Account.WithdrawAborted as aborted:` with
+`isinstance(aborted.error, OverdraftError)` is equivalent. When you only
+care that the call failed (a denial), assert
+`reboot.aio.aborted.Aborted`.
+
+### Asserting a live update: `reactively()`
+
+`Type.ref(id).reactively().<reader>(context)` is an async iterator that
+yields a fresh response on every state change, the subscription the
+React hooks use:
 
 ```python
-from reboot.aio.aborted import Aborted
-
-with self.assertRaises(Aborted):
-    await other_cart.get_cart(other_context)
-```
-
-## Asserting a Live Update — `reactively()`
-
-A "another session sees the change without refreshing" story is
-tested with `reactively()`, the same push-based subscription the
-generated React hooks use. `Type.ref(id).reactively().<reader>(context)`
-returns an **async iterator** that yields a fresh response on every
-state change; `anext()` pulls the next one. Never poll in a loop
-with `asyncio.sleep` — that tests the sleep, not the reactivity.
-
-```python
-# The "other browser session" subscribes...
 subscription = TaskList.ref(list_id).reactively().get(bob)
 first = await asyncio.wait_for(anext(subscription), timeout=10)
 self.assertEqual(first.tasks, [])
 
-# ...another session writes...
 await TaskList.ref(list_id).add_task(alice, title="Milk")
 
-# ...and the subscription is pushed the update.
 while True:
     update = await asyncio.wait_for(anext(subscription), timeout=10)
     if len(update.tasks) == 1:
@@ -172,59 +98,41 @@ while True:
 self.assertEqual(update.tasks[0].title, "Milk")
 ```
 
-Two details that make the difference between a passing and a
-flaky test: always wrap `anext()` in `asyncio.wait_for` so a
-missing update fails fast instead of hanging the suite, and loop
-until the state you expect rather than asserting on the very next
-yield — a subscription may deliver an intermediate snapshot first.
+Wrap every `anext()` in `asyncio.wait_for` so a missing update fails
+fast, and loop until the expected state: an intermediate snapshot may
+arrive first.
 
-## Waiting for Spawned Tasks and Workflows
+### Waiting for spawned tasks
 
-When a method spawns a task (via `schedule(...).method(context)`
-or by returning a `<Service>.<Method>Task`), the call returns
-immediately with a `task_id`. Tests must explicitly **wait** for
-that task to finish, using `<Service>.<Task>.retrieve`:
+A method that spawns a task returns a `task_id` at once; wait with
+`<Service>.<Task>.retrieve`:
 
 ```python
-# Speed the task up so the test doesn't sit through real delays.
 hello_servicer.SECS_UNTIL_WARNING = 0
 hello_servicer.ADDITIONAL_SECS_UNTIL_ERASE = 0
 
 send_response = await hello.send(context, message="Hello, World!")
-
-# Wait for the chain of spawned tasks to finish.
 warning_response = await Hello.WarningTask.retrieve(
     context,
     task_id=send_response.task_id,
 )
-await Hello.EraseTask.retrieve(
-    context,
-    task_id=warning_response.task_id,
-)
+await Hello.EraseTask.retrieve(context, task_id=warning_response.task_id)
 
-# Now the post-task state is visible.
 messages_response = await hello.messages(context)
 self.assertEqual(len(messages_response.messages), 1)
 ```
 
-For workflows driven by an external service you've mocked (e.g. an
-LLM that runs through a scripted sequence of tool calls), an
-`asyncio.Event()` set by the mock when it reaches the terminal
-step gives the test a clean synchronization point — see the
-`ScriptedLibrarian` pattern in the next section.
+For a workflow driven by a mocked external service, an
+`asyncio.Event` the mock sets at its terminal step is the sync point.
 
-## Mocking External Services and LLM Calls
+### Mocking externals
 
-Three techniques cover almost every external integration:
-
-**1. Override a workflow or method on a Servicer subclass.** Best
-when the external call lives behind a specific method you want
-to no-op (e.g. don't actually fulfill an order through Printful):
+**1. Override a method on a Servicer subclass**, and register the
+subclass in place of the original:
 
 ```python
 class NoFulfillOrderServicer(OrderServicer):
-    """Override the `fulfill` workflow to skip the Printful
-    call during tests."""
+    """Skip the Printful call during tests."""
 
     @classmethod
     async def fulfill(
@@ -235,19 +143,10 @@ class NoFulfillOrderServicer(OrderServicer):
         return None
 ```
 
-Then register `NoFulfillOrderServicer` in `Application(...)`
-instead of `OrderServicer`. The rest of the system still uses
-the production code. Subclassing to mock _behavior_ like this is
-fine; overriding `authorizer()` is not — see "Test Against the
-Real Authorizers" in [testing-harness.md](testing-harness.md).
-
-**2. `unittest.mock.patch` for plain Python helpers.** Best when
-the external call is a free function or async helper the
-servicer calls directly:
+**2. `unittest.mock.patch` a plain helper**, at its import location in
+the consuming module:
 
 ```python
-from unittest.mock import AsyncMock, patch
-
 with patch(
     "servicers.store.fetch_products",
     new=AsyncMock(return_value=catalog),
@@ -255,16 +154,7 @@ with patch(
     response = await User.ref(self.user_id).list_products(self.context)
 ```
 
-The patch path is the **import location** in the consuming
-module (`servicers.store.fetch_products`), not the definition
-location. Same rule as any `unittest.mock.patch`.
-
-**3. A scripted `FunctionModel` for pydantic-AI agents.** When a
-servicer runs an LLM agent, replace the agent's model with a
-deterministic `FunctionModel`. The pattern is a stateful
-`ScriptedLibrarian` that walks the agent through a fixed
-sequence of tool calls and uses `asyncio.Event` to signal
-completion. Sketch:
+**3. A scripted `FunctionModel` for a pydantic-AI agent**:
 
 ```python
 import asyncio
@@ -283,29 +173,26 @@ class ScriptedAgent:
         ...
 
 
-# In asyncSetUp:
+# In asyncSetUp. `wrapped` is typed `AbstractAgent`, whose `model` is
+# a read-only property to mypy; the assignment works at runtime.
 self.script = ScriptedAgent()
-wiki_module.librarian.wrapped.model = FunctionModel(self.script.step)
+wiki_module.librarian.wrapped.model = FunctionModel(self.script.step)  # type: ignore[misc]
 
 # In the test:
 await Wiki.ref(WIKI_ID).ingest(self.context, transcript_id=...)
-await self.script.done.wait()  # Workflow has reached the end.
+await self.script.done.wait()
 ```
 
-Always **restore** the original model in `asyncTearDown` so a
-test failure doesn't bleed into the next test.
+Restore the original model in `asyncTearDown`.
 
-## Environment Variables in Tests
+### Environment variables
 
-When servicer code reads from `os.environ` (e.g. an admin key for
-authorizing a privileged operation), set the variable in
-`asyncSetUp` and restore it in `asyncTearDown`:
+Set in `asyncSetUp`, restore in `asyncTearDown`:
 
 ```python
 async def asyncSetUp(self) -> None:
     self._prev_admin_key = os.environ.get(STORE_ADMIN_KEY_ENV)
     os.environ[STORE_ADMIN_KEY_ENV] = ADMIN_KEY
-    # ... rest of setup.
 
 async def asyncTearDown(self) -> None:
     await self.rbt.stop()
@@ -315,34 +202,54 @@ async def asyncTearDown(self) -> None:
         os.environ[STORE_ADMIN_KEY_ENV] = self._prev_admin_key
 ```
 
-For environment defaults that must be set **before any module is
-imported** (e.g. an LLM SDK that constructs its client at import
-time), use `conftest.py` instead — see
-[testing-project-setup.md](testing-project-setup.md).
+A variable that must exist before any import (an SDK that builds its
+client at import time) goes in `conftest.py`
+([`testing-project-setup.md`](testing-project-setup.md)).
 
-## One Test Method per User Story
+### One harness test per user story
 
-The build flows in the `mcp-ui` and `web-app` skills require
-backend unit tests covering each user-facing user story **before**
-running the app for the user. The structure that works best is:
+Name each test after the story
+(`test_overdraft_is_rejected_with_overdraft_error`), give it one
+external context, call through `Service.ref(id).method(context, ...)`,
+and assert the user-observable outcome (what the UI would render), not
+internal state shape. Not one test per servicer method.
 
-- **One test method per user story**, named after the story —
-  `test_user_creates_a_room_and_sees_it_listed`,
-  `test_user_sends_a_message_and_other_user_sees_it`,
-  `test_overdraft_is_rejected_with_overdraft_error`.
-- **One external context per test**, named `f"test-{self.id()}"`.
-- **Test the contract through `Service.ref(id).method(context, ...)`** —
-  never instantiate Servicers directly.
-- **Assert on the user-observable outcome** (the response the UI
-  would render, or the error message a user would see), not on
-  internal state shape.
+## Never
 
-This matches how the app's user actually uses the app — a manual
-click-through would exercise the same path. If a test passes, that
-specific user story works end-to-end against the real RPC stack;
-the user is unlikely to find a regression in it during their
-session.
+- **`ReaderContext(...)` / `WriterContext(...)` in a test** — those are
+  runtime-managed; use `create_external_context`.
+- **Overriding `authorizer()` in a test subclass** — impersonate with
+  `create_external_context_as`. Subclassing to mock *behavior* is fine.
+- **Several denied mutations asserted from one context** — a
+  `PermissionDenied` is not a declared error, so the context is marked
+  uncertain and its next mutation fails with `IdempotencyUncertainError`.
+  Use a fresh context per denial, or give each its own
+  `.idempotently("...")` alias. Asserting a declared error costs
+  nothing (cineloop, 1.4.1).
+- **Polling with `asyncio.sleep`** — that tests the sleep; use
+  `reactively()` or `retrieve`.
+- **`anext()` without `asyncio.wait_for`** — a missing update hangs
+  the suite.
+- **Patching where a helper is defined** — patch where it is imported.
 
-Anti-pattern: "one test per servicer method." Methods exist for
-the framework's sake; user stories exist for the user's. Test the
-ones the user notices.
+## Limits
+
+- `create_external_context_as` mints through the app's OAuth server;
+  call `up()` first.
+
+## Scales as
+
+- Not measured.
+
+## Errors you will see
+
+| Error text (stable prefix) | Meaning | Fix |
+| --- | --- | --- |
+| `IdempotencyUncertainError: Because we don't know if the mutation from calling` | An earlier call from this context failed with an undeclared error (often a denial) | Fresh context, or `.idempotently("...")` per call |
+| `Property "model" defined in "AbstractAgent" is read-only [misc]` (mypy) | Assigning `agent.wrapped.model` in a test | `# type: ignore[misc]` on that line |
+
+## See also
+
+- [`testing-harness.md`](testing-harness.md) — `Reboot()`, `up()`, impersonation
+- [`testing-features.md`](testing-features.md) — custom steps use these calls
+- [`patterns-idempotency.md`](patterns-idempotency.md) — uncertain mutations explained

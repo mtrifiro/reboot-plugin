@@ -11,8 +11,8 @@ names:
 tags: [testing, frontend, negative-space]
 cluster: "4.1"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/testing-web-app.md § Do this"
 ---
 
 # The only click is a plain left click; every other pointer gesture needs a custom step

@@ -10,8 +10,8 @@ names:
 tags: [operations, error-text, cost]
 cluster: "F"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "dashboard/SKILL.md § Known issues"
 ---
 
 # The dashboard's pyright runs out of heap on a mid-sized app, and the page blames the developer's generated code

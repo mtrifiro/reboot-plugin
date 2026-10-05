@@ -10,8 +10,8 @@ names:
 tags: [operations, negative-space]
 cluster: "F"
 still_applies: unknown
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/lifecycle-rbtrc.md § Limits; run/references/stop-restart-reset.md § Never"
 ---
 
 # dev run --watch did not pick up a change under backend/src/

@@ -98,7 +98,48 @@ def render(kind: str, args: dict, host_skill: str, refs: list[Ref]) -> str:
                 out.append(b + "\n")
             out.append("\n")
         return "".join(out).rstrip("\n") + "\n"
+    if kind == "never-digest":
+        return never_digest(refs, host_skill)
     raise ValueError(f"unknown block kind {kind!r}")
+
+
+def never_items(ref: Ref) -> list[str]:
+    """First line of each bullet in a reference's "## Never" section."""
+    text = ref.path.read_text(encoding="utf-8")
+    m = re.search(r"^## Never\s*$(.*?)(?=^## |\Z)", text, re.S | re.M)
+    if not m:
+        return []
+    items = []
+    for bullet in re.split(r"^- ", m.group(1), flags=re.M)[1:]:
+        first = " ".join(bullet.split())
+        # Only the lead: a bold phrase, else the wrong form before " — ",
+        # else the first sentence. The reference holds the reason.
+        bold = re.match(r"\*\*(.+?)\*\*", first)
+        if bold:
+            lead = bold.group(1)
+        elif " — " in first:
+            lead = first.split(" — ", 1)[0]
+        else:
+            cut = re.search(r"(?<=[.;])\s", first)
+            lead = first[: cut.start()] if cut else first
+        items.append(lead.rstrip(".:;") )
+    return items
+
+
+def never_digest(refs: list[Ref], host_skill: str) -> str:
+    """Every converted reference's Never list, one line per item."""
+    out = []
+    order = {p: i for i, (p, _) in enumerate(concepts())}
+    for r in sorted(refs, key=lambda r: (r.skill != "python", order.get(r.concept, 99), r.name)):
+        items = never_items(r)
+        if not items or r.name == "patterns-common-gotchas.md":
+            continue
+        LISTED.add(r.rel)
+        where = (f"`{r.name}`" if r.skill == host_skill else f"`{r.skill}/references/{r.name}`")
+        out.append(f"**{where}**\n")
+        out.extend(f"- {item}\n" for item in items)
+        out.append("\n")
+    return "".join(out).rstrip("\n") + "\n"
 
 
 def parse_args(raw: str) -> dict:
@@ -107,7 +148,7 @@ def parse_args(raw: str) -> dict:
 
 def process(path: Path, refs: list[Ref]) -> tuple[str, str, int]:
     text = path.read_text(encoding="utf-8")
-    host = path.parent.name
+    host = path.parent.name if path.name == "SKILL.md" else path.parent.parent.name
     count = 0
 
     def sub(m: re.Match) -> str:
@@ -177,7 +218,9 @@ def main() -> int:
 
     refs = load_refs()
     drift, total = [], 0
-    for path in sorted(SKILLS.glob("*/SKILL.md")):
+    hosts = sorted(SKILLS.glob("*/SKILL.md")) + [
+        r.path for r in refs if "<!-- generated:start" in r.path.read_text(encoding="utf-8")]
+    for path in hosts:
         before, after, count = process(path, refs)
         total += count
         if before != after:

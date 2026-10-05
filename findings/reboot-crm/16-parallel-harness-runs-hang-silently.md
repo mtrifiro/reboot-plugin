@@ -11,8 +11,8 @@ names:
 tags: [testing, negative-space, cost]
 cluster: "D"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/testing-project-setup.md § Limits"
 ---
 
 # Parallel harness runs hang, silently

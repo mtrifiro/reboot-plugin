@@ -11,8 +11,8 @@ names:
 tags: [negative-space, auth, contradiction]
 cluster: "4.1"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/auth-custom-predicates.md § Never; python/references/servicer-authorizer.md § Never"
 ---
 
 # Per-method authorization by isinstance(request, ...) cannot express rules for methods with request=None

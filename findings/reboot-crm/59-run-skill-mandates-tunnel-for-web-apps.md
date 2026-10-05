@@ -11,8 +11,8 @@ tags: [operations, builder-drift]
 cluster: "4.2"
 duplicate_of: reboot-air-141-11
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "run/SKILL.md § Tunnel — MCP branch only"
 ---
 
 # run skill mandates a Cloudflare quick tunnel for web apps

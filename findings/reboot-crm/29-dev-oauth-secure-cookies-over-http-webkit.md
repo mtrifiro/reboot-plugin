@@ -12,8 +12,8 @@ names:
 tags: [auth, operations, error-text, frontend]
 cluster: "4.2"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "run/references/stop-restart-reset.md § Errors you will see; web-app/SKILL.md § Auth in Web Apps"
 ---
 
 # The dev OAuth server sets Secure on cookies served over plain http, so local sign-in fails in every WebKit browser

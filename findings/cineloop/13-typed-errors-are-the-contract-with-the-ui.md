@@ -11,8 +11,8 @@ names:
 tags: [pattern, frontend]
 cluster: "E"
 still_applies: unknown
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/patterns-error-handling.md § Do this"
 ---
 
 # Typed errors are the contract with the UI

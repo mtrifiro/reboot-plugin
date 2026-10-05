@@ -12,8 +12,8 @@ names:
 tags: [negative-space, error-text]
 cluster: "4.1"
 still_applies: unknown
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/patterns-error-handling.md § Never; python/references/rpc-constructor-calls.md § Never"
 ---
 
 # Generated <Method>Aborted catches SYSTEM errors too

@@ -11,8 +11,8 @@ names:
 tags: [index-gap, testing]
 cluster: "G"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/testing-harness.md § Do this"
 ---
 
 # Reference-reading notes: batched cat truncates and ExternalContext import
