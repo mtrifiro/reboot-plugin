@@ -13,7 +13,7 @@
 # Exits non-zero on the first failure. A template that does not build
 # cannot ship.
 #
-#   tools/templates-smoke.sh [mcp-ui] [web-app]   # default: both
+#   tools/templates-smoke.sh [mcp-ui] [web-app] [both]   # default: all three
 #
 # Environment:
 #   SMOKE_FULL=1   also run the scenarios (`pytest`), not just collect
@@ -27,7 +27,7 @@ export PATH="$PLUGIN_ROOT/bin:$PATH"
 
 FRONT_DOORS=("$@")
 if [ "${#FRONT_DOORS[@]}" -eq 0 ]; then
-  FRONT_DOORS=(mcp-ui web-app)
+  FRONT_DOORS=(mcp-ui web-app both)
 fi
 
 WORK="$(mktemp -d "${TMPDIR:-/tmp}/templates-smoke.XXXXXX")"
@@ -47,7 +47,7 @@ step() {
 
 for FD in "${FRONT_DOORS[@]}"; do
   case "$FD" in
-    mcp-ui) FRONTEND=frontend ;;
+    mcp-ui|both) FRONTEND=frontend ;;
     web-app) FRONTEND=web ;;
     *) echo "unknown front door: $FD" >&2; exit 2 ;;
   esac

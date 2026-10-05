@@ -27,6 +27,9 @@ rbt generate
 rbt generate                   # again: the React bindings need node_modules
 ```
 
+`both` is the dual-frontend app: the `mcp-ui` template plus the SPA in
+`frontend/web/` (see "`both/` adds" below).
+
 ## Placeholders
 
 | Placeholder | Form | Example | Used in |
@@ -82,6 +85,22 @@ Both front doors share the Python shell:
 | `web/src/App.tsx` | Sign-in gate on `useUser()`, one reader and one mutation, built on `styles.css` |
 | `web/src/theme.tsx` | `ThemeToggle` (light/dark, saved in `localStorage`, OS setting until chosen) and `applySavedTheme()`, called in `main.tsx` before render |
 | `web/src/vite-env.d.ts` | Vite client types for `import.meta.env` |
+
+### `both/` adds
+
+The `mcp-ui` template with a `list_counters` reader on `User` (so the
+web app can find the user's counters) and the SPA beside the MCP UIs:
+
+| File | What it is |
+| --- | --- |
+| `frontend/web/index.html`, `src/main.tsx` | The SPA entry; served by the backend at `/__/frontend/web/`, so the provider's default origin is the backend (no `.env.development`) |
+| `frontend/web/src/App.tsx` | Sign-in gate, the user's counters as cards, `useCounter({ id })` per card; imports the one generated client via `@api/…` |
+| `frontend/web/src/styles.css`, `theme.tsx` | The same stylesheet and light/dark toggle as `web-app/` |
+
+`frontend/vite.config.ts` and `build.mjs` already serve and build
+`web/`. `tools/templates-smoke.sh` builds this template and runs its
+backend scenario; it does not yet run browser scenarios against
+`frontend/web/`.
 
 
 ## Versions

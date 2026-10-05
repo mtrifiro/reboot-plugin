@@ -36,8 +36,10 @@ api = API(
                 request=None,
                 response=GetResponse,
                 description="Get the user's count.",
-                # Every method states `mcp=`; a web app exposes no MCP
-                # tools, so it is always `None`.
+                # Every method states `mcp=`: `None` until an MCP UI is
+                # added, then `Tool()` on what the AI calls. Changing it
+                # is compatible; changing `description=` after a deploy
+                # is not, so write it for the AI now.
                 mcp=None,
             ),
             increment=Writer(

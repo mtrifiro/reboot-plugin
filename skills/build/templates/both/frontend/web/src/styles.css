@@ -1,0 +1,111 @@
+/* The app's one stylesheet: tokens, base elements, and the standard
+   components every page builds on (web-app/references/ui-design.md).
+   Replace the token values with the visual brief's palette and type
+   pairing; keep the names. Components never carry raw hex.
+
+   Classes: topbar (.brand), page-head, panel / panel-head, card, cards,
+   spacer; buttons .primary / .ghost / .danger; pill .ok / .warm /
+   .cold / .danger; tabs / tab; table-wrap; skeleton; empty (.actions);
+   error; mono, small, muted, visually-hidden. Dark mode follows
+   prefers-color-scheme until the user picks one with ThemeToggle
+   (theme.tsx), which sets data-theme="light|dark" on <html>. */
+
+:root {
+  --bg: #fbf9f4;        --bg-2: #ffffff;      --panel: #ffffff;
+  --ink: #16213e;       --muted: #6b7280;     --line: #e6e2d8;
+  --accent: #1f5eff;    --highlight: #c7f464; --danger: #d64545;
+  --warm: #f59e0b;      --cold: #8b95a5;      --ok: #16a34a;
+  --track: #ece8df;     --bg-glow: #f3f0e8;   --on-accent: #ffffff;
+  --shadow: rgba(16, 33, 62, 0.10);
+  --radius: 10px;       --radius-sm: 6px;
+  --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px; --space-6: 24px; --space-8: 32px;
+  --font-display: "Space Grotesk", system-ui, sans-serif;
+  --font-text: "DM Sans", system-ui, sans-serif;
+  --font-mono: "DM Mono", ui-monospace, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1420; --bg-2: #161c2b; --panel: #161c2b; --ink: #e8ecf5; --muted: #9aa4b8;
+    --line: #263049; --track: #222a3d; --bg-glow: #1b2335; --shadow: rgba(0, 0, 0, 0.35);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f1420; --bg-2: #161c2b; --panel: #161c2b; --ink: #e8ecf5; --muted: #9aa4b8;
+  --line: #263049; --track: #222a3d; --bg-glow: #1b2335; --shadow: rgba(0, 0, 0, 0.35);
+  color-scheme: dark;
+}
+
+/* Base */
+html { font-family: var(--font-text); color: var(--ink); background: var(--bg); font-size: 15px; -webkit-font-smoothing: antialiased; }
+body { margin: 0; }
+h1, h2, h3 { font-family: var(--font-display); margin: 0 0 var(--space-2); line-height: 1.15; }
+h1 { font-size: 28px; } h2 { font-size: 18px; } h3 { font-size: 15px; }
+a { color: var(--accent); text-decoration: none; } a:hover { text-decoration: underline; }
+.mono { font-family: var(--font-mono); } .small { font-size: 13px; } .muted { color: var(--muted); }
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+
+/* Shell */
+.topbar { display: flex; align-items: center; gap: var(--space-6); padding: 10px 20px; border-bottom: 1px solid var(--line); background: color-mix(in srgb, var(--panel) 90%, transparent); backdrop-filter: blur(8px); position: sticky; top: 0; z-index: 10; }
+.topbar .brand { font-family: var(--font-display); font-weight: 700; }
+.topbar nav a { color: var(--muted); padding: 6px 10px; border-radius: var(--radius-sm); } .topbar nav a.active { color: var(--ink); background: var(--bg-glow); }
+main { max-width: 1280px; margin: 0 auto; padding: var(--space-6) var(--space-4); }
+.page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--space-4); flex-wrap: wrap; margin-bottom: var(--space-4); }
+
+/* Panels and cards */
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: var(--space-4); }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: var(--space-4); }
+.panel-head { display: flex; align-items: center; gap: var(--space-3); margin-bottom: var(--space-3); } .spacer { flex: 1; }
+.card { background: var(--bg-2); border: 1px solid var(--line); border-radius: var(--radius); padding: var(--space-3); transition: box-shadow 120ms, transform 120ms, background-color 160ms; }
+.card:hover { box-shadow: 0 6px 20px var(--shadow); transform: translateY(-1px); }
+
+/* Controls: never unstyled */
+button, .button-link { font: inherit; border-radius: var(--radius-sm); padding: 7px 12px; border: 1px solid var(--line); background: var(--bg-2); color: var(--ink); cursor: pointer; }
+button.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+button.ghost { background: transparent; }
+button.danger { background: var(--danger); border-color: var(--danger); color: var(--on-accent); }
+button:disabled { opacity: 0.55; cursor: default; }
+input, select, textarea { font: inherit; color: var(--ink); background: var(--bg-2); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 7px 10px; }
+select { appearance: none; padding-right: 28px; background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6'><path d='M0 0l5 6 5-6z' fill='%236b7280'/></svg>"); background-repeat: no-repeat; background-position: right 10px center; }
+.inline-select { width: auto; padding: 4px 28px 4px 8px; font-size: 13px; }
+input:focus, select:focus, textarea:focus, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+/* Status: pills, colored by meaning, the same everywhere */
+.pill { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; background: var(--bg-glow); color: var(--ink); border: 1px solid var(--line); }
+.pill.warm { background: color-mix(in srgb, var(--warm) 18%, transparent); border-color: var(--warm); }
+.pill.cold { background: color-mix(in srgb, var(--cold) 18%, transparent); border-color: var(--cold); }
+.pill.ok   { background: color-mix(in srgb, var(--ok) 18%, transparent);   border-color: var(--ok); }
+.pill.danger { background: color-mix(in srgb, var(--danger) 18%, transparent); border-color: var(--danger); }
+
+/* Tables: the second view, never the only one */
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; }
+th { text-align: left; font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); padding: 8px 10px; border-bottom: 1px solid var(--line); position: sticky; top: 52px; background: var(--bg); }
+td { padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; transition: background-color 160ms; }
+tr:hover td { background: var(--bg-glow); }
+
+/* Tabs */
+.tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--line); margin-bottom: var(--space-4); }
+.tab { background: none; border: 0; border-bottom: 2px solid transparent; border-radius: 0; padding: 8px 12px; color: var(--muted); }
+.tab.active, .tab[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--highlight); }
+
+/* Live data: skeletons, not "Loading…" */
+.skeleton { background: linear-gradient(90deg, var(--track) 25%, var(--bg-glow) 50%, var(--track) 75%); background-size: 200% 100%; animation: shimmer 1.2s infinite; border-radius: var(--radius-sm); height: 14px; }
+@keyframes shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+
+/* Empty and error states */
+.empty { text-align: center; padding: var(--space-8) var(--space-4); color: var(--muted); }
+.empty :is(h1, h2, h3) { color: var(--ink); } .empty .actions { margin-top: var(--space-3); }
+.error { color: var(--danger); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+
+/* Phone: 16px gutters, no horizontal page scroll */
+@media (max-width: 640px) {
+  main { padding: var(--space-4); }
+  .topbar { gap: var(--space-3); padding: 10px var(--space-4); }
+  .page-head { align-items: stretch; }
+}

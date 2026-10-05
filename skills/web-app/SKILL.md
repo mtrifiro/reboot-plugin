@@ -34,11 +34,11 @@ The backend is identical; the deltas are on the frontend:
 | Concern      | MCP UI (`mcp-ui`)                                        | Web App (this skill)                                                                      |
 | ------------ | -------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
 | Front door   | MCP host (ChatGPT, Claude, …) creates a `User` per user. | Browser user signs in via `Application(oauth=...)`; same `User` per upstream identity.    |
-| API exposure | `mcp=Tool()` on methods the AI calls.                    | `mcp=None` on every method (the keyword is required); calls go through the generated React client. |
+| API exposure | `mcp=Tool()` on methods the AI calls.                    | `mcp=None` on every method until an MCP UI is added (the keyword is required); calls go through the generated React client. |
 | UI shape     | `UI()` methods → artifacts embedded in the MCP host.     | A normal SPA at `web/` opened at a URL.                                                   |
 | Vite config  | Special — nested `dist/mcp/<ui-name>/index.html`.        | Stock single-page Vite output; no `viteSingleFile`, no nested-output override.            |
 | Manual check | MCPJam inspector, from the setup wizard.                 | The browser; scenarios drive it through Playwright (`python/references/testing-web-app.md`). |
-| `User` type  | Required — the MCP entry point.                          | Optional — only if your app needs per-user state.                                         |
+| `User` type  | Required — the MCP entry point.                          | Required too — it owns per-user state and keeps the backend ready for an MCP UI.          |
 
 ## Auth in Web Apps
 

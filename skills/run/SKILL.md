@@ -29,7 +29,7 @@ from the project root.
 | `web/` only | **Web App** | `web/` |
 | `frontend/mcp/` only | **MCP UI** | `frontend/` |
 | `frontend/mcp/` and `frontend/web/` | **Both** (dual-frontend) | `frontend/` (one Vite server serves both) |
-| `frontend/mcp/` and a top-level `web/` | **Both** | `frontend/` and `web/` (two Vite servers) |
+| `frontend/mcp/` and a top-level `web/` | **Both**, mid-migration | `frontend/` and `web/` (two Vite servers); finish the move into `frontend/web/` (build skill, "Adding the other front door") |
 
 - An API using `mcp=Tool(` with no frontend directory is an MCP UI with
   no frontend (tools only, no `UI()` methods).

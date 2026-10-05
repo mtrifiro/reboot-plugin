@@ -68,6 +68,11 @@ method types mean regenerating a dozen or more files.
    - Method map: each operation's method type
      (Reader/Writer/Transaction/Workflow).
    - Auth per method: anonymous, signed-in, owner only, app-internal.
+   - Ready for both front doors, whichever is built first: a `User`
+     type; per method its AI role (a tool the AI calls, a `UI()` view,
+     or human-only) and a `description=` written for the AI. A
+     description can't be edited once deployed; switching `mcp=` later
+     can (`python/references/api-schema-evolution.md`).
    - The look: **highly visual unless the user asks otherwise** — a
      view that shows the data's shape (board, timeline, chart, map),
      not only tables or text; a deliberate palette with light and dark
@@ -76,9 +81,8 @@ method types mean regenerating a dozen or more files.
      creates and locates application-type instances); which methods get
      `UI()`; the AI's tool surface; ~3 example prompts, most ending on a
      turn that renders a `UI()`.
-   - web-app: the SPA's pages and the methods each calls; whether there
-     is per-user state (then a `User` type owns it); the visual brief
-     per `web-app/references/ui-design.md`.
+   - web-app: the SPA's pages and the methods each calls; the visual
+     brief per `web-app/references/ui-design.md`.
 Updates start with the design too (Update Flow).
 
 ### Writing the Design for a Human Reader
@@ -119,9 +123,8 @@ The reader hasn't read the skill files; make the design stand alone:
    an external system** (a repo's issues, a mailbox) is an entity
    collection, unbounded by definition. Signals:
    `python/references/state-collections.md` Step 1.
-2. **`User`?** mcp-ui: always — it is the MCP front door. web-app: only
-   with per-user state, then route creation through `User` exactly as
-   an MCP UI does; anonymous or fully shared-state apps skip it. `User`
+2. **`User`: always** — the MCP front door, and the owner of per-user
+   state in the web app; route creation through it in both. `User`
    holds identity and the **IDs** of what it owns; unrelated concerns
    (auth/session, persona, background-engine config, caches) are their
    own Types, or its writers serialize
@@ -210,7 +213,8 @@ method with `description=` and an explicit `mcp=` (required on all four
 factories).
 - mcp-ui: `mcp=Tool()` on what the AI calls, `mcp=None` otherwise;
   `UI()` methods per the design.
-- web-app: `mcp=None` everywhere; no `UI()`.
+- web-app: `mcp=None` everywhere and no `UI()` until an MCP UI is
+  added; descriptions are already written for the AI.
 
 ### Step 2 — Project shell
 
@@ -222,8 +226,9 @@ an `.rbtrc` and would overwrite your API file with the sample. So copy
 into an empty scratch directory, delete the dashboard's stub `.rbtrc`
 and `pyproject.toml`, and merge with `cp -Rn <scratch>/. .` to keep
 step 1's API file. The sample servicer, feature, test module and UI (a
-counter) are replaced in steps 3, 5 and 6; a dual-frontend app takes
-pieces of both templates. Then:
+counter) are replaced in steps 3, 5 and 6; a dual-frontend app copies
+`templates/both/` (MCP UIs in `frontend/mcp/`, the SPA in
+`frontend/web/`, one Vite server and one generated client). Then:
 
 1. `uv sync`.
 2. `uv run rbt generate`. Don't read the output; the servicer signature
@@ -352,6 +357,11 @@ never bare `rbt dev run` / `npm run dev`.
   Wizard and MCPJam").
 - web-app: check the page at the URL a person would type
   (`localhost`).
+
+**Hand off** with the app's URL and, unless the user asked for only one
+front door, the one-line offer of the other (`app` skill, "At
+handoff").
+
 ## Update Flow
 
 1. Read `.rbtrc`, the API definition, servicer, `main.py` and the
@@ -372,5 +382,17 @@ never bare `rbt dev run` / `npm run dev`.
    click-through flow). Run `uv run mypy backend/ tests/` and
    `uv run pytest`; fix everything; ask before removing `@wip`.
 8. Not running: start it with the [`run` skill](../run/SKILL.md).
+
+**Adding the other front door** is an update like any other: load its
+skill and make the project look like `templates/both/`.
+- To a web app: copy `both/frontend/` and
+  `backend/src/example_prompts.py`, move `web/src/` and
+  `web/index.html` into `frontend/web/`, import the client from
+  `@api/…`, and point `.rbtrc`'s `generate --react=` at
+  `frontend/api` (one output directory per project; two `node_modules`
+  would load React twice). Delete `web/`.
+- To an MCP UI: copy `both/frontend/web/`.
+Then switch the AI's methods to `mcp=Tool()`, add any `UI()` methods,
+and write the new front door's scenarios.
    Under `rbt dev run`, `--watch` globs reload code and editing `.env`
    restarts it, so `--env-file` re-reads secrets.

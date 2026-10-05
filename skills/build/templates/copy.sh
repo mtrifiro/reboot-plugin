@@ -3,7 +3,7 @@
 # Copy a front-door template into a new project directory and fill in
 # its placeholders. See README.md next to this script.
 #
-#   copy.sh <mcp-ui|web-app> <dest-dir> <project> <app> "<Title>"
+#   copy.sh <mcp-ui|web-app|both> <dest-dir> <project> <app> "<Title>"
 #
 #   <project>  kebab-case project name  (e.g. todo-list)  -> __project__
 #   <app>      snake_case API package   (e.g. todo_list)  -> __app__
@@ -14,7 +14,7 @@
 set -eu
 
 if [ "$#" -ne 5 ]; then
-  echo "usage: $0 <mcp-ui|web-app> <dest-dir> <project> <app> \"<Title>\"" >&2
+  echo "usage: $0 <mcp-ui|web-app|both> <dest-dir> <project> <app> \"<Title>\"" >&2
   exit 2
 fi
 
@@ -28,7 +28,7 @@ TEMPLATES="$(cd "$(dirname -- "$0")" && pwd)"
 SRC="$TEMPLATES/$FRONT_DOOR"
 
 if [ ! -d "$SRC" ]; then
-  echo "unknown front door '$FRONT_DOOR' (expected mcp-ui or web-app)" >&2
+  echo "unknown front door '$FRONT_DOOR' (expected mcp-ui, web-app or both)" >&2
   exit 2
 fi
 case "$PROJECT" in
