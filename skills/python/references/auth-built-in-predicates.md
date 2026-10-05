@@ -3,7 +3,7 @@ title: Built-In Authorizer Predicates
 impact: HIGH
 impactDescription: The three shipped predicates cover most auth needs without custom code
 tags: auth, predicate, has_verified_token, is_app_internal, state_id_is_user_id
-summary: "`has_verified_token`, `is_app_internal` and `state_id_is_user_id` and their common compositions; a self-scheduled workflow needs `is_app_internal`; predicates always take `**kwargs`."
+summary: "Token predicates alone deny servicer-to-servicer calls; `has_verified_token`, `is_app_internal`, `state_id_is_user_id` and compositions."
 step: auth
 applies: [mcp-ui, web-app, backend-only]
 always: false
@@ -92,8 +92,6 @@ user-owned actors with background work.
   (`servicer-authorizer.md` § Never).
 - Treat `has_verified_token` as "is a user of this app" — it only checks
   the token.
-- A predicate signature without `**kwargs` — the runtime passes `context`,
-  `state`, `request` by keyword and may add more.
 
 ## Limits
 
@@ -108,9 +106,7 @@ user-owned actors with background work.
 
 ## Errors you will see
 
-| Error text (stable prefix) | Meaning | Fix |
-| --- | --- | --- |
-| `aborted with 'Unauthenticated': You are not authorized to call` | A token-based predicate saw no `context.auth`, often a scheduled or nested call | Add `is_app_internal` to an `any=[...]` |
+`Unauthenticated`: see `servicer-authorizer.md`.
 
 ## See also
 

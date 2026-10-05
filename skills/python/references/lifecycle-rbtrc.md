@@ -3,7 +3,7 @@ title: Configure `.rbtrc` Correctly
 impact: CRITICAL
 impactDescription: `rbt generate` and `rbt dev run` won't find files without correct config
 tags: rbtrc, config, generate, dev, expunge, application-name, port, watch
-summary: "`.rbtrc` is line-based `<subcommand> <flag>`, not YAML; `--application-name` (not `--name`) persists state; `--env-file` for secrets; `serve run` lines for production; named configs."
+summary: "`.rbtrc` is line-based, not YAML; `--application-name` not `--name`; `--env-file` for secrets; `serve run` lines; named configs."
 step: shell
 applies: [mcp-ui, web-app, backend-only]
 always: false
@@ -112,7 +112,9 @@ dev run:dist --frontend-dist-path=frontend/dist
   the RocksDB LOCK; kill the old one and wait.
 - **Debugging dev state that lived through incompatible API changes**
   (changed method kinds, tasks pointing at reworked methods) — native
-  asserts and context-type errors on task replay; expunge and reseed.
+  asserts and context-type errors on task replay. Stop the app,
+  `rbt dev expunge --application-name=<name> --yes`, reseed, reload open
+  tabs (theater-network, 1.4.0).
 - **A literal secret on a `--env=KEY=secret` line** — `.rbtrc` is
   checked in. `dev run --env-file=.env` is fine; it's only a path.
 
@@ -147,7 +149,6 @@ dev run:dist --frontend-dist-path=frontend/dist
 | `'--env-file' '.env' does not exist.` | Warning only; app starts without those variables | Create the file, or ignore until secrets are needed |
 | `cannot bind '0.0.0.0:9991': Address already in use` (followed by "This is a bug in the Envoy configuration Reboot generated") | Another process, usually another Reboot app, holds the port; not a Reboot bug | `dev run --port=<other>` in `.rbtrc` |
 | `Failed to find 'protoc-gen-reboot_python'. Please report this bug to the maintainers.` | `rbt` run outside `uv run`; venv `bin/` not on `PATH` | `uv run rbt ...` (or `uv run --project <repo> rbt ...`) |
-| `Failed to flush monotonic clock high water mark: IO error: No such file or directory` | State expunged under a running app | Stop, expunge, restart ([`run` skill](../../run/SKILL.md)) |
 
 ## See also
 

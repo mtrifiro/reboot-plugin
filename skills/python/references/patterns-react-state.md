@@ -3,7 +3,7 @@ title: React State on Top of Reactive Readers
 impact: HIGH
 impactDescription: Without these idioms a Reboot UI ships round-trip-gated clicks, spinners that never stop, hook-order crashes, and pages that mount sixty subscriptions
 tags: react, patterns, optimistic, hooks, subscription, deadline, useEffect, newId, frontend
-summary: "One reactive hook per component, subscribe to summaries, optimistic overrides, a deadline on every mutation, `newId()` for browser-minted ids, string dependencies for derived values."
+summary: "Hooks in loops or derived-array deps break; one reactive hook per component, summaries, optimistic overrides, mutation deadlines, `newId()`."
 step: any
 applies: [mcp-ui, web-app]
 always: false

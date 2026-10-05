@@ -3,7 +3,7 @@ title: Fan Out Calls with `Service.forall(ids).method(context)`
 impact: MEDIUM
 impactDescription: A hand-rolled gather is more code; an unbudgeted fan-out over ~150 actors times out
 tags: rpc, forall, fan-out, batch, parallel, gather
-summary: "`Service.forall(ids).method(context)` instead of a hand-rolled gather: results in input order, one RPC per id (no batching), no constructors or workflows, budgeted fan-out."
+summary: "Fan-out is one RPC per id, no batching; `Service.forall(ids).method(context)` over a hand-rolled gather; input order; budgets."
 step: servicer
 applies: [mcp-ui, web-app, backend-only]
 always: false
@@ -71,9 +71,7 @@ await Queue.forall(queue_ids).enqueue(context, items=items)
 
 ## Errors you will see
 
-| Error text (stable prefix) | Meaning | Fix |
-| --- | --- | --- |
-| `Unavailable: ping timeout` | The fan-out did not finish inside the request window | Materialize on write; see `patterns-cross-actor-reads.md` |
+`Unavailable: ping timeout`: see `patterns-load-and-benchmarking.md`.
 
 ## See also
 

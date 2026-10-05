@@ -3,7 +3,7 @@ title: Handle Constructor Methods
 impact: HIGH
 impactDescription: Initial state set in the wrong place leaks across actors or never runs; a constructor called twice aborts with `StateAlreadyConstructed`
 tags: servicer, constructor, context.constructor, create, initialization, factory, StateAlreadyConstructed
-summary: "Set initial state in the `factory=True` method, never in `__init__`; a constructor runs once per actor (a second call aborts `StateAlreadyConstructed`); declare `Transaction(factory=True)` if it may construct others."
+summary: "Never set initial state in `__init__`; a second call aborts `StateAlreadyConstructed`; use `Transaction(factory=True)` if it constructs others."
 step: servicer
 applies: [mcp-ui, web-app, backend-only]
 always: false
@@ -75,12 +75,8 @@ await account.deposit(context, amount=request.initial_deposit)
   Servicer instances are created lazily and reused; set state in the
   constructor method.
 - **A "create or re-open" constructor.** On an existing actor it aborts
-  `StateAlreadyConstructed`; branching on `context.constructor` changes
-  nothing; a retrying workflow loops forever (reboot-crm-68, 1.6.0).
-  For get-or-create, probe with a reader first (`rpc-refs.md`) or catch
-  `StateAlreadyConstructed` and fall through to an ordinary writer.
-  Only a reused idempotency key (`initialize`'s automatic key, a
-  repeated `.idempotently(alias)`) returns the stored result instead.
+  `StateAlreadyConstructed`; get-or-create from the caller
+  (`rpc-constructor-calls.md` § Never).
 - **Stamping `context.auth` in a constructor reached from another
   servicer.** A nested `create` is app-internal with `context.auth`
   `None`, so an "owner" or first history entry comes out empty
@@ -125,9 +121,7 @@ await account.deposit(context, amount=request.initial_deposit)
 
 | Error text (stable prefix) | Meaning | Fix |
 | --- | --- | --- |
-| `aborted with 'StateAlreadyConstructed'` | Constructor called on an existing actor (e.g. `OpenAborted: aborted with 'StateAlreadyConstructed'`) | Probe first, or catch it and call an ordinary writer |
 | `Reboot options for method` `...` `updated from` | A persisted constructor's kind changed between `Writer` and `Transaction` | Revert the kind; construct the other actor elsewhere |
-| `TypeError: reboot.aio.contexts.WriterContext is not an instance or subclass of one of the expected type(s)` | A writer (constructor or not) called another actor's writer or constructor | Make the method a `Transaction` |
 
 ## See also
 

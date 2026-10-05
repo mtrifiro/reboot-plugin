@@ -3,7 +3,7 @@ title: API Definition — Method Types and Tool Exposure
 impact: CRITICAL
 impactDescription: The pydantic API file is the source of truth for both Reboot codegen AND MCP tool surface. `UI()` is MCP-UI-only; every method (including `User`'s) requires explicit `mcp=`; application types need `factory=True` on their `create` Writer.
 tags: api, pydantic, ui, tool, mcp, reader, writer, transaction, workflow, factory, user
-summary: "Every method, `Workflow` included, needs explicit `mcp=Tool()` or `mcp=None`; put an entity's `UI()` on that entity's Type, never on `User` with an ID in `request=`; `factory=True` on `create`."
+summary: "Every method needs `mcp=Tool()` or `mcp=None`; an entity's `UI()` goes on its Type, not `User`; `factory=True` `create`."
 step: api
 applies: [mcp-ui]
 always: false
@@ -205,7 +205,6 @@ entity's Readers, Writers and UIs go on its own `Type`.
 
 | Error text (stable prefix) | Meaning | Fix |
 | --- | --- | --- |
-| `1 validation error for Workflow` / `mcp` / `Field required` | A factory (any of the four) declared without `mcp=` | Add `mcp=None` or `mcp=Tool()` |
 | `1 validation error for UI` / `request` / `Field required` | `UI()` without `request=` | `request=None` |
 | `'Resource()' is not yet supported; use 'Tool()' instead` | `mcp=Resource()` | `mcp=Tool()` |
 | `"type[<Type>]" has no attribute "create"` | mypy: the type has no `factory=True` method (observed at 1.4.1) | `factory=True` on its `create` Writer |

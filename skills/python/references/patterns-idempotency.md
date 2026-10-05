@@ -3,7 +3,7 @@ title: Make Constructor and `initialize` Calls Idempotent
 impact: MEDIUM
 impactDescription: Non-idempotent setup duplicates state on restart; a replayed call's response describes its first run; one uncertain mutation blocks every later bare mutation from that context
 tags: patterns, idempotency, initialize, constructor, restart, IdempotencyUncertainError, idempotently, alias, replay, memoized
-summary: "What `IdempotencyUncertainError` means and when a retry needs an idempotency key; replayed calls return the first run's response; idempotent `create` / `initialize`; UUIDv7 for insertable records."
+summary: "Replayed calls return the first run's response; what `IdempotencyUncertainError` means, when retries need keys, idempotent `create`/`initialize`."
 step: tests
 applies: [mcp-ui, web-app, backend-only]
 always: false
@@ -130,8 +130,7 @@ next mutation _without_ an idempotency key fails:
 
 | Error text (stable prefix) | Meaning | Fix |
 | --- | --- | --- |
-| `IdempotencyUncertainError: Because we don't know if the mutation from calling` | An earlier call from this context failed in a way the client cannot classify | Give this mutation an alias or key, or use a fresh context |
-| `aborted with 'StateAlreadyConstructed'` | An explicit constructor ran on an existing actor outside a used key | Leave creation to `initialize`'s key, or get-or-create (`rpc-constructor-calls.md`) |
+| `IdempotencyUncertainError: Because we don't know if the mutation from calling` | An earlier call from this context failed in a way the client cannot classify (often a denial) | Give this mutation an alias or key (`.idempotently("...")`), or use a fresh context |
 
 ## See also
 

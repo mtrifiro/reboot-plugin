@@ -3,7 +3,7 @@ title: Time and Randomness in Method Bodies
 impact: HIGH
 impactDescription: A fresh id or timestamp that something later re-derives or addresses splits into two values on retry or replay; a wall-clock read in a workflow diverges on every replay
 tags: patterns, time, now, clock, random, uuid, uuid4, uuid7, determinism, effect validation, replay, deadline
-summary: "A timestamp or id that is later addressed splits on retry or replay: pass it in the request, derive it from state, or capture it with `at_least_once`."
+summary: "A timestamp or id later addressed splits on retry or replay; pass it in, derive it, use `at_least_once`."
 step: any
 applies: [mcp-ui, web-app, backend-only]
 always: false
@@ -144,10 +144,7 @@ seconds (cineloop-24, 1.4.1; `testing-harness.md`).
 
 ## Errors you will see
 
-| Error text (stable prefix) | Meaning | Fix |
-| --- | --- | --- |
-| `Re-running method` | Info, not an error: effect validation re-runs the body; the second run commits | None needed; make external calls in a workflow |
-| `Re-running block with idempotency alias` | Info: an `at_least_once` callable re-runs (not `at_most_once`, not `until`); its second result is memoized | Pass `effect_validation=EffectValidation.DISABLED` on calls that must run once in dev |
+`Re-running method`: see `servicer-writer.md`; `Re-running block with idempotency alias`: see `servicer-workflow-external.md`.
 
 ## See also
 

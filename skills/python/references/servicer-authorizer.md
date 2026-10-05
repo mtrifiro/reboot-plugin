@@ -3,7 +3,7 @@ title: Authorizers — When to Write Them, What They See
 impact: HIGH
 impactDescription: Rules that ignore app-internal call paths or assume identity crosses servicer calls fail minutes later, or silently compute as if nobody is signed in
 tags: servicer, authorizer, allow, allow_if, auth, authorizers, production, oauth, token-verifier, is_app_internal, context.auth, per-method
-summary: "Write real rules on every servicer before the first test; list the tokenless call paths first; identity does not cross servicer calls; `oauth=` vs. the `token_verifier=` escape hatch."
+summary: "Without real rules every external call is denied; identity doesn't cross servicer calls; tokenless paths; `oauth=` vs `token_verifier=`."
 step: auth
 applies: [mcp-ui, web-app, backend-only]
 always: false
@@ -94,7 +94,6 @@ class CounterServicer(Counter.Servicer):
 
 ## Never
 
-- `return allow` — returns the function, not a rule. `return allow()`.
 - Omitting `authorizer()` "until later" — the test harness, `rbt serve`
   and Reboot Cloud deny every external call to it.
 - `allow()` as a "safe default" — it makes the method public and
@@ -110,12 +109,10 @@ class CounterServicer(Counter.Servicer):
   only when `context.auth is None and context.app_internal`, otherwise
   use `context.auth.user_id`.
 - Gate per-method rules by `isinstance(request, ...)` in one predicate
-  — methods with `request=None` or a shared request model cannot get
-  their own rule. Use `<Type>.Authorizer(method=...)`.
+  (`auth-custom-predicates.md` § Never).
 - Read `PermissionDenied` from `allow_if(any=[has_verified_token,
   is_app_internal])` as "signed in but forbidden" — anonymous callers
-  get it too, because `is_app_internal`'s denial wins the aggregation
-  (`auth-allow-if.md`).
+  get it too (`auth-allow-if.md` § Never).
 
 ## Limits
 
@@ -139,7 +136,7 @@ class CounterServicer(Counter.Servicer):
 
 | Error text (stable prefix) | Meaning | Fix |
 | --- | --- | --- |
-| `aborted with 'PermissionDenied': You are not authorized to call` | No rule allowed the caller; in harness/prod often a servicer with no `authorizer()` | Write the rule; add `is_app_internal` for internal paths |
+| `aborted with 'PermissionDenied': You are not authorized to call` | No rule allowed the caller (or a `deny()` matched); in harness/prod often a servicer with no `authorizer()` | Write a real `allow_if(...)` rule; add `is_app_internal` for internal paths |
 | `aborted with 'Unauthenticated': You are not authorized to call` | A rule needed identity and the call had none, typically servicer-to-servicer | Add `is_app_internal`; pass identity in the request |
 | `IS MISSING AUTHORIZATION` | `rbt dev` allowed a call to a servicer with no `authorizer()` | Write the rule before testing |
 

@@ -3,7 +3,7 @@ title: Call Actor Methods with Kwargs and a Context
 impact: HIGH
 impactDescription: A writer called from a WriterContext raises TypeError; a dict or wrong model in the request slot raises a bare AssertionError that mypy does not catch
 tags: rpc, call, kwargs, context, await, Context, TypeError, AssertionError, deadlock, TypedDict
-summary: "Pass kwargs: `await ref.deposit(context, amount=10)`; writers and transactions can't be called from a WriterContext, even your own; caller identity does not travel; writer cycles deadlock."
+summary: "Writers can't call writers or transactions, even their own; caller identity doesn't travel; writer cycles deadlock; pass kwargs."
 step: servicer
 applies: [mcp-ui, web-app, backend-only]
 always: false
@@ -89,13 +89,8 @@ await asyncio.gather(
   (reboot-crm-02, 1.6.0). Pass identity as a request field
   (`servicer-authorizer.md` § Never).
 - A writer cycle: a transaction on A calls a writer on B while a
-  transaction on B calls a writer on A. Two ordinary concurrent
-  requests deadlock; `rbt generate`, mypy and tests stay silent and the
-  dashboard's call graph draws the cycle without flagging it
-  (reboot-crm-25, 1.6.0). Usually both actors hold a copy of one fact:
-  pick the owner, delete the other. A return to A through
-  `per_workflow` (a later transaction of its own) is not a cycle,
-  though it greps the same.
+  transaction on B calls a writer on A — concurrent requests deadlock
+  (`state-actor-decomposition.md` § Never).
 
 ## Limits
 
@@ -113,7 +108,6 @@ await asyncio.gather(
 | Error text (stable prefix) | Meaning | Fix |
 | --- | --- | --- |
 | `TypeError: reboot.aio.contexts.WriterContext is not an instance or subclass of one of the expected type(s): ['reboot.aio.contexts.TransactionContext', 'reboot.aio.contexts.WorkflowContext', 'reboot.aio.external.ExternalContext']` | A writer called a writer or transaction (any actor) | Make the caller a `Transaction` |
-| `No overload variant matches argument types "WriterContext"` | mypy's form of the same | Same |
 | `AssertionError` (empty) | A dict or the wrong model passed where the request goes | Pass kwargs |
 | `TypeError: Unexpected use of request type` | A request object passed in the context or options slot | `ref.method(context, field=value)` |
 | `is a workflow and must be scheduled from a` | A workflow method called directly | `await ref.schedule().method(context, ...)` |

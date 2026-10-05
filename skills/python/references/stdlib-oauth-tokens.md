@@ -3,7 +3,7 @@ title: Store Provider OAuth Tokens in `OAuthTokenManager`, Not Hand-Rolled `Ciph
 impact: HIGH
 impactDescription: OAuth access/refresh tokens are secrets at rest; the stdlib manager encrypts, indexes, and crypto-shreds them per user for you — a plain `str` field leaks them, and hand-rolling `Ciphertext` re-implements what already exists.
 tags: stdlib, oauth, tokens, access-token, refresh-token, store-tokens, ciphertext, encryption, crypto-shred, google, github, secret
-summary: "Store provider access/refresh tokens in `OAuthTokenManager`, never a `str` field or hand-rolled `Ciphertext`; three libraries required (the `oauth` one is missing from the 1.6.0 wheel); app-internal only."
+summary: "Never tokens in a `str` field or hand-rolled `Ciphertext`; `OAuthTokenManager`, three libraries (`oauth` missing at 1.6.0), app-internal only."
 step: auth
 applies: [mcp-ui, web-app, backend-only]
 always: false

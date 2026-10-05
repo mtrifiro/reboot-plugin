@@ -3,7 +3,7 @@ title: API State Shapes — List and Nested Sub-Objects
 impact: HIGH
 impactDescription: Two recurring MCP UI state patterns. `list[Item]` of non-state Models is for **bounded sub-records** that have no identity of their own; entity collections (people, posts, messages, anything addressable on its own) must be promoted to their own state `Type`. Single nested `Model` sub-objects must be `Optional` with `default=None` and hydrated in the factory `create` Writer.
 tags: state, list, nested, sub-object, optional, model, default, default_factory, decomposition, crud
-summary: "`list[Item]` only for bounded sub-records without identity, with index-checked CRUD Writers; a single nested `Model` is `Optional` and hydrated in factory `create`; never nest state Models."
+summary: "Never nest state Models; `list[Item]` only for bounded identity-less sub-records; a nested `Model` is `Optional`, hydrated in `create`."
 step: api
 applies: [mcp-ui]
 always: false
@@ -82,9 +82,8 @@ Plural sub-objects are `list[GuestPreferences]` with
   Give the item its own `Type` and store IDs
   ([`state-collections.md`](../../python/references/state-collections.md)).
 - A `MAX_ITEMS` cap to keep a collection small enough for `list[Sub]` —
-  needing a cap means it is unbounded. A collection synced or scraped
-  from an external system (issues, mail, a feed) is never Shape A; it is
-  an `OrderedMap` of IDs.
+  needing a cap means it is unbounded; a synced or scraped collection is
+  an `OrderedMap` of IDs (`state-collections.md` § Never).
 - `OrderedMap.ref(f"{self.ref().state_id}-items")` — persist the map's ID
   in a field allocated once in the constructor (`items_index_id`); see
   `state-collections.md`.

@@ -3,7 +3,7 @@ title: Define and Raise Typed Errors
 impact: HIGH
 impactDescription: Untyped failures become opaque RPC errors at the call site
 tags: errors, MethodAborted, errors-list, typed-failures, raise, rollback
-summary: "Declare error Models in `errors=[...]` and raise the generated `<Method>Aborted(...)`, never an untyped exception; raising rolls back the mutation."
+summary: "An untyped exception surfaces as `Unknown`; declare error Models in `errors=[...]`, raise `<Method>Aborted(...)`; raising rolls back."
 step: api
 applies: [mcp-ui, web-app, backend-only]
 always: false
@@ -111,7 +111,7 @@ class AccountServicer(Account.Servicer):
 
 | Error text (stable prefix) | Meaning | Fix |
 | --- | --- | --- |
-| `Unhandled (in '` … `propagating as 'Unknown'` | A method raised a non-`Aborted` exception (or an undeclared one); the caller receives `Unknown` | Declare the error and raise `<Method>Aborted(...)` |
+| `Unhandled (in '` … `propagating as 'Unknown'` | A method raised a non-`Aborted` exception, or an error no method on the path declared; the caller receives `Unknown` | Declare the error and raise `<Method>Aborted(...)`, or catch and translate |
 
 ## See also
 

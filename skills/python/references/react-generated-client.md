@@ -3,7 +3,7 @@ title: The Generated React Client Contract
 impact: HIGH
 impactDescription: The exact hook, mutator, and error shapes `rbt generate --react=` emits — identical for web apps and MCP UIs
 tags: react, hooks, generated, codegen, errors, typescript, partialRequest, aborted, subscription
-summary: "What `rbt generate --react=` emits: `use<Type>()` overloads, three-field reader returns, mutations resolving to `{ response, aborted }` instead of throwing, typed errors, snake-to-camel naming."
+summary: "Mutations resolve to `{ response, aborted }`, never throw; `rbt generate --react=` output: `use<Type>()` overloads, reader returns, naming."
 step: frontend
 applies: [mcp-ui, web-app]
 always: false
@@ -123,7 +123,8 @@ asynchronously: guard at the parent, mount the child with a real id.
 - `ids.map(id => useFoo({ id }))` — breaks the rules of hooks; render
   one child per id ([`patterns-react-state.md`](patterns-react-state.md)).
 - `#` in a subscribed actor id — it rides a WebSocket URL and `#`
-  truncates it as a fragment; `@`, `:`, `~` are safe (observed 1.4.0).
+  truncates it as a fragment (`Failed to construct 'WebSocket'`); `@`,
+  `:`, `~` are safe (observed 1.4.0).
 - An error model with no fields at 1.5.0 or earlier — the client throws at
   import (blank page); give it one field. Safe at 1.6.0 (codegen
   always emits the `type` literal).
@@ -185,7 +186,6 @@ asynchronously: guard at the parent, mount the child with a real id.
 | `[Reboot] '<Type>.<Method>' aborted with` | Console warning on every aborted call | Expected; handle `aborted` |
 | `[Reboot] Caught unknown exception: Not expecting stream to ever be done` | Open subscriptions during a dev-server restart | None; it reconnects |
 | `Expecting either a response or a status` | The one case a mutation promise rejects | Transport failure; handle in `try/finally` |
-| `Maximum update depth exceeded` | A derived array in an effect's deps | See [`patterns-react-state.md`](patterns-react-state.md) |
 
 ## See also
 

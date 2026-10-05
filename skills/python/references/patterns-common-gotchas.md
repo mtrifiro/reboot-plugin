@@ -3,7 +3,7 @@ title: Every "Never" in One List
 impact: MEDIUM
 impactDescription: A scan list of every known trap across the references; each line points at the file that explains it
 tags: gotchas, never, traps, pitfalls, checklist, digest
-summary: "Generated one-line index of every reference's Never section, grouped by file; scan it before debugging, then read the owning file for the reason and fix."
+summary: "Scan before debugging: a generated one-line index of every Never lead, grouped by owning file."
 step: any
 applies: [mcp-ui, web-app, backend-only]
 always: false
@@ -129,19 +129,17 @@ section. Add or change a trap in its owning reference, not here. -->
 
 **`api-schema-evolution.md`**
 - Rewording a method's `description=` after state exists
-- Iterating on a state shape while `rbt dev run` watches
+- Iterating on a state shape while `rbt dev run` watches (`lifecycle-dev-loop.md` § Never)
 - Allocating a new ID field only in the `factory=True` constructor of a type with existing actors
 - Calling a backfill bare from `initialize`
-- `rbt dev expunge` from a script without `--yes`
-- `rbt dev expunge` while `rbt dev run` is live
+- `rbt dev expunge` without `--yes`, or while `rbt dev run` is live (`lifecycle-rbtrc.md` § Never)
 - Expunging a production application without explicit human confirmation
 
 **`servicer-authorizer.md`**
-- `return allow`
 - Omitting `authorizer()` "until later"
 - `allow()` as a "safe default"
 - Assume the caller's identity reaches an actor your servicer calls
-- Gate per-method rules by `isinstance(request, ...)` in one predicate
+- Gate per-method rules by `isinstance(request, ...)` in one predicate (`auth-custom-predicates.md` § Never)
 - Read `PermissionDenied` from `allow_if(any=[has_verified_token, is_app_internal])` as "signed in but forbidden"
 
 **`servicer-constructor.md`**
@@ -162,7 +160,7 @@ section. Add or change a trap in its owning reference, not here. -->
 - Multi-actor work in a `Writer` (`withdraw(...)` then `deposit(...)` on other actors)
 - An external call in the body
 - Stash data on `self`
-- One transaction over N things when N is more than a handful (48 showings stalled a suite; cineloop-40)
+- One transaction over N things when N is more than a handful (Reset All over 48 showings stalled a suite; cineloop-40, 1.4.1)
 - `schedule()` onto N foreign actors from one transaction
 - Read an actor then write it as two calls
 - Touch shared actors in different orders in different transactions (A then B, B then A)
@@ -352,7 +350,6 @@ section. Add or change a trap in its owning reference, not here. -->
 **`auth-built-in-predicates.md`**
 - `has_verified_token` or `state_id_is_user_id` alone on a servicer that other servicers call
 - Treat `has_verified_token` as "is a user of this app"
-- A predicate signature without `**kwargs`
 
 **`auth-claims.md`**
 - `Development()` with no `claims=` while expecting identity
@@ -370,7 +367,6 @@ section. Add or change a trap in its owning reference, not here. -->
 - Annotate `state` with `<Type>Authorizer.StateType` / `.RequestTypes`
 - Return `AuthorizerRule[TaskListState, Any]` from a helper
 - `if request is None: <check auth>` without checking `context.app_internal` first
-- An expensive predicate before `has_verified_token` in `all=[...]`
 
 **`auth-external-api-calls.md`**
 - The outbound HTTP call in a `Reader` / `Writer` / `Transaction`
@@ -409,7 +405,7 @@ section. Add or change a trap in its owning reference, not here. -->
 - `self.state_id`
 - `ChatRoomServicer().send(...)`
 - One ref used from two contexts (e.g. `program = Program.ref("BS-CS")`, called as the registrar and again as a second user)
-- Expect `Service.create(...)` / a factory on an existing actor to rerun its body
+- Expect `Service.create(...)` / a factory on an existing actor to rerun its body (`rpc-constructor-calls.md` § Never)
 - Expect the caller's identity to travel through a ref call from inside a servicer
 
 **`scheduling-basic.md`**
@@ -503,9 +499,7 @@ section. Add or change a trap in its owning reference, not here. -->
 **`patterns-load-and-benchmarking.md`**
 - Benchmark with effect validation on and call it the app's latency
 - Put a cross-actor `Transaction` on a click that must feel instant
-- Read an actor and then write it as two calls
-- Wrap "do this to N things" in one transaction when N is more than a handful
-- `schedule()` onto N foreign actors from one transaction
+- Read an actor and then write it as two calls, wrap "do this to N things" in one transaction when N is more than a handful, or `schedule()` onto N foreign actors from one transaction (`servicer-transaction.md` § Never)
 - Issue about 200 writer calls from one transaction behind a UI button
 - Run a background loop as a transaction holding a hot actor
 - Restart only the app process (SIGTERM, let the watcher respawn) before measuring
@@ -593,7 +587,7 @@ section. Add or change a trap in its owning reference, not here. -->
 - `process.env.PORT` in `vite.config.ts` without `@types/node`: `tsc -b` fails
 - Leaving the port at Vite's default 5173 or dropping `strictPort`: another project's server on `[::1]:5173` silently answers `localhost` while this one answers `127.0.0.1`, and without `strictPort` Vite slides to the next port, leaving `.env` and `allowed_origins` wrong
 - Deploying with `allowed_origins=[]`: a standalone SPA is cross-origin from its backend by construction
-- `#` in an actor id a page subscribes to: the id rides a WebSocket URL and `#` truncates it (`Failed to construct 'WebSocket'`)
+- `#` in an actor id a page subscribes to (`react-generated-client.md` § Never)
 - Subscribing to an actor that may not exist: the reader aborts `StateNotConstructed` and retries about once a second, disturbing every other subscription on the page
 
 **`mcp-ui/references/react-scaffolding.md`**

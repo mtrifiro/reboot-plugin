@@ -3,7 +3,7 @@ title: Calling External Systems from a Workflow
 impact: CRITICAL
 impactDescription: A plain await or the wrong primitive re-bills on replay, charges twice, or poisons the step so the workflow can never finish
 tags: workflow, external, at_least_once, at_most_once, idempotency key, effect validation, retry, now, randomness, LLM
-summary: "Wrap every external call in `at_least_once` (the default) or `at_most_once` (only when a duplicate is the failure); a plain await re-bills on replay; annotate return types."
+summary: "A plain await on external calls re-runs on replay; `at_least_once` by default, `at_most_once` when duplicates fail; annotate returns."
 step: servicer
 applies: [mcp-ui, web-app, backend-only]
 always: false
@@ -193,7 +193,7 @@ async def send_login_sms(
 | `which will now forever more raise` | stderr note: an exception escaped an `at_most_once` callable | Return failures as data |
 | `` is not `None` but no `type=` argument was passed `` | Callable returns a value with no annotation | Annotate the return type |
 | `is not compatible with the expected type` | Return value disagrees with the annotation | Fix the annotation or `type=` |
-| `Re-running block with idempotency alias` | INFO: effect validation re-ran this callable; silenced for 5 minutes after printing | Expected in dev; measure progress from state, not log counts |
+| `Re-running block with idempotency alias` | INFO: effect validation re-ran an `at_least_once` callable (not `at_most_once`, not `until`); its second result is memoized; silenced for 5 minutes after printing | Expected in dev; measure progress from state, not log counts; pass `effect_validation=EffectValidation.DISABLED` on calls that must run once in dev |
 
 ## See also
 

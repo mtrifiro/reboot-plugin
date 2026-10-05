@@ -56,8 +56,8 @@ def lint(path: Path, sections: bool) -> tuple[list[str], list[str]]:
     for f in (FIELDS if sections else NAV_ONLY):
         if f not in fm:
             errors.append(f"frontmatter missing {f}")
-    if len(fm.get("summary", "").split()) > 30:
-        warnings.append("summary longer than 30 words")
+    if len(fm.get("summary", "").split()) > 18:
+        warnings.append("summary longer than 18 words")
     if fm.get("via") and not (path.parent / fm["via"].strip("\"'")).exists():
         errors.append(f"via points at missing file {fm['via']}")
     if fm.get("step") and fm["step"] not in STEPS:

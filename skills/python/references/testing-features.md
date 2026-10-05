@@ -3,7 +3,7 @@ title: Specify Behavior in Feature Files
 impact: MEDIUM
 impactDescription: Feature files are the application's specification and its test suite at once; a suite written any other way is neither reviewable by the developer nor shown by the dashboard
 tags: testing, bdd, gherkin, feature, scenario, rule, pytest-bdd, reboot.bdd, wip, blocked, custom-steps, world
-summary: "The built-in steps' exact spelling (who calls, `creates` / `does`, saved values, `eventually`, aborts, tasks), `@wip` / `@blocked`, feature / rule / scenario shape, custom steps, mocks."
+summary: "Built-in steps match their exact spelling; who calls, `creates` / `does`, saved values, `eventually`, aborts, `@wip`, custom steps."
 step: tests
 applies: [mcp-ui, web-app, backend-only]
 always: false
@@ -305,13 +305,12 @@ test module.
 
 | Error text (stable prefix) | Meaning | Fix |
 | --- | --- | --- |
-| `Step definition is not found:` | No step matches: a custom step without `parsers.parse`, a typo, or a `When`-only step after `Then` | Wrap in `parsers.parse`; match the built-in spelling and keyword |
+| `Step definition is not found:` | No step matches: a custom step without `parsers.parse`, a typo, or a `When`-only step (`saves the text of`, `clicks`, `fills`) after `Then` | Wrap in `parsers.parse`; match the built-in spelling and keyword |
 | `Almost: a Given or When 'has' saves what it reads now; 'eventually has' asserts, under a Then` | `eventually has` under `Given`/`When` | Move it under `Then` |
 | `Almost: a Given or When 'has' saves, e.g. `path` saved as `name`` | An assertion under `Given`/`When` | Assert under `Then` |
 | `Almost: say a saved value as <name>, not $name` | `$name` / `${name}` spelling | `<name>` |
 | `Almost: each clause goes in backticks` | A `with` / `has` clause without backticks | `` `amount=50` `` |
 | `Nothing saved as "...";` | Recall before the save, or a misspelled name | Check the list of saved names it prints |
-| `` `OAuth` requires `allowed_origins=[...]` to be set explicitly in production `` | `oauth=` in the fixture without `allowed_origins` | `OAuth(..., allowed_origins=[])` |
 | `StateNotConstructed` (from `eventually has`) | The actor does not exist yet | Custom polling step (Limits) |
 
 ## See also

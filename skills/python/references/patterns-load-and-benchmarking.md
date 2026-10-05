@@ -3,7 +3,7 @@ title: Load, Cost and Benchmarking
 impact: HIGH
 impactDescription: Unmeasured designs put a transaction or a fan-out on a click path and ship a page that takes seconds
 tags: patterns, cost, performance, benchmark, load test, effect validation, transaction, forall, subscriptions
-summary: "Measured costs that should shape a design (an actor is a lock, transactions cost per participant, ~150-200 ms dev writes); benchmark in the harness with effect validation off."
+summary: "An actor is a lock; transactions cost per participant; dev writes ~150-200 ms; benchmark with effect validation off."
 step: any
 applies: [mcp-ui, web-app, backend-only]
 always: false
@@ -89,18 +89,10 @@ application restarted (reboot-air-141-load-02, 1.4.1).
 - Put a cross-actor `Transaction` on a click that must feel instant —
   use a single-actor `Writer` that schedules the follow-up
   (reboot-air-150-09: click-to-confirm 480 ms to about 60 ms, 1.5.0).
-- Read an actor and then write it as two calls — have the writer
-  return what the caller needs; about 10x cheaper under contention
-  (theater-chain-17).
-- Wrap "do this to N things" in one transaction when N is more than a
-  handful — iterate in a `Workflow`, one small transaction or writer
-  per item (cineloop-40: Reset All over 48 showings stalled the suite,
-  1.4.1).
-- `schedule()` onto N foreign actors from one transaction — each is a
-  two-phase-commit participant; colliding prepares killed the dev
-  database worker (`database.cc:1374` assert; theater-network-20,
-  1.4.0). Pass the list in a workflow's request and write each actor
-  from the workflow.
+- Read an actor and then write it as two calls, wrap "do this to N
+  things" in one transaction when N is more than a handful, or
+  `schedule()` onto N foreign actors from one transaction
+  (`servicer-transaction.md` § Never).
 - Issue about 200 writer calls from one transaction behind a UI
   button — subscribers see nothing until the commit lands (reads as a
   hang); chunk into batches (25 worked; showtime-40, 1.4.1).
@@ -185,8 +177,6 @@ A transaction is roughly 5-10x a writer.
 | Error text (stable prefix) | Meaning | Fix |
 | --- | --- | --- |
 | `Unavailable: ping timeout` | Reader did not finish in the request window (fan-out of about 150 actors), or the post-restart Envoy window on macOS arm64 | Materialize on write; or wait out the window, see `run` |
-| `Timed out waiting 30.0s to acquire exclusive lock; retry the transaction.` | A writer queued behind a long holder, possibly a vanished caller | Bound holder work; drain drivers; restart clears an orphaned lock |
-| `Cannot upgrade shared lock to exclusive` | A transaction read an actor, then scheduled on it, while another chain held it | Give parallel chains their own actors; don't read before scheduling |
 | `Not expecting stream to ever be done` | Browser tab outlived a backend restart | Reload the tab |
 
 ## See also

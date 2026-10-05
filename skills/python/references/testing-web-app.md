@@ -3,7 +3,7 @@ title: Drive the Web App from Scenarios
 impact: MEDIUM
 impactDescription: A user-facing flow that is only tested at the backend leaves the page, the session cookie, and CORS untested; a page without accessible markup cannot be driven at all
 tags: testing, bdd, web-app, playwright, frontend, vite, aria, accessible-name, recordings, sign-in
-summary: "The `frontend` fixture and web app steps, sign-in clicked through then bound, recordings, and the accessible markup (paired labels, named buttons, captioned tables) a page needs to be driven."
+summary: "Pages need accessible markup (labels, named buttons) to be driven; the `frontend` fixture, web steps, clicked-through sign-in, recordings."
 step: tests
 applies: [web-app]
 always: false
@@ -279,7 +279,6 @@ CI without a browser or `node_modules` passes
 
 | Error text (stable prefix) | Meaning | Fix |
 | --- | --- | --- |
-| `Step definition is not found:` | A `When`-only step (`saves the text of`, `clicks`, `fills`) under `Then` | Put it under `When` |
 | `Almost: each clause goes in backticks` | Web text containing ` has ` / ` with ` hit the catch-all | Change the label |
 | `"alice" has not opened the web app;` | A web step before `opens the web app` | Open it first |
 | `AssertionError: already serving` | `frontend` fixture shared across scenarios | Keep it function-scoped |

@@ -3,7 +3,7 @@ title: Pick the Right Shape for Each Collection
 impact: HIGH
 impactDescription: Putting an unbounded collection in-state, or flattening an entity into `list[Sub]` when it has its own identity, forces a full data-model rewrite once the app grows.
 tags: state, collections, list, dict, OrderedMap, decomposition, cohesion, sub-records, entity, ids
-summary: "Decide whether each \"list of X\" item is its own state Type (usually yes), then pick `list[Sub]`, `list[str]` of IDs, or an `OrderedMap`; never `list[Entity]` on a parent."
+summary: "Never `list[Entity]` on parents; decide if each item is its own Type, then `list[Sub]`, ID list or `OrderedMap`."
 step: api
 applies: [mcp-ui, web-app, backend-only]
 always: false
@@ -192,7 +192,6 @@ constructor marks the moment of ownership.
 
 | Error text (stable prefix) | Meaning | Fix |
 | --- | --- | --- |
-| `InvalidStateRefError: The 'state_id' option must be at least 1 character(s) long` | A persisted ID field is still `""` — usually a new field never back-filled on an existing actor | Allocate lazily on first use; treat `""` as empty in readers |
 | `aborted with 'StateNotConstructed'` | A read hit an `OrderedMap` (or factory-constructed actor) that was never constructed | Construct it first, or catch `<Method>Aborted` and treat as empty |
 
 ## See also

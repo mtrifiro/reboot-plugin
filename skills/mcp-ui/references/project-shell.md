@@ -3,7 +3,7 @@ title: Project Shell — MCP UI Deltas
 impact: CRITICAL
 impactDescription: The shell files (`.rbtrc`, `pyproject.toml`, `.python-version`, `main.py`) wire the build, the dev server, the HMR routing, and the entry point — wrong shapes break either codegen or live reload before the app even boots.
 tags: project, shell, rbtrc, pyproject, python-version, main, application-entry, hmr, dist, template
-summary: "Copy `build/templates/mcp-ui/`: `.rbtrc` with `--default-config=hmr` and `:hmr`/`:dist` configs, no `--react-extensions`; `main.py` with `oauth=` and `example_prompts=`."
+summary: "Dropping `oauth=` fails startup; copy `build/templates/mcp-ui/`: `.rbtrc` with `--default-config=hmr`, `:hmr`/`:dist` configs, `example_prompts=`."
 step: shell
 applies: [mcp-ui]
 always: false
@@ -108,7 +108,6 @@ Not measured.
 
 | Error text (stable prefix) | Meaning | Fix |
 | --- | --- | --- |
-| `` `OAuth` requires `allowed_origins=[...]` to be set explicitly in production `` | `oauth=OAuth(...)` without `allowed_origins` outside `rbt dev run` (including the test harness) | Pass `allowed_origins=[]` (same-origin) or the SPA origins |
 | `` WARNING: `--name` has been renamed to `--application-name` `` | Old `.rbtrc` flag | Use `--application-name` |
 
 ## See also

@@ -3,7 +3,7 @@ title: Use `Service.create` and `Service.<ctor>` for Constructor Calls
 impact: MEDIUM
 impactDescription: Calling a constructor through `.ref(...).method(...)` fails with `AttributeError`; a second call aborts `StateAlreadyConstructed`; a broad `except <X>Aborted` hides timeouts
 tags: rpc, constructor, create, factory, StateAlreadyConstructed, get-or-create, Aborted
-summary: "Call constructors as `<X>.<ctor>(context, id, ...)`, never through `.ref(id)`; `create` exists only if a factory is named that; outside a replayed key a second call aborts."
+summary: "Constructors aren't on `.ref(id)` and a second call aborts; call `<X>.<ctor>(context, id, ...)`; get-or-create."
 step: servicer
 applies: [mcp-ui, web-app, backend-only]
 always: false
@@ -53,8 +53,12 @@ await account.deposit(context, amount=request.initial_deposit)
   not generated (mypy: `"type[Lab]" has no attribute "create"`,
   showtime-32, 1.4.1; confirmed at 1.6.0). Call a writer.
 - Expecting a second constructor call to be a no-op. Outside an
-  already-used key it aborts `StateAlreadyConstructed`; a retrying
-  workflow loops forever (reboot-crm-68, 1.6.0). Get-or-create:
+  already-used key it aborts `StateAlreadyConstructed`, whatever the
+  constructor branches on (`context.constructor` changes nothing); a
+  retrying workflow loops forever (reboot-crm-68, 1.6.0). A used key
+  (`initialize`'s automatic per-(actor, method) key, or a repeated
+  `.idempotently(alias)`) returns the memoized result without running
+  the body. Get-or-create:
 
   ```python
   from rbt.v1alpha1.errors_pb2 import StateAlreadyConstructed
@@ -96,10 +100,9 @@ await account.deposit(context, amount=request.initial_deposit)
 
 | Error text (stable prefix) | Meaning | Fix |
 | --- | --- | --- |
-| `aborted with 'StateAlreadyConstructed'` | Constructor called on an existing actor | Get-or-create pattern above |
+| `aborted with 'StateAlreadyConstructed'` | Explicit constructor called on an existing actor (e.g. `OpenAborted: aborted with 'StateAlreadyConstructed'`), also inside a transaction | Get-or-create pattern above (probe first), or construct via `.idempotently(...)` / `initialize`'s key |
 | `AttributeError: 'WeakReference' object has no attribute` | A constructor called through `Service.ref(id)` | `Service.<ctor>(context, id, ...)` |
 | `has no attribute "create"` | No factory named `create` (or none at all) | Call the declared factory, or a writer on a factory-less type |
-| `aborted with 'StateNotConstructed { requires_constructor: true }'` | Ordinary writer before the constructor ran | Call the constructor first |
 
 ## See also
 

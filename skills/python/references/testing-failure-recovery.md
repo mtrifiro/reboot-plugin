@@ -3,7 +3,7 @@ title: Test Failure Recovery — `rbt.down()` and `rbt.up(revision=...)`
 impact: MEDIUM
 impactDescription: Durability is the reason to build on Reboot; a suite that never restarts the app never tests it
 tags: testing, recovery, restart, down, up, revision, crash, effect-validation, exactly-once, mocking, tasks, workflows, idempotency
-summary: "Restart mid-flight with `rbt.down()` / `rbt.up(revision=...)`, land the crash with a stalling mock, assert in-flight work happened exactly once; don't test that committed data survives."
+summary: "Don't test that committed data survives; restart mid-flight with `rbt.down()` / `rbt.up(revision=...)` and a stalling mock; assert exactly-once."
 step: tests
 applies: [mcp-ui, web-app, backend-only]
 always: false

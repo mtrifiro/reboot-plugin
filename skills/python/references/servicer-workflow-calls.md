@@ -3,7 +3,7 @@ title: Classifying Workflow Calls and Calling Reboot
 impact: CRITICAL
 impactDescription: The wrong primitive on an await double-charges users, poisons a workflow forever, or re-runs a write on every replay
 tags: workflow, classify, per_workflow, per_iteration, always, idempotently, alias, inline write, scope, replay
-summary: "Classify every awaited call before writing it; Reboot calls take `.per_workflow(alias)`, `.per_iteration(alias)` or `.always()` with stable, descriptive aliases; inline writes to this actor's state."
+summary: "Classify every awaited call first; Reboot calls take `.per_workflow(alias)`, `.per_iteration(alias)` or `.always()`, stable aliases; inline writes."
 step: servicer
 applies: [mcp-ui, web-app, backend-only]
 always: false
@@ -158,12 +158,11 @@ async def control_loop(
 
 | Error text (stable prefix) | Meaning | Fix |
 | --- | --- | --- |
-| `got an unexpected keyword argument 'state'` | Inline writer callback parameter not named `state` | Rename it `state` |
+| `got an unexpected keyword argument 'state'` | Inline writer callback parameter not named `state` | Rename it: `async def fn(state)` |
 | `TypeError: object str can't be used in 'await' expression` | Inline writer callback is a plain `def` | `async def` |
 | `more than once using the same context an idempotency alias or key must be specified` | Same method on the same actor called twice without distinct aliases | Give each call an alias |
 | `is being reused _unsafely_; you can not reuse an idempotency key with a different request` | One alias, different request on replay | Make the request replay-stable, or use a new alias |
 | `` `read()` is currently only supported within workflows `` | Inline `read()` on a ref with an id | Call a declared `Reader` |
-| `StateAlreadyConstructed` | Constructor called on an existing actor | Call an ordinary writer |
 
 ## See also
 

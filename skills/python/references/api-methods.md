@@ -3,7 +3,7 @@ title: Pick a Method Factory — `Reader`, `Writer`, `Transaction`, or `Workflow
 impact: CRITICAL
 impactDescription: The factory drives the context type, isolation, and access semantics
 tags: method, reader, writer, transaction, workflow, factory, constructor, mode, mcp, User
-summary: "Which factory (`Reader`, `Writer`, `Transaction`, `Workflow`) and the servicer signature and context type each obliges; `factory=True` marks creation; `errors=`, `description=` and the required `mcp=`."
+summary: "The factory fixes the servicer's context type, and `mcp=` is required; `Reader`/`Writer`/`Transaction`/`Workflow`, `factory=True`, `errors=`, `description=`."
 step: api
 applies: [mcp-ui, web-app, backend-only]
 always: false
@@ -175,12 +175,11 @@ Two generated shapes you do not write:
 | --- | --- | --- |
 | `Method '` … `' must be an instance of 'Writer', 'Reader', 'Transaction', 'Workflow', or 'UI'.` | An entry in `Methods(...)` is not a factory call | Wrap it in a factory |
 | `Transaction '` … `' does not say how it holds the lock on its own state while it runs.` | `Transaction(...)` without `mode=` | Add `mode=Exclusive()` or `mode=Shared()` |
-| `1 validation error for Workflow` / `mcp` / `Field required` | `mcp=` omitted (any factory; the first word names it) | Add `mcp=None` |
+| `1 validation error for Workflow` / `mcp` / `Field required` | `mcp=` omitted (any factory; the first word names it) | Add `mcp=None` (or `mcp=Tool()` in an MCP UI) |
 | `Error while parsing option value for "method": Message type "rbt.v1alpha1.WorkflowMethodOptions" has no field named "constructor".` | `factory=True` on a `Workflow` (or `Reader`) | Move `factory=True` to a `Writer`/`Transaction` |
 | `'create' is a reserved method name for User types.` | `create` declared on `User` | Override `create` in the servicer instead |
 | `'set_claims' is a reserved method name for User types` | `set_claims` declared on `User` | Override it in the servicer instead |
 | `must have a default value, or be optional. User instances are auto-constructed` | A `User` state field lacks a default | Add a zero default or `Optional` |
-| `'Resource()' is not yet supported; use 'Tool()' instead` | `mcp=Resource()` | Use `mcp=Tool()` |
 
 ## See also
 

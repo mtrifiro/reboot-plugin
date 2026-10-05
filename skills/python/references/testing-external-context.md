@@ -3,7 +3,7 @@ title: Drive Tests with `create_external_context`, Assert, Wait, and Mock
 impact: MEDIUM
 impactDescription: Tests can't call into the application, observe errors, or wait for workflows without these patterns
 tags: testing, external-context, RPC, harness, aborted, errors, mocking, workflows, user-stories, idempotency
-summary: "`create_external_context` with a unique name per test; asserting `<Method>Aborted`, live updates with `reactively()`, waiting on spawned tasks and workflows, mocking external services and LLMs."
+summary: "A context reused after a denial turns uncertain; `create_external_context`, asserting aborts, `reactively()`, awaiting tasks, mocking externals."
 step: tests
 applies: [mcp-ui, web-app, backend-only]
 always: false
@@ -203,7 +203,6 @@ UI would render, not internal state shape.
 
 | Error text (stable prefix) | Meaning | Fix |
 | --- | --- | --- |
-| `IdempotencyUncertainError: Because we don't know if the mutation from calling` | An earlier call from this context failed with an undeclared error (often a denial) | Fresh context, or `.idempotently("...")` per call |
 | `Property "model" defined in "AbstractAgent" is read-only [misc]` (mypy) | Assigning `agent.wrapped.model` in a test | `# type: ignore[misc]` on that line |
 
 ## See also

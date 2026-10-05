@@ -3,7 +3,7 @@ title: Write Custom Authorizer Predicates
 impact: MEDIUM
 impactDescription: App-specific access rules require custom predicates; the shipped ones aren't enough alone
 tags: auth, custom, predicate, allow_if, async, sync, per-method, Authorizer
-summary: "Per-method rules via `<Type>.Authorizer(method=rule, _default=rule)`; keyword-only predicates ending in `**kwargs`, annotated or `mypy` fails; check `context.app_internal` first; `PermissionDenied` vs. `Unauthenticated`."
+summary: "Predicates must be keyword-only with `**kwargs` and check `context.app_internal` first; per-method rules via `<Type>.Authorizer(method=rule, _default=rule)`."
 step: auth
 applies: [mcp-ui, web-app, backend-only]
 always: false
@@ -106,14 +106,15 @@ StateAlreadyConstructed UnknownService UnknownTask InvalidMethod`.
 ## Never
 
 - `def can_edit(context, state, request):` — positional, no `**kwargs`;
-  the runtime calls by keyword.
+  the runtime passes `context`, `state`, `request` by keyword and may
+  add more.
 - One predicate that tells methods apart by `isinstance(request, ...)`
   — a `request=None` method, or two sharing a request model, can't get
   its own rule. Use `<Type>.Authorizer(method=...)`.
 - A custom `Authorizer` subclass, or splitting state across servicers,
   to get per-method rules — `<Type>.Authorizer` already does it.
 - `allow_if(any=[is_app_internal, allow_if(all=[a, b])])` — rules don't
-  nest; write one predicate that combines `a` and `b`.
+  nest (`auth-allow-if.md` § Never); write one predicate combining them.
 - Annotate `state` with `<Type>Authorizer.StateType` / `.RequestTypes`
   — they alias the **protobuf** types (`<name>_pb2.TaskList`), not the
   pydantic model received; they type-check (same fields) but name the
@@ -125,7 +126,6 @@ StateAlreadyConstructed UnknownService UnknownTask InvalidMethod`.
 - `if request is None: <check auth>` without checking
   `context.app_internal` first — nested reader calls get a confusing
   `Unauthenticated`.
-- An expensive predicate before `has_verified_token` in `all=[...]`.
 
 ## Limits
 

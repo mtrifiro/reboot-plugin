@@ -3,7 +3,7 @@ title: Derive Your Own Keys from Reboot's Managed Crypto Root Keys (with Rotatio
 impact: HIGH
 impactDescription: Deriving keys wrong, or skipping rotation/usage markers, makes data permanently unrecoverable or pins an old root key forever.
 tags: crypto, root-keys, hkdf, derive_key, rotation, use_root_key_version, disuse_root_key_version, encryption, signing
-summary: "Most apps want `Ciphertext` instead. Otherwise HKDF-derive from `active_version()`, never change `info` / `length` after shipping, and run the rotation loop with `use` / `disuse` root-key-version markers."
+summary: "Usually use `Ciphertext`; never change `info`/`length` after shipping; HKDF from `active_version()`, rotation via `use`/`disuse` markers."
 step: servicer
 applies: [mcp-ui, web-app, backend-only]
 always: false

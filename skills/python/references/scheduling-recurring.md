@@ -3,7 +3,7 @@ title: Recurring and "Cron" Schedules by Self-Rescheduling
 impact: MEDIUM
 impactDescription: Without a self-reschedule the recurring tick stops after one fire; reaching for an OS cron daemon loses durability; a redundant start can orphan the chain
 tags: scheduling, recurring, periodic, cron, wall-clock, daily, hourly, self-reschedule, workflow, generation token
-summary: "A recurring job reschedules itself (`start()` → `tick()` → `run()`), never OS cron; a dead chain is silent, catch-up fires once, stopping is a state flag or generation token."
+summary: "A dead recurring chain is silent; self-rescheduling `start()` → `tick()` → `run()`, never OS cron; catch-up, stop flags."
 step: servicer
 applies: [mcp-ui, web-app, backend-only]
 always: false

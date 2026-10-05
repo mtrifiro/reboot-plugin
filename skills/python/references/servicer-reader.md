@@ -3,7 +3,7 @@ title: Implement Reader Methods
 impact: HIGH
 impactDescription: A reader that mutates `self.state` loses the change silently; nested readers drop the caller's identity and multiply subscription cost
 tags: servicer, reader, ReaderContext, state, async, reactive, transitive, fan-out
-summary: "The reader signature must match the API file; mutating `self.state` is silently discarded; readers may call other readers, and a subscribed reader re-runs when any actor it read changes."
+summary: "Mutating `self.state` in a reader is silently discarded; signature must match the API; reader-to-reader calls; subscription re-runs."
 step: servicer
 applies: [mcp-ui, web-app, backend-only]
 always: false
@@ -80,7 +80,6 @@ class ChatRoomServicer(ChatRoom.Servicer):
 
 | Error text (stable prefix) | Meaning | Fix |
 | --- | --- | --- |
-| `aborted with 'StateNotConstructed'` | The reader ran against an actor never constructed | Construct it first, or catch `<Method>Aborted` (`rpc-refs.md`) |
 | `No overload variant matches argument types "ReaderContext"` | mypy: a reader called a writer, transaction or constructor | Move the work to a `Transaction` |
 
 ## See also

@@ -3,7 +3,7 @@ title: Seed Data in Batches, Sequentially, with Aliases
 impact: HIGH
 impactDescription: A naive seed (one transaction per record, gathered concurrently, bare calls in a loop) hangs, stalls silently or takes minutes, and a full production seed in every test dominates the suite
 tags: seeding, seed, initialize, bulk, batch, fixture, idempotently, alias, OrderedMap, entries, expunge, effect-validation
-summary: "Seed in sequential batched transactions with a stable alias per call; concurrent or one-per-record seeding hangs or takes minutes; keep the full production seed out of most tests."
+summary: "Concurrent or one-per-record seeding hangs or takes minutes; seed in sequential batched transactions with stable per-call aliases."
 step: servicer
 applies: [mcp-ui, web-app, backend-only]
 always: false
@@ -122,11 +122,8 @@ Assert against seed constants (`LAB_SHOWINGS`), not literals (`48`).
 - **Seeding through a user context in a test** — `initialize`-only
   methods are usually internal-only (`PermissionDenied`); use
   `rbt.create_external_context(name=..., app_internal=True)`.
-- **Debugging dev state that lived through incompatible designs**
-  (changed method kinds, tasks pointing at reworked methods) — stop the
-  app, `rbt dev expunge --application-name=<name> --yes`, reseed, reload
-  open tabs (theater-network, 1.4.0). Never expunge under a running
-  `rbt dev run`.
+- **Debugging dev state that lived through incompatible designs** —
+  expunge and reseed (`lifecycle-rbtrc.md` § Never).
 
 ## Limits
 
@@ -169,9 +166,7 @@ Assert against seed constants (`LAB_SHOWINGS`), not literals (`48`).
 
 | Error text (stable prefix) | Meaning | Fix |
 | --- | --- | --- |
-| `StateNotConstructed { requires_constructor: true }` | Test called an actor production's `initialize` constructs but the fixture didn't | Construct it in the fixture, or pass the production `initialize=` to `rbt.up(...)` |
 | `PermissionDenied` (on a seed call in a test) | Internal-only method called with a user context | Seed through `create_external_context(..., app_internal=True)` |
-| `ValueError: To call '...' of '...' more than once using the same context an idempotency alias or key must be specified` | Loop called the same method on a shared actor without per-iteration aliases | Add `.idempotently(f"...-{id}")` |
 | `database.cc Check failed` | Dev state from an incompatible earlier design | Stop the app, run `rbt dev expunge --application-name=<name> --yes`, reseed |
 | `is presumed deadlocked with it; aborting so that the older transaction proceeds` | Concurrent transactions contending for the same actors | Seed sequentially |
 

@@ -5,7 +5,7 @@ impact: HIGH                                   # CRITICAL | HIGH | MEDIUM | LOW-
 impactDescription: One line — what goes wrong if the agent skips this file
 tags: scheduling, workflow, spawn              # free-text search terms
 summary: "`spawn(when=…)` from a workflow; why `schedule()` is refused there"
-                      # one line (≤ 30 words) shown in every generated reading list:
+                      # one line (≤ 18 words) shown in every generated reading list:
                       # what the agent gets from this file, traps first
 # ── Navigation fields (new) ────────────────────────────────────────
 step: servicer        # the ONE build step that reads this file:

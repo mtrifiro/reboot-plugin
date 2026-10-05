@@ -3,7 +3,7 @@ title: Implement Transaction Methods
 impact: HIGH
 impactDescription: Cross-actor atomic work requires a transaction; an oversized or externally-calling one stalls, locks actors, or fires side effects twice
 tags: servicer, transaction, TransactionContext, atomic, multi-actor, lock, participants, deadlock, two-phase commit
-summary: "A transaction rolls back every mutation on every actor it touched; never call external systems inside one (schedule a workflow); oversized ones stall and lock actors."
+summary: "External calls inside fire on abort; oversized transactions stall; rollback spans every touched actor; schedule a workflow instead."
 step: servicer
 applies: [mcp-ui, web-app, backend-only]
 always: false
@@ -87,13 +87,15 @@ on an in-system actor that schedules the HTTP send in a workflow, then
 - An external call in the body — it fires on abort and every re-run.
 - Stash data on `self` — each call may get a fresh servicer instance;
   state lives in `self.state` or other actors.
-- One transaction over N things when N is more than a handful (48
-  showings stalled a suite; cineloop-40) — every actor is a two-phase-
+- One transaction over N things when N is more than a handful (Reset
+  All over 48 showings stalled a suite; cineloop-40, 1.4.1) — every actor is a two-phase-
   commit participant. Iterate in a `Workflow`, one small transaction or
   writer per item, `.per_workflow(f"... {id}")` per step.
 - `schedule()` onto N foreign actors from one transaction — each
   becomes a 2PC participant; colliding prepares killed the dev database
-  worker (theater-network-20, 1.4.0). Pass the list to a workflow.
+  worker (`database.cc:1374` assert; theater-network-20, 1.4.0). Pass
+  the list in a workflow's request and write each actor from the
+  workflow.
 - Read an actor then write it as two calls — one writer returning what
   the caller needs was about 10x faster under contention
   (theater-chain-17).
@@ -153,7 +155,6 @@ on an in-system actor that schedules the HTTP send in a workflow, then
 | `Timed out waiting 30.0s to acquire exclusive lock; retry the transaction.` | Another holder kept the actor locked past the deadline (long transaction, or a vanished caller) | Shrink the transaction; drain callers; restart clears an orphaned lock |
 | `Cannot upgrade shared lock to exclusive: another transaction is already upgrading the same state; retry the transaction.` | Two `Shared()` transactions both read then wrote (or scheduled on) the same actor | Use `Exclusive()`, or don't read before scheduling; give parallel chains their own actors |
 | `is presumed deadlocked with it; aborting so that the older transaction proceeds. Retry required.` | Deadlock broken by aborting the younger transaction (logged; retried automatically) | Keep one actor-touch order to avoid the retries |
-| `aborted with 'StateAlreadyConstructed'` | A constructor inside the transaction hit an existing actor | Probe first or construct via `.idempotently(...)` |
 
 ## See also
 

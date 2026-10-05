@@ -3,7 +3,7 @@ title: Use `Ciphertext` for Envelope Encryption and Crypto-Shredding
 impact: HIGH
 impactDescription: Hand-rolled encryption-at-rest / right-to-erasure is easy to get wrong; the stdlib library is auditable and handles key rotation for you.
 tags: stdlib, ciphertext, encryption, envelope, crypto-shred, gdpr, right-to-erasure, shred, scope, key-manager, associated-data
-summary: "Envelope encryption and per-scope crypto-shredding with automatic key rotation, before you hand-roll any; needs `ordered_map_library()`; keep the `Ciphertext` id; never rebuild `associated_data` by hand."
+summary: "Don't hand-roll encryption or rebuild `associated_data`; envelope encryption, crypto-shredding, rotation; needs `ordered_map_library()`; keep the id."
 step: servicer
 applies: [mcp-ui, web-app, backend-only]
 always: false

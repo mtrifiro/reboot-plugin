@@ -1,7 +1,7 @@
 ---
 title: Use `Queue` for Durable FIFO Work Queues
 tags: stdlib, Queue, FIFO, enqueue, dequeue, try_dequeue, durable, consumer loop
-summary: "Durable FIFO `Queue`: producers enqueue, a `Workflow` consumer loop dequeues, transactions try-dequeue; no `create`; start the consumer with an alias; `empty` aborts before the first enqueue."
+summary: "`empty` aborts before the first enqueue and a bare consumer spawn fails; durable FIFO `Queue`, workflow consumer, try-dequeue."
 impact: HIGH
 impactDescription: Workflows pulling work from a Queue is the canonical "consumer loop" pattern
 step: servicer
@@ -137,7 +137,6 @@ async def main():
 | Error text (stable prefix) | Meaning | Fix |
 | --- | --- | --- |
 | `'WeakReference' object has no attribute 'create'` | Tried to construct a `Queue` | Enqueue directly |
-| `IdempotencyRequiredError: Calls to mutators from within your initialize function must use idempotency` | Bare `.spawn()` of the consumer in `initialize` | `.idempotently("Start consumer").spawn()` |
 | `StateNotConstructed` | `empty` on a queue nobody has enqueued to | `try_dequeue`, or enqueue first |
 | `Missing required libraries: reboot.std.collections.v1.sorted_map` | `queue_library()` registered without `sorted_map_library()` | Add `sorted_map_library()` |
 

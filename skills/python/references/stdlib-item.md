@@ -3,7 +3,7 @@ title: Use `Item` for Heterogeneous Values in Stdlib Containers
 impact: LOW-MEDIUM
 impactDescription: Queue/Topic accept Items; picking the right value field affects ergonomics across languages
 tags: stdlib, Item, value, bytes, any, Queue, Topic
-summary: "Set exactly one of `value`, `bytes` or `any` per `Item` (a bulk `Item` with two is stored silently); single calls take one top-level keyword, bulk calls `items=[...]`; `reboot.protobuf` converts values."
+summary: "A bulk `Item` with two of `value`/`bytes`/`any` stores silently; single calls take one keyword, bulk `items=[...]`; `reboot.protobuf` converts."
 step: servicer
 applies: [mcp-ui, web-app, backend-only]
 always: false

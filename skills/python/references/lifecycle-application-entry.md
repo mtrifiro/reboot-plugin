@@ -3,7 +3,7 @@ title: Define the Application Entry Point
 impact: CRITICAL
 impactDescription: Application won't start without a correctly-shaped `main`
 tags: main, application, asyncio, servicers, libraries
-summary: "An `async def main()` that awaits `Application(servicers=[...], initialize=...).run()`; pass servicer classes, not instances; register stdlib libraries alongside your servicers."
+summary: "Pass servicer classes, not instances, and register stdlib libraries; `async def main()` awaiting `Application(servicers=[...], initialize=...).run()`."
 step: shell
 applies: [mcp-ui, web-app, backend-only]
 always: false

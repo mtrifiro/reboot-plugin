@@ -3,7 +3,7 @@ title: Use Zero-Value Defaults for Scalar State Fields
 impact: MEDIUM
 impactDescription: Non-zero defaults are rejected at import time
 tags: state, scalar, fields, defaults, secret, token, password, credential, api-key, oauth, pii, encryption, ciphertext, bytes
-summary: "Scalar `Field`s take the type's zero value, with real values set in the constructor; never store a secret in a plain field, store a `Ciphertext` id."
+summary: "Non-zero defaults are rejected and plain-field secrets leak; zero values, real values in the constructor, `Ciphertext` ids."
 step: api
 applies: [mcp-ui, web-app, backend-only]
 always: false
@@ -52,23 +52,10 @@ async def open(
 
 A `str` field is plaintext at rest (database, leaked backups). Encrypt
 with the `Ciphertext` stdlib type (envelope encryption, per-scope
-crypto-shredding), store the returned `state_id` (a harmless `str`),
-decrypt on demand.
-
-```python
-class IntegrationState(Model):
-    api_key_id: str = Field(tag=1, default="")  # `Ciphertext` actor ID
-
-
-ciphertext, _ = await Ciphertext.encrypt(
-    context,
-    plaintext=raw_api_key.encode(),
-    associated_data=make_associated_data(tenant_id=tenant_id, purpose="api-key"),
-    scope=f"tenant:{tenant_id}",  # crypto-shred unit for right-to-erasure
-    key_manager_id=APP_SHARED_KEY_MANAGER_ID,
-)
-self.state.api_key_id = ciphertext.state_id
-```
+crypto-shredding) and store only the returned `state_id`, e.g.
+`api_key_id: str = Field(tag=1, default="")` set to
+`ciphertext.state_id`; decrypt on demand. The encrypt/decrypt block is
+in `stdlib-ciphertext.md`.
 
 | Secret | Where it goes |
 | --- | --- |

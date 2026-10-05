@@ -3,7 +3,7 @@ title: Stop, Restart and Reset a Local Reboot App
 impact: HIGH
 impactDescription: "`rbt dev run` leaves orphaned app and Envoy processes that hold the port and the state lock, serve stale data, and re-seed with old code"
 tags: run, stop, restart, expunge, orphan, envoy, port, rocksdb, lock, dev
-summary: "Killing `rbt dev run` orphans `main.py` and Envoy; stop in order (SIGINT, app, port holder) and verify; `rbt dev expunge --yes` only after a full stop; reload tabs."
+summary: "Killing `rbt dev run` orphans `main.py` and Envoy; stop in order and verify; expunge only after full stop."
 step: run
 applies: [mcp-ui, web-app, backend-only]
 always: false
@@ -102,10 +102,9 @@ uv run rbt dev expunge --yes
 
 ## Never
 
-- **Iterating on a state shape with the `--watch` loop live.** A hot
-  restart persists whatever schema booted, even a seconds-long typo;
-  the fix is then refused (`has switched type from ... waiting`) until
-  you expunge (theater-network, 1.4.0). Write the API edit once, final.
+- **Iterating on a state shape with the `--watch` loop live** — the fix
+  is refused until you expunge
+  ([`lifecycle-dev-loop.md`](../../python/references/lifecycle-dev-loop.md) § Never).
 - **If an edit does not take,** look for `Application modified;
   restarting` in the backend log; one `backend/src/` edit didn't
   restart the app (reboot-crm, 1.6.0). Restart by hand.

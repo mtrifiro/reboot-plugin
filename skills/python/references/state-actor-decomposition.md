@@ -3,7 +3,7 @@ title: Split a State Type That Holds Multiple Concerns
 impact: HIGH
 impactDescription: One actor holding many unrelated concerns serializes all writers across them and turns the front door into a God actor.
 tags: state, decomposition, responsibility, actors, front-door, serialization, contention, deadlock, cycle, ownership
-summary: "Split a Type whose fields cluster by unrelated concern (auth, persona, background engine, cache) into separate Types, or its writers serialize and `User` becomes a God actor."
+summary: "A Type with unrelated field clusters serializes writers and grows a God `User`; split it into separate Types."
 step: api
 applies: [mcp-ui, web-app, backend-only]
 always: false
@@ -99,9 +99,12 @@ no reader, or make one the owner and have the other read it.
 - Build a **writer cycle**: a transaction on `A` that writes `B`, while
   a transaction on `B` writes `A` (e.g. `Contact.update` writes the account's copy of a
   name while `Account.set_contact_role` holds the account and writes the
-  contact). Two concurrent requests deadlock; no single-request test
-  reproduces it. It usually means a duplicated fact: delete the copy
-  rather than invert the call.
+  contact). Two ordinary concurrent requests deadlock; `rbt generate`,
+  mypy and single-request tests stay silent, and the dashboard's call
+  graph draws the cycle without flagging it (reboot-crm-25, 1.6.0). It
+  usually means a duplicated fact: pick the owner and delete the copy
+  rather than invert the call. A return to A through `per_workflow` (a
+  later transaction of its own) is not a cycle, though it greps the same.
 - Put a new feature on `User` because it is the entry point — that is
   how the God actor grows.
 

@@ -3,7 +3,7 @@ title: Iterating in a Workflow with context.loop
 impact: HIGH
 impactDescription: A while-loop replays every iteration from the start; a renamed or second loop breaks progress tracking or raises
 tags: workflow, loop, context.loop, iteration, interval, control loop, checkpoint, per_iteration
-summary: "Iterate with `context.loop(\"Name\")`, never `while`, which replays every iteration; calls default to per-iteration scope; never rename a loop or add a second; `interval=` paces it."
+summary: "`while` replays every iteration; use `context.loop(\"Name\")`, never renamed or doubled; per-iteration call scope; `interval=` pacing."
 step: servicer
 applies: [mcp-ui, web-app, backend-only]
 always: false
@@ -93,7 +93,6 @@ async def control_loop(
 | --- | --- | --- |
 | `Only one loop per workflow is currently supported` | A second `context.loop` in the same workflow | One loop per workflow; split into two workflows |
 | `While validating effects, the re-run of the last iteration of the` | The re-run last iteration did not break | Make the break condition replay-stable |
-| `Waiting for changes must be done _within_ a control loop` | `until_changes` called outside `context.loop` | Move it inside the loop |
 
 ## See also
 

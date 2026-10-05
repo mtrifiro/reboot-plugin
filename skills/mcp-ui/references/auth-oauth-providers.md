@@ -3,7 +3,7 @@ title: OAuth Providers — Choosing a Production Provider
 impact: HIGH
 impactDescription: The provider you launch with fixes your user-ID namespace; switching providers later strands all user-keyed state, so choose deliberately before you have production users
 tags: auth, oauth, development, anonymous, google, github, auth0, ory, provider, production, migration, claims, consent
-summary: "The launch provider fixes the user-ID namespace, so switching later strands user state; `OAuthProviderByEnvironment(dev=Development(), prod=Google(...))`, credentials as secrets, the `/__/oauth/callback` URL."
+summary: "Switching providers later strands user state; `OAuthProviderByEnvironment(dev=Development(), prod=Google(...))`, credentials as secrets, `/__/oauth/callback`."
 step: auth
 applies: [mcp-ui, web-app]
 always: false

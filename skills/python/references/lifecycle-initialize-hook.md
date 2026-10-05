@@ -3,7 +3,7 @@ title: Use `initialize` for First-Run Setup
 impact: HIGH
 impactDescription: Singletons and seeded state need an explicit creation path, and a bare call in `initialize` runs once in the application's lifetime, not once per boot
 tags: initialize, InitializeContext, create, singleton, bootstrap, idempotently, alias, migration, backfill, app_internal
-summary: "Each `initialize` call runs once in the app's lifetime, not per boot, so a migration needs a new alias; create singletons here, not in `__init__`; failures retry forever."
+summary: "Each `initialize` call runs once per app lifetime, not per boot; migrations need new aliases; failures retry forever."
 step: servicer
 applies: [mcp-ui, web-app, backend-only]
 always: false
@@ -103,17 +103,15 @@ whole hook under one token instead (1.6.0 source).
   context.
 - **Expecting a bare call to run again next boot** — use a versioned
   alias (above).
-- **Trusting a replayed call's response.** It's the stored first-boot
-  response; a `created` flag or count in it describes the first boot
-  (reboot-air, 1.4.1). Ask a reader what is new.
+- **Trusting a replayed call's response** — it describes the first
+  boot; ask a reader what is new (`patterns-idempotency.md` § Never).
 - **Recomputing seed-time values in a migration.** "Today at 14:00"
   differs on migration day while seeded actors keep the old value.
   Build payloads from persisted state or never-changing inputs
   (showtime, 1.4.1).
-- **Calling an explicit constructor again expecting a no-op.** On an
-  existing actor it aborts with `StateAlreadyConstructed`; a bare
-  `create` in `initialize` is safe on later boots only because its
-  persisted key replays before the constructor is reached.
+- **Calling an explicit constructor again expecting a no-op**
+  (`rpc-constructor-calls.md` § Never). A bare `create` in `initialize`
+  is safe on later boots only because its persisted key replays first.
 - **A bare `.spawn()` from `initialize`.** It raises
   `IdempotencyRequiredError` (observed at 1.6.0). Write
   `ref.idempotently(alias="consumer").spawn()...`; the alias also stops
@@ -150,7 +148,7 @@ whole hook under one token instead (1.6.0 source).
 
 | Error text (stable prefix) | Meaning | Fix |
 | --- | --- | --- |
-| `ValueError: To call '...' of '...' more than once using the same context an idempotency alias or key must be specified` | Same method called twice on one actor in `initialize` | Distinct `.idempotently("alias")` per call |
+| `ValueError: To call '...' of '...' more than once using the same context an idempotency alias or key must be specified` | Same method called twice on one actor in `initialize` (e.g. a seeding loop on a shared actor) | Distinct `.idempotently("alias")` per call; in a loop `.idempotently(f"...-{id}")` |
 | `ValueError: Idempotency key for ... is being reused _unsafely_` | One alias or key used for two different calls | One alias per distinct call |
 | `IdempotencyRequiredError: Calls to mutators from within your initialize function must use idempotency` | A mutation, typically a bare `.spawn()`, had no key | `ref.idempotently(alias=...)` before the call |
 | `initialize for application '...' failed with ...; will retry after backoff ...` | `initialize` raised; retried forever. Usually why `rbt.up()` hangs | Fix the named exception |

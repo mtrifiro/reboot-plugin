@@ -3,7 +3,7 @@ title: Debug the Dev and Test Loop
 impact: MEDIUM
 impactDescription: A Reboot failure usually looks like a hang or a silent pass, and an agent that misreads one burns whole test runs chasing the wrong cause
 tags: pytest, hang, faulthandler, exit-code, pipefail, retry, timeout, watch, dev-loop, debugging
-summary: "A Reboot failure looks like a hang (a retry loop) or a silent pass: rerun with `pytest -s`, dump stacks, bisect, trust only exit codes, never test under the watcher."
+summary: "Failures look like hangs or silent passes; `pytest -s`, stack dumps, exit codes; never test under the watcher."
 step: any
 applies: [mcp-ui, web-app, backend-only]
 always: false
@@ -74,9 +74,10 @@ transaction, a failed workflow attempt. Find the quiet failure:
   edit regenerates `backend/api/**` under the suite, which then fails
   with `Method not found!` on methods that exist.
 - **Iterating on a state shape while the watcher is live.** A
-  hot-restart can persist a seconds-lived field type, and the corrected
-  code is refused as incompatible. Write the API edit once in final
-  form, or stop the watcher (theater-network, 1.4.0; see
+  hot-restart can persist a seconds-lived field type (even a typo), and
+  the corrected code is refused as incompatible
+  (`has switched type from ... waiting`) until you expunge. Write the API edit once in final
+  form, or stop the watcher (theater-network, 1.4.0; the gate:
   [`api-schema-evolution.md`](api-schema-evolution.md)).
 - **Counting log lines to measure progress** — effect-validation lines
   are rate-limited (Limits), so a long seed looks hung. Read actor state
@@ -106,9 +107,7 @@ transaction, a failed workflow attempt. Find the quiet failure:
 
 | Error text (stable prefix) | Meaning | Fix |
 | --- | --- | --- |
-| `initialize for application '...' failed with ...; will retry after backoff ...` | `initialize` raises every attempt; the cause of a "hung" `up()` | Fix the named exception |
 | `Application modified; restarting` | Dev watcher reloaded after a file change | Don't run the suite against a watched tree |
-| `StatusCode.UNIMPLEMENTED details = "Method not found!"` | Missing servicer, watcher restart mid-suite, or (observed, unexplained) a start-up race | Check `servicers=`, stop the watcher, rerun the file alone |
 | `Not expecting stream to ever be done` (browser console) | Tab outlived its backend | Reload the tab |
 | `Failed to flush monotonic clock high water mark: IO error: No such file or directory` | State expunged under a running app | Stop, then restart, per [`../../run/SKILL.md`](../../run/SKILL.md) |
 | `has switched type from` | Watcher persisted a transient field type | Restore the persisted type, or expunge dev state |

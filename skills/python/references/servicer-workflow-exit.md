@@ -3,7 +3,7 @@ title: How a Workflow Exits
 impact: HIGH
 impactDescription: An undeclared exception retries the workflow forever; a declared abort raised too eagerly fails it on a transient blip
 tags: workflow, exit, abort, Aborted, errors, retry, declared error, terminate
-summary: "Return, raise a declared `<Workflow>Aborted` to stop, or let an undeclared exception retry the whole workflow forever; abort only on permanent failures, not transient blips."
+summary: "An undeclared exception retries the workflow forever; return, or raise a declared `<Workflow>Aborted` on permanent failures only."
 step: servicer
 applies: [mcp-ui, web-app, backend-only]
 always: false

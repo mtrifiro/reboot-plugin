@@ -3,7 +3,7 @@ title: Compose Predicates with `allow_if(all=...)` / `allow_if(any=...)`
 impact: HIGH
 impactDescription: All non-trivial authorization is composed from `allow_if` and predicates
 tags: auth, allow_if, predicate, all, any, composition
-summary: "`allow_if(all=[...])` or `allow_if(any=[...])`, never both, never nested; `all` short-circuits in order; `is_app_internal` in `any` turns anonymous callers' `Unauthenticated` into `PermissionDenied`."
+summary: "`is_app_internal` in `any` turns anonymous `Unauthenticated` into `PermissionDenied`; `allow_if(all=[...])` or `allow_if(any=[...])`, never both or nested; `all` short-circuits."
 step: auth
 applies: [mcp-ui, web-app, backend-only]
 always: false
@@ -99,7 +99,6 @@ The stdlib `OrderedMapServicer` defaults to `allow_if(all=[is_app_internal])`.
 | Error text (stable prefix) | Meaning | Fix |
 | --- | --- | --- |
 | ``Exactly one of `all` or `any` must be passed`` | Both or neither keyword given | Pass one of `all=` / `any=` |
-| `aborted with 'PermissionDenied': You are not authorized to call` | No predicate allowed; with `is_app_internal` in `any`, also an anonymous caller | Check identity first, or a combined predicate |
 
 ## See also
 

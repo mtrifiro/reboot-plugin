@@ -3,7 +3,7 @@ title: `allow()` and `deny()` — Narrow Uses, Not Defaults
 impact: HIGH
 impactDescription: `allow()` is for genuinely public endpoints; do not use it to silence dev-mode auth warnings or to get tests past `PermissionDenied`
 tags: auth, allow, deny, authorizer, rule
-summary: "`allow()` only for genuinely public endpoints, never to silence dev warnings, pass tests, or mark \"internal-only\" methods; `deny()` locks a method out; return an instance."
+summary: "`allow()` to silence warnings, pass tests or mark internal methods makes them public; `deny()` blocks everyone; `return allow()`."
 step: auth
 applies: [mcp-ui, web-app, backend-only]
 always: false
@@ -93,10 +93,7 @@ class LegacyServicer(Legacy.Servicer):
 
 ## Errors you will see
 
-| Error text (stable prefix) | Meaning | Fix |
-| --- | --- | --- |
-| `aborted with 'PermissionDenied': You are not authorized to call` | Harness: often no `authorizer()`, or a `deny()` | Real `allow_if(...)`; impersonate users in tests |
-| `IS MISSING AUTHORIZATION` | `rbt dev` allowed a call to a servicer with no `authorizer()` | Write the rule before the tests |
+`PermissionDenied` and `IS MISSING AUTHORIZATION`: see `servicer-authorizer.md`.
 
 ## See also
 

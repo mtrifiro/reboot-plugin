@@ -3,7 +3,7 @@ title: Wire the Web SPA to the Reboot Backend
 impact: HIGH
 impactDescription: The browser shell, the backend URL, the generated hooks, and how a typed backend error reaches the user
 tags: web-app, react, vite, hooks, errors, RebootClientProvider, template, allowed-origins
-summary: "Copy `build/templates/web-app/web/`; set `VITE_REBOOT_URL` in dev (the default resolves to Vite's origin); `server.host`, own port, `strictPort`; sign-in/out, accessible markup, typed errors."
+summary: "An unset `VITE_REBOOT_URL` points at Vite's origin; copy `build/templates/web-app/web/`; own port, `strictPort`, sign-in, typed errors."
 step: frontend
 applies: [web-app]
 always: false
@@ -157,9 +157,8 @@ every page this way from the start:
   hiding this in development. Set the production origin in `main.py`'s
   `OAuth(allowed_origins=[...])` when choosing the provider (`deploy`
   skill).
-- `#` in an actor id a page subscribes to: the id rides a WebSocket URL
-  and `#` truncates it (`Failed to construct 'WebSocket'`); `@`, `:`,
-  `~` are safe (observed at 1.4.x).
+- `#` in an actor id a page subscribes to (`react-generated-client.md`
+  § Never).
 - Subscribing to an actor that may not exist: the reader aborts
   `StateNotConstructed` and retries about once a second, disturbing every
   other subscription on the page. Mount the component after the actor is

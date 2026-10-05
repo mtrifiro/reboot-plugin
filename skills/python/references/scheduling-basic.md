@@ -3,7 +3,7 @@ title: Schedule Future Work with `ref.schedule(when=...)`
 impact: HIGH
 impactDescription: Deferred work in asyncio timers vanishes on restart; scheduling from the wrong context fails, and bunched schedules on one actor can crash the dev database worker
 tags: scheduling, schedule, spawn, timedelta, datetime, deferred, async, task, TransactionContext
-summary: "Durable deferred work with `ref.schedule(when=...).method(context)`, never asyncio timers; which contexts may schedule; bunched schedules on one actor can crash the dev database worker."
+summary: "asyncio timers are lost on restart and bunched schedules crash the dev database; `ref.schedule(when=...).method(context)`; which contexts schedule."
 step: servicer
 applies: [mcp-ui, web-app, backend-only]
 always: false
@@ -78,10 +78,9 @@ while it runs.
   `expire_hold` per seat) — their two-phase-commit prepares collide and
   a native assert kills the worker (observed at 1.4.0). Schedule one
   task per logical event covering all the work.
-- A transaction that loops `schedule()` onto N foreign actors — one
-  N-party two-phase commit; it crashed the database worker within
-  minutes under contention (observed at 1.4.0). Pass the list to a
-  workflow and fan out there.
+- A transaction that loops `schedule()` onto N foreign actors — it
+  crashed the database worker within minutes under contention; fan out
+  from a workflow (`servicer-transaction.md` § Never).
 - A naive `datetime` — interpreted in the server's local zone.
 - Relying on a reader that computes "expired" at read time to update
   other viewers — reactive readers push mutations, not derived values.
@@ -117,7 +116,7 @@ while it runs.
 | Error text (stable prefix) | Meaning | Fix |
 | --- | --- | --- |
 | `TypeError: reboot.aio.contexts.WorkflowContext is not an instance or subclass of one of the expected type(s): ['reboot.aio.contexts.TransactionContext']` | `schedule()` from a workflow | `spawn(when=…)` |
-| `Cannot upgrade shared lock to exclusive` | Concurrent transactions read then schedule on the same actor | Separate actors per chain |
+| `Cannot upgrade shared lock to exclusive` | Concurrent transactions read, then schedule on, the same actor | Give parallel chains their own actors; don't read before scheduling |
 | `database.cc:1374] Check failed: inserted` | Simultaneous scheduled transactions on one actor (worker exits with status -6) | One task per event; expunge dev state if it crash-loops |
 
 ## See also

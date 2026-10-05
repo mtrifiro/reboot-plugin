@@ -3,7 +3,7 @@ title: React App.tsx — Generated Hooks and Component Patterns
 impact: HIGH
 impactDescription: The no-id `use<Type>()` hook resolves the actor from the MCP tool-call target but returns `{ <type>, isLoading }`, not the handle; reader and mutation calls go on the handle once it exists. Import from `@api/<pkg>/v1/<name>_rbt_react`. Many actors render through one composing reader.
 tags: react, app-tsx, hooks, useType, css-module, snake-camel, import-path, default-id, composing-reader, pagination, ordered-map, multi-actor
-summary: "No-id `use<Type>()` returns `{ <type>, isLoading }` resolved from the tool-call target — render a child once the handle exists; import `@api/<pkg>/v1/<name>_rbt_react`; composing reader for many actors."
+summary: "No-id `use<Type>()` returns `{ <type>, isLoading }`: render a child once the handle exists; `_rbt_react` imports; composing readers."
 step: frontend
 applies: [mcp-ui]
 always: false
@@ -231,9 +231,7 @@ const DashboardPage: FC<{ user: UseUserApi }> = ({ user }) => {
 
 ## Errors you will see
 
-| Error text (stable prefix) | Meaning | Fix |
-| --- | --- | --- |
-| `state ID must have a length of at least 1` | An explicit-id hook got `id: ''` | Mount the component only once the id is real |
+`state ID must have a length of at least 1`: see `react-generated-client.md`.
 
 ## See also
 

@@ -3,7 +3,7 @@ title: Deploy on Reboot Cloud
 impact: MEDIUM
 impactDescription: Production deployment target — needed when an app graduates beyond `rbt dev run` or a single-machine `rbt serve`.
 tags: deploy, cloud, rbt-cloud, scaling, secrets, dockerfile, api-key, docker
-summary: "`rbt cloud up` / `down`, secrets, logs and getting access; when Cloud beats `rbt serve`; calls the dev server let through are `PermissionDenied` on Cloud."
+summary: "Dev lets through calls Cloud denies (`PermissionDenied`); `rbt cloud up`/`down`, secrets, logs, access; Cloud vs `rbt serve`."
 step: deploy
 applies: [mcp-ui, web-app, backend-only]
 always: false
@@ -138,7 +138,7 @@ only on first deploy. See
 | `Organization '...' does not have a valid payment method.` | Creating an app on an org with no payment method | Add one at `cloud.reboot.dev` |
 | `push failed: failed to connect to the docker API at unix:///var/run/docker.sock` | macOS Docker Desktop socket is elsewhere | `export DOCKER_HOST="unix://$HOME/.docker/run/docker.sock"` |
 | `Could not deploy revision` | The new revision failed to start; its logs follow | Fix the cause in the logs and `up` again |
-| `` `OAuth` requires `allowed_origins=[...]` to be set explicitly in production `` | `oauth=` with no `allowed_origins` outside `rbt dev run` | List the SPA's origin, or `allowed_origins=[]` for same-origin only |
+| `` `OAuth` requires `allowed_origins=[...]` to be set explicitly in production `` | `oauth=` with no `allowed_origins` outside `rbt dev run` (the test harness counts as production) | List the SPA's origin, or `allowed_origins=[]` for same-origin only |
 | `PermissionDenied` | A method with no authorizer, allowed in dev, denied here | Add an authorizer |
 
 ## See also

@@ -3,7 +3,7 @@ title: Schema Evolution Is Additive-Only on Deployed Applications
 impact: CRITICAL
 impactDescription: Backwards-incompatible API changes, even a reworded method description, stop an app with persisted state from booting
 tags: api, schema, evolution, backwards-compatibility, migration, backfill, expunge, field tag
-summary: "Only additive changes boot over persisted state, and even a reworded `description=` refuses; add fields, tags, methods and Types instead of changing them; expunge rules for dev and production."
+summary: "Over persisted state only additive changes boot, even a reworded `description=` refuses; add fields/tags/methods/Types; expunge rules."
 step: api
 applies: [mcp-ui, web-app, backend-only]
 always: false
@@ -125,16 +125,14 @@ right before state first persists.
 
 - Rewording a method's `description=` after state exists — boot is
   refused. Put evolving rules in the servicer method's docstring.
-- Iterating on a state shape while `rbt dev run` watches — a hot
-  restart can persist a typo and the gate rejects the fix. Write the
-  final form in one edit, or stop the watcher.
+- Iterating on a state shape while `rbt dev run` watches
+  (`lifecycle-dev-loop.md` § Never).
 - Allocating a new ID field only in the `factory=True` constructor of
   a type with existing actors — it is never back-filled.
 - Calling a backfill bare from `initialize` — it runs once ever; if
   that run was a no-op it never runs again. Use a versioned alias.
-- `rbt dev expunge` from a script without `--yes` — waits forever.
-- `rbt dev expunge` while `rbt dev run` is live — stop the backend
-  first.
+- `rbt dev expunge` without `--yes`, or while `rbt dev run` is live
+  (`lifecycle-rbtrc.md` § Never).
 - Expunging a production application without explicit human
   confirmation.
 
@@ -169,7 +167,6 @@ right before state first persists.
 | `was removed from Pydantic model` | A field was deleted (any model) | Restore it |
 | `has switched type from` | A field's type changed | New field, new `tag` |
 | ``waiting for modification, or hit `x` to expunge`` | `rbt dev run` with `ask` | Fix the code (reloads) or press `x` |
-| `InvalidStateRefError: The 'state_id' option must be at least 1 character(s) long` | A new ID field was never back-filled | Allocate lazily |
 
 Recovery: `rbt dev run` — fix the code, or `x`, or
 `rbt dev expunge --application-name=<app> --yes`; `rbt serve` — delete

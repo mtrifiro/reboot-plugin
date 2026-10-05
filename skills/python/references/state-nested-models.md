@@ -3,7 +3,7 @@ title: Compose State with Nested `Model`s
 impact: MEDIUM
 impactDescription: Flat-only state forces unwieldy parallel field naming as state grows; nesting a *state* Model inside another state Model collapses N actors into one.
 tags: state, nested, models, sub-objects, structure
-summary: "Group related fields into nested non-state `Model`s instead of parallel flat names, and mutate them in place; never put a state `Model` inside another state `Model`."
+summary: "Never a state `Model` inside another; group related fields in nested non-state `Model`s, mutated in place."
 step: api
 applies: [mcp-ui, web-app, backend-only]
 always: false

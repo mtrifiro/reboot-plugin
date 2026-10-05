@@ -1,7 +1,7 @@
 {
   "_comment": "Max words on each front door's minimal reading path (tools/budget.py). A ratchet: lower a ceiling whenever a change brings the path under it; never raise one to make a change fit. Target for every front door: 30000.",
   "target": 30000,
-  "mcp-ui": 35700,
-  "web-app": 32800,
-  "backend-only": 25300
+  "mcp-ui": 34600,
+  "web-app": 31900,
+  "backend-only": 24400
 }

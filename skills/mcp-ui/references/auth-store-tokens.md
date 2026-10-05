@@ -3,7 +3,7 @@ title: Capturing the Identity Provider's Tokens with `store_tokens=True`
 impact: HIGH
 impactDescription: The `store_tokens=True` capture path is opt-in and easy to get subtly wrong — the wrong scope, a missing library, or the real provider absent in `dev=` all fail at runtime, not startup.
 tags: auth, oauth, scopes, tokens, store_tokens, ciphertext, google, github, auth0, workflow, api, external
-summary: "Extra `scopes=[...]` + `store_tokens=True` captures only the provider's own tokens (Auth0 yields an Auth0 token, not Google's); needs three libraries and crypto root keys; `Development()` issues none."
+summary: "`store_tokens=True` captures only the sign-in provider's tokens, none under `Development()`; extra `scopes=[...]`, three libraries, root keys."
 step: auth
 applies: [mcp-ui]
 always: false
@@ -120,7 +120,6 @@ Read back with `OAuthTokenManager.ref(<service id>).fetch(...)` inside a
 
 | Error text (stable prefix) | Meaning | Fix |
 | --- | --- | --- |
-| `ModuleNotFoundError: No module named 'reboot.std.oauth'` | The 1.6.0 wheel doesn't ship the `oauth` library | See Limits; no plugin-side fix at 1.6.0 |
 | ``An OAuth provider with `store_tokens=True` needs the `oauth` and `ciphertext` libraries`` | Libraries not mounted (once the module ships) | Add all three to `libraries=` |
 
 ## See also

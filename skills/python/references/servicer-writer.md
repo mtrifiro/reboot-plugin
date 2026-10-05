@@ -3,7 +3,7 @@ title: Implement Writer Methods
 impact: HIGH
 impactDescription: Writer methods are the only path to mutate single-actor state; a writer that reaches another actor's writer raises, and an external call in one fires twice or survives a rollback
 tags: servicer, writer, WriterContext, state, mutation, effect validation, schedule
-summary: "A writer mutates `self.state` on one actor only: no writes to other actors, no external calls, schedule only on itself; errors roll back the mutation; writers may return no response."
+summary: "Writers mutate one actor: no writes to others, no external calls, schedule only on self; errors roll back."
 step: servicer
 applies: [mcp-ui, web-app, backend-only]
 always: false
@@ -97,9 +97,9 @@ class AccountServicer(Account.Servicer):
 
 | Error text (stable prefix) | Meaning | Fix |
 | --- | --- | --- |
-| `TypeError: reboot.aio.contexts.WriterContext is not an instance or subclass of one of the expected type(s)` | The writer called a writer, transaction or constructor through a ref | Make the method a `Transaction`, or schedule the work |
-| `No overload variant matches argument types "WriterContext"` | mypy's form of the same, also for `schedule()` on another actor | Same |
-| `Re-running method` | Info: effect validation re-runs the body; the second run commits | None needed |
+| `TypeError: reboot.aio.contexts.WriterContext is not an instance or subclass of one of the expected type(s)` | The writer (constructor or not) called a writer, transaction or constructor through a ref | Make the method a `Transaction`, or schedule the work |
+| `No overload variant matches argument types "WriterContext"` | mypy's form of the `WriterContext` `TypeError` above, also for `schedule()` on another actor | Make the method a `Transaction`, or schedule the work |
+| `Re-running method` | Info: effect validation re-runs the body; the second run commits | None needed; make external calls in a workflow |
 
 ## See also
 

@@ -3,7 +3,7 @@ title: Spin Up Tests with the `Reboot()` Harness
 impact: MEDIUM
 impactDescription: Without the harness, Servicer methods can't be exercised end-to-end; with it misconfigured, tests hang, fail at call time, or test a different application
 tags: testing, Reboot, harness, IsolatedAsyncioTestCase, setup, authorizer, libraries, impersonation, bearer-token, oauth, token-verifier, app_internal, fixture, initialize
-summary: "Register what `main.py` registers, construct what `initialize` constructs, impersonate users instead of disabling authorizers; never call servicer instances directly or reuse actor ids across tests."
+summary: "Disabling authorizers or calling servicers directly tests nothing; register what `main.py` does, construct what `initialize` does, impersonate users."
 step: tests
 applies: [mcp-ui, web-app, backend-only]
 always: false
@@ -194,10 +194,9 @@ or one transaction covering every actor involved.
   authorizers. Mocking *non-auth* behaviour by subclass is fine (an
   external call, the clock: route every wall-clock read through one
   module-level `_now()` and patch that).
-- **Reusing a context after asserting a denial.** `PermissionDenied`
-  is undeclared, so the context turns uncertain and its next mutation
-  raises `IdempotencyUncertainError`. Use a throwaway context per
-  expected denial (student-sor, 1.5.0).
+- **Reusing a context after asserting a denial** — its next mutation
+  raises `IdempotencyUncertainError` (`testing-external-context.md` §
+  Never; student-sor, 1.5.0).
 - **Holding a `ref()` across two contexts**, even serially — a
   `WeakReference` binds to the first context that uses it. Hold ids;
   call `Type.ref(id)` inline per call.
@@ -236,10 +235,9 @@ or one transaction covering every actor involved.
 | --- | --- | --- |
 | `StateNotConstructed { requires_constructor: true }` | The test reached an actor that production's `initialize` constructs | Pass `initialize=`, or construct it in the fixture |
 | `aborted with 'PermissionDenied': You are not authorized to call` | The harness enforces real authorizers, or a user context called an internal method | Impersonate with `create_external_context_as`, or use `app_internal=True` for internal calls |
-| `StatusCode.UNIMPLEMENTED details = "Method not found!"` | The type's servicer is missing from this harness's `servicers=` | Register it, ideally from a shared registry |
+| `StatusCode.UNIMPLEMENTED details = "Method not found!"` | The type's servicer is missing from this harness's `servicers=`; or a watcher restart mid-suite, or (observed, unexplained) a start-up race | Register it, ideally from a shared registry; stop the watcher; rerun the file alone |
 | `IdempotencyUncertainError: Because we don't know if the mutation` | The context was reused after a denied or failed mutation | Use a fresh context for each expected failure |
 | `has previously been used by a different` (`MixedContextsError`) | One `ref()` was used with two contexts | `Type.ref(id)` per call |
-| `` `OAuth` requires `allowed_origins=[...]` to be set explicitly in production `` | A test passed `OAuth(...)` with no `allowed_origins` | Omit `oauth=`, or pass `allowed_origins=[]` |
 | `ValueError: This application is already up` | `up()` was called twice | `await rbt.down()` first, and see [`testing-failure-recovery.md`](testing-failure-recovery.md) |
 
 ## See also

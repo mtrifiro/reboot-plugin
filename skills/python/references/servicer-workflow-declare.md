@@ -3,7 +3,7 @@ title: Declaring and Starting a Workflow
 impact: CRITICAL
 impactDescription: A workflow written as an instance method, declared as a factory, or started with schedule() from another workflow fails at codegen or retries forever
 tags: workflow, WorkflowContext, classmethod, Workflow, schedule, spawn, factory, start, claim
-summary: "A workflow is a `@classmethod` taking `WorkflowContext`, never an instance method or a factory; start it with `schedule()`, but from another workflow with `spawn()`."
+summary: "A workflow is a `@classmethod` taking `WorkflowContext`, never a factory; start with `schedule()`, from another workflow `spawn()`."
 step: servicer
 applies: [mcp-ui, web-app, backend-only]
 always: false
@@ -130,7 +130,6 @@ than once.
 | Error text (stable prefix) | Meaning | Fix |
 | --- | --- | --- |
 | `Message type "rbt.v1alpha1.WorkflowMethodOptions" has no field named "constructor"` | `factory=True` on a `Workflow` | Factory writer/transaction schedules it |
-| `TypeError: reboot.aio.contexts.WorkflowContext is not an instance or subclass of one of the expected type(s): ['reboot.aio.contexts.TransactionContext']` | `schedule()` called from a workflow | `spawn(when=…)` |
 | `TypeError: <YourType>BaseServicer.ref() missing 1 required positional argument: 'self'` | `cls.ref()` in a workflow | `MyType.ref()` |
 | `is a workflow and must be scheduled from a 'WriterContext' via` | Writer/transaction called a workflow directly | `self.ref().schedule().wf(context, …)` |
 | `` `ref()` called without a `state_id` can only be used within a Workflow. `` | `Type.ref()` with no id outside a workflow | `self.ref()` or `Type.ref(id)` |

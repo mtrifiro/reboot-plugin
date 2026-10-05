@@ -3,7 +3,7 @@ title: Define APIs in Pydantic
 impact: CRITICAL
 impactDescription: The pydantic API file is the source of truth; everything else is generated from it
 tags: pydantic, api, Model, Field, tag, default, Optional, Type, API, description, generated names
-summary: "Every `Field` needs a tag and a zero-value default (non-zero is rejected at import time); wire declarations through `API(...)`; generated Request/Response names come from the method name, not the class."
+summary: "A non-zero `Field` default is rejected at import; tags, zero defaults, `API(...)` wiring, Request/Response naming."
 step: api
 applies: [mcp-ui, web-app, backend-only]
 always: false

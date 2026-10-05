@@ -3,7 +3,7 @@ title: Servicer Patterns — User Front Door, Workflow Magic, Scheduling
 impact: CRITICAL
 impactDescription: The MCP-UI-specific servicer shape layered on top of `python`'s Servicer rules. The User-side `create_<X>` Transaction is the front door for every application-type instance; a workflow it starts on the new instance must be `.schedule()`-d, not awaited; workflow bodies follow the python workflow references.
 tags: servicer, user, transaction, workflow, ref, schedule, spawn, classmethod, inline-writer, front-door
-summary: "`UserServicer.create_<X>` Transaction calls `<X>.create(context)` and returns `state_id`; `.schedule()` a workflow from it, never await; workflow bodies use `MyType.ref()`, `spawn()`, `state`-named inline writers."
+summary: "Never await a workflow from `UserServicer.create_<X>`, `.schedule()` it; the Transaction calls `<X>.create(context)`, returns `state_id`; workflow-body idioms."
 step: servicer
 applies: [mcp-ui]
 always: false
@@ -168,9 +168,7 @@ python workflow parts, don't improvise:
 
 | Error text (stable prefix) | Meaning | Fix |
 | --- | --- | --- |
-| `is a workflow and must be scheduled from a` | A Transaction/Writer awaited a workflow directly | `Type.ref(id).schedule().wf(context, …)` |
 | `got an unexpected keyword argument 'request'` | `request=` wrapper passed to a scheduled call | Pass fields as kwargs |
-| `got an unexpected keyword argument 'state'` | Inline writer parameter not named `state` | `async def fn(state)` |
 
 ## See also
 

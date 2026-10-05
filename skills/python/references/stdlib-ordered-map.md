@@ -3,7 +3,7 @@ title: Use `OrderedMap` for Distributed Sorted Key/Value Storage
 impact: HIGH
 impactDescription: Without a stdlib sorted map, large or paginated collections must be hand-rolled; misusing it hangs bulk loads or aborts first reads
 tags: stdlib, OrderedMap, B-tree, collections, range, paginated, ordered, bulk insert, seeding
-summary: "Sorted key/value map for large or paged collections: construct it explicitly when a read may come first, bulk `insert` with `Item`, design keys for your queries, page by last key."
+summary: "Construct explicitly if a read may come first; sorted map for large collections: bulk `insert`, key design, paging."
 step: servicer
 applies: [mcp-ui, web-app, backend-only]
 always: false

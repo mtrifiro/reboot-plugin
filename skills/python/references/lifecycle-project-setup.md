@@ -3,7 +3,7 @@ title: Set Up a Reboot Python Project
 impact: CRITICAL
 impactDescription: Project won't build or run without the right files in place
 tags: project-setup, pyproject, python-version, dependencies, layout, gitignore, mypy, template
-summary: "Copy `build/templates/<front-door>/`: layout, `pyproject.toml`, `.gitignore`, `.mypy.ini`. No `__init__.py`; never edit `*_rbt.py`; mypy sees `self.state` as `Any` — use typed locals."
+summary: "Never add `__init__.py` or edit `*_rbt.py`; copy `build/templates/<front-door>/`; mypy sees `self.state` as `Any`: typed locals."
 step: shell
 applies: [mcp-ui, web-app, backend-only]
 always: false

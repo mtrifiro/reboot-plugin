@@ -3,7 +3,7 @@ title: Error Handling Patterns
 impact: MEDIUM
 impactDescription: Inconsistent error handling makes failures opaque to callers
 tags: patterns, errors, MethodAborted, catch, propagate, SystemAborted, timeout
-summary: "`<Method>Aborted` also carries timeouts and system errors: always inspect `.error` and re-raise what isn't yours; carrying a typed error across actors; no catch-to-log."
+summary: "`<Method>Aborted` also carries timeouts and system errors: inspect `.error`, re-raise the rest; typed errors across actors."
 step: any
 applies: [mcp-ui, web-app, backend-only]
 always: false
@@ -99,7 +99,6 @@ except Showing.HoldSeatsAborted as aborted:
 | Error text (stable prefix) | Meaning | Fix |
 | --- | --- | --- |
 | `Propagating unhandled but declared error (in '` | An inner call's declared error passed through a method that also declares it; it is re-raised as that method's `Aborted` | Nothing, if intended; catch it to add context |
-| `Unhandled (in '` … `propagating as 'Unknown'` | An error neither method declared reached the boundary | Declare it on the outer method, or catch and translate |
 
 ## See also
 

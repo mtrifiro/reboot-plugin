@@ -3,7 +3,7 @@ title: Get Actor References with `Service.ref(id)`
 impact: MEDIUM
 impactDescription: Wrong ref construction hits nonexistent actors, aborts readers with `StateNotConstructed`, or raises `AttributeError` / `MixedContextsError`
 tags: rpc, ref, actor, identity, state_id, StateNotConstructed, MixedContextsError, existence check
-summary: "`self.ref().state_id`, never `self.state_id`; IDs are caller-supplied strings; checking whether an actor exists without hitting `StateNotConstructed`; `self.ref().schedule(...)`; reserved method names."
+summary: "`self.state_id` raises, use `self.ref().state_id`; probing existence without `StateNotConstructed`; caller-supplied IDs; reserved method names."
 step: servicer
 applies: [mcp-ui, web-app, backend-only]
 always: false
@@ -101,9 +101,7 @@ implicitly; on a type with a `factory=True` constructor it aborts
   user) — `MixedContextsError` even without concurrency. Keep the ID;
   call `Program.ref(id)` inline per context.
 - Expect `Service.create(...)` / a factory on an existing actor to rerun
-  its body — a fresh key aborts `StateAlreadyConstructed`; a used key
-  (`initialize`'s automatic per-(actor, method) key, or the same
-  `.idempotently(alias)`) returns the memoized result. A field added to
+  its body (`rpc-constructor-calls.md` § Never). A field added to
   the constructor later is never back-filled on existing actors
   (`InvalidStateRefError: The 'state_id' option must be at least 1
   character(s) long` when used as a ref); allocate lazily:
@@ -135,11 +133,10 @@ implicitly; on a type with a `factory=True` constructor it aborts
 | --- | --- | --- |
 | `aborted with 'StateNotConstructed'` | A reader (or, on a factory type, a writer) ran against an actor never constructed | Construct it first, or catch `<Method>Aborted` and check `isinstance(aborted.error, StateNotConstructed)` |
 | `aborted with 'StateNotConstructed { requires_constructor: true }'` | A non-constructor writer on a type with a `factory=True` constructor | Call the constructor first |
-| `aborted with 'StateAlreadyConstructed'` | An explicit constructor called on an actor that exists | Probe first, or call it via `.idempotently(...)` |
 | `AttributeError: 'XServicer' object has no attribute 'state_id'` | `self.state_id` on a servicer | `self.ref().state_id` / `context.state_id` |
 | `MixedContextsError` / `has previously been used by a different \`Context\`` | One `WeakReference` reused across contexts | Fresh `Type.ref(id)` per context |
 | `has illegal name: Schedule is reserved` | A method named after a ref API verb | Rename the method |
-| `InvalidStateRefError: The 'state_id' option must be at least 1 character(s) long` | Ref built from an empty stored ID | Allocate the ID lazily; see Never |
+| `InvalidStateRefError: The 'state_id' option must be at least 1 character(s) long` | Ref built from an empty stored ID, usually a new ID field never back-filled on an existing actor | Allocate the ID lazily on first use; treat `""` as empty in readers; see Never |
 
 ## See also
 
