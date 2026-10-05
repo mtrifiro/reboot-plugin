@@ -3,6 +3,12 @@ title: Implement Reader Methods
 impact: HIGH
 impactDescription: Reader methods give read-only state access; incorrect signatures fail at startup
 tags: servicer, reader, ReaderContext, state, async
+summary: "The reader signature must match the API file; never mutate `self.state`; readers run concurrently and may call other actors, read-only."
+step: servicer
+applies: [mcp-ui, web-app, backend-only]
+always: false
+verified: 1.6.0
+docs: ""
 ---
 
 ## Implement Reader Methods

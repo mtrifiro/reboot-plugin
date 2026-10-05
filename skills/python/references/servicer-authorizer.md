@@ -3,6 +3,7 @@ title: Authorizers — When to Write Them, What They See
 impact: HIGH
 impactDescription: Rules that ignore app-internal call paths or assume identity crosses servicer calls fail minutes later, or silently compute as if nobody is signed in
 tags: servicer, authorizer, allow, allow_if, auth, authorizers, production, oauth, token-verifier, is_app_internal, context.auth, per-method
+summary: "Write real rules on every servicer before the first test; list the tokenless call paths first; identity does not cross servicer calls; `oauth=` vs. the `token_verifier=` escape hatch."
 step: auth
 applies: [mcp-ui, web-app, backend-only]
 always: false

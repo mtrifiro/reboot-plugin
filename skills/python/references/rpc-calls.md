@@ -3,6 +3,12 @@ title: Call Actor Methods with Kwargs and a Context
 impact: HIGH
 impactDescription: Calling with Request wrappers fails at type-check or runtime
 tags: rpc, call, kwargs, context, await
+summary: "Pass kwargs, never a Request wrapper: `await ref.deposit(context, amount=10)`; the context type must match the method; constructors return `(ref, response)`; `asyncio.gather` for concurrency."
+step: servicer
+applies: [mcp-ui, web-app, backend-only]
+always: false
+verified: 1.6.0
+docs: ""
 ---
 
 ## Call Actor Methods with Kwargs and a Context

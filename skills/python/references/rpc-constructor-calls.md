@@ -3,6 +3,12 @@ title: Use `Service.create` and `Service.<ctor>` for Constructor Calls
 impact: MEDIUM
 impactDescription: Calling a constructor through `.ref(...).method(...)` skips creation semantics
 tags: rpc, constructor, create, factory
+summary: "Call constructors as `<X>.create(context, id, ...)` or `<X>.<Ctor>(...)`, never `<X>.ref(id).<ctor>(...)`, which skips creation semantics; `create` is idempotent; reuse the returned ref."
+step: servicer
+applies: [mcp-ui, web-app, backend-only]
+always: false
+verified: 1.6.0
+docs: ""
 ---
 
 ## Use `Service.create` and `Service.<ctor>` for Constructor Calls

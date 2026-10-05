@@ -3,9 +3,12 @@ title: Classifying Workflow Calls and Calling Reboot
 impact: CRITICAL
 impactDescription: The wrong primitive on an await double-charges users, poisons a workflow forever, or re-runs a write on every replay
 tags: workflow, classify, per_workflow, per_iteration, always, idempotently, alias, inline write, scope, replay
+summary: "Classify every awaited call before writing it; Reboot calls take `.per_workflow(alias)`, `.per_iteration(alias)` or `.always()` with stable, descriptive aliases; inline writes to this actor's state."
 step: servicer
 applies: [mcp-ui, web-app, backend-only]
 always: false
+when: "you declared a `Workflow`"
+via: servicer-workflow.md
 verified: 1.6.0
 docs: ""
 ---

@@ -3,6 +3,13 @@ title: Fan Out Calls with `Service.forall(ids).method(context)`
 impact: MEDIUM
 impactDescription: Hand-rolled gather over many actors is more code and misses framework optimizations
 tags: rpc, forall, fan-out, batch, parallel
+summary: "`Service.forall(ids).method(context)` instead of a hand-rolled gather: results in input order, which method types it allows, read-mostly fan-out, cross-cutting writes from workflows."
+step: servicer
+applies: [mcp-ui, web-app, backend-only]
+always: false
+when: "fanning one call out to many actors"
+verified: 1.6.0
+docs: ""
 ---
 
 ## Fan Out Calls with `Service.forall(ids).method(context)`

@@ -3,6 +3,12 @@ title: Built-In Authorizer Predicates
 impact: HIGH
 impactDescription: The three shipped predicates cover most auth needs without custom code
 tags: auth, predicate, has_verified_token, is_app_internal, state_id_is_user_id
+summary: "`has_verified_token`, `is_app_internal` and `state_id_is_user_id` and their common compositions; a self-scheduled workflow needs `is_app_internal`; predicates always take `**kwargs`."
+step: auth
+applies: [mcp-ui, web-app, backend-only]
+always: false
+verified: 1.6.0
+docs: ""
 ---
 
 ## Built-In Authorizer Predicates

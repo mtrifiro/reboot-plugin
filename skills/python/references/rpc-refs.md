@@ -3,6 +3,7 @@ title: Get Actor References with `Service.ref(id)`
 impact: MEDIUM
 impactDescription: Wrong ref construction hits nonexistent actors, aborts readers with `StateNotConstructed`, or raises `AttributeError` / `MixedContextsError`
 tags: rpc, ref, actor, identity, state_id, StateNotConstructed, MixedContextsError, existence check
+summary: "`self.ref().state_id`, never `self.state_id`; IDs are caller-supplied strings; checking whether an actor exists without hitting `StateNotConstructed`; `self.ref().schedule(...)`; reserved method names."
 step: servicer
 applies: [mcp-ui, web-app, backend-only]
 always: false

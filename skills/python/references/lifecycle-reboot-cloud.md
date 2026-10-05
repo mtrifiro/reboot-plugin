@@ -3,6 +3,12 @@ title: Deploy on Reboot Cloud
 impact: MEDIUM
 impactDescription: Production deployment target — needed when an app graduates beyond `rbt dev run` or a single-machine `rbt serve`.
 tags: deploy, cloud, rbt-cloud, scaling, secrets, dockerfile, api-key
+summary: "`rbt cloud up` / `down`, secrets, logs and getting access; when Cloud beats `rbt serve`; calls the dev server let through are `PermissionDenied` on Cloud."
+step: deploy
+applies: [mcp-ui, web-app, backend-only]
+always: false
+verified: 1.6.0
+docs: ""
 ---
 
 ## Deploy on Reboot Cloud

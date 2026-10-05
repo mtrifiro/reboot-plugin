@@ -3,6 +3,12 @@ title: MCP UI–Specific Gotchas
 impact: CRITICAL
 impactDescription: The trip list specific to the MCP UI layer. Every entry is a real failure mode the MCP UI codegen, runtime, or build surfaces — most are caught at startup or at codegen rather than at write time, so they look like runtime errors but are static schema problems.
 tags: gotchas, traps, errors, mcp, ui, factory, workflow, ref, schedule, optional, react, vite, snake-camel
+summary: "The numbered MCP UI trip list: camelCase bindings, required `mcp=`, `--default-config=hmr`, `MyType.ref()` not `cls.ref()` in workflows, Optional nested Models, inline writer parameter named `state`."
+step: api
+applies: [mcp-ui]
+always: false
+verified: 1.6.0
+docs: ""
 ---
 
 ## MCP UI–Specific Gotchas

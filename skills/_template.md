@@ -4,6 +4,9 @@ title: Scheduling from Inside a Workflow       # link text in every generated in
 impact: HIGH                                   # CRITICAL | HIGH | MEDIUM | LOW-MEDIUM | LOW
 impactDescription: One line — what goes wrong if the agent skips this file
 tags: scheduling, workflow, spawn              # free-text search terms
+summary: "`spawn(when=…)` from a workflow; why `schedule()` is refused there"
+                      # one line (≤ 30 words) shown in every generated reading list:
+                      # what the agent gets from this file, traps first
 # ── Navigation fields (new) ────────────────────────────────────────
 step: servicer        # the ONE build step that reads this file:
                       #   shell | api | servicer | auth | frontend | tests | run | deploy | any
@@ -11,6 +14,15 @@ step: servicer        # the ONE build step that reads this file:
                       # and lookups (errors, versions) read at no fixed step.
 applies: [mcp-ui, web-app, backend-only]   # front doors whose builds read it
 always: false         # true = read before any code, every build (keep this list tiny)
+when: "you start other work from inside a `Workflow`"
+                      # optional. Empty = every build of the step reads it. Otherwise the
+                      # condition, rendered as "only when …"; conditional files are
+                      # excluded from the minimal reading budget.
+# when-web-app: "…"   # optional per-front-door override of `when` (also when-mcp-ui,
+                      # when-backend-only); "" makes it unconditional for that front door
+via: ""               # optional. A router file that lists this one (e.g.
+                      # servicer-workflow.md); the file is then left out of the build
+                      # reading lists and reached through the router.
 verified: 1.6.0       # Reboot version this file was last checked against
 docs: ""              # matching docs.reboot.dev URL, if any. When this file deliberately
                       # tightens a rule from the public docs, say how in one sentence

@@ -3,6 +3,13 @@ title: Use `Topic` for Publish/Subscribe Fan-Out to Queues
 impact: MEDIUM
 impactDescription: Pub/sub fan-out without `Topic` requires hand-rolling broadcast and per-subscriber buffers
 tags: stdlib, Topic, pubsub, publish, subscribe, broker, fan-out
+summary: "`Topic` fans published `Item`s out to subscribed `Queue`s: register the library, subscribe, publish, consume on the queue side; one topic per logical channel."
+step: servicer
+applies: [mcp-ui, web-app, backend-only]
+always: false
+when: "publishing to topics (pub/sub)"
+verified: 1.6.0
+docs: ""
 ---
 
 ## Use `Topic` for Publish/Subscribe Fan-Out to Queues

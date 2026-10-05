@@ -3,9 +3,12 @@ title: Declaring and Starting a Workflow
 impact: CRITICAL
 impactDescription: A workflow written as an instance method, declared as a factory, or started with schedule() from another workflow fails at codegen or retries forever
 tags: workflow, WorkflowContext, classmethod, Workflow, schedule, spawn, factory, start, claim
+summary: "A workflow is a `@classmethod` taking `WorkflowContext`, never an instance method or a factory; start it with `schedule()`, but from another workflow with `spawn()`."
 step: servicer
 applies: [mcp-ui, web-app, backend-only]
 always: false
+when: "you declared a `Workflow`"
+via: servicer-workflow.md
 verified: 1.6.0
 docs: ""
 ---

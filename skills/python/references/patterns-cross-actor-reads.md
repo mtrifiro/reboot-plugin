@@ -3,6 +3,7 @@ title: Cross-Actor Reads and Reader Shape
 impact: HIGH
 impactDescription: Wrong actor boundaries turn one click into a distributed transaction; wrong reader shapes stream N full payloads to every list page or leak other users' data
 tags: patterns, reader, reactive, fan-out, summary reader, view model, derived state, decomposition, cohesion
+summary: "Run the cohesion test before splitting; derive projections; pair summary and detail readers; aggregate server-side one level deep; return per-caller views; one reactive hook per component."
 step: any
 applies: [mcp-ui, web-app, backend-only]
 always: false

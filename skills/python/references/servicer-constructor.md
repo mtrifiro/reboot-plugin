@@ -3,6 +3,12 @@ title: Handle Constructor Methods
 impact: HIGH
 impactDescription: Initial state set in the wrong place leaks across actors or never runs
 tags: servicer, constructor, context.constructor, create, initialization
+summary: "Set initial state in the constructor method, branching on `context.constructor`, never in `__init__`; callers use `Service.create`; calling constructors from `initialize` and from a Transaction."
+step: servicer
+applies: [mcp-ui, web-app, backend-only]
+always: false
+verified: 1.6.0
+docs: ""
 ---
 
 ## Handle Constructor Methods

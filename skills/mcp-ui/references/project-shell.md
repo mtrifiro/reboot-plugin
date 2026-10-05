@@ -3,6 +3,12 @@ title: Project Shell — MCP UI Deltas
 impact: CRITICAL
 impactDescription: The shell files (`.rbtrc`, `pyproject.toml`, `.python-version`, `main.py`) wire the build, the dev server, the HMR routing, and the entry point — wrong shapes break either codegen or live reload before the app even boots.
 tags: project, shell, rbtrc, pyproject, python-version, main, application-entry, hmr, dist
+summary: "MCP UI shell deltas: `.rbtrc` HMR and dist configs (`--default-config=hmr`), `pyproject.toml` extras, the `main.py` shape, and `example_prompts.py` wired into `Application(example_prompts=...)`."
+step: shell
+applies: [mcp-ui]
+always: false
+verified: 1.6.0
+docs: ""
 ---
 
 ## Project Shell — MCP UI Deltas

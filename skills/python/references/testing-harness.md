@@ -3,9 +3,11 @@ title: Spin Up Tests with the `Reboot()` Harness
 impact: MEDIUM
 impactDescription: Without the harness, Servicer methods can't be exercised end-to-end; with it misconfigured, tests hang, fail at call time, or test a different application
 tags: testing, Reboot, harness, IsolatedAsyncioTestCase, setup, authorizer, libraries, impersonation, bearer-token, oauth, token-verifier, app_internal, fixture, initialize
+summary: "Register what `main.py` registers, construct what `initialize` constructs, impersonate users instead of disabling authorizers; never call servicer instances directly or reuse actor ids across tests."
 step: tests
 applies: [mcp-ui, web-app, backend-only]
 always: false
+when: "writing custom steps"
 verified: 1.6.0
 docs: ""
 ---

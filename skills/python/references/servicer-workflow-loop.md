@@ -3,9 +3,12 @@ title: Iterating in a Workflow with context.loop
 impact: HIGH
 impactDescription: A while-loop replays every iteration from the start; a renamed or second loop breaks progress tracking or raises
 tags: workflow, loop, context.loop, iteration, interval, control loop, checkpoint, per_iteration
+summary: "Iterate with `context.loop(\"Name\")`, never `while`, which replays every iteration; calls default to per-iteration scope; never rename a loop or add a second; `interval=` paces it."
 step: servicer
 applies: [mcp-ui, web-app, backend-only]
 always: false
+when: "you declared a `Workflow`"
+via: servicer-workflow.md
 verified: 1.6.0
 docs: ""
 ---

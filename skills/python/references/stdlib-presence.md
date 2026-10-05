@@ -3,6 +3,13 @@ title: Track Online Subscribers with `Presence`
 impact: MEDIUM
 impactDescription: Connection-aware UIs need a durable presence model; rolling your own duplicates this
 tags: stdlib, Presence, Subscriber, MousePosition, online, connected
+summary: "`Presence` registry and `Subscriber` connection tracking (plus `MousePosition`) for who-is-online UIs; registering the servicers, the connection lifecycle, React hooks in `reboot.std.react.presence`."
+step: servicer
+applies: [mcp-ui, web-app, backend-only]
+always: false
+when: "tracking who is connected (presence)"
+verified: 1.6.0
+docs: ""
 ---
 
 ## Track Online Subscribers with `Presence`

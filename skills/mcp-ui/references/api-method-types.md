@@ -3,6 +3,12 @@ title: API Definition — Method Types and Tool Exposure
 impact: CRITICAL
 impactDescription: The pydantic API file is the source of truth for both Reboot codegen AND MCP tool surface. `UI()` is MCP-UI-only; every method (including `User`'s) requires explicit `mcp=`; application types need `factory=True` on their `create` Writer.
 tags: api, pydantic, ui, tool, mcp, reader, writer, transaction, workflow, factory, user
+summary: "Every method, `Workflow` included, needs explicit `mcp=Tool()` or `mcp=None`; put an entity's `UI()` on that entity's Type, never on `User` with an ID in `request=`; `factory=True` on `create`."
+step: api
+applies: [mcp-ui]
+always: false
+verified: 1.6.0
+docs: ""
 ---
 
 ## API Definition — Method Types and Tool Exposure

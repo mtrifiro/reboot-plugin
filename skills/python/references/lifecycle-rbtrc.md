@@ -3,6 +3,12 @@ title: Configure `.rbtrc` Correctly
 impact: CRITICAL
 impactDescription: `rbt generate` and `rbt dev run` won't find files without correct config
 tags: rbtrc, config, generate, dev, expunge, application-name
+summary: "`.rbtrc` is line-based `<subcommand> <flag>`, not YAML; `--application-name` (not `--name`) persists state; `--env-file` for secrets; `serve run` lines for production; named configs."
+step: shell
+applies: [mcp-ui, web-app, backend-only]
+always: false
+verified: 1.6.0
+docs: ""
 ---
 
 ## Configure `.rbtrc` Correctly

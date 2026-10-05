@@ -3,9 +3,11 @@ title: Schedule Future Work with `ref.schedule(when=...)`
 impact: HIGH
 impactDescription: Deferred work in asyncio timers vanishes on restart; scheduling from the wrong context fails, and bunched schedules on one actor can crash the dev database worker
 tags: scheduling, schedule, spawn, timedelta, datetime, deferred, async, task, TransactionContext
+summary: "Durable deferred work with `ref.schedule(when=...).method(context)`, never asyncio timers; which contexts may schedule; bunched schedules on one actor can crash the dev database worker."
 step: servicer
 applies: [mcp-ui, web-app, backend-only]
 always: false
+when: "deferring work with `schedule()` or `spawn(when=…)`"
 verified: 1.6.0
 docs: ""
 ---

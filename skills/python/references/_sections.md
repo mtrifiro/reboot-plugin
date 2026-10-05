@@ -63,3 +63,8 @@ This file defines the rule categories for Reboot Python best practices. Rules ar
 
 **Impact:** LOW-MEDIUM
 **Description:** Cross-cutting patterns and anti-patterns: raising typed errors, idempotency strategies, and the most common Reboot Python gotchas.
+
+## 13. React (react)
+
+**Impact:** MEDIUM
+**Description:** What `rbt generate --react=` emits and how a React frontend uses it — the `use<Type>()` hooks, reader and mutation return shapes, typed error classes, and naming rules. Shared by MCP UI and Web App frontends.

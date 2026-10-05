@@ -3,9 +3,11 @@ title: Implement Transaction Methods
 impact: HIGH
 impactDescription: Cross-actor atomic work requires a transaction; an oversized or externally-calling one stalls, locks actors, or fires side effects twice
 tags: servicer, transaction, TransactionContext, atomic, multi-actor, lock, participants, deadlock, two-phase commit
+summary: "A transaction rolls back every mutation on every actor it touched; never call external systems inside one (schedule a workflow); oversized ones stall and lock actors."
 step: servicer
 applies: [mcp-ui, web-app, backend-only]
 always: false
+when: "you declared a `Transaction`"
 verified: 1.6.0
 docs: "https://docs.reboot.dev/develop/side_effects"
 ---

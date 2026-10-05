@@ -3,9 +3,12 @@ title: Waiting in a Workflow with until and until_changes
 impact: CRITICAL
 impactDescription: until resolves on any non-bool return, so a None or 0 "not yet" sentinel skips the wait and ships the bug; an external poll inside until hangs forever
 tags: workflow, until, until_changes, reactive, wait, approval, claim, atomic, external status, sentinel
+summary: "`until` resolves on any non-`bool` return, so a `None` or `0` \"not yet\" skips the wait: return `False`. `until_changes` reacts to each change; never poll externals inside `until`."
 step: servicer
 applies: [mcp-ui, web-app, backend-only]
 always: false
+when: "you declared a `Workflow`"
+via: servicer-workflow.md
 verified: 1.6.0
 docs: ""
 ---

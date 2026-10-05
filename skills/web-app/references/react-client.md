@@ -3,6 +3,12 @@ title: Wire the Web SPA to the Reboot Backend
 impact: HIGH
 impactDescription: The browser shell, the backend URL, the generated hooks, and how a typed backend error reaches the user
 tags: web-app, react, vite, hooks, errors, RebootClientProvider
+summary: "Set `VITE_REBOOT_URL` in dev: the default resolves to Vite's origin, not the backend. Also the `web/` Vite shell (`server.host`), sign-in/out, accessible markup, and showing typed errors."
+step: frontend
+applies: [web-app]
+always: false
+verified: 1.6.0
+docs: ""
 ---
 
 ## Wire the Web SPA to the Reboot Backend

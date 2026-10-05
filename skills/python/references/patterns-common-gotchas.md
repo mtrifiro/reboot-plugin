@@ -3,6 +3,12 @@ title: Common Reboot Python Gotchas
 impact: MEDIUM
 impactDescription: Each item here breaks startup or causes subtle runtime errors
 tags: patterns, gotchas, anti-patterns, mistakes
+summary: "The consolidated trip list: line-based `.rbtrc`, `--application-name`, no `__init__.py`, kwargs not Request wrappers, `self.ref().state_id`, zero defaults, `MixedContextsError`, the auto-constructed `User`."
+step: any
+applies: [mcp-ui, web-app, backend-only]
+always: true
+verified: 1.6.0
+docs: ""
 ---
 
 ## Common Reboot Python Gotchas

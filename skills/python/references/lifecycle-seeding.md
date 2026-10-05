@@ -3,9 +3,11 @@ title: Seed Data in Batches, Sequentially, with Aliases
 impact: HIGH
 impactDescription: A naive seed (one transaction per record, gathered concurrently, bare calls in a loop) hangs, stalls silently or takes minutes, and a full production seed in every test dominates the suite
 tags: seeding, seed, initialize, bulk, batch, fixture, idempotently, alias, OrderedMap, entries, expunge, effect-validation
+summary: "Seed in sequential batched transactions with a stable alias per call; concurrent or one-per-record seeding hangs or takes minutes; keep the full production seed out of most tests."
 step: servicer
 applies: [mcp-ui, web-app, backend-only]
 always: false
+when: "the app seeds data in `initialize` or a script"
 verified: 1.6.0
 docs: ""
 ---

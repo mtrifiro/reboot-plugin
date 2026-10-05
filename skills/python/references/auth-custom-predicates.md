@@ -3,6 +3,12 @@ title: Write Custom Authorizer Predicates
 impact: MEDIUM
 impactDescription: App-specific access rules require custom predicates; the shipped ones aren't enough alone
 tags: auth, custom, predicate, allow_if, async, sync
+summary: "Keyword-only predicates ending in `**kwargs`, annotated or `mypy` fails; sync or async; order by cost in `all`; return `PermissionDenied` vs. `Unauthenticated` correctly; per-method rules."
+step: auth
+applies: [mcp-ui, web-app, backend-only]
+always: false
+verified: 1.6.0
+docs: ""
 ---
 
 ## Write Custom Authorizer Predicates

@@ -3,6 +3,12 @@ title: Drive the Web App from Scenarios
 impact: MEDIUM
 impactDescription: A user-facing flow that is only tested at the backend leaves the page, the session cookie, and CORS untested; a page without accessible markup cannot be driven at all
 tags: testing, bdd, web-app, playwright, frontend, vite, aria, accessible-name, recordings, sign-in
+summary: "The `frontend` fixture and web app steps, sign-in clicked through then bound, recordings, and the accessible markup (paired labels, named buttons, captioned tables) a page needs to be driven."
+step: tests
+applies: [web-app]
+always: false
+verified: 1.6.0
+docs: ""
 ---
 
 ## Drive the Web App from Scenarios

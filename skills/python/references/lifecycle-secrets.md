@@ -3,6 +3,13 @@ title: Set Secrets — Env Vars in Dev, `rbt cloud secret set` in Cloud
 impact: HIGH
 impactDescription: Wrong delivery mechanism means either committing a secret to git (dev) or seeing `KeyError` at boot (cloud).
 tags: secrets, env, environment-variables, rbt-cloud, oauth, api-key, client-secret
+summary: "An `--env-file` in dev, `rbt cloud secret set` in Cloud; never in `.rbtrc` or code; a bare `.env` is not auto-loaded; no `REBOOT_*` / `RBT_*` names."
+step: shell
+applies: [mcp-ui, web-app, backend-only]
+always: false
+when: "the app needs secrets (API keys, OAuth client secrets)"
+verified: 1.6.0
+docs: ""
 ---
 
 ## Set Secrets — Env Vars in Dev, `rbt cloud secret set` in Cloud

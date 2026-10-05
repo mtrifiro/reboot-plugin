@@ -3,6 +3,12 @@ title: Split a State Type That Holds Multiple Concerns
 impact: HIGH
 impactDescription: One actor holding many unrelated concerns serializes all writers across them and turns the front door into a God actor.
 tags: state, decomposition, responsibility, actors, front-door, serialization, contention
+summary: "Split a Type whose fields cluster by unrelated concern (auth, persona, background engine, cache) into separate Types, or its writers serialize and `User` becomes a God actor."
+step: api
+applies: [mcp-ui, web-app, backend-only]
+always: false
+verified: 1.6.0
+docs: ""
 ---
 
 ## Split a State Type That Holds Multiple Concerns

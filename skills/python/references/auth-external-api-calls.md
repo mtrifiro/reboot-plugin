@@ -3,6 +3,13 @@ title: Calling External-Service APIs on the User's Behalf
 impact: HIGH
 impactDescription: Token capture is opt-in and easy to get subtly wrong — the wrong scope, a missing library, storing from a non-app-internal context, or an external call outside a Workflow all fail at runtime, not at startup. This is the host-agnostic recipe shared by MCP UIs and web apps.
 tags: auth, oauth, tokens, store_tokens, oauth-token-manager, ciphertext, workflow, external, api, api-key, custom-endpoint, on-behalf, refresh-token, crypto-shred
+summary: "Call external APIs as the user only inside a `Workflow`: capture OAuth tokens (`store_tokens=True` or your own flow) into `OAuthTokenManager`, or a user API key as `Ciphertext`; refresh and erase."
+step: auth
+applies: [mcp-ui, web-app, backend-only]
+always: false
+when: "calling an external service's API as the user"
+verified: 1.6.0
+docs: ""
 ---
 
 ## Calling External-Service APIs on the User's Behalf

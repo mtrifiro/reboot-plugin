@@ -201,10 +201,14 @@ at the frontend step; don't reconstruct it from memory here.
 Everything you read stays in the conversation and is re-sent on
 every later turn, so **read each reference at the step that needs
 it** — not all of them up front — and read each one **once**. The
-groups below are in build order, and each reference appears in
-exactly one of them — the step that needs it. Pattern references
-(`patterns-*.md`) other than the two named below are not on the
-build path; read one when its situation comes up.
+groups below are in build order; each reference appears in exactly
+one of them. A line ending *Only when …* is skipped unless that is
+true of your app. Pattern references (`patterns-*.md`) are not on
+the build path; read one when its situation comes up (catalog in
+the `python` skill).
+
+<!-- The lists below are generated from each reference's frontmatter
+by tools/gen-index.py. Edit the frontmatter, not the lists. -->
 
 > **Never read `mcp-ui/references/*` for a web app.** They cover
 > the MCP frontend — `UI()` artifacts, the MCPJam inspector, the
@@ -217,101 +221,98 @@ build path; read one when its situation comes up.
 > [mcp-ui/references/auth-oauth-providers.md](../mcp-ui/references/auth-oauth-providers.md),
 > which is frontend-neutral: read it when you pick a real provider.
 
+**Before any code** (every build):
+
+<!-- generated:start always front-door=web-app -->
+- `python/references/patterns-common-gotchas.md` — The consolidated trip list: line-based `.rbtrc`, `--application-name`, no `__init__.py`, kwargs not Request wrappers, `self.ref().state_id`, zero defaults, `MixedContextsError`, the auto-constructed `User`.
+<!-- generated:end -->
+
 **Before the API definition:**
 
-- `python/references/patterns-common-gotchas.md` — recurring trips
-  (`self.ref().state_id`, kwargs convention, a `ref()` belongs to
-  one context, the auto-constructed `User` type, `--name` vs.
-  `--application-name`).
-- `python/references/api-pydantic.md` — pydantic API rules (every
-  Field needs a zero-value default; non-Optional `Model`-typed
-  fields can't take defaults).
-- `python/references/api-methods.md` — factory → context type
-  mapping (Reader/Writer/Transaction/Workflow).
-- `python/references/api-errors.md` — typed errors, when the API
-  declares any.
-- `python/references/state-collections.md` — **always read when the
-  app has any "list of X" concept.** Decides whether each X should
-  be its own state `Type` (most of the time, yes) and picks between
-  in-state `list[Sub]`, in-state `list[str]` of foreign IDs, or an
-  `OrderedMap` of foreign IDs. The trap is defaulting to
-  `list[Todo]`/`list[Document]`/etc. on one parent for entity
-  collections — see Step 1 of that reference.
-- `python/references/state-nested-models.md` — the same rule from
-  the nested-`Model` angle.
+<!-- generated:start reading-list front-door=web-app step=api -->
+- `python/references/api-methods.md` — Which factory (`Reader`, `Writer`, `Transaction`, `Workflow`) and the servicer signature and context type each obliges; `factory=True` marks creation; `errors=`, `description=` and the required `mcp=`.
+- `python/references/api-pydantic.md` — Every `Field` needs a tag and a zero-value default (non-zero is rejected at import time); wire declarations through `API(...)`; generated Request/Response names come from the method name, not the class.
+- `python/references/state-actor-decomposition.md` — Split a Type whose fields cluster by unrelated concern (auth, persona, background engine, cache) into separate Types, or its writers serialize and `User` becomes a God actor.
+- `python/references/state-collections.md` — Decide whether each "list of X" item is its own state Type (usually yes), then pick `list[Sub]`, `list[str]` of IDs, or an `OrderedMap`; never `list[Entity]` on a parent.
+- `python/references/state-nested-models.md` — Group related fields into nested non-state `Model`s instead of parallel flat names, and mutate them in place; never put a state `Model` inside another state `Model`.
+- `python/references/api-schema-evolution.md` — only when changing an API that is deployed or has persisted state.
+- `python/references/api-errors.md` — only when the API declares typed errors.
+- `python/references/state-scalar-fields.md` — only when a field holds a secret, token or PII, or you want a non-zero default.
+<!-- generated:end -->
 
 **Before the project shell** (`.rbtrc`, `pyproject.toml`,
 `.mypy.ini`, `main.py`):
 
-- `python/references/lifecycle-{project-setup,rbtrc,application-entry,initialize-hook}.md` — the canonical layout, the CLI flags, the
-  `Application(...)` constructor, the `initialize` hook.
+<!-- generated:start reading-list front-door=web-app step=shell -->
+- `python/references/lifecycle-application-entry.md` — An `async def main()` that awaits `Application(servicers=[...], initialize=...).run()`; pass servicer classes, not instances; register stdlib libraries alongside your servicers.
+- `python/references/lifecycle-project-setup.md` — Canonical layout, `pyproject.toml`, the required `.gitignore` and project-root `.mypy.ini` (without it type-checking is useless), no `__init__.py` anywhere, generated code under `backend/`.
+- `python/references/lifecycle-rbtrc.md` — `.rbtrc` is line-based `<subcommand> <flag>`, not YAML; `--application-name` (not `--name`) persists state; `--env-file` for secrets; `serve run` lines for production; named configs.
+- `python/references/lifecycle-secrets.md` — only when the app needs secrets (API keys, OAuth client secrets).
+<!-- generated:end -->
 
 **Before the servicer:**
 
-- `python/references/servicer-{reader,writer,transaction,constructor}.md` — one per context type you actually declared.
-- `python/references/rpc-refs.md` — `self.ref().state_id` (never
-  `self.state_id`); `self.ref().schedule(...)`.
-- `python/references/rpc-calls.md` — kwargs, not Request wrappers.
-- `python/references/rpc-constructor-calls.md` —
-  `Service.create(context, id)` semantics.
-- `python/references/lifecycle-seeding.md` — only when the app seeds
-  data in `initialize` or a script.
-- `python/references/servicer-workflow.md` — only when you declared
-  a `Workflow`: read the router, then each part at the moment it
-  names (declaring, calling Reboot, external calls, `context.loop`,
-  `until` / `until_changes`, exit).
+<!-- generated:start reading-list front-door=web-app step=servicer -->
+- `python/references/lifecycle-initialize-hook.md` — Each `initialize` call runs once in the app's lifetime, not per boot, so a migration needs a new alias; create singletons here, not in `__init__`; failures retry forever.
+- `python/references/rpc-calls.md` — Pass kwargs, never a Request wrapper: `await ref.deposit(context, amount=10)`; the context type must match the method; constructors return `(ref, response)`; `asyncio.gather` for concurrency.
+- `python/references/servicer-constructor.md` — Set initial state in the constructor method, branching on `context.constructor`, never in `__init__`; callers use `Service.create`; calling constructors from `initialize` and from a Transaction.
+- `python/references/servicer-reader.md` — The reader signature must match the API file; never mutate `self.state`; readers run concurrently and may call other actors, read-only.
+- `python/references/servicer-writer.md` — A writer mutates `self.state` on one actor only, never calling another actor's writer; errors roll back the mutation; writers may return no response.
+- `python/references/rpc-constructor-calls.md` — Call constructors as `<X>.create(context, id, ...)` or `<X>.<Ctor>(...)`, never `<X>.ref(id).<ctor>(...)`, which skips creation semantics; `create` is idempotent; reuse the returned ref.
+- `python/references/rpc-refs.md` — `self.ref().state_id`, never `self.state_id`; IDs are caller-supplied strings; checking whether an actor exists without hitting `StateNotConstructed`; `self.ref().schedule(...)`; reserved method names.
+- `python/references/servicer-workflow.md` — only when you declared a `Workflow`.
+- `python/references/agent-pydantic-ai.md` — only when the backend calls an LLM.
+- `python/references/agent-tools.md` — only when an LLM agent needs tools that read or change Reboot state.
+- `python/references/crypto-root-keys.md` — only when building your own key-derivation feature.
+- `python/references/lifecycle-seeding.md` — only when the app seeds data in `initialize` or a script.
+- `python/references/scheduling-basic.md` — only when deferring work with `schedule()` or `spawn(when=…)`.
+- `python/references/servicer-transaction.md` — only when you declared a `Transaction`.
+- `python/references/stdlib-ciphertext.md` — only when storing secrets or PII encrypted at rest.
+- `python/references/stdlib-ordered-map.md` — only when the design uses an `OrderedMap`.
+- `python/references/stdlib-queue.md` — only when the design uses a work `Queue`.
+- `python/references/rpc-forall.md` — only when fanning one call out to many actors.
+- `python/references/scheduling-recurring.md` — only when the app needs a recurring or cron job.
+- `python/references/stdlib-presence.md` — only when tracking who is connected (presence).
+- `python/references/stdlib-pubsub.md` — only when publishing to topics (pub/sub).
+- `python/references/stdlib-item.md` — only when using the stdlib `Item` value envelope.
+<!-- generated:end -->
 
 **Before the authorizers** (browser users — see "Auth in Web Apps"
 above for the dev-vs-prod sequence):
 
-- `python/references/servicer-authorizer.md` — **start here**.
-  Explains `oauth=` (the default) vs. `token_verifier=` (the
-  escape hatch for custom IdPs), and why rules must exist before
-  the first test.
-- `python/references/auth-allow-if.md`,
-  `python/references/auth-built-in-predicates.md`,
-  `python/references/auth-custom-predicates.md` — the predicate
-  machinery once you're ready to write rules.
-- `python/references/auth-claims.md` — only when you use claims /
-  `set_claims`.
-- `python/references/auth-allow-deny.md` — narrow uses of
-  unconditional rules; specifically, when **not** to reach for
-  `allow()`.
-- `python/references/auth-external-api-calls.md` and
-  `python/references/stdlib-oauth-tokens.md` — **calling an external
-  service's API as the user**: custom OAuth endpoints (web apps use
-  Path B — no `store_tokens=True` shortcut) → `OAuthTokenManager.store`
-  → read back + call inside a `Workflow`. Never a plain `str` token
-  field.
+<!-- generated:start reading-list front-door=web-app step=auth -->
+- `python/references/auth-allow-deny.md` — `allow()` only for genuinely public endpoints, never to silence dev auth warnings or for "internal-only" methods; `deny()` locks a method out; return an instance; one authorizer per servicer.
+- `python/references/auth-allow-if.md` — `allow_if(all=[...])` or `allow_if(any=[...])`, never both; `all` evaluates in order and short-circuits, so cheap predicates go first; how the decisions aggregate.
+- `python/references/auth-built-in-predicates.md` — `has_verified_token`, `is_app_internal` and `state_id_is_user_id` and their common compositions; a self-scheduled workflow needs `is_app_internal`; predicates always take `**kwargs`.
+- `python/references/servicer-authorizer.md` — Write real rules on every servicer before the first test; list the tokenless call paths first; identity does not cross servicer calls; `oauth=` vs. the `token_verifier=` escape hatch.
+- `python/references/auth-custom-predicates.md` — Keyword-only predicates ending in `**kwargs`, annotated or `mypy` fails; sync or async; order by cost in `all`; return `PermissionDenied` vs. `Unauthenticated` correctly; per-method rules.
+- `python/references/auth-external-api-calls.md` — only when calling an external service's API as the user.
+- `mcp-ui/references/auth-oauth-providers.md` — only when you pick a real (production) provider.
+- `python/references/stdlib-oauth-tokens.md` — only when storing a user's OAuth tokens for an external service.
+- `python/references/auth-claims.md` — only when you use claims or `set_claims`.
+<!-- generated:end -->
 
 **Before the frontend:**
 
-- [`references/react-client.md`](references/react-client.md) — the
-  `web/` shell (Vite config, including the `server.host` the browser
-  needs), the backend URL (`VITE_REBOOT_URL` — the default detection
-  resolves to Vite's origin, not the backend's), sign-in/sign-out,
-  and how a typed backend error becomes a message the user sees.
-- `python/references/react-generated-client.md` — what
-  `rbt generate --react=` emits: the `use<Type>()` overloads, the
-  three-field reader return, why mutations resolve to
-  `{ response, aborted }` instead of throwing, the typed error
-  classes, and the snake→camel naming rules.
+<!-- generated:start reading-list front-door=web-app step=frontend -->
+- `references/react-client.md` — Set `VITE_REBOOT_URL` in dev: the default resolves to Vite's origin, not the backend. Also the `web/` Vite shell (`server.host`), sign-in/out, accessible markup, and showing typed errors.
+- `python/references/react-generated-client.md` — What `rbt generate --react=` emits: `use<Type>()` overloads, three-field reader returns, mutations resolving to `{ response, aborted }` instead of throwing, typed errors, snake-to-camel naming.
+<!-- generated:end -->
 
-**Before the tests:** `python/references/testing-project-setup.md`,
-`python/references/testing-features.md` (the built-in steps'
-spelling; always), and `python/references/testing-web-app.md` (the
-`frontend` fixture, the web app steps, and the accessible markup
-the page needs), plus `python/references/patterns-idempotency.md` —
-it explains `IdempotencyUncertainError`, which is otherwise the one
-runtime error whose cause is not in any reference you have read.
-`python/references/testing-harness.md` and
-`testing-external-context.md` are for custom steps;
-`testing-failure-recovery.md` is the one to read whenever the app
-has a spawned task, a `Workflow`, or `schedule()`d work: it covers
-restarting the app under test and asserting that work survived.
+**Before the tests:**
+
+<!-- generated:start reading-list front-door=web-app step=tests -->
+- `python/references/patterns-idempotency.md` — What `IdempotencyUncertainError` means and when a retry needs an idempotency key; idempotent `create` / `initialize` calls, `context.constructor` for set-once fields, UUIDv7 for insertable records.
+- `python/references/testing-features.md` — The built-in steps' exact spelling (who calls, `creates` / `does`, saved values, `eventually`, aborts, tasks), `@wip` / `@blocked`, feature / rule / scenario shape, custom steps, mocks.
+- `python/references/testing-project-setup.md` — `tests/` layout, `pytest.ini` with three paths so generated `_rbt` modules import, `reboot[dev]` dev-deps, git-ignored recordings, `uv run pytest`; never construct servicers directly.
+- `python/references/testing-web-app.md` — The `frontend` fixture and web app steps, sign-in clicked through then bound, recordings, and the accessible markup (paired labels, named buttons, captioned tables) a page needs to be driven.
+- `python/references/testing-external-context.md` — only when writing custom steps or harness tests.
+- `python/references/testing-failure-recovery.md` — only when the app has a spawned task, a `Workflow`, or scheduled work.
+- `python/references/testing-harness.md` — only when writing custom steps.
+<!-- generated:end -->
+
 The order of work around the feature files (agree in English, tag
-`@wip`, iterate on scenarios) is the
-[`feature` skill](../feature/SKILL.md).
+`@wip`, iterate on scenarios) is the [`feature` skill](../feature/SKILL.md).
 
 **Before running the app:** the [`run` skill](../run/SKILL.md).
 

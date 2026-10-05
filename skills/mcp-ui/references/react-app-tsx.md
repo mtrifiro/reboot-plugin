@@ -3,6 +3,12 @@ title: React App.tsx — Generated Hooks and Component Patterns
 impact: HIGH
 impactDescription: The generated `use<Type>()` hook returns reader subscriptions and mutation functions; both go directly to the Reboot backend. Reboot snake_case Python field names become camelCase in TypeScript. Each `App.tsx` lives next to a CSS module and consumes the per-UI props passed via `UI(request=...)`.
 tags: react, app-tsx, hooks, useType, css-module, snake-camel, app-tsx-example, composing-reader, pagination, ordered-map, multi-actor
+summary: "Zero-arg `use<Type>()` resolves the actor from the tool-call target; camelCase fields; the full Counter `App.tsx` + CSS module; one composing reader with cursor pagination for many actors."
+step: frontend
+applies: [mcp-ui]
+always: false
+verified: 1.6.0
+docs: ""
 ---
 
 ## React App.tsx — Generated Hooks and Component Patterns

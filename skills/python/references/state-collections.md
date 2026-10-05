@@ -3,6 +3,7 @@ title: Pick the Right Shape for Each Collection
 impact: HIGH
 impactDescription: Putting an unbounded collection in-state, or flattening an entity into `list[Sub]` when it has its own identity, forces a full data-model rewrite once the app grows.
 tags: state, collections, list, dict, OrderedMap, decomposition, cohesion, sub-records, entity, ids
+summary: "Decide whether each \"list of X\" item is its own state Type (usually yes), then pick `list[Sub]`, `list[str]` of IDs, or an `OrderedMap`; never `list[Entity]` on a parent."
 step: api
 applies: [mcp-ui, web-app, backend-only]
 always: false

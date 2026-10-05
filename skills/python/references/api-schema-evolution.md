@@ -3,9 +3,11 @@ title: Schema Evolution Is Additive-Only on Deployed Applications
 impact: CRITICAL
 impactDescription: Backwards-incompatible API changes, even a reworded method description, stop an app with persisted state from booting
 tags: api, schema, evolution, backwards-compatibility, migration, backfill, expunge, field tag
+summary: "Only additive changes boot over persisted state, and even a reworded `description=` refuses; add fields, tags, methods and Types instead of changing them; expunge rules for dev and production."
 step: api
 applies: [mcp-ui, web-app, backend-only]
 always: false
+when: "changing an API that is deployed or has persisted state"
 verified: 1.6.0
 docs: ""
 ---

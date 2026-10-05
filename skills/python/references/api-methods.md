@@ -3,6 +3,12 @@ title: Pick a Method Factory — `Reader`, `Writer`, `Transaction`, or `Workflow
 impact: CRITICAL
 impactDescription: The factory drives the context type, isolation, and access semantics
 tags: method, reader, writer, transaction, workflow, factory, constructor
+summary: "Which factory (`Reader`, `Writer`, `Transaction`, `Workflow`) and the servicer signature and context type each obliges; `factory=True` marks creation; `errors=`, `description=` and the required `mcp=`."
+step: api
+applies: [mcp-ui, web-app, backend-only]
+always: false
+verified: 1.6.0
+docs: ""
 ---
 
 ## Pick a Method Factory — `Reader`, `Writer`, `Transaction`, or `Workflow`

@@ -3,6 +3,12 @@ title: Compose Predicates with `allow_if(all=...)` / `allow_if(any=...)`
 impact: HIGH
 impactDescription: All non-trivial authorization is composed from `allow_if` and predicates
 tags: auth, allow_if, predicate, all, any, composition
+summary: "`allow_if(all=[...])` or `allow_if(any=[...])`, never both; `all` evaluates in order and short-circuits, so cheap predicates go first; how the decisions aggregate."
+step: auth
+applies: [mcp-ui, web-app, backend-only]
+always: false
+verified: 1.6.0
+docs: ""
 ---
 
 ## Compose Predicates with `allow_if(all=...)` / `allow_if(any=...)`

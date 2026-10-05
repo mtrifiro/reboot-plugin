@@ -3,6 +3,13 @@ title: Use Zero-Value Defaults for Scalar State Fields
 impact: MEDIUM
 impactDescription: Non-zero defaults are rejected at import time
 tags: state, scalar, fields, defaults, secret, token, password, credential, api-key, oauth, pii, encryption, ciphertext
+summary: "Scalar `Field`s take the type's zero value, with real values set in the constructor; never store a secret in a plain field, store a `Ciphertext` id."
+step: api
+applies: [mcp-ui, web-app, backend-only]
+always: false
+when: "a field holds a secret, token or PII, or you want a non-zero default"
+verified: 1.6.0
+docs: ""
 ---
 
 ## Use Zero-Value Defaults for Scalar State Fields

@@ -3,6 +3,7 @@ title: Load, Cost and Benchmarking
 impact: HIGH
 impactDescription: Unmeasured designs put a transaction or a fan-out on a click path and ship a page that takes seconds
 tags: patterns, cost, performance, benchmark, load test, effect validation, transaction, forall, subscriptions
+summary: "Measured costs that should shape a design (an actor is a lock, transactions cost per participant, ~150-200 ms dev writes); benchmark in the harness with effect validation off."
 step: any
 applies: [mcp-ui, web-app, backend-only]
 always: false

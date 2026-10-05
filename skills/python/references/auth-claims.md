@@ -3,9 +3,11 @@ title: Identity Claims and `User.set_claims`
 impact: MEDIUM
 impactDescription: Without `claims=` the app sees only an opaque user ID and `set_claims` never runs; a wrong override signature or merge semantics breaks sign-in or keeps stale identity
 tags: auth, claims, set_claims, User, oauth, Development, Google, email, name, identity
+summary: "Request `claims=` on the provider and override `User.set_claims` with the right signature; replace, never merge, on each delivery; never key roles on `Development()` user IDs."
 step: auth
 applies: [mcp-ui, web-app]
 always: false
+when: "you use claims or `set_claims`"
 verified: 1.6.0
 docs: ""
 ---

@@ -3,6 +3,7 @@ title: Use `initialize` for First-Run Setup
 impact: HIGH
 impactDescription: Singletons and seeded state need an explicit creation path, and a bare call in `initialize` runs once in the application's lifetime, not once per boot
 tags: initialize, InitializeContext, create, singleton, bootstrap, idempotently, alias, migration, backfill, app_internal
+summary: "Each `initialize` call runs once in the app's lifetime, not per boot, so a migration needs a new alias; create singletons here, not in `__init__`; failures retry forever."
 step: servicer
 applies: [mcp-ui, web-app, backend-only]
 always: false

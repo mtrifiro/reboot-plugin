@@ -3,6 +3,7 @@ title: The Generated React Client Contract
 impact: HIGH
 impactDescription: The exact hook, mutator, and error shapes `rbt generate --react=` emits — identical for web apps and MCP UIs
 tags: react, hooks, generated, codegen, errors, typescript, partialRequest, aborted, subscription
+summary: "What `rbt generate --react=` emits: `use<Type>()` overloads, three-field reader returns, mutations resolving to `{ response, aborted }` instead of throwing, typed errors, snake-to-camel naming."
 step: frontend
 applies: [mcp-ui, web-app]
 always: false

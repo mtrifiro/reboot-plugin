@@ -3,6 +3,12 @@ title: Set Up a Reboot Python Project
 impact: CRITICAL
 impactDescription: Project won't build or run without the right files in place
 tags: project-setup, pyproject, python-version, dependencies, layout
+summary: "Canonical layout, `pyproject.toml`, the required `.gitignore` and project-root `.mypy.ini` (without it type-checking is useless), no `__init__.py` anywhere, generated code under `backend/`."
+step: shell
+applies: [mcp-ui, web-app, backend-only]
+always: false
+verified: 1.6.0
+docs: ""
 ---
 
 ## Set Up a Reboot Python Project

@@ -1,8 +1,15 @@
 ---
 title: Use `Queue` for Durable FIFO Work Queues
 tags: stdlib, Queue, FIFO, enqueue, dequeue, durable
+summary: "Durable FIFO `Queue`: producers enqueue, a `Workflow` consumer loop dequeues, transactions try-dequeue; register the library and match the consumer's method type."
 impact: HIGH
 impactDescription: Workflows pulling work from a Queue is the canonical "consumer loop" pattern
+step: servicer
+applies: [mcp-ui, web-app, backend-only]
+always: false
+when: "the design uses a work `Queue`"
+verified: 1.6.0
+docs: ""
 ---
 
 ## Use `Queue` for Durable FIFO Work Queues

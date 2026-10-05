@@ -3,9 +3,12 @@ title: Calling External Systems from a Workflow
 impact: CRITICAL
 impactDescription: A plain await or the wrong primitive re-bills on replay, charges twice, or poisons the step so the workflow can never finish
 tags: workflow, external, at_least_once, at_most_once, idempotency key, effect validation, retry, now, randomness, LLM
+summary: "Wrap every external call in `at_least_once` (the default) or `at_most_once` (only when a duplicate is the failure); a plain await re-bills on replay; annotate return types."
 step: servicer
 applies: [mcp-ui, web-app, backend-only]
 always: false
+when: "you declared a `Workflow`"
+via: servicer-workflow.md
 verified: 1.6.0
 docs: "https://docs.reboot.dev/develop/side_effects"
 ---

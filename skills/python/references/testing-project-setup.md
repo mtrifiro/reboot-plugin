@@ -3,6 +3,12 @@ title: Lay Out a Reboot Backend Test Suite
 impact: MEDIUM
 impactDescription: Without `reboot[dev]`, the pytest paths, and the git-ignore, the built-in steps are missing, generated `_rbt` modules can't be imported, and recordings get committed
 tags: testing, pytest, layout, pyproject, conftest, uv, reboot-dev, gitignore, recordings
+summary: "`tests/` layout, `pytest.ini` with three paths so generated `_rbt` modules import, `reboot[dev]` dev-deps, git-ignored recordings, `uv run pytest`; never construct servicers directly."
+step: tests
+applies: [mcp-ui, web-app, backend-only]
+always: false
+verified: 1.6.0
+docs: ""
 ---
 
 ## Lay Out a Reboot Backend Test Suite

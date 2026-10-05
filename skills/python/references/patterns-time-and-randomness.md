@@ -3,6 +3,7 @@ title: Time and Randomness in Method Bodies
 impact: HIGH
 impactDescription: A fresh id or timestamp that something later re-derives or addresses splits into two values on retry or replay; a wall-clock read in a workflow diverges on every replay
 tags: patterns, time, now, clock, random, uuid, uuid4, uuid7, determinism, effect validation, replay, deadline
+summary: "A timestamp or id that is later addressed splits on retry or replay: pass it in the request, derive it from state, or capture it with `at_least_once`."
 step: any
 applies: [mcp-ui, web-app, backend-only]
 always: false

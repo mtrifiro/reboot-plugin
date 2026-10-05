@@ -3,6 +3,12 @@ title: Define APIs in Pydantic
 impact: CRITICAL
 impactDescription: The pydantic API file is the source of truth; everything else is generated from it
 tags: pydantic, api, Model, Methods, Reader, Writer, Transaction, factory
+summary: "Every `Field` needs a tag and a zero-value default (non-zero is rejected at import time); wire declarations through `API(...)`; generated Request/Response names come from the method name, not the class."
+step: api
+applies: [mcp-ui, web-app, backend-only]
+always: false
+verified: 1.6.0
+docs: ""
 ---
 
 ## Define APIs in Pydantic
@@ -315,6 +321,18 @@ Use `default=<zero>` for scalar fields (`""`, `0`, `False`) and
 `default_factory=list` / `default_factory=dict` for collections. This
 applies to **state** Models, **request/response** Models, and **error**
 Models — anywhere `model_construct` may run.
+
+### A Single Nested `Model` Field Is `Optional[X] = None`
+
+A field typed as a non-state `Model` (not a `list`/`dict` of them)
+takes neither `default=` nor `default_factory=`. Both raise
+`UserPydanticError` at startup:
+
+- `Field <X> in model <Y> is a non-optional Model type and cannot have a default value. Use Optional for Model types with empty default.`
+- `Field <X> in model <Y> uses default_factory which is not supported for type <T>. Only list, dict types can have a default_factory currently.`
+
+Declare it `Optional[Sub] = Field(tag=N, default=None)` and set it
+in the constructor (or lazily on first write).
 
 ### `default=` Must Be the Type's Zero Value
 

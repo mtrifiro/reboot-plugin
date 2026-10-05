@@ -3,6 +3,13 @@ title: Capturing the Identity Provider's Tokens with `store_tokens=True`
 impact: HIGH
 impactDescription: The `store_tokens=True` capture path is opt-in and easy to get subtly wrong — the wrong scope, a missing library, or the real provider absent in `dev=` all fail at runtime, not startup.
 tags: auth, oauth, scopes, tokens, store_tokens, ciphertext, google, github, auth0, workflow, api, external
+summary: "Extra `scopes=[...]` + `store_tokens=True` captures only the provider's own tokens (Auth0 yields an Auth0 token, not Google's); needs three libraries and crypto root keys; `Development()` issues none."
+step: auth
+applies: [mcp-ui]
+always: false
+when: "the app acts as the user at its own identity provider's API"
+verified: 1.6.0
+docs: ""
 ---
 
 ## Capturing the Identity Provider's Tokens with `store_tokens=True`

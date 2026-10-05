@@ -3,6 +3,12 @@ title: Make Constructor and `initialize` Calls Idempotent
 impact: MEDIUM
 impactDescription: Non-idempotent setup duplicates state on restart
 tags: patterns, idempotency, initialize, constructor, restart
+summary: "What `IdempotencyUncertainError` means and when a retry needs an idempotency key; idempotent `create` / `initialize` calls, `context.constructor` for set-once fields, UUIDv7 for insertable records."
+step: tests
+applies: [mcp-ui, web-app, backend-only]
+always: false
+verified: 1.6.0
+docs: ""
 ---
 
 ## Make Constructor and `initialize` Calls Idempotent

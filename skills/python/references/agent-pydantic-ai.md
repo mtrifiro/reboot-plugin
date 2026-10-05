@@ -3,6 +3,13 @@ title: Call LLMs via the Reboot `Agent`, Never a Raw SDK
 impact: HIGH
 impactDescription: A raw LLM call re-hits the provider on every workflow replay — wasteful, non-deterministic, double-billed
 tags: agent, llm, pydantic-ai, workflow, memoize, durable
+summary: "Never call a raw LLM SDK, which re-bills on every replay; use `reboot.agents.pydantic_ai.Agent` with a stable `name=`, run it in a `WorkflowContext`, `variant=` for repeats; streaming is drained."
+step: servicer
+applies: [mcp-ui, web-app, backend-only]
+always: false
+when: "the backend calls an LLM"
+verified: 1.6.0
+docs: ""
 ---
 
 ## Call LLMs via the Reboot `Agent`, Never a Raw SDK

@@ -3,6 +3,13 @@ title: Give the Agent Tools with `@agent.tool` and `@agent.tool_plain`
 impact: HIGH
 impactDescription: Tools are how an LLM agent reads and mutates Reboot state; the wrong signature won't receive the `WorkflowContext`
 tags: agent, llm, tools, pydantic-ai, workflow
+summary: "Tools take `WorkflowContext` first and `RunContext` second, or they never see Reboot state; `@agent.tool_plain` for state-free tools; register at construction; tool calls are memoized."
+step: servicer
+applies: [mcp-ui, web-app, backend-only]
+always: false
+when: "an LLM agent needs tools that read or change Reboot state"
+verified: 1.6.0
+docs: ""
 ---
 
 ## Give the Agent Tools with `@agent.tool` and `@agent.tool_plain`

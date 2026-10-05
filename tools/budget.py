@@ -37,14 +37,17 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 SKILLS = ROOT / "skills"
 
-FRONT_DOORS = ("mcp-ui", "web-app")
+FRONT_DOORS = ("mcp-ui", "web-app", "backend-only")
 
 # SKILL.md files every build of a front door reads in full, in order:
 # the router, the builder, the foundation, the feature workflow and run.
 FIXED_SKILLS = {
     "mcp-ui": ["app", "mcp-ui", "python", "feature", "run"],
     "web-app": ["app", "web-app", "python", "feature", "run"],
+    "backend-only": ["python", "feature", "run"],
 }
+
+LEGACY_FRONT_DOORS = ("mcp-ui", "web-app")
 
 BUILD_STEPS = ("shell", "api", "servicer", "auth", "frontend", "tests")
 
@@ -220,14 +223,15 @@ def legacy(front_door: str) -> Report:
 
 
 def from_frontmatter(front_door: str) -> Report:
+    import reflib
+
     report = Report(front_door, "frontmatter")
-    for path in all_references():
-        fm = frontmatter(path)
-        applies = fm.get("applies", [])
-        if fm.get("always"):
-            report.items.append(Item(path, "always", False))
-        elif fm.get("step") in BUILD_STEPS and front_door in applies:
-            report.items.append(Item(path, fm["step"], False))
+    refs = reflib.load_refs()
+    for r in reflib.always_list(refs, front_door):
+        report.items.append(Item(r.path, "always", False))
+    for step in reflib.BUILD_STEPS:
+        for r in reflib.reading_list(refs, front_door, step):
+            report.items.append(Item(r.path, step, bool(r.when(front_door))))
     return report
 
 
@@ -235,7 +239,10 @@ def measure(front_door: str) -> Report:
     # Switch only once every reference is converted; a partial switch
     # would silently drop the unconverted files from the count.
     uses_frontmatter = all("step" in frontmatter(p) for p in all_references())
-    report = from_frontmatter(front_door) if uses_frontmatter else legacy(front_door)
+    if not uses_frontmatter and front_door not in LEGACY_FRONT_DOORS:
+        report = Report(front_door, "legacy (no list)")
+    else:
+        report = from_frontmatter(front_door) if uses_frontmatter else legacy(front_door)
     report.fixed = [
         (f"{s}/SKILL.md", words(SKILLS / s / "SKILL.md"))
         for s in FIXED_SKILLS[front_door]

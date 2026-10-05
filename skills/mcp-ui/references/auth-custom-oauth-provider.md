@@ -3,6 +3,13 @@ title: Writing Your Own OAuth Provider
 impact: MEDIUM
 impactDescription: Only needed when no shipped provider fits; the contract is small but strict — an unstable user id silently fragments user state, and a wrong `state`/`redirect_uri` handling breaks the flow at runtime, not startup.
 tags: auth, oauth, provider, custom, oidc, okta, keycloak, sso, identity, exchange-code, authorization-url, store_tokens
+summary: "Subclass `RegisteredOAuthProvider`: `authorization_url`, `exchange_code` returning a stable user id (it becomes `context.auth.user_id`), `validate()` / `mount_routes()`, and `token_service_id` for `store_tokens=True`."
+step: auth
+applies: [mcp-ui]
+always: false
+when: "none of the shipped OAuth providers fits"
+verified: 1.6.0
+docs: ""
 ---
 
 ## Writing Your Own OAuth Provider

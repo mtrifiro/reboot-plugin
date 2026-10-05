@@ -3,6 +3,13 @@ title: Drive Tests with `create_external_context`, Assert, Wait, and Mock
 impact: MEDIUM
 impactDescription: Tests can't call into the application, observe errors, or wait for workflows without these patterns
 tags: testing, external-context, RPC, harness, aborted, errors, mocking, workflows, user-stories
+summary: "`create_external_context` with a unique name per test; asserting `<Method>Aborted`, live updates with `reactively()`, waiting on spawned tasks and workflows, mocking external services and LLMs."
+step: tests
+applies: [mcp-ui, web-app, backend-only]
+always: false
+when: "writing custom steps or harness tests"
+verified: 1.6.0
+docs: ""
 ---
 
 ## Drive Tests with `create_external_context`

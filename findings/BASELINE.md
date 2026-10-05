@@ -121,3 +121,31 @@ plus six parts read on demand, which is why the "every listed" total
 fell. The proposal expects the minimal path to come down in Phase 3
 (one build spine instead of two half-copied builders) and Phase 2 (each
 reference in exactly one step), not here.
+
+---
+
+# After Phase 2 (2026-10-04)
+
+Every reference carries navigation frontmatter (`summary`, `step`,
+`applies`, `always`, `when`, `via`, `verified`, `docs`).
+`tools/gen-index.py` generates the 21 list regions in the mcp-ui,
+web-app and python SKILL.md files; the hand-written indices (two
+builder reading lists, the python task list and catalog, and the
+duplicated category table) are gone.
+
+| Measure | After Phase 1 | After Phase 2 |
+| --- | ---: | ---: |
+| mcp-ui minimal path | 50,685 | 51,553 (+868) |
+| web-app minimal path | 39,543 | 41,352 (+1,809) |
+| backend-only minimal path | — | 30,052 (first measured) |
+| Hand-maintained reference indices | 5 | 0 |
+| References with navigation frontmatter | 25 / 77 | 77 / 77 |
+
+Why the minimal path still grew: web-app builds now read
+`state-actor-decomposition.md` (864 words), which only the mcp-ui list
+had named; and `python/SKILL.md`, read by every build, now carries the
+backend-only reading lists (~900 words) that mcp-ui and web-app builds
+don't need. `servicer-transaction.md` became conditional ("only when
+you declared a `Transaction`", as the old list's wording said),
+which saved 1,285. Phase 3's shared build spine is the place to stop
+python/SKILL.md re-listing what the builders list.

@@ -3,6 +3,13 @@ title: Define and Raise Typed Errors
 impact: HIGH
 impactDescription: Untyped failures become opaque RPC errors at the call site
 tags: errors, MethodAborted, errors-list, typed-failures
+summary: "Declare error Models in `errors=[...]` and raise the generated `<Method>Aborted(...)`, never an untyped exception; catch it typed at the call site; raising rolls back the mutation."
+step: api
+applies: [mcp-ui, web-app, backend-only]
+always: false
+when: "the API declares typed errors"
+verified: 1.6.0
+docs: ""
 ---
 
 ## Define and Raise Typed Errors

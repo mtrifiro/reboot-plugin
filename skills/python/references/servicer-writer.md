@@ -3,6 +3,12 @@ title: Implement Writer Methods
 impact: HIGH
 impactDescription: Writer methods are the only path to mutate single-actor state
 tags: servicer, writer, WriterContext, state, mutation
+summary: "A writer mutates `self.state` on one actor only, never calling another actor's writer; errors roll back the mutation; writers may return no response."
+step: servicer
+applies: [mcp-ui, web-app, backend-only]
+always: false
+verified: 1.6.0
+docs: ""
 ---
 
 ## Implement Writer Methods

@@ -3,6 +3,12 @@ title: Error Handling Patterns
 impact: MEDIUM
 impactDescription: Inconsistent error handling makes failures opaque to callers
 tags: patterns, errors, MethodAborted, raise, catch
+summary: "Raise typed errors instead of returning `None`; catch them typed at the caller; errors roll back mutations; no `except Exception:` around servicer calls, no catching just to log."
+step: any
+applies: [mcp-ui, web-app, backend-only]
+always: false
+verified: 1.6.0
+docs: ""
 ---
 
 ## Error Handling Patterns

@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 """Lint reference files against skills/_template.md.
 
-A reference counts as converted once its frontmatter has `step:`.
-Converted references must have every navigation field and the seven
-section headings, exactly once each and in order. Unconverted ones are
-counted, not failed, so the lint can gate CI while conversion is still
-in progress (pass `--all` to fail on them too).
+Every reference must carry the navigation frontmatter (step, applies,
+always, summary, verified). A reference counts as converted to the
+template once it has a "## When you are here" heading; converted
+references must also have the seven section headings, exactly once each
+and in order. Unconverted ones are counted, not failed, so the lint can
+gate CI while conversion is still in progress (pass `--all` to fail on
+them too).
 
 Usage:
     tools/lint-references.py           # lint converted files, report progress
@@ -24,8 +26,9 @@ SKILLS = ROOT / "skills"
 
 SECTIONS = ("When you are here", "Do this", "Never", "Limits", "Scales as",
             "Errors you will see", "See also")
-FIELDS = ("title", "impact", "impactDescription", "tags", "step", "applies",
-          "always", "verified")
+FIELDS = ("title", "impact", "impactDescription", "tags", "summary", "step",
+          "applies", "always", "verified")
+NAV_ONLY = ("step", "applies", "always", "summary", "verified")
 STEPS = {"shell", "api", "servicer", "auth", "frontend", "tests", "run", "deploy", "any"}
 FRONT_DOORS = {"mcp-ui", "web-app", "backend-only"}
 WORD_BUDGET = 1500
@@ -44,15 +47,19 @@ def frontmatter(text: str) -> tuple[dict, str]:
     return data, text[end + 4 :]
 
 
-def lint(path: Path) -> tuple[list[str], list[str]]:
+def lint(path: Path, sections: bool) -> tuple[list[str], list[str]]:
     errors: list[str] = []
     warnings: list[str] = []
     text = path.read_text(encoding="utf-8")
     fm, body = frontmatter(text)
 
-    for f in FIELDS:
+    for f in (FIELDS if sections else NAV_ONLY):
         if f not in fm:
             errors.append(f"frontmatter missing {f}")
+    if len(fm.get("summary", "").split()) > 30:
+        warnings.append("summary longer than 30 words")
+    if fm.get("via") and not (path.parent / fm["via"].strip("\"'")).exists():
+        errors.append(f"via points at missing file {fm['via']}")
     if fm.get("step") and fm["step"] not in STEPS:
         errors.append(f"step {fm['step']!r} not in {sorted(STEPS)}")
     applies = {a.strip() for a in fm.get("applies", "").strip("[]").split(",") if a.strip()}
@@ -62,6 +69,8 @@ def lint(path: Path) -> tuple[list[str], list[str]]:
         errors.append("always must be true or false")
     if path.name.startswith("patterns-") and fm.get("step") not in ("any", None):
         warnings.append("patterns-* files normally use step: any")
+    if not sections:
+        return errors, warnings
 
     # Strip fenced code so `## ` inside examples isn't read as a heading.
     prose = re.sub(r"^(```|~~~).*?^\1", "", body, flags=re.S | re.M)
@@ -103,11 +112,11 @@ def main() -> int:
     refs = [r for r in refs if not r.name.startswith("_")]
     converted, pending, failures = [], [], 0
     for path in refs:
-        fm, _ = frontmatter(path.read_text(encoding="utf-8"))
-        (converted if "step" in fm else pending).append(path)
+        text = path.read_text(encoding="utf-8")
+        (converted if re.search(r"^## When you are here\s*$", text, re.M) else pending).append(path)
 
-    for path in converted:
-        errors, warnings = lint(path)
+    for path in refs:
+        errors, warnings = lint(path, sections=path in converted)
         rel = path.relative_to(ROOT)
         for e in errors:
             print(f"{rel}: error: {e}")

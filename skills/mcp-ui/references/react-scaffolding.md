@@ -3,6 +3,12 @@ title: React Scaffolding — package.json, vite.config.ts, tsconfigs, index.css
 impact: CRITICAL
 impactDescription: The shell files for the `frontend/` tree. `vite.config.ts` is load-bearing — flattening the HTML output breaks MCP UI artifact discovery (the server resolves `frontend/dist/mcp/<name>/index.html`, the **nested** Vite default). `npm run build` runs `build.mjs`, which auto-discovers and builds every UI; tsconfigs split into `app` and `node` halves.
 tags: web, react, vite, tsconfig, package-json, css, build, hmr, scaffolding, build-mjs
+summary: "Copy `vite.config.ts` exactly: flattening output breaks UI discovery at `frontend/dist/mcp/<name>/index.html`. Plus `package.json`, `build.mjs`, split tsconfigs, `index.css`, per-UI `index.html` / `main.tsx`."
+step: frontend
+applies: [mcp-ui]
+always: false
+verified: 1.6.0
+docs: ""
 ---
 
 ## React Scaffolding — package.json, vite.config.ts, tsconfigs, index.css

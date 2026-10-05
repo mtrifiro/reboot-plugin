@@ -3,6 +3,12 @@ title: Write a Reboot Cloud Dockerfile
 impact: HIGH
 impactDescription: Reboot Cloud rejects images that don't follow this layout; mistakes only surface on first deploy.
 tags: dockerfile, deploy, rbt-cloud, base-image, codegen, dockerignore
+summary: "The Dockerfile layout Reboot Cloud accepts, backend-only or with a bundled MCP UI frontend; production flags belong in `.rbtrc` `serve run` lines, not the Dockerfile; `.dockerignore`."
+step: deploy
+applies: [mcp-ui, web-app, backend-only]
+always: false
+verified: 1.6.0
+docs: ""
 ---
 
 ## Write a Reboot Cloud Dockerfile

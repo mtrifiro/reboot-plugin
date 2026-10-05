@@ -3,6 +3,12 @@ title: `allow()` and `deny()` — Narrow Uses, Not Defaults
 impact: HIGH
 impactDescription: `allow()` is for genuinely public endpoints; do not use it to silence dev-mode auth warnings
 tags: auth, allow, deny, authorizer, rule
+summary: "`allow()` only for genuinely public endpoints, never to silence dev auth warnings or for \"internal-only\" methods; `deny()` locks a method out; return an instance; one authorizer per servicer."
+step: auth
+applies: [mcp-ui, web-app, backend-only]
+always: false
+verified: 1.6.0
+docs: ""
 ---
 
 ## `allow()` and `deny()` — Narrow Uses, Not Defaults

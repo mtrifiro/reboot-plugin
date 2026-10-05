@@ -3,9 +3,11 @@ title: Building Durable Workflows
 impact: CRITICAL
 impactDescription: Router for the six workflow parts; the wrong shape breaks replay, and the wrong call primitive double-charges users, poisons workflows forever, or stalls progress
 tags: workflow, WorkflowContext, classmethod, durable, replay, at_least_once, at_most_once, per_workflow, per_iteration, always, loop, until, until_changes, spawn
+summary: "Router to the six workflow parts (declare, Reboot calls, external calls, `context.loop`, `until` / `until_changes`, exit) and the moment to read each."
 step: servicer
 applies: [mcp-ui, web-app, backend-only]
 always: false
+when: "you declared a `Workflow`"
 verified: 1.6.0
 docs: ""
 ---
