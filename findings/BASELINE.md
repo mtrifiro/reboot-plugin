@@ -1,3 +1,10 @@
+---
+title: "Phase 0 baseline"
+summary: "Reading cost, CLI and symbol drift, and findings counts measured before the restructure."
+kind: report
+audience: maintainer
+---
+
 # Phase 0 baseline
 
 Measured on 2026-10-04 against plugin `1f4f7bf` (Reboot 1.6.0), before

@@ -8,6 +8,7 @@ cd "$(dirname -- "$0")/.."
 
 python3 tools/gen-index.py --check --quiet
 python3 tools/lint-references.py
+python3 tools/lint-frontmatter.py
 python3 tools/findings.py > /dev/null
 python3 tools/budget.py --readme check
 if [ "${1:-}" = "--full" ]; then

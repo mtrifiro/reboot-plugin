@@ -1,3 +1,12 @@
+---
+title: "BetterErrorTracingReporter now requires Vitest 3"
+summary: "Bump Vitest to 3 where the app uses Reboot's BetterErrorTracingReporter."
+kind: migration
+audience: agent
+applies: [mcp-ui, web-app]
+when: "the app uses BetterErrorTracingReporter with Vitest below 3"
+---
+
 ## `BetterErrorTracingReporter` now requires Vitest 3
 
 The `BetterErrorTracingReporter` exported from

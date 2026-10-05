@@ -76,8 +76,11 @@ know.
 Read every fragment (`.md`) in this skill's `migrations/<version>/`
 directories with current < `<version>` ≤ target, in ascending version
 order (the order they apply). A version with no directory needs no code
-migrations. Tell the developer the from/to versions and a one-line
-summary per fragment; get their go-ahead before changing anything.
+migrations. Each fragment's front matter says which apps it touches:
+skip one whose `applies` doesn't list this app's front door, or whose
+`when` doesn't hold for it (check, don't assume). Tell the developer the
+from/to versions and each remaining fragment's `summary`, plus the
+skipped ones and why; get their go-ahead before changing anything.
 
 ## Step 6 — Apply the code migrations
 

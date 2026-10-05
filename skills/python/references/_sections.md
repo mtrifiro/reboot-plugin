@@ -1,3 +1,10 @@
+---
+title: "Reference concepts and filename prefixes"
+summary: "The 13 reference categories with their impact; a reference joins one by its filename prefix."
+kind: index
+audience: agent
+---
+
 # Section Definitions
 
 This file defines the rule categories for Reboot Python best practices. Rules are automatically assigned to sections based on their filename prefix.

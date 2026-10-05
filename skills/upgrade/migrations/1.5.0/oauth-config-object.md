@@ -1,3 +1,12 @@
+---
+title: "OAuth options moved into an OAuth object"
+summary: "Wrap the oauth selector and allowed_origins in one OAuth object passed as oauth=."
+kind: migration
+audience: agent
+applies: [mcp-ui, web-app, backend-only]
+when: "the app passes oauth= or allowed_origins= to Application"
+---
+
 ## OAuth options moved into an `OAuth` object
 
 `Application(...)` no longer accepts `oauth=<selector>` and

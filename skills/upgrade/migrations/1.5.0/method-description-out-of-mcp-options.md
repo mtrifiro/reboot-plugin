@@ -1,3 +1,12 @@
+---
+title: "description moved out of the mcp options block"
+summary: "Move each method's description from its mcp options onto the method options."
+kind: migration
+audience: agent
+applies: [mcp-ui, web-app, backend-only]
+when: "a method's description sits inside its mcp options"
+---
+
 ## `description` moved out of the `mcp` options block
 
 A method's description now belongs on the method options themselves

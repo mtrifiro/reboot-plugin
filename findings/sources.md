@@ -1,3 +1,10 @@
+---
+title: "Findings sources"
+summary: "The source findings file and Reboot version behind each project directory under findings/."
+kind: index
+audience: maintainer
+---
+
 # Sources
 
 Where each project's items came from. Paths are relative to the

@@ -1,3 +1,12 @@
+---
+title: "_auto_construct was renamed to _authenticated"
+summary: "Rename calls to the generated _auto_construct static method to _authenticated."
+kind: migration
+audience: agent
+applies: [mcp-ui, web-app, backend-only]
+when: "code calls _auto_construct"
+---
+
 ## `_auto_construct` was renamed to `_authenticated`
 
 The generated static method

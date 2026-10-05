@@ -1,3 +1,12 @@
+---
+title: "TokenVerifierForTest has been removed"
+summary: "Delete TokenVerifierForTest substitutions; the test harness supplies its own OAuth provider."
+kind: migration
+audience: agent
+applies: [mcp-ui, web-app, backend-only]
+when: "tests construct TokenVerifierForTest"
+---
+
 ## `TokenVerifierForTest` has been removed
 
 The test harness no longer needs a stub verifier: it always supplies

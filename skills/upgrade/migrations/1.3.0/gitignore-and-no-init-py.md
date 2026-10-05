@@ -1,3 +1,11 @@
+---
+title: "Projects need a .gitignore; stray __init__.py files go away"
+summary: "Add a project-root .gitignore and delete __init__.py files anywhere in the project."
+kind: migration
+audience: agent
+applies: [mcp-ui, web-app, backend-only]
+---
+
 ## Projects need a `.gitignore`; stray `__init__.py` files go away
 
 The canonical project layout now includes a project-root

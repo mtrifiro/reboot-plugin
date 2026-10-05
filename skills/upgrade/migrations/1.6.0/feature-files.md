@@ -1,3 +1,12 @@
+---
+title: "Tests become feature files"
+summary: "Convert unittest test classes into Gherkin feature files run by reboot.bdd."
+kind: migration
+audience: agent
+applies: [mcp-ui, web-app, backend-only]
+when: "the tests are unittest classes rather than feature files"
+---
+
 ## Tests become feature files
 
 Reboot applications now specify and test their behavior with

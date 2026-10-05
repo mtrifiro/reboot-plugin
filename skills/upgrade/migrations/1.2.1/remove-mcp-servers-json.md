@@ -1,3 +1,12 @@
+---
+title: "mcp_servers.json is no longer used"
+summary: "Delete mcp_servers.json and its references; MCPJam now launches with explicit flags."
+kind: migration
+audience: agent
+applies: [mcp-ui]
+when: "the project root has an mcp_servers.json"
+---
+
 ## `mcp_servers.json` is no longer used
 
 MCPJam Inspector is now launched with explicit flags rather than a

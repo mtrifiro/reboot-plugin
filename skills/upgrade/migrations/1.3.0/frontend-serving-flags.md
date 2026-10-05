@@ -1,3 +1,11 @@
+---
+title: "Frontend serving: CLI flags and the /__/frontend/ URL prefix"
+summary: "Rename the frontend dev-proxy flags and environment variable; frontends are served under /__/frontend/."
+kind: migration
+audience: agent
+applies: [mcp-ui, web-app]
+---
+
 ## Frontend serving: CLI flags and the `/__/frontend/` URL prefix
 
 This is the one migration note for the frontend-serving CLI changes; it

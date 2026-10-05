@@ -1,3 +1,12 @@
+---
+title: "The auto-constructed User.create is now a Transaction"
+summary: "Change a User servicer's create override from a WriterContext to a TransactionContext."
+kind: migration
+audience: agent
+applies: [mcp-ui, web-app, backend-only]
+when: "a User servicer overrides create"
+---
+
 ## The auto-constructed `User.create` is now a `Transaction`
 
 The reserved `create` factory method on an auto-constructed `User`

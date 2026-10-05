@@ -1,3 +1,12 @@
+---
+title: "Application(oauth=...) requires allowed_origins in production"
+summary: "List the browser origins allowed to sign in, or an empty list for same-origin only."
+kind: migration
+audience: agent
+applies: [mcp-ui, web-app, backend-only]
+when: "the app passes oauth= to Application"
+---
+
 ## `Application(oauth=...)` requires `allowed_origins=[...]` in production
 
 Applies only to applications that pass `oauth=...` to `Application(...)`
