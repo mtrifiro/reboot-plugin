@@ -9,7 +9,7 @@ on:
 jobs:
   fast:
     # Generated indices in sync, references in the template, findings
-    # schema, reading-budget ceilings. No network.
+    # schema, budget table. No network.
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

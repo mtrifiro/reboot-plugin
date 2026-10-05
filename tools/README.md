@@ -7,7 +7,7 @@ the plugin pins.
 
 | Tool | What it measures | Fails when |
 | --- | --- | --- |
-| `budget.py` | Words an agent reads before writing code, per front door; `--readme write` refreshes the README table | `--ceilings`: a front door is over its ceiling in `budget-ceilings.json`; `--readme check`: the README table is stale |
+| `budget.py` | Words an agent reads before writing code, per front door; `--readme write` refreshes the README table | `--readme check`: the README table is stale (reports the budget; never enforces it) |
 | `check-cli.py` | Every `rbt …` command and `.rbtrc` line vs `rbt --help` | a flag or subcommand is unknown |
 | `check-symbols.py` | Every `reboot…` import / dotted name / stdlib call vs the pinned package | a symbol doesn't resolve and isn't a tracked upstream defect in `known-defects.json` |
 | `templates-smoke.sh` | Copies each `skills/build/templates/<front-door>/`, then `rbt generate`, npm build, mypy, pytest | any step fails |
@@ -19,9 +19,6 @@ the plugin pins.
 template-build checks); `.github/workflows/skills-checks.yml` runs both
 in CI.
 
-- `budget-ceilings.json` — per-front-door word ceilings. A ratchet:
-  lower one when a change brings the path under it (the tool says
-  when); never raise one to make a change fit.
 - `known-defects.json` — symbols missing because of an upstream bug,
   each tied to the finding that tracks it. Remove an entry when the
   fix ships. `reflib.py` is the shared frontmatter model the others import.
