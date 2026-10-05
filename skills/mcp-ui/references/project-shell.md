@@ -15,99 +15,89 @@ docs: ""
 
 ## When you are here
 
-You are creating the project-root files of an MCP UI: `.python-version`,
+Creating an MCP UI's project-root files: `.python-version`,
 `pyproject.toml`, `.rbtrc`, `.mypy.ini`, `pytest.ini`, `.gitignore`,
-`backend/src/main.py` and `backend/src/example_prompts.py`. The shape
-shared with every Reboot project (layout, `.mypy.ini`, `.gitignore`,
-no `__init__.py`) is
+`backend/src/main.py`, `backend/src/example_prompts.py`. Shared shape
+(layout, `.mypy.ini`, `.gitignore`, no `__init__.py`):
 [`lifecycle-project-setup.md`](../../python/references/lifecycle-project-setup.md);
-the `.rbtrc` format is
-[`lifecycle-rbtrc.md`](../../python/references/lifecycle-rbtrc.md).
-The `frontend/` tree is [`react-scaffolding.md`](react-scaffolding.md).
+`.rbtrc` format:
+[`lifecycle-rbtrc.md`](../../python/references/lifecycle-rbtrc.md);
+`frontend/`: [`react-scaffolding.md`](react-scaffolding.md).
 
 ## Do this
 
-Copy the template; do not retype these files:
+Copy the template; do not retype these files
+(placeholders: [`build/templates/README.md`](../../build/templates/README.md)):
 
 ```sh
 <plugin>/skills/build/templates/copy.sh mcp-ui . <project> <app> "<Title>"
 ```
 
-([`build/templates/README.md`](../../build/templates/README.md) has the
-placeholders.) What each MCP-UI-specific file is for, and what to change:
-
-- **`.python-version`** — `3.12`. Leave it.
+- **`.python-version`** — `3.12`; leave it.
 - **`pyproject.toml`** — `reboot==1.6.0`, dev group `reboot[dev]==1.6.0`
-  (what the tests and the dashboard run on). Add a runtime dependency
-  only when your code imports it (`httpx`, `uuid7`, …); `reboot`
-  needs none.
-- **`.rbtrc`** — beyond the shared shape it adds
-  `dev run --default-config=hmr` plus two named configs:
+  (tests and dashboard). Add a runtime dependency only when your code
+  imports it (`httpx`, `uuid7`, …).
+- **`.rbtrc`** — adds `dev run --default-config=hmr` and two configs:
   `dev run:hmr --frontend-host=http://localhost:4444` routes Envoy's
-  `/__/frontend/**` to the Vite dev server (`cd frontend && npm run dev`),
-  and `dev run:dist --frontend-dist-path=frontend/dist` serves the
-  built `frontend/dist/` instead (`rbt dev run --config=dist`, after
-  `npm run build`). Its `serve run` lines mirror `dev run` minus the
-  dev-only knobs (`--watch`, `--env-file`, the `:hmr`/`:dist` configs);
-  Reboot Cloud runs `CMD ["rbt", "serve", "run"]`
+  `/__/frontend/**` to the Vite dev server (`cd frontend && npm run dev`);
+  `dev run:dist --frontend-dist-path=frontend/dist` serves the built
+  `frontend/dist/` (`rbt dev run --config=dist` after `npm run build`).
+  `serve run` lines mirror `dev run` minus dev-only knobs (`--watch`,
+  `--env-file`, the `:hmr`/`:dist` configs); Reboot Cloud runs
+  `CMD ["rbt", "serve", "run"]`
   ([`lifecycle-dockerfile.md`](../../python/references/lifecycle-dockerfile.md)).
 - **`backend/src/example_prompts.py`** — the `ExamplePrompt`s the
-  root-page wizard offers. Rewrite them for the app (rules below).
+  root-page wizard offers; rewrite them for the app (below).
 - **`backend/src/main.py`** — registers every servicer (`User` plus each
   application type), passes `example_prompts=`, and sets
   `oauth=OAuth(provider=OAuthProviderByEnvironment(dev=Development(),
-  prod=None), allowed_origins=[])`. Set `title` and `description` to
-  something human-readable: the wizard shows both (`title` defaults
-  to the application name). A typical MCP UI has no `initialize`
-  hook: the auto-constructed `User` covers per-user setup, and
-  application-type instances are created by `User`'s transactions.
+  prod=None), allowed_origins=[])`. Set human-readable `title` and
+  `description`; the wizard shows both (`title` defaults to the
+  application name). No `initialize` hook is typical: the
+  auto-constructed `User` covers per-user setup and `User`'s
+  transactions create application instances.
 
 ### Example prompts
 
-`ExamplePrompt` (from `reboot.application`) has two fields: `title`, a
-short label that is the example's identity (re-registering the same
-`title` replaces the entry), and `prompts`, the chat messages the user
-sends, one per turn. One example is a **sequence** walking an
-end-to-end flow through the app's tools (create → act → view), not
-one isolated message. Write about three that together exercise the
-main user stories, phrased the way a user talks, and end most of them
-on a "show me / open …" turn that renders a `UI()` component (rule in
-`SKILL.md`, "Example Prompts"). Worked set:
+`ExamplePrompt` (from `reboot.application`) has `title` (the example's
+identity; re-registering a `title` replaces it) and `prompts` (the user's
+chat messages, one per turn). Each example is a **sequence** walking an
+end-to-end flow through the app's tools (create → act → view). Write about
+three covering the main user stories in a user's phrasing, most ending on
+a "show me / open …" turn that renders a `UI()` (rule: `SKILL.md`,
+"Example Prompts"). Worked set:
 `public/reboot/examples/mcp-ui-counter/backend/src/example_prompts.py`.
 
 ### State is durable
 
-`dev run --application-name=<project>` keys the state that survives
-restarts; `rbt dev expunge --application-name=<project>` resets it
-(details in `lifecycle-rbtrc.md`).
+`dev run --application-name=<project>` keys state that survives restarts;
+`rbt dev expunge --application-name=<project>` resets it
+(`lifecycle-rbtrc.md`).
 
 ## Never
 
 - `dev run --default=hmr` — the flag is `--default-config=hmr`.
-- `generate --react-extensions` in `.rbtrc`. The React client is
-  generated into `frontend/api/` and resolved by Vite and by `tsc`
-  under `moduleResolution: "bundler"` without `.js` extensions, so the
-  flag buys nothing. It is needed only for a webpack/`ts-loader`
-  bundler or a `--nodejs`/`--web` target sharing the React output
-  directory, neither of which this skill produces, and `rbt generate`
-  rejects it alongside a future `--mobile` client (Metro cannot
-  resolve the `.js`-suffixed imports).
-- `dev run --name=<project>` — deprecated alias of
-  `--application-name`, warns on every start.
-- Dropping `oauth=` from `main.py`: the `User` type is
-  auto-constructed, and auto-construct servicers make the application
-  fail at startup without it.
+- `generate --react-extensions` in `.rbtrc` — Vite and `tsc`
+  (`moduleResolution: "bundler"`) resolve `frontend/api/` without `.js`
+  extensions. Needed only for a webpack/`ts-loader` bundler or a
+  `--nodejs`/`--web` target sharing the React output directory (neither
+  produced here); `rbt generate` rejects it alongside a future `--mobile`
+  client (Metro cannot resolve `.js`-suffixed imports).
+- `dev run --name=<project>` — deprecated alias of `--application-name`;
+  warns on every start.
+- Dropping `oauth=` from `main.py`: the `User` type is auto-constructed,
+  and auto-construct servicers fail at startup without it.
 - A `--watch` line for `api/`: `rbt dev run` already regenerates and
   restarts on API edits (`--generate-watch`, on by default at 1.6.0).
 
 ## Limits
 
-- `prod=None` refuses to start under `rbt serve` / Reboot Cloud until
-  a real provider is chosen ([`auth-oauth-providers.md`](auth-oauth-providers.md)).
-- Leaving `allowed_origins` out entirely is a hard error in production;
-  `[]` means same-origin only, which is right for UIs served by the
-  backend. A dual-frontend app lists its web SPA's origin.
-- `--env-file` is dev-only; production secrets go through
+- `prod=None` refuses to start under `rbt serve` / Reboot Cloud until a
+  real provider is chosen ([`auth-oauth-providers.md`](auth-oauth-providers.md)).
+- Omitting `allowed_origins` is a hard error in production; `[]` means
+  same-origin only, right for backend-served UIs. A dual-frontend app
+  lists its SPA's origin.
+- `--env-file` is dev-only; production secrets use
   `rbt cloud secret set` (`lifecycle-secrets.md`).
 
 ## Scales as

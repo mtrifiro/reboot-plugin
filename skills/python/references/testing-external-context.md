@@ -16,19 +16,18 @@ docs: ""
 
 ## When you are here
 
-You are writing Python that calls the application from a test: a
-custom step body, or an `IsolatedAsyncioTestCase` on the `Reboot()`
-harness. A user-observable behavior belongs in a feature file
-([`testing-features.md`](testing-features.md)); the harness setup
-(`self.rbt`, `up()`, impersonation) is
+Writing Python that calls the app from a test: a custom step body, or
+an `IsolatedAsyncioTestCase` on the `Reboot()` harness. User-observable
+behavior belongs in a feature file ([`testing-features.md`](testing-features.md));
+harness setup (`self.rbt`, `up()`, impersonation) is
 [`testing-harness.md`](testing-harness.md).
 
 ## Do this
 
-A test calls the app through a context from
-`rbt.create_external_context(name=...)`, passed as `context` to actor
-method calls. It plays an outside caller, can call any method
-(transactions included), and can drive many calls:
+Call through a context from `rbt.create_external_context(name=...)`,
+passed as `context`. It plays an outside caller and can call any
+method, transactions included. Name it after the test
+(`f"test-{self.id()}"`) so a failing trace is identifiable:
 
 ```python
 async def test_chat_room(self) -> None:
@@ -38,51 +37,36 @@ async def test_chat_room(self) -> None:
     chat_room = ChatRoom.ref("testing-chat-room")
 
     await chat_room.send(context, message="Hello, World")
-    await chat_room.send(context, message="Hello, Reboot!")
 
     response = await chat_room.messages(context)
-    self.assertEqual(response.messages, ["Hello, World", "Hello, Reboot!"])
+    self.assertEqual(response.messages, ["Hello, World"])
 ```
 
-Name the context after the test (`f"test-{self.id()}"`) so a failing
-test's trace is identifiable. To satisfy real authorizers, call as a
-user: `await self.rbt.create_external_context_as(name, user_id)` (after
-`up()`). A second user is a second context:
-
-```python
-other_context = await self.rbt.create_external_context_as(
-    name=f"other-{self.id()}",
-    user_id="other-user",
-)
-with self.assertRaises(Aborted):
-    await Cart.ref(cart.state_id).get_cart(other_context)
-```
+To satisfy real authorizers, call as a user (after `up()`):
+`await self.rbt.create_external_context_as(name=f"other-{self.id()}", user_id="other-user")`.
+A second user is a second context; a denial raises `Aborted`.
 
 ### Asserting an abort
 
-A declared error surfaces as the generated `<Service>.<Method>Aborted`,
-whose `.error` is the error model:
+A declared error surfaces as `<Service>.<Method>Aborted`, whose
+`.error` is the error model:
 
 ```python
 with self.assertRaises(Cart.CheckoutAborted) as cm:
-    await cart.checkout(
-        self.context,
-        shipping_address=SHIPPING,
-        coupon_code="definitely-not-a-real-code",
-    )
+    await cart.checkout(self.context, shipping_address=SHIPPING, coupon_code="bogus")
 self.assertIsInstance(cm.exception.error, InvalidCoupon)
 ```
 
-`try` / `except Account.WithdrawAborted as aborted:` with
-`isinstance(aborted.error, OverdraftError)` is equivalent. When you only
-care that the call failed (a denial), assert
-`reboot.aio.aborted.Aborted`.
+`try`/`except Account.WithdrawAborted as aborted:` +
+`isinstance(aborted.error, OverdraftError)` is equivalent. For a denial,
+assert `reboot.aio.aborted.Aborted`.
 
 ### Asserting a live update: `reactively()`
 
-`Type.ref(id).reactively().<reader>(context)` is an async iterator that
-yields a fresh response on every state change, the subscription the
-React hooks use:
+`Type.ref(id).reactively().<reader>(context)` is an async iterator
+yielding a response per state change (the React hooks' subscription). Wrap every `anext()` in `asyncio.wait_for` so a missing
+update fails fast, and loop until the expected state, because an
+intermediate snapshot may arrive first:
 
 ```python
 subscription = TaskList.ref(list_id).reactively().get(bob)
@@ -98,10 +82,6 @@ while True:
 self.assertEqual(update.tasks[0].title, "Milk")
 ```
 
-Wrap every `anext()` in `asyncio.wait_for` so a missing update fails
-fast, and loop until the expected state: an intermediate snapshot may
-arrive first.
-
 ### Waiting for spawned tasks
 
 A method that spawns a task returns a `task_id` at once; wait with
@@ -112,49 +92,34 @@ hello_servicer.SECS_UNTIL_WARNING = 0
 hello_servicer.ADDITIONAL_SECS_UNTIL_ERASE = 0
 
 send_response = await hello.send(context, message="Hello, World!")
-warning_response = await Hello.WarningTask.retrieve(
-    context,
-    task_id=send_response.task_id,
-)
+warning_response = await Hello.WarningTask.retrieve(context, task_id=send_response.task_id)
 await Hello.EraseTask.retrieve(context, task_id=warning_response.task_id)
 
 messages_response = await hello.messages(context)
 self.assertEqual(len(messages_response.messages), 1)
 ```
 
-For a workflow driven by a mocked external service, an
-`asyncio.Event` the mock sets at its terminal step is the sync point.
+A workflow driven by a mock syncs on an `asyncio.Event` the mock sets at its terminal step.
 
 ### Mocking externals
 
-**1. Override a method on a Servicer subclass**, and register the
-subclass in place of the original:
+1. **Override a method on a Servicer subclass**, registered in place of the original:
 
 ```python
 class NoFulfillOrderServicer(OrderServicer):
-    """Skip the Printful call during tests."""
-
     @classmethod
-    async def fulfill(
-        cls,
-        context: WorkflowContext,
-        request: Order.FulfillRequest,
-    ) -> None:
-        return None
+    async def fulfill(cls, context: WorkflowContext, request: Order.FulfillRequest) -> None:
+        return None  # Skip the Printful call.
 ```
 
-**2. `unittest.mock.patch` a plain helper**, at its import location in
-the consuming module:
+2. **`unittest.mock.patch` a plain helper** where the consuming module imports it:
 
 ```python
-with patch(
-    "servicers.store.fetch_products",
-    new=AsyncMock(return_value=catalog),
-):
+with patch("servicers.store.fetch_products", new=AsyncMock(return_value=catalog)):
     response = await User.ref(self.user_id).list_products(self.context)
 ```
 
-**3. A scripted `FunctionModel` for a pydantic-AI agent**:
+3. **A scripted `FunctionModel` for a pydantic-AI agent**:
 
 ```python
 import asyncio
@@ -167,14 +132,13 @@ class ScriptedAgent:
         self.done = asyncio.Event()
 
     async def step(self, messages, info: AgentInfo) -> ModelResponse:
-        # Inspect tool-returns in `messages`, pick the next
-        # `ToolCallPart` to emit, and `self.done.set()` on the
-        # terminal response.
+        # Read tool-returns in `messages`, emit the next `ToolCallPart`,
+        # `self.done.set()` on the terminal response.
         ...
 
 
 # In asyncSetUp. `wrapped` is typed `AbstractAgent`, whose `model` is
-# a read-only property to mypy; the assignment works at runtime.
+# read-only to mypy; the assignment works at runtime.
 self.script = ScriptedAgent()
 wiki_module.librarian.wrapped.model = FunctionModel(self.script.step)  # type: ignore[misc]
 
@@ -187,32 +151,27 @@ Restore the original model in `asyncTearDown`.
 
 ### Environment variables
 
-Set in `asyncSetUp`, restore in `asyncTearDown`:
+Set in `asyncSetUp` after saving the previous value; restore in `asyncTearDown`:
 
 ```python
-async def asyncSetUp(self) -> None:
-    self._prev_admin_key = os.environ.get(STORE_ADMIN_KEY_ENV)
-    os.environ[STORE_ADMIN_KEY_ENV] = ADMIN_KEY
-
-async def asyncTearDown(self) -> None:
-    await self.rbt.stop()
-    if self._prev_admin_key is None:
-        os.environ.pop(STORE_ADMIN_KEY_ENV, None)
-    else:
-        os.environ[STORE_ADMIN_KEY_ENV] = self._prev_admin_key
+self._prev_admin_key = os.environ.get(STORE_ADMIN_KEY_ENV)     # asyncSetUp
+os.environ[STORE_ADMIN_KEY_ENV] = ADMIN_KEY
+# asyncTearDown, after `await self.rbt.stop()`:
+if self._prev_admin_key is None:
+    os.environ.pop(STORE_ADMIN_KEY_ENV, None)
+else:
+    os.environ[STORE_ADMIN_KEY_ENV] = self._prev_admin_key
 ```
 
-A variable that must exist before any import (an SDK that builds its
-client at import time) goes in `conftest.py`
-([`testing-project-setup.md`](testing-project-setup.md)).
+A variable needed before any import (an SDK building its client at
+import) goes in `conftest.py` ([`testing-project-setup.md`](testing-project-setup.md)).
 
 ### One harness test per user story
 
-Name each test after the story
-(`test_overdraft_is_rejected_with_overdraft_error`), give it one
-external context, call through `Service.ref(id).method(context, ...)`,
-and assert the user-observable outcome (what the UI would render), not
-internal state shape. Not one test per servicer method.
+Not one per servicer method. Name it after the story
+(`test_overdraft_is_rejected_with_overdraft_error`), use one external
+context, call `Service.ref(id).method(context, ...)`, assert what the
+UI would render, not internal state shape.
 
 ## Never
 
@@ -221,11 +180,10 @@ internal state shape. Not one test per servicer method.
 - **Overriding `authorizer()` in a test subclass** — impersonate with
   `create_external_context_as`. Subclassing to mock *behavior* is fine.
 - **Several denied mutations asserted from one context** — a
-  `PermissionDenied` is not a declared error, so the context is marked
-  uncertain and its next mutation fails with `IdempotencyUncertainError`.
-  Use a fresh context per denial, or give each its own
-  `.idempotently("...")` alias. Asserting a declared error costs
-  nothing (cineloop, 1.4.1).
+  `PermissionDenied` is undeclared, so the context turns uncertain and
+  its next mutation fails with `IdempotencyUncertainError`. Use a fresh
+  context or `.idempotently("...")` alias per denial; declared errors
+  are free (cineloop, 1.4.1).
 - **Polling with `asyncio.sleep`** — that tests the sleep; use
   `reactively()` or `retrieve`.
 - **`anext()` without `asyncio.wait_for`** — a missing update hangs

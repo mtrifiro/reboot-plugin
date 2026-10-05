@@ -17,35 +17,29 @@ docs: ""
 
 ## When you are here
 
-You are deciding what the workflow does when something goes wrong: bad
-input, a declined payment, a failed external call returned as data. A
-running workflow has exactly three outcomes, and the difference between
-"stop" and "retry" is whether the exception you raise is declared.
-Turning an external failure into data in the first place is in
-[`servicer-workflow-external.md`](servicer-workflow-external.md).
+You are deciding what the workflow does on bad input, a declined
+payment, or an external failure returned as data (making it data:
+[`servicer-workflow-external.md`](servicer-workflow-external.md)).
+Stop vs. retry depends on whether the raised exception is declared.
 
 ## Do this
 
-1. **Return normally** — done. Any `response=` value is recorded;
-   callers see the final state.
-2. **Raise a declared `<Type>.<Workflow>Aborted(<Error>(...))`** — the
-   workflow **terminates** and is not retried. The error becomes its
-   recorded failure, inspected like a writer/transaction abort
-   ([`api-errors.md`](api-errors.md)).
-3. **Raise anything else** (a `ValueError`, a transient HTTP error, a
-   bug) — treated as transient: the workflow is replayed from its last
-   checkpoint, indefinitely, until it succeeds, you ship a fix, or the
-   state is expunged.
+A running workflow has three outcomes:
 
-Declare every error you might raise to stop the workflow in `errors=`:
+1. **Return normally** — done; any `response=` value is recorded.
+2. **Raise a declared `<Type>.<Workflow>Aborted(<Error>(...))`** —
+   **terminates**, not retried; the error is its recorded failure,
+   inspected like a writer/transaction abort
+   ([`api-errors.md`](api-errors.md)).
+3. **Raise anything else** (`ValueError`, transient HTTP error, a bug) —
+   transient: replayed from the last checkpoint indefinitely, until it
+   succeeds, a fix ships, or the state is expunged.
+
+Declare every stopping error in `errors=`:
 
 ```python
 class PaymentDeclined(Model):
     reason: str = Field(tag=1, default="")
-
-
-class CustomerSuspended(Model):
-    pass
 
 
 api = API(
@@ -65,7 +59,7 @@ api = API(
 )
 ```
 
-Then raise it **after** the failing step returns its outcome as data:
+Raise it **after** the failing step returns its outcome as data:
 
 ```python
 from reboot.aio.contexts import WorkflowContext
@@ -87,7 +81,7 @@ class OrderServicer(Order.Servicer):
                 )
                 return ChargeResult(ok=True, charge_id=response.id)
             except stripe.error.CardError as e:
-                # Permanent — surface as data so the alias isn't poisoned.
+                # Permanent — data, so the alias isn't poisoned.
                 return ChargeResult(ok=False, reason=str(e))
 
         outcome = await at_most_once("Charge", context, do_charge)
@@ -106,33 +100,32 @@ class OrderServicer(Order.Servicer):
         ).write(context, mark_paid)
 ```
 
-After a step returns a failure as data, choose deliberately:
+After a failure-as-data, choose deliberately:
 
-- **Stop, don't retry** → raise a declared abort.
-- **Continue degraded** → record the failure with a scoped inline write
-  and proceed.
+- **Stop** → raise a declared abort.
+- **Continue degraded** → record it with a scoped inline write; proceed.
 - **Fallback** → call a different actor or provider.
 - **Retry the whole workflow** → let an undeclared exception propagate
-  (rare; usually letting the step's own callable raise inside
-  `at_least_once` is what you want).
+  (rare; usually the step's callable raising inside `at_least_once` is
+  what you want).
 
 ## Never
 
 - `raise ValueError("amount must be positive")` where you mean "stop" —
-  bad input stays bad, so the workflow retries forever. Raise
+  bad input stays bad, so it retries forever. Raise
   `Order.FulfillAborted(InvalidRequest(field="amount", reason="must be positive"))`
   with the error declared.
 - Catching a transient error and converting it to a declared abort —
-  the workflow is marked failed on the first hiccup. Let it propagate.
+  fails the workflow on the first hiccup. Let it propagate.
 - `raise` inside an `at_least_once` / `at_most_once` callable to mean
-  "stop" — in `at_least_once` it retries indefinitely; in `at_most_once`
-  it poisons the alias. Return data, then decide in the body.
+  "stop" — `at_least_once` retries indefinitely; `at_most_once` poisons
+  the alias. Return data, decide in the body.
 - Raising an abort class whose error is not in the method's `errors=`.
 
 ## Limits
 
-- An undeclared exception from a bug retries until a fix ships or the
-  application's state is expunged; nothing gives up on its own.
+- An undeclared exception from a bug retries until a fix ships or state
+  is expunged; nothing gives up on its own.
 - Stopping the dev server does not end a workflow; it resumes on the
   next start ([`servicer-workflow-declare.md`](servicer-workflow-declare.md)).
 

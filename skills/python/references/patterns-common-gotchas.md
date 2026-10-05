@@ -34,8 +34,8 @@ section. Add or change a trap in its owning reference, not here. -->
 <!-- generated:start never-digest -->
 **`lifecycle-application-entry.md`**
 - `Application(servicers=[ChatRoomServicer()])`
-- `ChatRoomServicer().serve()` or a sync `main` with no `Application` wrapper
-- Registering a stdlib type's `servicers()` but not its `<name>_library()` (or the reverse)
+- `ChatRoomServicer().serve()` or a sync `main` with no `Application`
+- Registering a stdlib type's `servicers()` without its `<name>_library()` (or the reverse)
 
 **`lifecycle-dev-loop.md`**
 - Calling a run with no summary line a pass
@@ -55,24 +55,24 @@ section. Add or change a trap in its owning reference, not here. -->
 
 **`lifecycle-initialize-hook.md`**
 - Creating singletons in a Servicer's `__init__`
-- Expecting a bare call to run again on the next boot
-- Trusting the response of a replayed call
+- Expecting a bare call to run again next boot
+- Trusting a replayed call's response
 - Recomputing seed-time values in a migration
-- Calling an explicit constructor a second time and expecting it to do nothing
+- Calling an explicit constructor again expecting a no-op
 - A bare `.spawn()` from `initialize`
-- Person-level rules applied to seeded actions
-- Raising out of `initialize` and expecting the error to surface
+- Person-level rules on seeded actions
+- Raising out of `initialize` expecting the error to surface
 
 **`lifecycle-project-setup.md`**
 - `__init__.py` anywhere
-- Hand-editing `backend/api/<app>/v1/<app>_rbt.py` (or anything under `frontend/api/` / `web/src/api/`): every `rbt generate` overwrites it
+- Hand-editing `backend/api/<app>/v1/<app>_rbt.py` (or anything under `frontend/api/` / `web/src/api/`): `rbt generate` overwrites it
 - Committing generated code or `.rbt/`
-- A nonstandard layout (an entry point other than `backend/src/main.py`, API definitions outside `api/`): `.rbtrc`, the template and every reference assume the canonical one
-- A `[tool.rye]` table: migrate dev dependencies into `[dependency-groups].dev`, drop the duplicated `reboot`, add `name`/`version`, and replace `requirements*.lock` with `uv lock`
+- A nonstandard layout (entry point other than `backend/src/main.py`, API outside `api/`): `.rbtrc`, the template and every reference assume the canonical one
+- A `[tool.rye]` table: move dev deps into `[dependency-groups].dev`, drop the duplicated `reboot`, add `name`/`version`, replace `requirements*.lock` with `uv lock`
 
 **`lifecycle-rbtrc.md`**
 - YAML in `.rbtrc`
-- `dev run --name=<app>` in a fresh `.rbtrc`
+- `dev run --name=<app>`
 - `rbt dev expunge` without `--yes` from a script or agent shell
 - `rbt dev expunge` while `rbt dev run` is live
 - Two `rbt dev run`s over one state directory
@@ -90,20 +90,18 @@ section. Add or change a trap in its owning reference, not here. -->
 - A `--env=KEY=secret` line in `.rbtrc`
 - Relying on a bare `.env` being auto-loaded
 - `rbt cloud up` after `rbt cloud secret set`
-- One `rbt cloud secret set` per key
 - A `REBOOT_*` or `RBT_*` name
-- Assuming dev and Cloud share secrets
 
 **`lifecycle-seeding.md`**
 - Concurrent seeding transactions
-- A loop that calls a shared actor without an alias per iteration
-- Aliases built from anything that changes between runs
+- A shared actor called in a loop without a per-iteration alias
+- Aliases from values that change between runs
 - One transaction per record
-- Hundreds of creates and one shared `OrderedMap` in a single transaction
-- A big `list[Entity]` held inline on an actor the seed keeps writing
+- Hundreds of creates and one shared `OrderedMap` in one transaction
+- A big `list[Entity]` inline on an actor the seed keeps writing
 - The full production seed in every test
 - Seeding through a user context in a test
-- Debugging dev state that has lived through incompatible designs
+- Debugging dev state that lived through incompatible designs
 
 **`api-errors.md`**
 - `raise ValueError("not enough funds")` (or any non-`Aborted` exception) for a business failure
@@ -140,34 +138,34 @@ section. Add or change a trap in its owning reference, not here. -->
 
 **`servicer-authorizer.md`**
 - `return allow`
+- Omitting `authorizer()` "until later"
 - `allow()` as a "safe default"
 - Assume the caller's identity reaches an actor your servicer calls
 - Gate per-method rules by `isinstance(request, ...)` in one predicate
-- Omit `authorizer()` on an `oauth=` app "until later"
-- Treat a `PermissionDenied` from `allow_if(any=[has_verified_token, is_app_internal])` as "signed in but forbidden"
+- Read `PermissionDenied` from `allow_if(any=[has_verified_token, is_app_internal])` as "signed in but forbidden"
 
 **`servicer-constructor.md`**
 - Initial state in `__init__`
-- A constructor written as "create or re-open"
+- A "create or re-open" constructor
 - Stamping `context.auth` in a constructor reached from another servicer
 - A `Writer(factory=True)` that may one day construct another actor or write a second state
 - A field added to the constructor later, expected on existing actors
-- An id minted with `uuid4()` in the constructor that something later re-derives
+- Re-deriving a `uuid4()` id minted in the constructor
 
 **`servicer-reader.md`**
-- Mutating `self.state` in a reader: ```python async def messages(self, context: ReaderContext) -> ChatRoom.MessagesResponse: self.state.messages.append("seen") # NEVER return ChatRoom.MessagesResponse(messages=self.state.messages) ``` It does not raise
-- Calling a `Writer`, `Transaction` or constructor from a reader
-- Computing "mine" from `context.auth` in a reader that another reader calls
+- Mutating `self.state` (`self.state.messages.append("seen") # NEVER`)
+- Calling a `Writer`, `Transaction` or constructor
+- Computing "mine" from `context.auth` in a reader another reader calls
 - `self.state_id`
 
 **`servicer-transaction.md`**
-- Multi-actor work in a `Writer` (`await Account.ref(a).withdraw(...)` then `deposit(...)`)
-- An external call in the transaction body
+- Multi-actor work in a `Writer` (`withdraw(...)` then `deposit(...)` on other actors)
+- An external call in the body
 - Stash data on `self`
-- Wrap "do this to N things" in one transaction when N is more than a handful (48 showings stalled a suite; cineloop-40)
-- `schedule()` a method onto N foreign actors from one transaction
+- One transaction over N things when N is more than a handful (48 showings stalled a suite; cineloop-40)
+- `schedule()` onto N foreign actors from one transaction
 - Read an actor then write it as two calls
-- Touch shared actors in different orders in different transactions (A then B here, B then A there)
+- Touch shared actors in different orders in different transactions (A then B, B then A)
 - Cancel in-flight transaction calls (load drivers, timing-out tests, Ctrl-C)
 - Read `context.auth` in an actor called from this transaction
 
@@ -226,10 +224,10 @@ section. Add or change a trap in its owning reference, not here. -->
 - A wall-clock or random value read directly in the body
 
 **`servicer-writer.md`**
-- Calling another actor's writer, transaction or constructor: ```python self.state.balance += request.amount await Account.ref("audit-log").record(context, ...) # WRONG ``` It raises `TypeError` (see Errors)
-- `Other.ref(id).schedule(...)` from a writer
-- An external call (SMS, email, payment, LLM, network, filesystem) in a writer, **even an idempotent one**
-- Persisting a fresh `uuid4()` or clock value that something later re-derives or addresses (an actor id, an idempotency key)
+- Calling another actor's writer, transaction or constructor (`await Account.ref("audit-log").record(context, ...) # WRONG`)
+- `Other.ref(id).schedule(...)`
+- An external call (SMS, email, payment, LLM, network, filesystem), **even an idempotent one**
+- Persisting a fresh `uuid4()` or clock value that is later re-derived or addressed (an actor id, an idempotency key)
 
 **`agent-pydantic-ai.md`**
 - `anthropic.Anthropic().messages.create(...)` or a bare `pydantic_ai.Agent` in a workflow
@@ -257,7 +255,7 @@ section. Add or change a trap in its owning reference, not here. -->
 - Removing an old root key version before `status` shows `rotating == False`
 
 **`stdlib-item.md`**
-- Passing two of `value=` / `bytes=` / `any=`, or one of them plus `items=`, to `enqueue` / `publish`
+- Two of `value=` / `bytes=` / `any=`, or one plus `items=`, on `enqueue` / `publish`
 - `Item(value=..., bytes=...)` in a bulk list
 
 **`stdlib-oauth-tokens.md`**
@@ -385,33 +383,33 @@ section. Add or change a trap in its owning reference, not here. -->
 
 **`rpc-calls.md`**
 - `await account.deposit(context, DepositRequest(amount=100))`
-- A `dict` or a different model in that slot (`deposit(context, {"amount": 1})`)
-- `deposit(request)` with the context left out, or a request in the options slot
+- A `dict` or different model in that slot (`deposit(context, {"amount": 1})`)
+- `deposit(request)` without the context, or a request in the options slot
 - A writer calling another actor's writer (or its own via `self.ref()`)
-- Plain dicts for a kwarg typed `list[Model]`
+- Plain dicts for a `list[Model]` kwarg
 - Forwarding `**kwargs: dict[str, str]` into a generated method
-- Relying on the caller's identity inside the callee
-- A writer cycle: a transaction on A calls a writer on B while some transaction on B calls a writer on A
+- Relying on the caller's identity in the callee
+- A writer cycle: a transaction on A calls a writer on B while a transaction on B calls a writer on A
 
 **`rpc-constructor-calls.md`**
 - `await Account.ref(account_id).open(context)`
 - `Lab.create(context, id)` on a type with no `factory=True` method
-- Calling a constructor a second time and expecting a no-op
-- `except Seat.PlaceAborted: pass` around a constructor to tolerate "already exists"
-- Stamping the caller's identity inside a constructor reached from another servicer
+- Expecting a second constructor call to be a no-op
+- `except Seat.PlaceAborted: pass` to tolerate "already exists"
+- Stamping caller identity in a constructor reached from another servicer
 
 **`rpc-forall.md`**
-- `asyncio.gather(*[Message.ref(mid).get(context) for mid in ids])`
+- Hand-rolling `asyncio.gather(*[Message.ref(mid).get(context) for mid in ids])`
 - Expecting framework-side batching
-- A subscribed reader that `forall`s over a large or growing set, or that fans out to readers that fan out again
+- A subscribed reader that `forall`s over a large or growing set, or fans out to readers that fan out again
 - `forall` over a writer from a `WriterContext`
 
 **`rpc-refs.md`**
 - Assume a reader on a missing actor returns zero-valued state
 - `self.state_id`
 - `ChatRoomServicer().send(...)`
-- Hold one ref and use it from two contexts (e.g. `program = Program.ref("BS-CS")`, then call as the registrar's context and again as a second user's)
-- Expect `Service.create(...)` / a factory on an existing actor to run its body again
+- One ref used from two contexts (e.g. `program = Program.ref("BS-CS")`, called as the registrar and again as a second user)
+- Expect `Service.create(...)` / a factory on an existing actor to rerun its body
 - Expect the caller's identity to travel through a ref call from inside a servicer
 
 **`scheduling-basic.md`**
@@ -497,7 +495,7 @@ section. Add or change a trap in its owning reference, not here. -->
 - Write compensating undo after catching your own method's abort
 
 **`patterns-idempotency.md`**
-- A seed that opts out of the key and is not idempotent itself, e.g
+- A seed that opts out of the key and is not idempotent itself, e.g. `await bank.always().add_account(context, ...)` in `initialize`
 - Branching on the response of a replayed call
 - An alias built from a timestamp or fresh uuid
 - One alias for two different mutations
@@ -591,7 +589,7 @@ section. Add or change a trap in its owning reference, not here. -->
 - Importing hooks from anything but `<name>_rbt_react`
 
 **`web-app/references/react-client.md`**
-- `npm create vite@latest` for `web/`: it emits React 19 / TypeScript 6 tsconfigs (`erasableSyntaxOnly`) that the TypeScript 5 set here rejects
+- `npm create vite@latest` for `web/`: it emits React 19 / TypeScript 6 tsconfigs (`erasableSyntaxOnly`) the TypeScript 5 set rejects
 - `process.env.PORT` in `vite.config.ts` without `@types/node`: `tsc -b` fails
 - Leaving the port at Vite's default 5173 or dropping `strictPort`: another project's server on `[::1]:5173` silently answers `localhost` while this one answers `127.0.0.1`, and without `strictPort` Vite slides to the next port, leaving `.env` and `allowed_origins` wrong
 - Deploying with `allowed_origins=[]`: a standalone SPA is cross-origin from its backend by construction
@@ -614,7 +612,7 @@ section. Add or change a trap in its owning reference, not here. -->
 - `dev run --default=hmr`
 - `generate --react-extensions` in `.rbtrc`
 - `dev run --name=<project>`
-- Dropping `oauth=` from `main.py`: the `User` type is auto-constructed, and auto-construct servicers make the application fail at startup without it
+- Dropping `oauth=` from `main.py`: the `User` type is auto-constructed, and auto-construct servicers fail at startup without it
 - A `--watch` line for `api/`: `rbt dev run` already regenerates and restarts on API edits (`--generate-watch`, on by default at 1.6.0)
 
 **`run/references/stop-restart-reset.md`**

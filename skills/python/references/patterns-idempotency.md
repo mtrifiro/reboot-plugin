@@ -15,11 +15,10 @@ docs: ""
 
 ## When you are here
 
-A mutation may run more than once (`initialize` on every boot, your
-own retry, a test that keeps using a context after a failed call) and
-must change state once. How `initialize` keys each call, and why a
-migration needs a new alias, is in `lifecycle-initialize-hook.md`;
-clock and random values in method bodies are in
+A mutation may run more than once (`initialize` every boot, your own
+retry, a test reusing a context after a failed call) and must change
+state once. How `initialize` keys calls and why a migration needs a new
+alias: `lifecycle-initialize-hook.md`; clock and random values:
 `patterns-time-and-randomness.md`.
 
 ## Do this
@@ -32,19 +31,17 @@ async def initialize(context: InitializeContext):
     await Bank.create(context, SINGLETON_BANK_ID)
 ```
 
-The `initialize` hook runs on every boot, but each call in it has a
-persisted idempotency key: the first boot executes it, later boots get
-the stored result without running the constructor. Outside such a key,
-an explicit constructor called a second time on an existing actor
-raises `StateAlreadyConstructed` (`servicer-constructor.md`).
+Each call in `initialize` has a persisted idempotency key: the first
+boot executes it, later boots get the stored result. Outside such a
+key, an explicit constructor on an existing actor raises
+`StateAlreadyConstructed` (`servicer-constructor.md`).
 
 ### First-write setup in a type with no factory
 
 A factory-less type is constructed by its first writer call; gate
-set-once fields on `context.constructor`, which is `True` for that one
-call only. Inside an explicit `factory=True` constructor it is always
-`True` (the body never runs on an existing actor), so it gates nothing
-there (1.6.0 source).
+set-once fields on `context.constructor`, `True` for that call only.
+Inside a `factory=True` constructor it is always `True`, so it gates
+nothing there (1.6.0 source).
 
 ```python
 async def send(
@@ -57,9 +54,8 @@ async def send(
 
 ### Retrying a mutation yourself: give it a key
 
-Any hand-written retry loop, and any mutation issued after a
-cancelled or transport-failed one, carries `.idempotently("alias")` or
-an explicit `key=`:
+Any hand-written retry, and any mutation after a cancelled or
+transport-failed one, carries `.idempotently("alias")` or `key=`:
 
 ```python
 await TaskList.ref(list_id).idempotently("Add the first task").add_task(
@@ -67,64 +63,52 @@ await TaskList.ref(list_id).idempotently("Add the first task").add_task(
 )
 ```
 
-Reusing an alias tells Reboot "this is the same logical mutation":
-exactly right for a retry, exactly wrong for two different additions.
+Reusing an alias means "same logical mutation": right for a retry,
+wrong for two different additions.
 
 ### Uncertain mutations: what `IdempotencyUncertainError` means
 
-When a mutation call raises, the client can only be sure it did not
-happen if the exception is **definitively from the backend**: an
-`Aborted` carrying an error the method _declared_. Anything else (a
-transport failure, a cancellation, an undeclared or framework error
-such as an authorization denial) leaves it unable to tell, so it marks
-the context as having an **uncertain mutation**. The next mutation
-from that context _without_ an idempotency key then fails:
+A failed mutation is known not to have happened only if the exception
+is an `Aborted` carrying an error the method _declared_. Anything else
+(transport failure, cancellation, undeclared or framework error such
+as an authorization denial) marks the context **uncertain**, and its
+next mutation _without_ an idempotency key fails:
 
 > Because we don't know if the mutation from calling `X` of state
 > `'…'` failed or succeeded AND you've made some NON-IDEMPOTENT
 > mutations we can't reliably determine whether or not the call to
 > `Y` … is due to a retry which may cause an undesired mutation
 
-It refuses `Y` because an _earlier_ call left the context uncertain.
+`Y` is refused because an _earlier_ call left the context uncertain.
 
-- **Asserting a declared error is free.** `with
-  self.assertRaises(TaskList.AddTaskAborted)` on a method that declares
-  `QuotaExceededError` creates no uncertainty.
-- **Asserting a denial costs an alias.** `PermissionDenied` is not
-  declared, so the second denied mutation from one context fails as
-  above (cineloop-42, 1.4.1). Give each denied mutation its own
+- **Asserting a declared error is free:**
+  `with self.assertRaises(TaskList.AddTaskAborted)` on a method
+  declaring `QuotaExceededError` creates no uncertainty.
+- **Asserting a denial costs an alias:** `PermissionDenied` is
+  undeclared, so the second denied mutation from one context fails
+  (cineloop-42, 1.4.1). Give each its own
   `.idempotently("patron tries to reset the chain")`, or use a fresh
   context per assertion (`testing-harness.md`).
 
 ### Insertable records: UUIDv7 for time order
 
-Keys of an `OrderedMap` that should iterate in insertion order use
-UUIDv7, not UUIDv4:
-
-```python
-from uuid7 import create as uuid7
-
-await OrderedMap.ref(self.state.account_ids_map_id).insert(
-    context,
-    key=str(uuid7()),
-    bytes=account_id.encode(),
-)
-```
+`OrderedMap` keys that should iterate in insertion order use UUIDv7
+(`from uuid7 import create as uuid7`; `key=str(uuid7())`), not UUIDv4
+(`stdlib-ordered-map.md`).
 
 ## Never
 
 - A seed that opts out of the key and is not idempotent itself, e.g.
-  `await bank.always().add_account(context, ...)` in `initialize`: it
-  runs on every boot and adds the account again. Leave seed calls
-  keyed, or make the method a no-op when its work is done.
-- Branching on the response of a replayed call. A replayed idempotent
-  call returns the stored response from its first execution and the
-  body does not run, so counts, `created` flags and timestamps in it
-  describe the first run (reboot-air-141-22, 1.4.1: a startup log
-  claimed 540 new flights every boot when 180 were new). Ask a reader
-  what is new.
+  `await bank.always().add_account(context, ...)` in `initialize` — runs
+  every boot, adding the account again. Keep seeds keyed, or make the
+  method a no-op once done.
+- Branching on the response of a replayed call — it returns the first
+  run's stored response without running the body, so counts, `created`
+  flags and timestamps describe the first run (reboot-air-141-22,
+  1.4.1: a startup log claimed 540 new flights every boot when 180
+  were new). Ask a reader what is new.
 - An alias built from a timestamp or fresh uuid — a new key each time,
-  so the call is never recognised as a repeat.
+  never recognised as a repeat.
 - One alias for two different mutations — the second returns the
   first's result, or raises `is being reused _unsafely_` if it targets
   a different actor or method (`lifecycle-initialize-hook.md`).
@@ -132,12 +116,11 @@ await OrderedMap.ref(self.state.account_ids_map_id).insert(
 ## Limits
 
 - An alias must be unique within the lifetime of its context.
-- Reboot may retry transactions internally, and in dev effect
-  validation runs every writer and transaction body twice, committing
-  only the second run. Code must not depend on running exactly once:
-  the same input must produce the same state change once committed.
-- `.always()` skips key generation and uncertainty tracking entirely
-  (1.6.0 source), so it is never replayed.
+- Reboot may retry transactions internally, and dev effect validation
+  runs every writer and transaction body twice, committing only the
+  second; the same input must produce the same committed change.
+- `.always()` skips key generation and uncertainty tracking (1.6.0
+  source), so it is never replayed.
 
 ## Scales as
 

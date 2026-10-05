@@ -7,19 +7,16 @@ allowed-tools: Bash, Read, Write, Glob, Grep, Edit
 
 # mcp-ui — Build Reboot MCP UIs
 
-> **Version notices:** if `rbt` reports a version mismatch or that a
-> newer Reboot is available, the [upgrade skill](../upgrade/SKILL.md)
-> says how and when to react.
+> **Version notices:** if `rbt` reports a version mismatch or a newer
+> Reboot, follow the [upgrade skill](../upgrade/SKILL.md).
 
-**Follow [`../build/SKILL.md`](../build/SKILL.md)** — the design phase,
-state model assessment, build steps and update flow every Reboot app
-shares. This skill holds what differs for an MCP UI: the `User`-type
-front door, MCP tool exposure (`mcp=`), the `UI()` method type,
-`oauth=` provider selection, example prompts, the nested
-`frontend/mcp/<name>/` bundles, the setup wizard and MCPJam, and the
-reading list for each build step. Backend mechanics are the `python`
-skill's references, reached through the lists below. A dual-frontend app (MCP plus a browser SPA, one backend) also
-loads the [`web-app` skill](../web-app/SKILL.md); see the
+**Follow [`../build/SKILL.md`](../build/SKILL.md)** (design phase, state
+model assessment, build steps, update flow). This skill holds the MCP UI
+differences: the `User`-type front door, `mcp=`, `UI()`, `oauth=`
+provider selection, example prompts, nested `frontend/mcp/<name>/`
+bundles, the setup wizard and MCPJam, and each step's reading list.
+A dual-frontend app (MCP plus a browser SPA, one backend) also loads the
+[`web-app` skill](../web-app/SKILL.md); see the
 [`app` skill](../app/SKILL.md) for what they share.
 
 Install: `curl -fsSL https://reboot.dev/install.sh | bash`, then
@@ -28,8 +25,8 @@ restart the agent.
 ## When to Use
 
 - Building or changing a Reboot MCP UI.
-- Running an existing MCP UI needs no design or build phase: load
-  the [`run` skill](../run/SKILL.md). State survives restarts because
+- Running an existing one needs no design or build: load the
+  [`run` skill](../run/SKILL.md). State survives restarts because
   `.rbtrc` has `dev run --application-name=<name>`.
 
 ## Key Concepts (MCP UI–specific)
@@ -37,109 +34,98 @@ restart the agent.
 ### `User` and Application Types
 
 - **`User`** is the AI's front door for **creating and locating**
-  application-type instances — entry point and delegation, not a
-  container for all state. It holds identity and the **IDs** of what
-  it owns; its methods are `Transaction`s that create instances and
-  `Reader`s that locate their IDs (directly or via indexes). `User`-scoped UIs
-  (a dashboard over the whole user, a global browser) live here.
-- **Application types** (`Counter`, `Person`, `Task`) hold the entity
-  state and are constructed by a `create` Writer with `factory=True`
-  (the MCP UI spelling of a constructor; mechanics in
-  `python/references/servicer-constructor.md`). **Once an entity
-  exists, everything specific to it — Readers, Writers, UIs — lives on
-  its own `Type`**, never on `User`: the AI passes the entity ID to the
-  tool, and the generated `use<Type>()` hook resolves the same ID with
-  no arguments.
+  application-type instances, not a container for all state: it holds
+  identity and the **IDs** of what it owns; its methods are
+  `Transaction`s that create instances and `Reader`s that locate IDs
+  (directly or via indexes). `User`-scoped UIs (a dashboard over the
+  whole user, a global browser) live here.
+- **Application types** (`Counter`, `Person`, `Task`) hold entity state,
+  constructed by a `create` Writer with `factory=True`
+  (`python/references/servicer-constructor.md`). **Everything specific
+  to an existing entity — Readers, Writers, UIs — lives on its own
+  `Type`**, never on `User`: the AI passes the entity ID to the tool,
+  and the generated `use<Type>()` hook resolves it with no arguments.
 
-**UI Placement.** Ask of each UI: is the AI passing in an entity ID,
-or is the UI about the user as a whole? Per-entity UIs (`show_person`,
-`edit_task`) go on the entity's `Type` with `request=None`; putting
-one on `User` with the ID in a `request=<Model>` field is the most
-common scaffolding mistake (`references/api-method-types.md`, "UI
-Placement"). The second most common is letting `User` accrete
-unrelated concerns (auth/session, persona, background-engine config, a
-UI cache) — writers on one actor serialize, so a login contends with a
-persona edit; split each into its own `Type`
+**UI Placement.** Per-entity UIs (`show_person`, `edit_task`) go on the
+entity's `Type` with `request=None`; only UIs about the user as a whole
+go on `User`. The most common scaffolding mistake is a per-entity UI on
+`User` with the ID in a `request=<Model>` field
+(`references/api-method-types.md`, "UI Placement"). The second is `User`
+accreting unrelated concerns (auth/session, persona, background-engine
+config, a UI cache): writers on one actor serialize, so a login contends
+with a persona edit — split each into its own `Type`
 (`python/references/state-actor-decomposition.md`). The `UserServicer`
-+ `<X>.create(context)` pattern is in `references/servicer-patterns.md`.
++ `<X>.create(context)` pattern: `references/servicer-patterns.md`.
 
 ### Tool Exposure — `mcp=`
 
-Every method declares its MCP exposure explicitly:
+Every method declares its exposure explicitly, all in the API file (no
+`@mcp.tool()` decorators):
 
-- **`mcp=Tool()`** — an AI-callable tool. Required on every method,
-  `User` methods included, that the AI should call.
-- **`mcp=None`** — hidden from the AI: human-only actions, or to cut
-  context bloat.
-- **`Tool(name="...", title="...")`** — override the tool name or add
-  a human-readable title — its only fields in 1.6.0. Tools carry no
-  MCP annotations (`readOnlyHint`, …), so a host such as Claude asks
+- **`mcp=Tool()`** — AI-callable; required on every method the AI
+  should call, `User` methods included.
+- **`mcp=None`** — hidden from the AI (human-only actions, or to cut
+  context bloat).
+- **`Tool(name="...", title="...")`** — its only fields in 1.6.0. No
+  MCP annotations (`readOnlyHint`, …), so hosts such as Claude ask
   permission before every call, `Reader`s included; "Always allow" is
-  per tool and there is no app-side workaround.
-
-All MCP surface is declared in the API file — no `@mcp.tool()`
-decorators.
+  per tool, with no app-side workaround.
 
 ### `UI()` and the Method Types
 
-`Reader` / `Writer` / `Transaction` / `Workflow` behave exactly as
-`python/references/api-methods.md` describes. The MCP UI adds:
-
-- **`UI()`** — opens a React UI inside the MCP client. Takes
-  `request=` (a config `Model` or `None`), `path=` (web dir relative to
-  the project root), `title=`, `description=`. **No servicer
-  implementation** — the React app _is_ the implementation. When
-  `request=` is a `Model`, its fields become props on the component.
+`Reader` / `Writer` / `Transaction` / `Workflow` are as in
+`python/references/api-methods.md`. MCP UIs add **`UI()`**: opens a
+React UI in the MCP client. Takes `request=` (a config `Model` or
+`None`; a `Model`'s fields become component props), `path=` (web dir
+relative to the project root), `title=`, `description=`. **No servicer
+implementation** — the React app _is_ the implementation.
 
 ### Auth — `oauth=` Provider Selection
 
 Providers, rules before the first test, the `User` default rule and
-`allowed_origins` are build Step 4. Specific to MCP UIs:
+`allowed_origins` are build Step 4. MCP-specific:
 
-- In an MCP app the `oauth=` principal **is** the user, and there is
-  no middle ground: either every user signs in through this OAuth
-  flow, or the app has no per-user auth at all.
-- Provider details, the `/__/oauth/callback` URL and switching costs:
-  `references/auth-oauth-providers.md`; no shipped provider fits
-  (self-hosted Keycloak, internal SSO): `references/auth-custom-oauth-provider.md`.
-- **Acting as the user at the provider.** `Google` / `GitHub` /
-  `Auth0` can request extra `scopes=[...]` and capture the provider's
-  own tokens (`store_tokens=True` — with `Auth0`, an Auth0 token, not
-  the upstream Google one). They are stored encrypted, read back with
-  `OAuthTokenManager.ref(GOOGLE).fetch(context, user_id=context.state_id)`,
-  and the outbound call goes inside a `Workflow`. Shortcut:
+- The `oauth=` principal **is** the user, with no middle ground: every
+  user signs in through this OAuth flow, or the app has no per-user auth.
+- Providers, the `/__/oauth/callback` URL, switching costs:
+  `references/auth-oauth-providers.md`; none fits (self-hosted
+  Keycloak, internal SSO): `references/auth-custom-oauth-provider.md`.
+- **Acting as the user at the provider:** `Google` / `GitHub` / `Auth0`
+  accept extra `scopes=[...]` and `store_tokens=True` (with `Auth0`, an
+  Auth0 token, not the upstream Google one). Tokens are stored
+  encrypted, read with
+  `OAuthTokenManager.ref(GOOGLE).fetch(context, user_id=context.state_id)`;
+  make the outbound call inside a `Workflow`. Shortcut:
   `references/auth-store-tokens.md`; full recipe:
   `python/references/auth-external-api-calls.md`.
 
 ### Example Prompts (Root-Page Wizard)
 
-Every MCP UI ships **example prompts** — the named chat scenarios the
-root-page wizard offers so a fresh user has something to click the
-moment the app boots. Not optional.
+Every MCP UI ships **example prompts** (required): named chat scenarios
+the root-page wizard offers a fresh user.
 
-`ExamplePrompt(title=..., prompts=[...])` from `reboot.application`:
-`title` is a short label and the identity key (same title replaces an
-entry); `prompts` is an **ordered sequence** of messages sent one per
-turn, walking a real flow through the tools (create → act → view).
-Write ~3 covering the main user stories, phrased as a real user talks.
-**Make them show the UI**: the `UI()` components are why this is an
-MCP **App**, so each example ends on (or passes through) a natural
-"show me / open / view …" turn that makes the AI pick a `UI()` tool —
-like the counter example's "…and show me the counter" — and every
-`UI()` method is reached by at least one example. They live in
-`backend/src/example_prompts.py`, passed to
-`Application(example_prompts=...)`; shapes and a worked set in
-`references/project-shell.md` (`mcp-ui-counter` is canonical).
+- `ExamplePrompt(title=..., prompts=[...])` from `reboot.application`:
+  `title` is a short label and identity key (same title replaces an
+  entry); `prompts` is an **ordered sequence**, one message per turn,
+  walking a real flow (create → act → view).
+- Write ~3 covering the main user stories, phrased as a real user talks.
+- **Show the UI**: each ends on (or passes through) a "show me / open /
+  view …" turn that makes the AI pick a `UI()` tool (the counter's
+  "…and show me the counter"); every `UI()` method is reached by at
+  least one.
+- Put them in `backend/src/example_prompts.py`, passed to
+  `Application(example_prompts=...)`; shapes and a worked set in
+  `references/project-shell.md` (`mcp-ui-counter` is canonical).
 
 ### Setup Wizard and MCPJam
 
-The handoff is the **setup wizard at the backend root
+Hand off the **setup wizard at the backend root
 (`http://localhost:9991`)**, not the `/mcp` URL: it connects an MCP
-client (Claude, ChatGPT, MCPJam, …) and completes OAuth. Surface it and
-open it once at first startup, as the `run` skill directs. Do **not**
-start the MCPJam inspector yourself — it launches on demand from the
-wizard. Bare `rbt dev run` / `npm run dev` print only the
-API/MCP/inspect URLs and drop the wizard hint.
+client (Claude, ChatGPT, MCPJam, …) and completes OAuth. Surface and open
+it once at first startup, as the `run` skill directs. Never start the
+MCPJam inspector yourself — the wizard launches it on demand. Bare
+`rbt dev run` / `npm run dev` print only the API/MCP/inspect URLs, not
+the wizard.
 
 ## Project Structure
 
@@ -190,25 +176,20 @@ flattening that output breaks discovery.
 
 ## Which References to Read, and When
 
-Each group below is what to read at one step of the build flow in
-[`../build/SKILL.md`](../build/SKILL.md). The backend mechanics live in
-the `python` skill's references; the MCP-UI-specific shape on top of
-them lives in this skill's own `references/`.
-
-Read each at its step, once, one per tool call; each reference
-appears in exactly one group. Pattern references (`patterns-*.md`)
-are off the build path; read one when its situation comes up
-(catalog in the `python` skill).
+One group per step of [`../build/SKILL.md`](../build/SKILL.md): backend
+mechanics from the `python` skill's references, the MCP UI shape from
+this skill's `references/`. Read each at its step, once, one per tool
+call; each appears in exactly one group. Pattern references
+(`patterns-*.md`) are off the build path; read one when its situation
+comes up (catalog in the `python` skill).
 
 <!-- The lists below are generated from each reference's frontmatter
 by tools/gen-index.py. Edit the frontmatter, not the lists. -->
 
-> **Never read `web-app/references/*` for an MCP UI.** They cover
-> the standalone browser SPA — a top-level `web/` Vite shell, the
-> `VITE_REBOOT_URL` backend URL, `<RebootClientProvider>`,
-> browser sign-in buttons — none of which apply to the nested
-> `frontend/mcp/<name>/` bundles an MCP host loads. The MCP UI
-> equivalents are
+> **Never read `web-app/references/*` for an MCP UI.** They cover the
+> standalone SPA (top-level `web/` Vite shell, `VITE_REBOOT_URL`,
+> `<RebootClientProvider>`, browser sign-in buttons), not the nested
+> `frontend/mcp/<name>/` bundles an MCP host loads. Use
 > [`references/react-scaffolding.md`](references/react-scaffolding.md)
 > and [`references/react-app-tsx.md`](references/react-app-tsx.md).
 
@@ -303,11 +284,10 @@ servicer before the first test):
 - `python/references/testing-harness.md` — only when writing custom steps.
 <!-- generated:end -->
 
-The order of work around the feature files (agree in English, tag
-`@wip`, iterate on scenarios) is the [`feature` skill](../feature/SKILL.md).
+Order of work around feature files (agree in English, tag `@wip`,
+iterate on scenarios): the [`feature` skill](../feature/SKILL.md).
 
 **Before running the app:** the [`run` skill](../run/SKILL.md).
 
-If you find yourself grepping the framework's installed source or a
-generated file to answer a question, stop: build's "Never Read
-Generated or Installed Source in the Main Thread" is for you.
+Grepping installed framework source or a generated file? Stop: see
+build's "Never Read Generated or Installed Source in the Main Thread".

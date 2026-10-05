@@ -16,11 +16,10 @@ docs: ""
 
 ## When you are here
 
-You have a Reboot `Agent` (`agent-pydantic-ai.md`) and the model needs
-to read or change application state during a run. Register tools as on
-a `pydantic_ai.Agent`, except that an `@agent.tool` function receives
-the durable `WorkflowContext` as its first parameter. That context is
-how a tool reaches Reboot actors.
+The model needs to read or change application state during a Reboot
+`Agent` run (`agent-pydantic-ai.md`). Register tools as on
+`pydantic_ai.Agent`, except an `@agent.tool` function takes the durable
+`WorkflowContext` first; that is how it reaches Reboot actors.
 
 ## Do this
 
@@ -39,8 +38,6 @@ async def get_page(
     page_id: str,
 ) -> dict:
     """Read a page's title and content."""
-    # The `WorkflowContext` reaches Reboot actors through the same
-    # durable envelope as the rest of the workflow.
     state = await Page.ref(page_id).get(context)
     return {"title": state.title, "content": state.content}
 
@@ -51,35 +48,22 @@ async def add(x: int, y: int) -> int:
     return x + y
 ```
 
-Both decorators accept the parametrized form (`@agent.tool(retries=2)`).
-Agent deps come from `run.deps`.
-
-Tools can also be passed at construction: `tools=` takes plain tool
-functions, `toolsets=` takes pydantic_ai toolsets (including
-`MCPServer` instances):
-
-```python
-agent = Agent(
-    "anthropic:claude-sonnet-4-6",
-    name="librarian",
-    tools=[some_tool],
-    toolsets=[some_function_toolset],
-)
-```
-
-Tools added with `@agent.tool` / `@agent.tool_plain` after
-`Agent.wrap(...)` are picked up too; no need to register them on the
-wrapped agent.
+- Agent deps come from `run.deps`. Both decorators accept the
+  parametrized form (`@agent.tool(retries=2)`).
+- At construction, `tools=` takes plain tool functions and `toolsets=`
+  pydantic_ai toolsets (including `MCPServer` instances):
+  `Agent("anthropic:claude-sonnet-4-6", name="librarian", tools=[some_tool], toolsets=[some_function_toolset])`.
+- Tools decorated after `Agent.wrap(...)` are picked up too.
 
 ## Never
 
 - `async def get_page(run: RunContext[Deps], page_id: str)` under
-  `@agent.tool` — the raw pydantic_ai signature has no
-  `WorkflowContext`, so the tool cannot call `Page.ref(...)`. Put
-  `context: WorkflowContext` first, `RunContext` second.
+  `@agent.tool` — no `WorkflowContext`, so it cannot call
+  `Page.ref(...)`. Put `context: WorkflowContext` first, `RunContext`
+  second.
 - A tool body that is unsafe to run twice (charges a card, sends an
-  email, appends without a key) — in development and the test harness
-  it does run twice; see Limits.
+  email, appends without a key) — in development and tests it does run
+  twice (see Limits).
 - Per-run `toolsets=` built from local closures — they cannot pickle
   and raise `UserError`; define tool functions at module scope.
 - Returning a value that cannot be pickled — the memoized result is
@@ -88,20 +72,18 @@ wrapped agent.
 ## Limits
 
 - Every tool call runs inside `at_least_once` (alias
-  `"Tool call for step #<n>"`), so on a workflow replay a completed
-  tool returns its cached result without running the body.
-- That covers replay, not effect validation. Unlike the agent's model
-  calls, tool calls keep effect validation on (1.6.0 source): under
-  `rbt dev run` and the test harness the body runs twice and the second
-  result is memoized. The tool has no per-call opt-out; keep it
-  idempotent, or make the expensive or side-effecting work its own
-  workflow step outside the tool. The effect-validation rule itself is
-  in `servicer-workflow-external.md`.
+  `"Tool call for step #<n>"`): on replay a completed tool returns its
+  cached result.
+- Unlike model calls, tool calls keep effect validation on (1.6.0
+  source): under `rbt dev run` and tests the body runs twice and the
+  second result is memoized, with no per-call opt-out. Keep tools
+  idempotent, or move expensive/side-effecting work into its own
+  workflow step (rule: `servicer-workflow-external.md`).
 
 ## Scales as
 
-- Not measured. Each tool call is one memoized step; its first
-  execution costs whatever the body does (twice in development).
+- Not measured. Each tool call is one memoized step costing whatever
+  its body does (twice in development).
 
 ## Errors you will see
 

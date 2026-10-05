@@ -15,15 +15,15 @@ docs: ""
 
 ## When you are here
 
-You are calling a method that can abort, from a servicer, a workflow
-or a test, and deciding what to catch, what to let through, and how a
-typed error from a nested call reaches your own caller. Declaring an
-error and raising it is in [`api-errors.md`](api-errors.md).
+Calling a method that can abort (servicer, workflow, test) and
+deciding what to catch, what to let through, and how a nested typed
+error reaches your caller. Declaring and raising errors:
+[`api-errors.md`](api-errors.md).
 
 ## Do this
 
-Catch the method's `<Method>Aborted`, branch on the type of `.error`,
-and re-raise everything you did not expect:
+Catch `<Method>Aborted`, branch on the type of `.error`, re-raise the
+rest:
 
 ```python
 from bank.v1.account import OverdraftError
@@ -38,27 +38,24 @@ except Account.WithdrawAborted as aborted:
     ...
 ```
 
-`.error` is typed as the union of the method's declared error `Model`s
-**plus** every gRPC error (`DeadlineExceeded`, `Unavailable`,
-`Unknown`, …) and every Reboot error (`StateNotConstructed`,
-`StateAlreadyConstructed`, …) (1.6.0 source,
-`reboot/aio/aborted.py`). The `isinstance` check is what makes the
-handler mean "the error I declared".
+`.error` is the union of the method's declared error `Model`s **plus**
+every gRPC error (`DeadlineExceeded`, `Unavailable`, `Unknown`, …) and
+every Reboot error (`StateNotConstructed`, `StateAlreadyConstructed`,
+…) (1.6.0 source, `reboot/aio/aborted.py`), so the `isinstance` check
+is required.
 
-Typed errors are the contract with the UI: `SeatUnavailableError(seat_ids=[...])`
-lets the interface say "F-11 and F-12 were just taken" and repaint
-those seats, where a generic exception collapses every case into
-"something went wrong" (observed at 1.4.1).
+Typed errors are the UI contract: `SeatUnavailableError(seat_ids=[...])`
+lets it say "F-11 and F-12 were just taken" and repaint them; a generic
+exception collapses to "something went wrong" (observed at 1.4.1).
 
 ### Carrying a typed error across an actor boundary
 
 If `User.add_seats` calls `Showing.hold_seats` and both declare the
 **same** `SeatUnavailableError` class, an uncaught inner abort is
 re-raised as `User.AddSeatsAborted` with the payload intact, logging
-`Propagating unhandled but declared error` (1.6.0 template). If the
-outer method does not declare that exact class, the caller gets
-`Unknown`. At 1.4.1 the payload arrived empty; where you must be sure
-(or the classes differ), catch and re-raise explicitly:
+`Propagating unhandled but declared error` (1.6.0 template); otherwise
+the caller gets `Unknown`. At 1.4.1 the payload arrived empty. To be
+sure, or when the classes differ, re-raise explicitly:
 
 ```python
 try:
@@ -74,26 +71,24 @@ except Showing.HoldSeatsAborted as aborted:
 ## Never
 
 - `except Seat.PlaceAborted: pass` for "already exists" tolerance — a
-  timeout under load arrives as `PlaceAborted` too, and is silently
-  swallowed. Check `isinstance(aborted.error, StateAlreadyConstructed)`
-  and re-raise anything else.
+  timeout under load is also `PlaceAborted` and gets swallowed; check
+  `isinstance(aborted.error, StateAlreadyConstructed)`, re-raise the rest.
 - `except Exception:` around a Reboot call — swallows infrastructure
-  failures and retries. Catch the typed `<Method>Aborted`.
-- Catch only to log and continue — if the caller cannot act on it, let
-  it propagate; the framework logs the typed payload.
+  failures and retries; catch the typed `<Method>Aborted`.
+- Catch only to log and continue — let it propagate; the framework logs
+  the typed payload.
 - Write compensating undo after catching your own method's abort — a
-  raised `<Method>Aborted` already rolled back that method's writes
+  raised `<Method>Aborted` already rolled back its writes
   (`api-errors.md`).
 
 ## Limits
 
-- An undeclared exception (a `ValueError`, a `KeyError`) inside a
-  method reaches every caller as `Unknown`; the original message is
-  only in the server log (1.6.0 template).
+- An undeclared exception (`ValueError`, `KeyError`) reaches callers as
+  `Unknown`; the message is only in the server log (1.6.0 template).
 - Retryable aborts (gRPC `UNAVAILABLE`) propagate as-is so the client
-  can retry transparently (1.6.0 template).
-- Automatic propagation needs the outer method to declare the exact
-  same class (a subclass or per-package copy does not count).
+  retries transparently (1.6.0 template).
+- Automatic propagation needs the exact same class on the outer method
+  (not a subclass or per-package copy).
 
 ## Scales as
 

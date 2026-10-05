@@ -15,10 +15,10 @@ docs: ""
 
 ## When you are here
 
-You are filling a `Methods(...)` block and choosing, per method, the
-factory, its options, and therefore the servicer method you must
-write. Model and field rules are in [`api-pydantic.md`](api-pydantic.md);
-how each kind is implemented is in the matching `servicer-*.md`.
+You are filling a `Methods(...)` block: per method, the factory, its
+options, and the servicer method it obliges. Model/field rules:
+[`api-pydantic.md`](api-pydantic.md); implementation: the matching
+`servicer-*.md`.
 
 ## Do this
 
@@ -32,38 +32,24 @@ how each kind is implemented is in the matching `servicer-*.md`.
 | `Workflow(...)` | `WorkflowContext` | Durable, long-running, restartable work, or any external call. A `@classmethod`; no `self.state`. Router: `servicer-workflow.md`. |
 
 Every factory takes `request=`, `response=` (a `Model` or `None`),
-optional `errors=[...]` (typed errors; raising them is in
-[`api-errors.md`](api-errors.md)), optional `description=`, and a
-**required** `mcp=` (`None`, or `Tool()` to expose it as an MCP tool).
+optional `errors=[...]` ([`api-errors.md`](api-errors.md)), optional
+`description=`, and a **required** `mcp=` (`None`, or `Tool()` to expose
+an MCP tool).
 
-A `Transaction` must also declare how it holds the lock on its own
-state: `mode=Exclusive()` takes it exclusive from the start, so
-concurrent callers of the same state queue: the choice when it writes
-its own state, which is most transactions, and when in doubt.
-`mode=Shared()` takes it shared and upgrades only if the body writes
-its own state, so callers proceed concurrently: the choice for a
-transaction that mostly reads its own state while writing others, such
-as the root of a tree of states. Both import from `reboot.api`.
+`Transaction` `mode=` (both from `reboot.api`) sets how it locks its own state:
+- `mode=Exclusive()` — exclusive from the start; concurrent callers
+  queue. Use when it writes its own state (most transactions) or when
+  in doubt.
+- `mode=Shared()` — shared, upgraded only if the body writes its own
+  state; callers proceed concurrently. Use when it mostly reads its own
+  state while writing others (e.g. the root of a tree of states).
 
 From [`reboot-bank-pydantic`](https://github.com/reboot-dev/reboot-bank-pydantic):
 
 ```python
-from reboot.api import (
-    API, Exclusive, Field, Methods, Model, Reader, Shared, Transaction, Type,
-    Writer,
-)
+from reboot.api import Methods, Shared, Transaction, Writer
 
 AccountMethods = Methods(
-    balance=Reader(
-        request=None, response=BalanceResponse,
-        description="The funds currently available to withdraw.",
-        mcp=None,
-    ),
-    deposit=Writer(
-        request=DepositRequest, response=None,
-        description="Add funds. Any amount is accepted.",
-        mcp=None,
-    ),
     withdraw=Writer(
         request=WithdrawRequest, response=None,
         errors=[OverdraftError],
@@ -81,8 +67,7 @@ AccountMethods = Methods(
 
 BankMethods = Methods(
     transfer=Transaction(
-        # The bank only coordinates the two accounts and never writes
-        # its own state, so transfers proceed through it concurrently.
+        # Never writes the bank's own state, so transfers run concurrently.
         mode=Shared(),
         request=TransferRequest, response=TransferResponse,
         description="Move funds between two accounts, both sides "
@@ -92,27 +77,22 @@ BankMethods = Methods(
 )
 ```
 
-`description=` is shown by the dev dashboard and used as the MCP tool
-description for `mcp=Tool()` methods. Write what a caller cannot
-derive from the signature: the precondition, the side effect, the
-unit, which error it raises and when. Get it right before state
-persists: a method's `description=` is part of its frozen options, and
-rewording it later refuses boot
-([`api-schema-evolution.md`](api-schema-evolution.md)).
-
-`factory=True` on a `Writer` or `Transaction` makes it the actor's
-explicit creation path; the servicer branches on `context.constructor`
-([`servicer-constructor.md`](servicer-constructor.md)). A `Type`
-without one is constructed implicitly on first write. To start a
-workflow when an actor is created, schedule it from the factory's
-body.
+- `description=` shows in the dev dashboard and is the MCP tool
+  description for `mcp=Tool()`. Write what the signature can't say:
+  precondition, side effect, unit, which error and when. Get it right
+  before state persists: it is a frozen option, and rewording it later
+  refuses boot ([`api-schema-evolution.md`](api-schema-evolution.md)).
+- `factory=True` on a `Writer` or `Transaction` makes it the explicit
+  creation path; the servicer branches on `context.constructor`
+  ([`servicer-constructor.md`](servicer-constructor.md)). Without one,
+  a `Type` is constructed implicitly on first write. To start a
+  workflow on creation, schedule it from the factory's body.
 
 ### The Servicer Signature Each Declaration Obliges
 
-`rbt generate` turns every entry into one method on
-`<Type>.Servicer`, and yours must match it. This is the whole
-contract; there is nothing more to learn from the generated
-`*_rbt.py`, which runs to tens of thousands of lines:
+`rbt generate` turns every entry into one method on `<Type>.Servicer`;
+yours must match. This is the whole contract — don't read the generated
+`*_rbt.py` (tens of thousands of lines):
 
 ```python
 class AnyNameServicer(<Type>.Servicer):    # subclass this alias
@@ -126,65 +106,44 @@ class AnyNameServicer(<Type>.Servicer):    # subclass this alias
 ```
 
 `<Entry>` is the PascalCase entry name (`add_task` on `TaskList` gives
-`TaskList.AddTaskRequest`), never the class you passed; the rule is in
-`api-pydantic.md`. So
+`TaskList.AddTaskRequest`), never the class you passed (rule in
+`api-pydantic.md`):
 
 ```python
-add_task=Transaction(
-    mode=Exclusive(),
-    request=AddTaskRequest, response=AddTaskResponse,
-    description="Append one task, returning the id it was given.",
-    mcp=None,
-),
-lists=Reader(
-    request=None, response=ListsResponse,
-    description="Every list this user owns.",
-    mcp=None,
-),
-ensure=Transaction(
-    mode=Exclusive(),
-    request=None, response=None,
-    description="Create the user's default list if they have none.",
-    mcp=None,
-),
-```
-
-obliges exactly:
-
-```python
+# add_task=Transaction(mode=Exclusive(), request=AddTaskRequest, response=AddTaskResponse, mcp=None)
 async def add_task(
     self,
     context: TransactionContext,
     request: TaskList.AddTaskRequest,
 ) -> TaskList.AddTaskResponse: ...
 
+# lists=Reader(request=None, response=ListsResponse, mcp=None)
 async def lists(self, context: ReaderContext) -> User.ListsResponse: ...
 
+# ensure=Transaction(mode=Exclusive(), request=None, response=None, mcp=None)
 async def ensure(self, context: TransactionContext) -> None: ...
 ```
 
-Two shapes in the generated file look like contradictions; neither is
-what you write. A **PascalCase twin** of every method (`AddTask` next
-to `add_task`) delegates to the snake_case one for older servicers:
-implement the snake_case method. A **`state:` parameter**
-(`(self, context, state, request)`) belongs to
-`<Type>.singleton.Servicer`, which the framework uses for its own
-singletons; applications subclass `<Type>.Servicer` and use
-`self.state`.
+Two generated shapes you do not write:
+- A **PascalCase twin** (`AddTask` next to `add_task`) delegates to the
+  snake_case one for older servicers; implement the snake_case method.
+- A **`state:` parameter** (`(self, context, state, request)`) belongs
+  to `<Type>.singleton.Servicer`, for framework singletons; subclass
+  `<Type>.Servicer` and use `self.state`.
 
 ## Never
 
 - `balance=BalanceResponse` (a bare `Model`) in `Methods(...)` — every
   entry must be a factory call.
-- Omit `mcp=` — required on all four factories, `Workflow` included,
-  though workflows are rarely tools. Use `mcp=None`.
+- Omit `mcp=` — required on all four factories, `Workflow` included.
+  Use `mcp=None`.
 - `factory=True` on a `Reader` or `Workflow` — refused by
   `rbt generate`. Make the factory a `Writer`/`Transaction` and
   schedule the workflow from it.
-- Choose `Writer` for a method that must change another actor — a
-  writer mutates only its own actor (`servicer-writer.md`). And two
-  types whose transactions write each other deadlock under concurrent
-  requests; see `state-actor-decomposition.md` § Never.
+- Choose `Writer` for a method that must change another actor — a writer
+  mutates only its own actor (`servicer-writer.md`). Two types whose
+  transactions write each other deadlock under concurrency; see
+  `state-actor-decomposition.md` § Never.
 - A sign-up method that creates `User`, an id passed to `useUser()`
   in the browser, or constructing `User` in tests — see Limits.
 - `mcp=Resource()` — not supported; use `Tool()`.
@@ -194,17 +153,16 @@ singletons; applications subclass `<Type>.Servicer` and use
 - Some entry names are reserved by the ref API and refused by codegen;
   the list is in [`rpc-refs.md`](rpc-refs.md) § Limits.
 - A state type named exactly `User` is auto-constructed: with
-  `Application(oauth=...)`, Reboot constructs one `User` per signed-in
-  identity on first access, with state ID `context.auth.user_id`.
-  Codegen injects `create` (`Transaction(factory=True)`) and
-  `set_claims`; both names are reserved on `User` — override them in
-  the servicer for custom initialization, don't declare them. Every
-  `User` state field needs a default or `Optional`. In tests,
-  `rbt.create_external_context_as(name, user_id)` is enough for
-  `User.ref(user_id)` to resolve. An app with a `User` type and no
-  `oauth=` fails to start. Other types are constructed explicitly.
-- The context type follows the factory (table above); annotate the
-  one it names.
+  `Application(oauth=...)`, one `User` per signed-in identity on first
+  access, state ID `context.auth.user_id`. A `User` type without
+  `oauth=` fails to start.
+  - Codegen injects `create` (`Transaction(factory=True)`) and
+    `set_claims`; both are reserved — override them in the servicer,
+    don't declare them.
+  - Every `User` state field needs a default or `Optional`.
+  - In tests, `rbt.create_external_context_as(name, user_id)` suffices
+    for `User.ref(user_id)` to resolve.
+  - Other types are constructed explicitly.
 
 ## Scales as
 

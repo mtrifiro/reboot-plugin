@@ -16,49 +16,37 @@ docs: ""
 
 ## When you are here
 
-You hold, or are about to capture, a user's OAuth access/refresh tokens
-for an external service (Google, GitHub, Slack, …) and need to store and
-read them. This file is the `OAuthTokenManager` surface. The end-to-end
-flow — `store_tokens=True`, your own authorize/callback endpoints, the
-in-`Workflow` call, refresh, erasure — is `auth-external-api-calls.md`.
-Non-OAuth secrets (a user-pasted API key, PII) use `Ciphertext` directly
-(`stdlib-ciphertext.md`).
+Storing or reading a user's OAuth access/refresh tokens for an external
+service (Google, GitHub, Slack, …). This is the `OAuthTokenManager`
+surface; the end-to-end flow (`store_tokens=True`, your own
+authorize/callback, the in-`Workflow` call, refresh, erasure) is
+`auth-external-api-calls.md`. Non-OAuth secrets (pasted API key, PII):
+`Ciphertext` (`stdlib-ciphertext.md`).
 
 ## Do this
 
-`OAuthTokenManager` holds the tokens for **one** external service, keyed
-by `user_id`. Address it by a state ID naming the service (the `GOOGLE`
-/ `GITHUB` constants, or any string, e.g. `"slack.com"`). Each manager
-encrypts under its own `KeyManager`, and each user's tokens under a
-crypto-shred scope of their `user_id`, so one user's tokens can be erased
-without touching anyone else's.
+One `OAuthTokenManager` per external service, keyed by `user_id`; its state
+ID names the service (`GOOGLE` / `GITHUB` constants, or any string, e.g.
+`"slack.com"`). Each manager encrypts under its own `KeyManager`, each
+user's tokens under a crypto-shred scope of their `user_id`, so one user
+can be erased alone.
 
-Mount all three libraries — the manager builds on `Ciphertext`, which
-builds on `OrderedMap`:
+Mount all three libraries (manager → `Ciphertext` → `OrderedMap`) and
+import the manager:
 
 ```python
-from reboot.std.oauth.v1.oauth import oauth_library
+from reboot.std.oauth.v1.oauth import oauth_library, GOOGLE, GITHUB
 from reboot.std.ciphertext.v1.ciphertext import ciphertext_library
 from reboot.std.collections.ordered_map.v1.ordered_map import (
     ordered_map_library,
 )
-
-
-async def main():
-    await Application(
-        servicers=[...],
-        libraries=[
-            oauth_library(), ciphertext_library(), ordered_map_library(),
-        ],
-    ).run()
-```
-
-Imports for the manager:
-
-```python
 from rbt.std.oauth.v1.oauth_rbt import OAuthTokenManager, OAuthTokens
 # also: from reboot.aio.auth import OAuthTokenManager, OAuthTokens
-from reboot.std.oauth.v1.oauth import GOOGLE, GITHUB
+
+Application(
+    servicers=[...],
+    libraries=[oauth_library(), ciphertext_library(), ordered_map_library()],
+)
 ```
 
 `OAuthTokens`:
@@ -80,9 +68,9 @@ if response.found:
     access_token = response.tokens.access_token
 ```
 
-**Store** (transaction) — only when you capture tokens yourself, from a
-service other than the `oauth=` sign-in provider (the only path in a
-web app without `oauth=`):
+**Store** (transaction) — only when you capture tokens yourself from a
+service other than the `oauth=` sign-in provider (the only path in a web
+app without `oauth=`):
 
 ```python
 await OAuthTokenManager.ref("slack.com").store(
@@ -96,22 +84,21 @@ await OAuthTokenManager.ref("slack.com").store(
 )
 ```
 
-For the identity provider's **own** tokens under `Application(oauth=...)`,
-don't call `store`: `store_tokens=True` on the provider makes the OAuth
-server capture and store them at the code exchange; your code only
-`fetch`es (`auth-external-api-calls.md`, Path A).
+For the sign-in provider's **own** tokens under `Application(oauth=...)`,
+don't `store`: `store_tokens=True` captures them at the code exchange; you
+only `fetch` (`auth-external-api-calls.md`, Path A).
 
 ## Never
 
 - Tokens in a `str` state field — plaintext at rest.
 - Hand-rolled `Ciphertext` for provider OAuth tokens — the manager
-  already does the encryption, `user_id` index, and per-user shred scope.
+  already encrypts, indexes by `user_id`, and shreds per user.
 - A user-pasted API key in `OAuthTokenManager` — that is `Ciphertext`
   (`auth-external-api-calls.md`, Path C).
 - Leaving out any of `oauth_library()`, `ciphertext_library()`,
   `ordered_map_library()`.
-- Calling `store` / `fetch` from an untrusted, external context — the
-  methods are meant to be app-internal only.
+- Calling `store` / `fetch` from an untrusted, external context — they
+  are app-internal only.
 
 ## Limits
 
@@ -125,15 +112,14 @@ server capture and store them at the code exchange; your code only
   `"github.com"` (`GitHub`); `Auth0` uses its tenant domain.
 - `store` replaces the user's tokens wholesale, but carries a prior
   `refresh_token` forward when the new `tokens` leaves it unset.
-- You can't read and write the same manager in one transaction; to
-  merge, `fetch` in a separate call first.
+- No read and write of the same manager in one transaction; to merge,
+  `fetch` in a separate call first.
 - `fetch` returns `found=False` when nothing is stored for the user or
-  their scope was shredded; before anything was ever stored for the
-  service, it aborts (`FetchAborted`, `StateNotConstructed`) — the
-  manager is constructed by the first `store`.
+  their scope was shredded; before the first `store` (which constructs the
+  manager) it aborts (`FetchAborted`, `StateNotConstructed`).
 - Reboot does not refresh expired access tokens; check `expires_at`.
-- `REBOOT_CRYPTO_ROOT_KEYS` backs the encryption; it is auto-provisioned
-  under `rbt dev run` and on Reboot Cloud.
+- `REBOOT_CRYPTO_ROOT_KEYS` backs the encryption; auto-provisioned under
+  `rbt dev run` and on Reboot Cloud.
 
 ## Scales as
 

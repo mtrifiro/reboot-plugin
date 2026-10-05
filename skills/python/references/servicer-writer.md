@@ -15,11 +15,10 @@ docs: "https://docs.reboot.dev/develop/side_effects"
 
 ## When you are here
 
-You are implementing a method declared `Writer(...)` in the API file:
-it receives a `WriterContext` and is the place to mutate `self.state`
-for **one** actor. Writers on one actor are serialized; writers on
-different actors run independently. Cross-actor mutation is
-`servicer-transaction.md`; the exact signature codegen requires is in
+Implementing a method declared `Writer(...)`: it takes a
+`WriterContext` and mutates `self.state` for **one** actor. Writers on
+one actor are serialized; on different actors, independent.
+Cross-actor mutation: `servicer-transaction.md`; exact signature:
 `api-methods.md`. The public docs allow an idempotent side effect in
 any method run as a task; this skill deliberately tightens that: an
 external call goes in a `Workflow`, never in a writer.
@@ -35,90 +34,64 @@ from reboot.aio.contexts import WriterContext
 
 class AccountServicer(Account.Servicer):
 
-    async def deposit(
-        self,
-        context: WriterContext,
-        request: Account.DepositRequest,
-    ) -> None:
-        self.state.balance += request.amount
+    async def withdraw(
+        self, context: WriterContext, request: Account.WithdrawRequest,
+    ) -> None:  # response=None: no return value (api-methods.md)
+        self.state.balance -= request.amount
+        if self.state.balance < 0:
+            # Raising a declared error rolls back the decrement.
+            raise Account.WithdrawAborted(
+                OverdraftError(amount=-self.state.balance)
+            )
 ```
 
-`self.state` is the typed state `Model`; assignments and collection
-mutations (`self.state.messages.append(request.message)`) persist when
-the writer commits.
-
-**What a writer may do:** read and mutate its own state; call
-**readers** on other actors; schedule work on **itself** with
-`self.ref().schedule(...)` (`scheduling-basic.md`), including
-scheduling a `Workflow` that makes an external call.
-
-**Raise a declared error to undo.** Raising `<Method>Aborted` after
-mutating `self.state` rolls the mutation back:
-
-```python
-async def withdraw(
-    self, context: WriterContext, request: Account.WithdrawRequest,
-) -> None:
-    self.state.balance -= request.amount
-    if self.state.balance < 0:
-        # The decrement above rolls back automatically.
-        raise Account.WithdrawAborted(
-            OverdraftError(amount=-self.state.balance)
-        )
-```
-
-**`response=None`** is valid: the method returns `-> None` and has no
-`return` value (`api-methods.md`).
+- `self.state` is the typed state `Model`; assignments and collection
+  mutations (`self.state.messages.append(request.message)`) persist
+  when the writer commits.
+- A writer may: read and mutate its own state; call **readers** on
+  other actors; schedule work on **itself** with
+  `self.ref().schedule(...)` (`scheduling-basic.md`), including a
+  `Workflow` that makes an external call.
 
 ## Never
 
-- Calling another actor's writer, transaction or constructor:
-
-  ```python
-  self.state.balance += request.amount
-  await Account.ref("audit-log").record(context, ...)  # WRONG
-  ```
-
-  It raises `TypeError` (see Errors); a writer cannot call any writer
-  through a ref, not even its own via `self.ref()` (observed at
-  1.6.0). Cross-actor mutation is a `Transaction`.
-- `Other.ref(id).schedule(...)` from a writer — scheduling on another
-  actor takes a `TransactionContext` only; mypy reports an overload
-  mismatch (reboot-air-150-10, theater-network-19). Schedule a method
-  on `self` that reaches the other actor; make it a `Workflow` if it
-  should not hold this actor's lock while it runs. Each type that needs
-  this grows the same small hand-off workflow (reboot-crm-93, 1.6.0).
-- An external call (SMS, email, payment, LLM, network, filesystem) in
-  a writer, **even an idempotent one**. A writer can run inside a
-  transaction that later aborts, rolling state back after the call
-  already happened, and its body re-runs on retries and under effect
-  validation, firing the call twice (a real bug: an SMS login code sent
-  twice, the first invalidated). Put the call in a `Workflow` and have
-  the writer `schedule()` it; the primitive is chosen in
+- Calling another actor's writer, transaction or constructor
+  (`await Account.ref("audit-log").record(context, ...)  # WRONG`). It
+  raises `TypeError` (see Errors), even for its own writer via
+  `self.ref()` (observed at 1.6.0). Use a `Transaction`.
+- `Other.ref(id).schedule(...)` — scheduling on another actor takes a
+  `TransactionContext` only; mypy reports an overload mismatch
+  (reboot-air-150-10, theater-network-19). Schedule a method on `self`
+  that reaches the other actor, a `Workflow` if it should not hold this
+  actor's lock; each type that needs this grows the same small hand-off
+  workflow (reboot-crm-93, 1.6.0).
+- An external call (SMS, email, payment, LLM, network, filesystem),
+  **even an idempotent one**. An enclosing transaction can abort and
+  roll state back after the call happened, and the body re-runs on
+  retries and under effect validation, firing it twice (real bug: an
+  SMS login code sent twice, the first invalidated). Have the writer
+  `schedule()` a `Workflow`; the primitive is chosen in
   `servicer-workflow-external.md`.
-- Persisting a fresh `uuid4()` or clock value that something later
-  re-derives or addresses (an actor id, an idempotency key). A value
-  that is only displayed is fine. See `patterns-time-and-randomness.md`.
+- Persisting a fresh `uuid4()` or clock value that is later re-derived
+  or addressed (an actor id, an idempotency key); display-only is fine
+  (`patterns-time-and-randomness.md`).
 
 ## Limits
 
-- The runtime may re-execute a writer's body: on transient retries,
-  and in development as **effect validation**, which aborts the first
-  run of the body, discards its effects, and runs it again; only the
-  second run commits, and the two runs are never compared (1.6.0
-  source). So the body must be safe to run more than once: confine it
-  to `self.state` mutations and in-system calls. A clock or random
-  value differs between the runs and the second one is kept; that is
-  harmless when the value is only observed (cineloop-06,
-  reboot-air-150-05, student-system-08).
-- No `context.now()` or RNG exists on `WriterContext` (1.6.0).
-- A writer's scope is one actor: its own state, plus reads elsewhere.
+- The body may re-execute: on transient retries, and in development as
+  **effect validation**, which aborts the first run, discards its
+  effects and reruns; only the second run commits and the runs are
+  never compared (1.6.0 source). Confine the body to `self.state`
+  mutations and in-system calls. A clock or random value differs
+  between runs and the second is kept, harmless when only observed
+  (cineloop-06, reboot-air-150-05, student-system-08).
+- No `context.now()` or RNG on `WriterContext` (1.6.0).
+- Scope is one actor: its own state, plus reads elsewhere.
 
 ## Scales as
 
-- Writers on one actor are serialized, so one actor's write throughput
-  bounds every flow that writes it; measured costs are in
-  `patterns-load-and-benchmarking.md`.
+- One actor's serialized write throughput bounds every flow that
+  writes it; measured costs: `patterns-load-and-benchmarking.md`.
 
 ## Errors you will see
 

@@ -15,33 +15,31 @@ docs: "https://docs.reboot.dev/develop/side_effects"
 
 ## When you are here
 
-You need "now", a deadline, a fresh id or a random token inside a
-`Writer`, `Transaction` or `Workflow`. This file says which values may
-come from the clock or RNG directly and the routes for the ones that
-may not. The public docs say only that development runs methods twice;
-older plugin text went further ("effect validation asserts the
-mutations match", "never persist a wall-clock or random value from a
-writer"). The 1.6.0 source does not compare runs, so this file replaces
-that rule with the narrower one below.
+Needing "now", a deadline, a fresh id or a random token in a `Writer`,
+`Transaction` or `Workflow`. The public docs say only that development
+runs methods twice. Older plugin text said "effect validation
+asserts the mutations match" and "never persist a wall-clock or random
+value from a writer"; the 1.6.0 source does not compare runs, so the
+narrower rule below replaces that.
 
 ## Do this
 
 ### What the runtime actually does (1.6.0 source)
 
-- **No clock or RNG on any context.** `ReaderContext`, `WriterContext`,
-  `TransactionContext` and `WorkflowContext` have no `now`, `random` or
-  id helper. `reboot.time.DateTimeWithTimeZone.now()` is the wall clock
-  with a timezone attached, not a replayed value.
-- **Effect validation retries, it does not compare.** In development a
-  writer or transaction body runs, then raises `EffectValidationRetry`
+- **No clock or RNG on any context:** `ReaderContext`,
+  `WriterContext`, `TransactionContext` and `WorkflowContext` have no
+  `now`, `random` or id helper.
+  `reboot.time.DateTimeWithTimeZone.now()` is the wall clock with a
+  timezone, not a replayed value.
+- **Effect validation retries, it does not compare:** in development a
+  writer or transaction body runs, raises `EffectValidationRetry`
   ("raised in order to abort and retry transactions"), runs again, and
-  only the second run commits. Nothing compares the two runs; the
-  memoize path says so in a TODO ("we don't do this for other effect
-  validation"). A transient retry behaves the same way: only one
-  attempt commits.
+  only the second run commits; nothing compares them (memoize TODO:
+  "we don't do this for other effect validation"). A transient retry
+  likewise commits one attempt.
 - **`at_least_once` runs its callable twice under validation and
-  memoizes the second result** (`reboot/aio/memoize.py`; reboot-crm-04).
-  `effect_validation=EffectValidation.DISABLED` on that one call turns it
+  memoizes the second result** (`reboot/aio/memoize.py`; reboot-crm-04);
+  `effect_validation=EffectValidation.DISABLED` on that call turns it
   off.
 
 ### The rule: observed values are free, addressed values are derived
@@ -53,25 +51,22 @@ that rule with the narrower one below.
 | A `when=` on `schedule(...)` | Wall clock is fine (timing is not replay-validated) | Wall clock is fine |
 
 A stored `hold_expires_at = now + 120 s` is fine in a writer: whichever
-attempt commits, the stored value is consistent with itself
-(cineloop-06, 1.4.1; reboot-air-150-05 and student-system-08 saw no
-validation failure across 13 and 11 tests at 1.5.0). An order id from
-`uuid4()` is not: if the *caller* retries the whole call after losing
-the response, a second id creates a second actor.
+attempt commits is self-consistent (cineloop-06, 1.4.1;
+reboot-air-150-05 and student-system-08 saw no validation failure
+across 13 and 11 tests at 1.5.0). An order id from `uuid4()` is not: a
+*caller* retry after a lost response creates a second actor.
 
 ### Three escape routes for addressed values, in order of preference
 
-**1. Push it into the request.** The outermost caller supplies the
-value, fixed across retries. Inside a transaction-to-writer chain the
-transaction reads the clock once and passes it down as a request field
-(showtime-11, showtime-46):
+**1. Push it into the request.** The outermost caller supplies it,
+fixed across retries; in a transaction-to-writer chain the transaction
+reads the clock once and passes it down (showtime-11, showtime-46):
 
 ```python
 async def checkout(
     self, context: TransactionContext, request: User.CheckoutRequest,
 ) -> User.CheckoutResponse:
-    # The browser generated request.order_id once; a retried request
-    # carries the same id and re-addresses the same Order.
+    # Browser minted order_id once; a retry re-addresses the same Order.
     await Order.ref(request.order_id).create(
         context, seat_ids=request.seat_ids,
     )
@@ -93,13 +88,12 @@ oid = order_id(context.state_id, self.state.order_count)
 ```
 
 For a child `OrderedMap` or index id, derive from the owner
-(`f"orders:{context.state_id}"`) and persist it into a real
+(`f"orders:{context.state_id}"`) and persist it in a real
 `orders_index_id` field, so `rbt inspect` shows the edge and a retry
-cannot allocate a second index (theater-chain-01, cineloop-05).
+can't allocate a second index (theater-chain-01, cineloop-05).
 
-**3. Capture it in a `Workflow`** with `at_least_once`, at the cost of a
-workflow round trip. The capture code is in `servicer-workflow-external.md`
-(the `at_least_once` section).
+**3. Capture it in a `Workflow`** with `at_least_once` (costs a
+workflow round trip; code in `servicer-workflow-external.md`).
 
 ### Route every clock read through one helper
 
@@ -110,9 +104,8 @@ def _now_ms() -> int:
     return int(time.time() * 1000)
 ```
 
-Tests patch this one function with a hand-cranked fake clock, turning
-a 2-minute hold test into a 2-second one (cineloop-24, 1.4.1; harness
-in `testing-harness.md`).
+Tests patch it with a fake clock: a 2-minute hold test becomes 2
+seconds (cineloop-24, 1.4.1; `testing-harness.md`).
 
 ## Never
 
@@ -124,8 +117,8 @@ in `testing-harness.md`).
 - Building an `at_least_once` / `.per_workflow` alias from a timestamp
   or fresh uuid — the alias must be identical across replays.
 - A test double inside `at_least_once` that pops answers off a list —
-  under validation the second invocation's answer is the one kept;
-  derive the stand-in's answer from its input (reboot-crm-04, 1.6.0).
+  validation keeps the second invocation's answer; derive the answer
+  from its input (reboot-crm-04, 1.6.0).
 - Looking for `context.now()` — it does not exist at 1.6.0 (mattprd-05
   asks for one).
 
@@ -133,16 +126,16 @@ in `testing-harness.md`).
 
 - The two runs of a validated body see different clock and RNG values;
   the committed value is the second run's.
-- A 1.4.0 project reported a constructor's `uuid4()` failing
-  validation and fixed it by deriving the id from the actor's own id
-  (theater-network-03). The 1.6.0 source has no comparison step that
-  could fail this way; the derived form is still the better shape.
-- Two references disagreed on this rule (mattprd-05, team-memo-0826-07):
-  `state-collections.md` and `stdlib-ordered-map.md` allocate
-  `str(uuid4())` in a constructor writer, while `servicer-writer.md` and
-  `scheduling-recurring.md` forbid persisting any random or wall-clock
-  value from a writer. At 1.6.0 both are inside the table above: the
-  constructor's id is read back from state, never re-derived.
+- A 1.4.0 project saw a constructor's `uuid4()` fail validation and
+  derived the id from the actor's own id (theater-network-03). 1.6.0
+  has no comparison step that could fail so; the derived form is still
+  better.
+- `state-collections.md` and `stdlib-ordered-map.md` allocate
+  `str(uuid4())` in a constructor writer while `servicer-writer.md` and
+  `scheduling-recurring.md` forbid persisting random or wall-clock
+  values from a writer (mattprd-05, team-memo-0826-07). At 1.6.0 both
+  fit the table: the constructor's id is read back from state, never
+  re-derived.
 
 ## Scales as
 

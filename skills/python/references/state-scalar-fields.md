@@ -16,33 +16,24 @@ docs: ""
 
 ## When you are here
 
-You are declaring a scalar state field and either want it to start at
-something other than zero, or it will hold a password, API key, token
-or PII. The general field rules (tags, why defaults must be zero,
-nested `Model`s) are in [`api-pydantic.md`](api-pydantic.md).
+You are declaring a scalar state field that should start non-zero, or
+will hold a password, API key, token or PII. General field rules (tags,
+why defaults are zero, nested `Model`s): [`api-pydantic.md`](api-pydantic.md).
 
 ## Do this
 
 ### Zero on the `Field`, the real value in the constructor
 
-| Type | Default |
-| --- | --- |
-| `int` | `0` |
-| `float` | `0.0` |
-| `bool` | `False` |
-| `str` | `""` |
-| `Literal["a", "b"]` | its first value, `"a"` |
-| `Optional[T]` | `None` |
-| `list[T]` | `default_factory=list` |
-| `dict[str, T]` | `default_factory=dict` |
+Defaults: `int` `0`, `float` `0.0`, `bool` `False`, `str` `""`,
+`Literal["a", "b"]` its first value `"a"`, `Optional[T]` `None`,
+`list[T]` `default_factory=list`, `dict[str, T]` `default_factory=dict`.
 
 ```python
 class AccountState(Model):
     name: str = Field(tag=1, default="")
     balance: int = Field(tag=2, default=0)
-```
 
-```python
+
 async def open(
     self, context: WriterContext, request: Account.OpenRequest,
 ) -> None:
@@ -51,25 +42,24 @@ async def open(
         self.state.balance = 100  # initial balance applied here
 ```
 
-Gate set-once values on `context.constructor`; a `start`-style reset
-writer may set them unconditionally. Keep the domain default in a
-module constant (`DEFAULT_MOVE_DELAY = 1.0`) and apply it when the
-request leaves the field at zero.
+- Gate set-once values on `context.constructor`; a `start`-style reset
+  writer may set them unconditionally.
+- Keep the domain default in a module constant
+  (`DEFAULT_MOVE_DELAY = 1.0`) and apply it when the request leaves the
+  field at zero.
 
 ### A secret is stored as a `Ciphertext` id
 
-A `str` field is plaintext at rest: anyone with the database or a
-leaked backup reads it. Encrypt the value with the `Ciphertext` stdlib
-type (envelope encryption, per-scope crypto-shredding) and store the
-returned `state_id`, itself a harmless `str`. Decrypt on demand.
+A `str` field is plaintext at rest (database, leaked backups). Encrypt
+with the `Ciphertext` stdlib type (envelope encryption, per-scope
+crypto-shredding), store the returned `state_id` (a harmless `str`),
+decrypt on demand.
 
 ```python
 class IntegrationState(Model):
-    # ID of the `Ciphertext` actor holding the encrypted API key.
-    api_key_id: str = Field(tag=1, default="")
-```
+    api_key_id: str = Field(tag=1, default="")  # `Ciphertext` actor ID
 
-```python
+
 ciphertext, _ = await Ciphertext.encrypt(
     context,
     plaintext=raw_api_key.encode(),
@@ -79,8 +69,6 @@ ciphertext, _ = await Ciphertext.encrypt(
 )
 self.state.api_key_id = ciphertext.state_id
 ```
-
-Pick by who holds the secret:
 
 | Secret | Where it goes |
 | --- | --- |
@@ -92,8 +80,7 @@ Pick by who holds the secret:
 ## Never
 
 - `api_key: str = Field(tag=1, default="")` holding the key itself —
-  plaintext at rest. "It's just a string" is the trap. Store
-  `api_key_id`.
+  plaintext at rest. Store `api_key_id`.
 - `balance: int = Field(tag=1, default=100)` — rejected at import;
   zero default, set `100` in the constructor.
 - `image: bytes = Field(tag=1, default=b"")` — `bytes` is not a field

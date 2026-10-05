@@ -16,55 +16,37 @@ docs: ""
 
 ## When you are here
 
-You are about to change the API of an application that has persisted
-state: a deployed app, or a `rbt dev run` session with
-`--application-name=...`. On boot the runtime compares the current API
-against the schema the state was written with; a backwards-incompatible
-change refuses to boot. The gate is the same under `rbt dev run`,
-`rbt serve` and Reboot Cloud. What you ship stays in the schema until
-the data is expunged.
+You are changing the API of an app with persisted state: a deployed app,
+or `rbt dev run` with `--application-name=...`. On boot the runtime
+compares the API against the schema the state was written with and
+refuses a backwards-incompatible change — the same gate under
+`rbt dev run`, `rbt serve` and Reboot Cloud. What you ship stays in the
+schema until the data is expunged.
 
 ## Do this
 
 ### Check the change against the table
 
-| Change | Compatible? |
-| --- | --- |
-| Add a new state `Type` | yes |
-| Add a new method to an existing `Type` | yes |
-| Add a field with a (zero-value) default | yes |
-| Rename a field, keeping its `tag` | yes (data is keyed by tag) |
-| Rename a request/response `Model` class | yes (names are internal) |
-| Change a method between `Writer` and `Transaction` | yes, if other options are unchanged; on a `factory=True` constructor see Limits (observed refused at 1.6.0) |
-| Change a `Transaction`'s `mode=` | yes |
-| Add or remove declared `errors=` | yes |
-| Change `mcp=` options (add/remove/modify `Tool()`) | yes |
-| Edit a field's or a `Type`'s description | yes (observed at 1.5.0) |
-| **Edit a method's `description=`** | **NO** (it is part of the method's options) |
-| Delete a state `Type` | **NO** |
-| Rename a state `Type` | **NO** (a delete + an add) |
-| Delete a method | **NO** |
-| Rename a method | **NO** (a delete + an add) |
-| Delete a field (state, request or response model) | **NO** |
-| Change a field's `tag` | **NO** (a delete + an add) |
-| Change a field's type | **NO** |
-| Change `list[T]` ↔ scalar | **NO** |
-| Add a field without a default, or remove a default from a field | **NO** |
-| Any other method-kind change (e.g. `Writer` → `Workflow`) | **NO** |
+States and methods match by **name** (a rename is a delete plus an add);
+fields match by **`tag`**. Deletion is forbidden because state may hold
+any field ever written, and tasks, workflows and clients call methods by
+name. Request/response models follow the state-model field rules.
 
-States and methods are matched by name, so a rename is a delete plus
-an add; fields are matched by `tag`. A field's
-required-ness cannot change in either direction. Request and response
-models follow the state-model field rules; the class names passed to
-`request=` / `response=` are internal (generated names come from the
-method name). Deletion is forbidden because state may hold data in any
-field ever written, and tasks, workflows and clients call methods by
-name.
+| Compatible (boots) | **Incompatible (refused)** |
+| --- | --- |
+| Add a state `Type`, a method, or a field with a (zero-value) default | Delete or rename a state `Type` or a method |
+| Rename a field, keeping its `tag` (data is keyed by tag) | Delete a field (state, request or response model) |
+| Rename a request/response `Model` class (names are internal) | Change a field's `tag` or type, incl. `list[T]` ↔ scalar |
+| `Writer` ↔ `Transaction`, other options unchanged (on a `factory=True` constructor see Limits; observed refused at 1.6.0) | Add a field without a default, or remove a default (required-ness can't change either way) |
+| Change a `Transaction`'s `mode=` | Any other method-kind change (e.g. `Writer` → `Workflow`) |
+| Add or remove declared `errors=` | **Edit a method's `description=`** (it is part of the method's options) |
+| Change `mcp=` options (add/remove/modify `Tool()`) | |
+| Edit a field's or a `Type`'s description (observed at 1.5.0) | |
 
 ### When you need a "change", add instead
 
-**Change a method's signature or semantics** — add a new method,
-migrate callers, keep the old one as a delegating shim. To move
+**Change a method's signature or semantics** — add a new method, migrate
+callers, keep the old one as a delegating shim. Moving
 `deposit(amount: float)` to integer cents:
 
 ```python
@@ -72,20 +54,15 @@ api = API(
     Account=Type(
         state=AccountState,
         methods=Methods(
-            # Old method (`amount: float`, dollars): kept, since
-            # removal — or making `amount` optional in favor of a
-            # new `cents: int` field on the same request — would
-            # be rejected. Its servicer implementation now
-            # converts and delegates to the logic behind
-            # `deposit_cents`. Its `description=` stays word for
-            # word: rewording it is itself a rejected change.
+            # Old (`amount: float`, dollars): kept, because removing it or
+            # making `amount` optional is refused. Its servicer converts and
+            # delegates to `deposit_cents`. `description=` stays word for word.
             deposit=Writer(
                 request=DepositRequest, response=None,
                 description="Add funds, in dollars.",
                 mcp=None,
             ),
-            # New method with the corrected request shape
-            # (`amount_cents: int`).
+            # New request shape (`amount_cents: int`).
             deposit_cents=Writer(
                 request=DepositCentsRequest, response=None,
                 description="Add funds, in whole cents.",
@@ -96,23 +73,20 @@ api = API(
 )
 ```
 
-**Change a field's type or shape** — add a field with a new `tag` and
-migrate lazily in writers: when a writer touches an actor whose data is
-only in the old field, copy it across. The old field stays declared and
-reads as its zero value once unused.
+**Change a field's type or shape** — add a field with a new `tag`; in
+writers, copy old-field data across on touch. The old field stays
+declared and reads as its zero value once unused.
 
 ```python
 class CartState(Model):
-    # Old shape: kept; no longer written.
-    item_names: list[str] = Field(tag=1, default_factory=list)
-    # New shape.
-    items: list[CartItem] = Field(tag=2, default_factory=list)
+    item_names: list[str] = Field(tag=1, default_factory=list)  # old; no longer written
+    items: list[CartItem] = Field(tag=2, default_factory=list)  # new
 ```
 
 **Add an ID field (child actor, `OrderedMap` index) to a `Type` with
-existing actors** — allocate it lazily where first needed. A
-`factory=True` constructor is a no-op on an existing actor, so the
-field would stay `""` forever:
+existing actors** — allocate it lazily, because a `factory=True`
+constructor is a no-op on an existing actor and the field would stay
+`""` forever. Readers treat `""` as "no index yet".
 
 ```python
 async def add_flight(self, context: TransactionContext, request) -> None:
@@ -121,26 +95,23 @@ async def add_flight(self, context: TransactionContext, request) -> None:
     await OrderedMap.ref(self.state.flights_index_id).insert(...)
 ```
 
-Readers treat `""` as "no index yet".
-
-**Add an index or counter over data that already exists** — ship the
-backfill in the same change. Write it as an idempotent method that
-derives its payload from persisted state (re-running seed-time
-computations drifts: "today at 14:00" recomputed on a later day no
-longer matches what `create` stored), and call it from `initialize`
-under a versioned alias, `.idempotently("ledger-backfill-v2")`; bump the
-suffix to re-run. Why `initialize` needs the alias is in
-`lifecycle-initialize-hook.md`. Log what the backfill did.
+**Add an index or counter over existing data** — ship the backfill in
+the same change:
+- An idempotent method deriving its payload from persisted state, not
+  re-run seed computations ("today at 14:00" recomputed later drifts
+  from what `create` stored).
+- Called from `initialize` under a versioned alias,
+  `.idempotently("ledger-backfill-v2")`; bump the suffix to re-run (why:
+  `lifecycle-initialize-hook.md`). Log what it did.
 
 **Restructure state across types** — add the new `Type` beside the old,
-migrate actors on access (or via a `Workflow`), and leave the old one
-inert.
+migrate on access (or via a `Workflow`), leave the old one inert.
 
-**Plan for accretion.** What you add, you keep, in the API and the
-generated clients. Name fields so the default is the zero value
-(`show_tags`, not `hide_tags`); flipping a default later costs a second
-field. Mark superseded fields in their (editable) field description.
-Get method descriptions right before state first persists.
+**Plan for accretion** — what you add, you keep (API and generated
+clients). Name fields so the default is the zero value (`show_tags`, not
+`hide_tags`); flipping a default costs a second field. Mark superseded
+fields in their (editable) field description. Get method descriptions
+right before state first persists.
 
 ### Before changing a deployed API
 
@@ -155,8 +126,8 @@ Get method descriptions right before state first persists.
 - Rewording a method's `description=` after state exists — boot is
   refused. Put evolving rules in the servicer method's docstring.
 - Iterating on a state shape while `rbt dev run` watches — a hot
-  restart can persist a seconds-old typo and the gate then rejects the
-  fix. Write the final form in one edit, or stop the watcher.
+  restart can persist a typo and the gate rejects the fix. Write the
+  final form in one edit, or stop the watcher.
 - Allocating a new ID field only in the `factory=True` constructor of
   a type with existing actors — it is never back-filled.
 - Calling a backfill bare from `initialize` — it runs once ever; if
@@ -180,9 +151,9 @@ Get method descriptions right before state first persists.
 - On Reboot Cloud a rejected `rbt cloud up` does not take the running
   version down.
 - `Writer(factory=True)` → `Transaction(factory=True)`: the 1.6.0
-  validator allows it (mode is ignored), but one project saw it refused
-  at 1.6.0. Declare a factory as a `Transaction` from the start if it
-  might ever construct another actor.
+  validator allows it (mode ignored), but it was observed refused at
+  1.6.0. Declare a factory a `Transaction` from the start if it might
+  ever construct another actor.
 
 ## Scales as
 

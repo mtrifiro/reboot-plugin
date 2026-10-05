@@ -15,29 +15,24 @@ docs: ""
 
 ## When you are here
 
-You hold a ref (`Service.ref(id)`, `self.ref()`) and need to call a
-method on it from a servicer, `initialize`, a test or an external
-client. Getting the ref is in `rpc-refs.md`; constructors in
-`rpc-constructor-calls.md`; fan-out over many ids in `rpc-forall.md`.
+You hold a ref (`Service.ref(id)`, `self.ref()`) and call a method from
+a servicer, `initialize`, a test or an external client. Refs:
+`rpc-refs.md`; constructors: `rpc-constructor-calls.md`; fan-out:
+`rpc-forall.md`.
 
 ## Do this
 
-Call `await ref.method(context, **fields)`: the context positional,
-the request fields as keyword arguments matching the request `Model`.
-It returns the response `Model` (or `None` for `response=None`).
-
-```python
-await account.deposit(context, amount=100)   # reboot-bank example
-
-response = await chat_room.messages(context)
-print(response.messages)
-```
-
-Parallelize independent calls in one transaction with `asyncio.gather`:
+`await ref.method(context, **fields)`: context positional, request
+fields as kwargs matching the request `Model`; returns the response
+`Model` (or `None` for `response=None`).
 
 ```python
 import asyncio
 
+await account.deposit(context, amount=100)   # reboot-bank example
+response = await chat_room.messages(context)  # response.messages
+
+# Independent calls in one transaction run in parallel:
 await asyncio.gather(
     from_account.withdraw(context, amount=request.amount),
     to_account.deposit(context, amount=request.amount),
@@ -53,63 +48,60 @@ await asyncio.gather(
 | Constructor (`factory=True`) | `TransactionContext`, `WorkflowContext`, `ExternalContext` |
 | `Workflow` | scheduled (`.schedule()` / `.spawn()`), not called |
 
-A writer therefore cannot call any writer through a ref, not even its
-own through `self.ref()` (observed at 1.6.0). It mutates `self.state`
-directly; anything wider is a `Transaction`. When in doubt, call from
-a transaction: it can call any method on any actor.
-
-A helper shared by readers, writers and transactions takes
-`reboot.aio.contexts.Context`, the common base of `ReaderContext`,
-`WriterContext`, `TransactionContext` and `WorkflowContext`
-(`ExternalContext` is not a subclass).
+- A writer cannot call any writer through a ref, not even its own via
+  `self.ref()` (observed at 1.6.0); it mutates `self.state` directly.
+  When in doubt, call from a transaction: it can call any method on any
+  actor.
+- A helper shared across method kinds takes
+  `reboot.aio.contexts.Context`, the base of `ReaderContext`,
+  `WriterContext`, `TransactionContext` and `WorkflowContext`
+  (`ExternalContext` is not a subclass).
 
 ## Never
 
 - `await account.deposit(context, DepositRequest(amount=100))` — use
-  kwargs. At 1.6.0 neither mypy nor the runtime rejects a wrapper of
-  the method's own request type (`Account.DepositRequest`, which is the
-  API module's `DepositRequest`): it runs. But the framework's own
-  message calls the form wrong, the examples never use it, and the
-  slot is typed `Any` for pydantic APIs, so a wrong object there
-  passes mypy (verified at 1.6.0).
-- A `dict` or a different model in that slot
+  kwargs. At 1.6.0 a wrapper of the method's own request type
+  (`Account.DepositRequest`, i.e. the API module's `DepositRequest`)
+  runs and neither mypy nor the runtime rejects it, but the framework's
+  own message calls the form wrong, the examples never use it, and the
+  slot is typed `Any` for pydantic APIs, so a wrong object passes mypy
+  (verified at 1.6.0).
+- A `dict` or different model in that slot
   (`deposit(context, {"amount": 1})`) — passes mypy, then raises a bare
-  `AssertionError` with no message at call time (observed at 1.6.0).
-- `deposit(request)` with the context left out, or a request in the
-  options slot — raises `TypeError: Unexpected use of request type`.
-- A writer calling another actor's writer (or its own via
-  `self.ref()`) — mypy `No overload variant matches argument types
-  "WriterContext", ...`; at runtime the `TypeError` in Errors.
-- Plain dicts for a kwarg typed `list[Model]` — the runtime coerces
-  them, mypy rejects them (`List item 0 has incompatible type
+  `AssertionError` with no message (observed at 1.6.0).
+- `deposit(request)` without the context, or a request in the options
+  slot — `TypeError: Unexpected use of request type`.
+- A writer calling another actor's writer (or its own via `self.ref()`)
+  — mypy `No overload variant matches argument types "WriterContext",
+  ...`; at runtime the `TypeError` in Errors.
+- Plain dicts for a `list[Model]` kwarg — the runtime coerces them,
+  mypy rejects them (`List item 0 has incompatible type
   "dict[str, Any]"; expected "PassengerAssignment"`, reboot-air-150-06,
-  1.5.0). Construct the nested `Model` class from the API module
-  (`api/<pkg>/v1/<name>.py`); `<Type>.<Model>` exists only for
-  request and response types.
+  1.5.0). Build the nested `Model` from the API module
+  (`api/<pkg>/v1/<name>.py`); `<Type>.<Model>` exists only for request
+  and response types.
 - Forwarding `**kwargs: dict[str, str]` into a generated method — mypy
-  fails every overload; type the forwarded kwargs as a `TypedDict`
-  (student-sor-15, 1.5.0).
-- Relying on the caller's identity inside the callee. A call made from
-  a servicer is app-internal: `context.auth` is `None` in the callee,
-  and anything stamped from it (an audit entry, an owner) is silently
-  dropped (reboot-crm-02, 1.6.0). Pass the identity as a request field
-  from the method that had the session; the authorizer side is in
-  `servicer-authorizer.md` § Never.
-- A writer cycle: a transaction on A calls a writer on B while some
+  fails every overload; type them as a `TypedDict` (student-sor-15,
+  1.5.0).
+- Relying on the caller's identity in the callee — a call from a
+  servicer is app-internal, `context.auth` is `None`, and anything
+  stamped from it (audit entry, owner) is silently dropped
+  (reboot-crm-02, 1.6.0). Pass identity as a request field
+  (`servicer-authorizer.md` § Never).
+- A writer cycle: a transaction on A calls a writer on B while a
   transaction on B calls a writer on A. Two ordinary concurrent
-  requests on those paths deadlock, and `rbt generate`, mypy and tests
-  all stay silent; the dashboard's call graph draws the cycle without
-  flagging it (reboot-crm-25, 1.6.0). It usually means both actors
-  hold a copy of one fact: decide which owns it and delete the other.
-  A path that returns to A through `per_workflow` (a later transaction
-  of its own) is not a cycle, though it greps the same.
+  requests deadlock; `rbt generate`, mypy and tests stay silent and the
+  dashboard's call graph draws the cycle without flagging it
+  (reboot-crm-25, 1.6.0). Usually both actors hold a copy of one fact:
+  pick the owner, delete the other. A return to A through
+  `per_workflow` (a later transaction of its own) is not a cycle,
+  though it greps the same.
 
 ## Limits
 
-- Calls are awaited RPCs; a call carries no identity from the caller
-  servicer (above).
-- Inside a workflow, writer and transaction calls need an idempotency
-  choice; see `servicer-workflow-calls.md`.
+- Calls are awaited RPCs carrying no caller identity (above).
+- In a workflow, writer and transaction calls need an idempotency
+  choice (`servicer-workflow-calls.md`).
 
 ## Scales as
 

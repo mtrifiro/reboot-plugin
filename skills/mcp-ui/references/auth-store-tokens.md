@@ -16,21 +16,19 @@ docs: ""
 
 ## When you are here
 
-The app must call the API of the provider users sign in with
-(`Application(oauth=...)`: `Google` / `GitHub` / `Auth0`) **as the
-user**. This file is only the capture shortcut. Everything else — your
-own OAuth endpoints for any other service, the read-back, the
-in-`Workflow` call, refresh, erasure — is
+The app calls the sign-in provider's API (`Application(oauth=...)`:
+`Google` / `GitHub` / `Auth0`) **as the user**. This file is only the
+capture shortcut; other services' OAuth endpoints, read-back, the
+in-`Workflow` call, refresh and erasure are in
 [`python/references/auth-external-api-calls.md`](../../python/references/auth-external-api-calls.md).
 
 ## Do this
 
-`scopes=` lists the **extra** OAuth scopes on top of the base identity
-scope the provider always requests — only what your API calls need.
-`store_tokens=True` makes the OAuth server capture the access/refresh
-tokens at the code exchange (`/__/oauth/callback`) and store them
-encrypted in the provider's `OAuthTokenManager`. Web apps signing in
-through `oauth=` get the same capture.
+`scopes=` lists only the **extra** scopes your API calls need, beyond the
+base identity scope. `store_tokens=True` captures access/refresh tokens at
+the code exchange (`/__/oauth/callback`) into the provider's
+`OAuthTokenManager`, encrypted. Web apps signing in through `oauth=` get
+the same capture.
 
 ```python
 import os
@@ -68,8 +66,7 @@ async def main() -> None:
                    ordered_map_library()],
         oauth=OAuth(
             provider=OAuthProviderByEnvironment(
-                # `Development()` issues no tokens, so the calendar
-                # needs the real provider in dev too.
+                # `Development()` issues no tokens: real provider in dev.
                 dev=_google(),
                 prod=_google(),
             ),
@@ -78,28 +75,24 @@ async def main() -> None:
     await application.run()
 ```
 
-Read the tokens back with `OAuthTokenManager.ref(<service id>).fetch(...)`
-inside a `Workflow` — `auth-external-api-calls.md`, "Use: inside a
-`Workflow`".
+Read back with `OAuthTokenManager.ref(<service id>).fetch(...)` inside a
+`Workflow` (`auth-external-api-calls.md`, "Use: inside a `Workflow`").
 
 ## Never
 
 - Expect a Google/GitHub token from `Auth0` — `store_tokens=True`
-  captures the provider's **own** tokens. Through Auth0 (a broker) you
-  store an **Auth0** token under the tenant-domain service ID; it
-  authorizes Auth0's APIs, not Google Calendar. To reach the upstream
-  API: retrieve the federated IdP token via Auth0's Management API
-  (`GET /api/v2/users/{sub}`, needing a Management API token with
-  `read:user_idp_tokens`; follow Auth0's "Call an Identity Provider API"
-  docs), or run the upstream service's own flow (Path B of
-  `auth-external-api-calls.md`), or sign in with `Google(...)` directly
-  if its API is the point of the app.
+  captures the provider's **own** tokens: an **Auth0** token under the
+  tenant-domain service ID, good for Auth0's APIs, not Google Calendar.
+  For the upstream API: the federated IdP token via Auth0's Management API
+  (`GET /api/v2/users/{sub}`, Management API token with
+  `read:user_idp_tokens`; Auth0's "Call an Identity Provider API" docs),
+  the upstream service's own flow (Path B, `auth-external-api-calls.md`),
+  or `Google(...)` sign-in directly if its API is the point.
 - Use `store_tokens=True` for a service that isn't the sign-in provider
-  (sign in with Google, call Slack) — there is no shortcut; use Path B.
-- `dev=Development()` for a feature that needs provider tokens — it's a
-  fake account picker and stores nothing, so `fetch` reports nothing.
-  Put the real provider in `dev=` (with real credentials in dev).
-- Request broad scopes "just in case" — request the least you need.
+  (sign in with Google, call Slack) — no shortcut; Path B.
+- `dev=Development()` for a feature that needs provider tokens — the fake
+  picker stores nothing. Real provider (and credentials) in `dev=`.
+- Request broad scopes "just in case" — least you need.
 
 ## Limits
 
@@ -108,18 +101,16 @@ inside a `Workflow` — `auth-external-api-calls.md`, "Use: inside a
   provider with `store_tokens=True` fails at startup with
   `ModuleNotFoundError` (the library check imports that module).
   Observed on macOS / Python 3.12 (tool-checks-01, open).
-- Startup requires the `oauth` + `ciphertext` libraries (and
-  `ordered_map`, which `ciphertext` uses) when any provider stores
-  tokens.
+- Any provider storing tokens requires the `oauth` + `ciphertext` (+
+  `ordered_map`) libraries at startup.
 - `REBOOT_CRYPTO_ROOT_KEYS` backs the encryption; auto-provisioned under
   `rbt dev run`, part of your deploy in production
   (`python/references/stdlib-ciphertext.md`).
 - Built-in service IDs: `Google` stores under `"google.com"`, `GitHub`
   under `"github.com"`, `Auth0` under its tenant domain.
-- Refresh tokens: Google sends `access_type=offline` automatically;
-  `Auth0` adds `offline_access`; a GitHub OAuth App never issues one
-  (use a GitHub App with expiring user tokens). Reboot does not refresh
-  access tokens.
+- Refresh tokens: `Google` sends `access_type=offline`; `Auth0` adds
+  `offline_access`; a GitHub OAuth App never issues one (use a GitHub App
+  with expiring user tokens). Reboot does not refresh access tokens.
 
 ## Scales as
 

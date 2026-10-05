@@ -1,6 +1,6 @@
 ---
 name: python
-description: Reboot Python framework for building transactional microservices with durable actor state. APIs are defined in pydantic Python (`reboot.api`). Use this skill when writing Python code for a Reboot application, defining APIs with reader/writer/transaction/workflow methods, changing an API of an application that has already been deployed or has persisted state (schema evolution rules; see `references/api-schema-evolution.md`), implementing Servicers, calling actor refs across services, scheduling work (including recurring / "cron" jobs), building durable workflows with the right call primitive (`.per_workflow(alias)` / `.per_iteration(alias)` / `.always()` for Reboot calls; `at_least_once` / `at_most_once` for external calls; `until` / `until_changes` for reactive waiting on Reboot state), calling an LLM / building an AI agent in the backend via the durable `reboot.agents.pydantic_ai.Agent`, or testing Reboot applications with Gherkin feature files run by `reboot.bdd` (and, for crash recovery, the `Reboot()` test harness).
+description: Reboot Python framework for building transactional microservices with durable actor state; APIs are defined in pydantic Python (`reboot.api`). Use when writing Python for a Reboot application: defining APIs with reader/writer/transaction/workflow methods; changing an API of an application already deployed or holding persisted state (schema evolution rules; see `references/api-schema-evolution.md`); implementing Servicers; calling actor refs across services; scheduling work (including recurring / "cron" jobs); building durable workflows with the right call primitive (`.per_workflow(alias)` / `.per_iteration(alias)` / `.always()` for Reboot calls; `at_least_once` / `at_most_once` for external calls; `until` / `until_changes` for reactive waiting on Reboot state); calling an LLM / building an AI agent in the backend via the durable `reboot.agents.pydantic_ai.Agent`; or testing with Gherkin feature files run by `reboot.bdd` (and, for crash recovery, the `Reboot()` test harness).
 license: Apache-2.0
 metadata:
   author: reboot
@@ -13,68 +13,49 @@ metadata:
 # Reboot Python Best Practices
 
 > **Building an MCP UI or Web App?** Follow
-> [`../build/SKILL.md`](../build/SKILL.md) and your front-door skill
-> instead; this skill is the reference catalog and the entry point
-> for backend-only work.
+> [`../build/SKILL.md`](../build/SKILL.md) and your front-door skill;
+> this skill is the reference catalog and the entry point for
+> backend-only work.
 
-> **Version notices:** if `rbt` reports a version mismatch or that a
-> newer Reboot is available, the [upgrade skill](../upgrade/SKILL.md)
-> says how and when to react.
+> **Version notices:** if `rbt` reports a version mismatch or a newer
+> Reboot, follow the [upgrade skill](../upgrade/SKILL.md).
 
-Guide for building transactional microservices in Python with the Reboot
-framework. Reboot APIs are defined in pydantic Python
-(`reboot.api`) and code-generated into typed Servicer base classes;
-you implement `async` methods that receive a typed context
-(`ReaderContext`, `WriterContext`, `TransactionContext`, or
-`WorkflowContext`).
+Reboot APIs are defined in pydantic Python (`reboot.api`) and
+code-generated into typed Servicer base classes; you implement `async`
+methods that receive a typed context (`ReaderContext`, `WriterContext`,
+`TransactionContext`, or `WorkflowContext`).
 
 ## When to Apply
 
-Reference these guidelines when:
+Any Python for a Reboot app (see the description). Specifically:
 
-- Scaffolding a new Reboot Python project (`.rbtrc`, `pyproject.toml`,
-  application entry point)
-- Defining or modifying an API in pydantic Python (state,
-  reader/writer/transaction/workflow methods, errors, constructors)
-- Changing the API of an application that has persisted state or has
-  been deployed — read `references/api-schema-evolution.md` first
-- Implementing or modifying a Servicer
-- Calling another actor via `Service.ref(id).method(context, ...)`
-- Building a durable workflow with `WorkflowContext`, picking the right
-  primitive per `servicer-workflow-calls.md` (Reboot calls use
-  `.per_workflow(alias)` / `.per_iteration(alias)` / `.always()`;
-  external calls default to `at_least_once`, with `at_most_once` for
-  the rare non-retryable call)
-  plus `until` / `until_changes` for reactive waiting
-- Scheduling work via `ref.schedule(when=...).method(context)`,
-  including recurring / "cron" jobs (self-rescheduling at an absolute
-  wall-clock time)
-- Calling an LLM or building an AI agent in the backend via the
-  durable `reboot.agents.pydantic_ai.Agent`
-- Using the standard library (`OrderedMap`, mailgun, etc.)
-- Writing tests: Gherkin feature files run by `reboot.bdd`, and
-  crash-recovery tests on the `Reboot()` harness
+- Changing the API of an app that has persisted state or is deployed:
+  read `references/api-schema-evolution.md` first.
+- Workflows: pick primitives per `servicer-workflow-calls.md` —
+  `.per_workflow(alias)` / `.per_iteration(alias)` / `.always()` for
+  Reboot calls; `at_least_once` by default for external calls
+  (`at_most_once` for the rare non-retryable one); `until` /
+  `until_changes` for reactive waiting.
+- Scheduling via `ref.schedule(when=...).method(context)`; recurring /
+  "cron" jobs self-reschedule at an absolute wall-clock time.
+- Calls to another actor: `Service.ref(id).method(context, ...)`.
+- The standard library (`OrderedMap`, mailgun, etc.).
 - Verifying any change: **type-check with `mypy backend/ tests/` and fix all
-  errors** before considering Python work done (see "Type-checking"
-  below)
+  errors** (see "Type-checking" below).
 
 ## Rule Categories by Priority
 
 References are grouped by filename prefix into the categories, in
-priority order, defined in `references/_sections.md`; the catalog
-under "Available Reference Files" lists them in that order.
-
-The `Workflow(...)` context method is the fourth servicer context
-type alongside reader / writer / transaction; its reference is the
-router `servicer-workflow.md`, which sends you to six parts.
+priority order, of `references/_sections.md`; the catalog below follows
+that order. `Workflow(...)` is the fourth servicer context type; its
+router `servicer-workflow.md` sends you to six parts.
 
 ## Critical Rules
 
 ### Servicer Pattern
 
-A Reboot Servicer subclasses the generated `<Type>.Servicer` base class and
-implements one `async def` per RPC. Each method takes a typed context as the
-second argument; that type is determined by the API method factory
+Subclass the generated `<Type>.Servicer`; one `async def` per RPC, whose
+second argument's context type is set by the API factory
 (`Reader`/`Writer`/`Transaction`/`Workflow`):
 
 ```python
@@ -104,8 +85,7 @@ class ChatRoomServicer(ChatRoom.Servicer):
 
 ### Application Entry
 
-A Reboot application's `main` constructs an `Application` with the list of
-Servicer classes and runs it under `asyncio`:
+`main` runs an `Application` of Servicer classes under `asyncio`:
 
 ```python
 import asyncio
@@ -133,8 +113,8 @@ if __name__ == '__main__':
 
 ### The API File Drives Code Generation
 
-Never hand-edit generated `*_rbt.py` files. The pydantic API definition
-file is the source of truth (see `references/api-pydantic.md`):
+Never hand-edit generated `*_rbt.py`; the pydantic API file is the
+source of truth (see `references/api-pydantic.md`):
 
 ```python
 from reboot.api import API, Field, Methods, Model, Reader, Type, Writer
@@ -185,84 +165,67 @@ api = API(
 )
 ```
 
-`rbt generate` (run automatically by `rbt dev run`) emits
-`<pkg>/<v>/<name>_rbt.py` with the `<Type>` class, request/response
-messages nested as attributes, the `Servicer` base class, and the
-`.ref(id)` factory.
+`rbt generate` (run by `rbt dev run`) emits `<pkg>/<v>/<name>_rbt.py`:
+the `<Type>` class with nested request/response messages, the `Servicer`
+base, and the `.ref(id)` factory.
 
 ### Key Constraints
 
-- The context type in each method **must match** the API method
-  factory. `Reader(...)` requires `ReaderContext`; `Writer(...)`
-  requires `WriterContext`; `Transaction(...)` requires
-  `TransactionContext`; `Workflow(...)` requires `WorkflowContext`.
-- `self.state` is read-only inside `ReaderContext`. Mutate it only inside
-  `WriterContext` or `TransactionContext`. Workflows mutate state by
-  calling `Service.ref().write(context, callback)` — not `self.state` —
-  because workflows can re-execute on replay.
-- `.rbtrc` is **line-based**, not YAML. Each line is `<subcommand> <flag>`.
+- Each method's context type **must match** its factory: `Reader(...)` →
+  `ReaderContext`, `Writer(...)` → `WriterContext`, `Transaction(...)` →
+  `TransactionContext`, `Workflow(...)` → `WorkflowContext`.
+- `self.state` is read-only in `ReaderContext`; mutate it only in
+  `WriterContext` or `TransactionContext`. Workflows mutate via
+  `Service.ref().write(context, callback)`, not `self.state`, because
+  they re-execute on replay.
+- `.rbtrc` is **line-based**, not YAML: `<subcommand> <flag>` per line.
   Use `--application-name=<app>` (canonical since Reboot 1.0.4; `--name`
-  still works as a deprecated alias but warns).
-- The actor's ID is `self.ref().state_id` inside writer/reader/
-  transaction methods, and `context.state_id` inside workflows.
-  `self.state_id` does not exist and raises `AttributeError`.
+  is a deprecated alias that warns).
+- The actor's ID is `self.ref().state_id` in writer/reader/transaction
+  methods and `context.state_id` in workflows; `self.state_id` raises
+  `AttributeError`.
 - **Every `Field(tag=N)` needs an explicit zero-value default**
   (`default=""`, `default=0`, `default=0.0`, `default=False`,
-  `default_factory=list`, etc.). Two layered rules:
-  (1) `model_construct()` drops fields lacking declared defaults, so
-  reads `AttributeError`; (2) only the type's zero value is accepted —
-  non-zero defaults raise `UserPydanticError` at import time. Set
-  domain defaults (`turn="r"`, `delay=1.0`, etc.) inside the
-  constructor method, not on the Field. Applies to state,
-  request/response, and error Models.
-- **Every `Field(tag=N)` gets a `description=`** saying what the
-  value means, in state, request, response, and error Models alike.
-  The dashboard shows it beside the property, and a property without
-  one shows a request to add it. Never add a property without a
-  description, and describe the value, not the type: "What the
-  account holds, in dollars, never below zero", not "The balance
-  (float)".
+  `default_factory=list`, etc.) in state, request/response and error
+  Models: (1) `model_construct()` drops fields without declared
+  defaults, so reads raise `AttributeError`; (2) non-zero defaults raise
+  `UserPydanticError` at import time. Set domain defaults (`turn="r"`,
+  `delay=1.0`) in the constructor method.
+- **Every `Field(tag=N)` gets a `description=`** of what the value means,
+  in every Model; the dashboard shows it beside the property and flags
+  one without. Describe the value, not the type: "What the account
+  holds, in dollars, never below zero", not "The balance (float)".
 - Cross-actor and external-service calls belong in `TransactionContext`
   (one-shot) or `WorkflowContext` (durable, long-running).
-- **Changing an API after the application has persisted state or has
-  been deployed?** Read `references/api-schema-evolution.md` to
-  understand the rules you must follow for API schema evolution.
-- Pass arguments to actor methods as **kwargs**, not as Request wrappers:
+- **Changing an API after the app has persisted state or been
+  deployed?** Read `references/api-schema-evolution.md` first.
+- Pass actor-method arguments as **kwargs**:
   `await ref.deposit(context, amount=10)`, not
   `await ref.deposit(context, DepositRequest(amount=10))`.
 - **`Queue`, `Topic`, `OrderedMap`, `Presence`, `Item` are
-  stdlib actor names — use them, don't redefine them.** If a
-  design or task names any of these (e.g. "publish to a
-  `Topic`", "track members in an `OrderedMap`", "subscribe a
-  `Queue`", "presence shows who's online"), the answer is to
-  _import_ the stdlib actor — not to declare a pydantic `Model`
-  with the same name. Defining your own `Topic` / `Queue` /
-  etc. forfeits durability, ordering, blocking semantics, and
-  concurrency guarantees the stdlib already provides. See the
-  trigger table under "How to Use → Using stdlib state types"
-  below.
+  stdlib actor names — use them, don't redefine them.** When a design
+  names one ("publish to a `Topic`", "members in an `OrderedMap`"),
+  _import_ the stdlib actor; a same-named pydantic `Model` forfeits its
+  durability, ordering, blocking semantics and concurrency guarantees.
+  See the stdlib table under "Implementing a Servicer".
 
 ## How to Use
 
-Most footguns in this skill are **distributed across reference files**
-— skipping the right reference means hitting a runtime error that the
-docs would have prevented. Before writing code, load the references
-the task actually requires from the lists below, at the step that
-needs them. A line ending *Only when …* is skipped unless that is
-true of your app.
+Footguns are spread across references; skipping the right one means a
+runtime error it would have prevented. Load what the task requires from
+the lists below:
 
-Everything you read stays in the conversation and is re-sent on every
-later turn, so read a reference at the step that needs it rather than
-all of them up front, read each one **once**, and read **one per tool
-call** (`cat`-ing several at once can exceed the tool's output limit
-and be cut off). That cost is also
-why generated and installed source — `*_rbt.py`, `*_rbt_react.ts`,
-`site-packages/`, `node_modules/`, codegen templates — is the most
-expensive place in the system to learn a fact: the shapes worth
-knowing are written out in the references below. When something
-genuinely isn't covered, bound the output hard (a targeted
-`grep -n … | head -40`, or `sed -n '<start>,<end>p'` over a known
-range), never a whole generated file.
+- Read each reference **once**, at the step that needs it (everything
+  read is re-sent every later turn); skip a line ending *Only when …*
+  unless it holds.
+- **One per tool call**: `cat`-ing several can exceed the output limit
+  and be cut off.
+- Never read generated or installed source (`*_rbt.py`,
+  `*_rbt_react.ts`, `site-packages/`, `node_modules/`, codegen
+  templates) — the costliest way to learn a fact; the references hold
+  the shapes. If something isn't covered, bound the output (a targeted
+  `grep -n … | head -40`, or `sed -n '<start>,<end>p'` over a known
+  range), never a whole generated file.
 
 <!-- The lists below are generated from each reference's frontmatter
 by tools/gen-index.py. Edit the frontmatter, not the lists. MCP UIs
@@ -317,11 +280,9 @@ and Web Apps read their builder skill's lists instead. -->
 - `references/stdlib-item.md` — only when using the stdlib `Item` value envelope.
 <!-- generated:end -->
 
-If your design calls for any of the concepts in the left column,
-the stdlib already provides the canonical actor. Read the
-reference **before** writing your own actor type — defining your
-own `Queue` / `OrderedMap` / etc. is almost always wrong
-and forfeits durability, ordering, and concurrency guarantees:
+The stdlib already provides these; read the reference **before**
+writing your own actor type — a hand-rolled `Queue` / `OrderedMap` /
+etc. is almost always wrong:
 
 | You need...                                       | Use                 | Reference                |
 | ------------------------------------------------- | ------------------- | ------------------------ |
@@ -334,18 +295,17 @@ and forfeits durability, ordering, and concurrency guarantees:
 | A field holds a password/API key/secret/PII       | `Ciphertext`        | `stdlib-ciphertext.md`   |
 | Encrypt at rest / crypto-shred (right-to-erasure) | `Ciphertext`        | `stdlib-ciphertext.md`   |
 
-Each stdlib reference also lists its library registration —
-forgetting `<thing>_library()` and the stdlib actor's
-`<thing>.servicers()` in your `Application(...)` fails when the
-type is first called (an unknown state type), not at startup; only a
-library whose dependency library is missing fails at startup with
+Each stdlib reference lists its registration: forgetting
+`<thing>_library()` and `<thing>.servicers()` in `Application(...)`
+fails on the type's first call (unknown state type), not at startup;
+only a missing dependency library fails at startup with
 `Missing required libraries: …`.
 
-Backend LLM calls — chat completions, AI agents, tool-using
-assistants — go through the durable `reboot.agents.pydantic_ai.Agent`,
-**never** a raw `anthropic` / `openai` SDK or a bare
-`pydantic_ai.Agent`. A raw call re-hits (and re-bills) the provider
-on every workflow replay. Read `agent-pydantic-ai.md` before writing agent code.
+Backend LLM calls (chat, agents, tool-using assistants) go through the
+durable `reboot.agents.pydantic_ai.Agent`, **never** a raw `anthropic` /
+`openai` SDK or bare `pydantic_ai.Agent`, which re-hits (and re-bills)
+the provider on every workflow replay. Read `agent-pydantic-ai.md`
+first.
 
 ### Authorization
 
@@ -361,9 +321,8 @@ on every workflow replay. Read `agent-pydantic-ai.md` before writing agent code.
 
 ### Testing
 
-An application's tests are Gherkin `.feature` files run by
-`reboot.bdd`; the order of work that writes them (agree on the
-feature in English, tag it `@wip`, iterate on scenarios) is the
+Tests are Gherkin `.feature` files run by `reboot.bdd`; the order of
+work (agree in English, tag `@wip`, iterate on scenarios) is the
 [`feature` skill](../feature/SKILL.md).
 
 <!-- generated:start reading-list front-door=backend-only step=tests -->
@@ -377,31 +336,24 @@ feature in English, tag it `@wip`, iterate on scenarios) is the
 
 ### Type-checking (do this after every change)
 
-The generated `*_rbt.py` stubs are fully typed, so mypy checks the
-code you write against them and catches the mistakes that pass a
-visual read — a field set to the wrong type, a missing or misspelled
-keyword argument, a method called with the wrong context type, a
-response field that doesn't exist, a servicer method returning the
-wrong type. Treat a clean type-check as part of finishing, not an
-optional extra:
+The generated `*_rbt.py` stubs are fully typed, so mypy catches what a
+visual read misses: wrong field types, missing or misspelled kwargs, the
+wrong context type, nonexistent response fields, wrong return types.
 
 - Every project ships a project-root `.mypy.ini` (config and rationale
-  in `references/lifecycle-project-setup.md`). It puts `backend/src`,
-  `backend/api`, `tests`, and `api` on `mypy_path` with
-  `explicit_package_bases = True` so the generated `*_rbt.py` modules
-  resolve. If it's missing, create it first — `mypy` is useless
-  without it.
-- After writing or editing any Python under `backend/`, run
-  `uv run mypy backend/ tests/` (or `mypy backend/ tests/`) from the project root and
-  fix **every** error.
+  in `references/lifecycle-project-setup.md`) putting `backend/src`,
+  `backend/api`, `tests` and `api` on `mypy_path` with
+  `explicit_package_bases = True` so `*_rbt.py` modules resolve. Missing?
+  Create it first — `mypy` is useless without it.
+- After any Python edit under `backend/`, run `uv run mypy backend/ tests/`
+  (or `mypy backend/ tests/`) from the project root; fix **every** error.
 - "Done" means both `mypy backend/ tests/` and `uv run pytest` are green.
 
 ## Available Reference Files
 
-Reference files live in `references/` and are named
-`{prefix}-{topic}.md`; the prefix is the concept in
-`references/_sections.md`. Load only what the current task needs —
-the lists above say when. The full catalog:
+Files in `references/` are named `{prefix}-{topic}.md`, prefix per
+`references/_sections.md`.
+Load only what the task needs (the lists above say when). Full catalog:
 
 <!-- generated:start catalog skill=python -->
 **Lifecycle**

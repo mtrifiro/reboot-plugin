@@ -15,16 +15,15 @@ docs: "https://docs.reboot.dev/users/authorization"
 
 ## When you are here
 
-The shipped predicates (`auth-built-in-predicates.md`) can't express a
-rule — ownership stored in state, team membership, a role — or methods
-of one type need different rules. Composition semantics are
-`auth-allow-if.md`; when rules are required at all is
+Shipped predicates (`auth-built-in-predicates.md`) can't express the rule
+(ownership in state, team membership, a role), or one type's methods need
+different rules. Composition: `auth-allow-if.md`; when rules are required:
 `servicer-authorizer.md`.
 
 ## Do this
 
-Give each method its rule with the generated `<Type>.Authorizer(...)`,
-and write each app-specific check as a keyword-only predicate:
+Per-method rules via generated `<Type>.Authorizer(...)`; each app check
+is a keyword-only predicate:
 
 ```python
 from typing import Any
@@ -70,20 +69,16 @@ class TaskListServicer(TaskList.Servicer):
         )
 ```
 
-- **Signature.** `(*, context, state, request, **kwargs)`, keyword-only.
-  Declare only the arguments the body reads; `**kwargs` absorbs the rest
-  and anything the runtime adds later. `context` is always a
-  `ReaderContext`; `state` and `request` may be `None`.
-- **`state`** is annotated with the **pydantic** `<X>State` from your
-  API definition — that is what a pydantic app's predicate receives.
-- **Check `context.app_internal` first** when the type is called from
-  other servicers, `initialize`, or scheduled work: those calls carry
-  no `context.auth`.
-- **`Unauthenticated`** means "no identity — sign in";
-  **`PermissionDenied`** means "identity, but not allowed". Clients
-  choose between a login redirect and a 403 on it.
-- **Sync or async.** `allow_if` awaits an `async def` predicate.
-  Reading another actor goes through its declared `Reader`:
+- **Signature.** `(*, context, state, request, **kwargs)`, keyword-only;
+  declare only what the body reads, `**kwargs` absorbs the rest. `context`
+  is always a `ReaderContext`; `state` and `request` may be `None`.
+- **`state`** is annotated with the **pydantic** `<X>State` from your API.
+- **Check `context.app_internal` first** when other servicers,
+  `initialize`, or scheduled work call the type: they carry no `context.auth`.
+- **`Unauthenticated`** = "no identity — sign in"; **`PermissionDenied`** =
+  "identity, but not allowed" (login redirect vs 403).
+- **Sync or async.** `allow_if` awaits an `async def` predicate; read
+  another actor through its declared `Reader`:
 
 ```python
 async def is_team_member(*, context, state, **kwargs):
@@ -96,14 +91,13 @@ async def is_team_member(*, context, state, **kwargs):
 allow_if(all=[has_verified_token, is_team_member])
 ```
 
-A predicate shared by several methods that does read `request` gets the
-union of their request models: annotate `request: Any = None` (or the
-union) and narrow with `isinstance` before reading a field only one
-model has.
+A predicate shared by several methods that reads `request` gets the union
+of their request models: annotate `request: Any = None` (or the union) and
+narrow with `isinstance` before reading a model-specific field.
 
-A predicate returns only `Ok`, `Unauthenticated`, or
-`PermissionDenied` from `rbt.v1alpha1.errors_pb2`. The module also holds
-the framework errors a typed error union widens to: `NotFound
+A predicate returns only `Ok`, `Unauthenticated`, or `PermissionDenied`
+from `rbt.v1alpha1.errors_pb2`, which also holds the framework errors a
+typed error union widens to: `NotFound
 AlreadyExists InvalidArgument FailedPrecondition OutOfRange
 ResourceExhausted DeadlineExceeded Cancelled Unavailable Unimplemented
 Internal Unknown DataLoss Aborted StateNotConstructed
@@ -111,27 +105,26 @@ StateAlreadyConstructed UnknownService UnknownTask InvalidMethod`.
 
 ## Never
 
-- `def can_edit(context, state, request):` — positional and no
-  `**kwargs`; the runtime calls by keyword. Use the keyword-only form.
+- `def can_edit(context, state, request):` — positional, no `**kwargs`;
+  the runtime calls by keyword.
 - One predicate that tells methods apart by `isinstance(request, ...)`
-  — a method declared `request=None`, or two methods sharing a request
-  model, cannot get its own rule. Use `<Type>.Authorizer(method=...)`.
+  — a `request=None` method, or two sharing a request model, can't get
+  its own rule. Use `<Type>.Authorizer(method=...)`.
 - A custom `Authorizer` subclass, or splitting state across servicers,
-  to get per-method rules — `<Type>.Authorizer` already takes one rule
-  per method.
+  to get per-method rules — `<Type>.Authorizer` already does it.
 - `allow_if(any=[is_app_internal, allow_if(all=[a, b])])` — rules don't
   nest; write one predicate that combines `a` and `b`.
 - Annotate `state` with `<Type>Authorizer.StateType` / `.RequestTypes`
-  — those alias the **protobuf** types (`<name>_pb2.TaskList`), not the
-  pydantic model the predicate receives. They type-check (same field
-  names) while naming the wrong class.
+  — they alias the **protobuf** types (`<name>_pb2.TaskList`), not the
+  pydantic model received; they type-check (same fields) but name the
+  wrong class.
 - Return `AuthorizerRule[TaskListState, Any]` from a helper — the
-  generated `<Type>.Authorizer` expects `AuthorizerRule[<protobuf
-  state>, <protobuf requests>]` and rejects it at the point of use. Use
-  `AuthorizerRule[Any, Any]`, as above.
+  generated `<Type>.Authorizer` expects
+  `AuthorizerRule[<protobuf state>, <protobuf requests>]` and rejects it.
+  Use `AuthorizerRule[Any, Any]`.
 - `if request is None: <check auth>` without checking
-  `context.app_internal` first — nested reader calls from other
-  servicers are then denied with a confusing `Unauthenticated`.
+  `context.app_internal` first — nested reader calls get a confusing
+  `Unauthenticated`.
 - An expensive predicate before `has_verified_token` in `all=[...]`.
 
 ## Limits
@@ -139,24 +132,22 @@ StateAlreadyConstructed UnknownService UnknownTask InvalidMethod`.
 - Unannotated predicates fail `mypy`: `allow_if` reports
   `Argument "any" ... has incompatible type "list[function]"`, and a
   helper returning a rule reports `Need type annotation`.
-- The annotations only check anything if `mypy` resolves the API
-  package: `mypy_path` must include the project-root `api/`, and the
-  generated-code ignore must name `<pkg>.v1.<name>_rbt`, not
-  `<pkg>.v1.*` — a blanket ignore makes `TaskListState` `Any`, and a
-  misspelled field passes (`lifecycle-project-setup.md`).
-- A method omitted from `<Type>.Authorizer(...)` gets `_default`; when
-  `_default` is omitted too it is `allow_if(all=[is_app_internal])`, so
-  a method added later is unreachable from outside until named.
-- A predicate that fails closed on `state is None` turns a malformed
-  state ID (e.g. a whole JSON row passed as the ID) into
-  `PermissionDenied`; when every call is refused, check the ID before
-  the rule (client-portal, 1.6.0).
+- Annotations check nothing unless `mypy` resolves the API package:
+  `mypy_path` must include project-root `api/`, and the generated-code
+  ignore must name `<pkg>.v1.<name>_rbt`, not `<pkg>.v1.*` (a blanket
+  ignore makes `TaskListState` `Any`; misspelled fields pass)
+  (`lifecycle-project-setup.md`).
+- A method omitted from `<Type>.Authorizer(...)` gets `_default`, which
+  itself defaults to `allow_if(all=[is_app_internal])`: a method added
+  later is externally unreachable until named.
+- Failing closed on `state is None` turns a malformed state ID (e.g. a
+  whole JSON row passed as the ID) into `PermissionDenied`; when every
+  call is refused, check the ID before the rule (client-portal, 1.6.0).
 
 ## Scales as
 
-- A predicate that reads another actor costs one reader RPC per
-  authorized call, readers included (`servicer-authorizer.md` § Scales
-  as). Prefer facts on the authorized actor's own `state`.
+- Reading another actor costs one reader RPC per authorized call, readers
+  included (`servicer-authorizer.md` § Scales as). Prefer the actor's own `state`.
 
 ## Errors you will see
 

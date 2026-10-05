@@ -16,37 +16,25 @@ docs: ""
 
 ## When you are here
 
-A method can fail in a way its caller must act on (overdraft, seat
-taken, limit reached), and you are declaring that failure in the API
-and raising it from the servicer. This file owns declaring and
-**raising**. Catching, inspecting `.error`, and carrying an error
-across an actor boundary are in
+A caller must act on a failure (overdraft, seat taken, limit
+reached). This file owns declaring and **raising**;
+catching, `.error`, and crossing actor boundaries are in
 [`patterns-error-handling.md`](patterns-error-handling.md).
 
 ## Do this
 
-An error is an ordinary `Model`, listed in the method's `errors=[...]`.
-`rbt generate` emits one exception class per method,
-`<Type>.<Method>Aborted`, named after the **method**, not the error.
-Raise it with an error instance. From the
+An error is an ordinary `Model` listed in `errors=[...]`. `rbt generate`
+emits one exception per method, `<Type>.<Method>Aborted`, named after the
+**method**, not the error. From
 [`reboot-bank-pydantic`](https://github.com/reboot-dev/reboot-bank-pydantic)
-example, `api/bank/v1/account.py`:
+`api/bank/v1/account.py`:
 
 ```python
-from reboot.api import API, Field, Methods, Model, Type, Writer
+from reboot.api import Field, Methods, Model, Writer
 
 
 class OverdraftError(Model):
-    amount: float = Field(
-        tag=1,
-        default=0.0,
-        description="By how much the withdrawal exceeded the balance, in "
-        "dollars.",
-    )
-
-
-class WithdrawRequest(Model):
-    amount: float = Field(tag=1, default=0.0)
+    amount: float = Field(tag=1, default=0.0)  # dollars over the balance
 
 
 AccountMethods = Methods(
@@ -58,7 +46,6 @@ AccountMethods = Methods(
         "balance would go negative.",
         mcp=None,
     ),
-    # ... other methods ...
 )
 ```
 
@@ -78,49 +65,43 @@ class AccountServicer(Account.Servicer):
         request: Account.WithdrawRequest,
     ) -> None:
         self.state.balance -= request.amount
-        if self.state.balance < 0:
+        if self.state.balance < 0:  # mutate first, check after: rollback undoes it
             raise Account.WithdrawAborted(
                 OverdraftError(amount=-self.state.balance)
             )
 ```
 
-Raising a `<Method>Aborted` inside a `Writer` or `Transaction` rolls
-back every state change that method made, so the servicer above may
-mutate first and check after: no compensating undo. Give the error
-fields the payload the caller needs to say something specific (which
-seat, how far over the limit), and name the error and its condition in
-the method's `description=`.
+- Raising `<Method>Aborted` in a `Writer` or `Transaction` rolls back
+  every state change the method made; no compensating undo.
+- Give error fields the payload the caller needs (which seat, how far
+  over), and name the error and its condition in `description=`.
 
 ## Never
 
 - `raise ValueError("not enough funds")` (or any non-`Aborted`
-  exception) for a business failure — the caller gets
-  `<Method>Aborted` carrying `Unknown`, and the message is lost to the
-  log. Raise the declared `<Method>Aborted`.
-- `return None` (or a sentinel field) to signal failure — ambiguous
-  and untyped at the caller. Raise.
+  exception) for a business failure — the caller gets `<Method>Aborted`
+  carrying `Unknown`; the message only reaches the log.
+- `return None` (or a sentinel field) to signal failure — ambiguous and
+  untyped. Raise.
 - `raise OverdraftError(...)` or `raise Account.OverdraftErrorAborted(...)`
-  — a `Model` is not an exception, and the class is named after the
-  method: `Account.WithdrawAborted(OverdraftError(...))`.
+  — a `Model` is not an exception; write
+  `Account.WithdrawAborted(OverdraftError(...))`.
 - Raise an error `Model` the method did not list in its own
-  `errors=[...]` — only listed classes are declared; anything else
-  fails the type check when the `Aborted` is constructed (1.6.0
-  source). Add it to `errors=` (adding is a compatible change; see
+  `errors=[...]` — fails the type check when the `Aborted` is
+  constructed (1.6.0 source). Add it to `errors=` (compatible; see
   [`api-schema-evolution.md`](api-schema-evolution.md)).
-- An error `Model` with no fields — it breaks the generated React
-  client at import; see `react-generated-client.md` § Errors you will
-  see.
+- An error `Model` with no fields — breaks the generated React client
+  at import; see `react-generated-client.md` § Errors you will see.
 
 ## Limits
 
-- "Declared" means the exact class: the generated `is_declared_error`
-  checks `type(error) in <method>.errors` (1.6.0 source), so a
-  subclass of a declared error is not declared.
-- Rollback covers the raising method's own mutations (and, in a
-  transaction, everything the transaction did). It cannot undo an
-  external call already made; those belong in a workflow.
-- Error fields follow every other `Model`'s field rules
-  (`api-pydantic.md`).
+- "Declared" means the exact class: `is_declared_error` checks
+  `type(error) in <method>.errors` (1.6.0 source); a subclass is not
+  declared.
+- Rollback covers the method's own mutations (in a transaction,
+  everything it did), not an external call already made; put those in a
+  workflow.
+- Error fields follow normal `Model` field rules (`api-pydantic.md`).
 
 ## Scales as
 

@@ -16,12 +16,11 @@ docs: ""
 
 ## When you are here
 
-The backend calls a model (to summarize, rank, classify, generate,
-chat). Backend LLM calls go through `reboot.agents.pydantic_ai.Agent`,
-a durable drop-in wrapper over `pydantic_ai.Agent`, run inside a
-`Workflow` method. Each model call is memoized with `at_least_once`, so
-a workflow replay returns the stored `ModelResponse` instead of
-re-hitting and re-billing the provider. Giving the agent tools is
+The backend calls a model (summarize, rank, classify, generate, chat).
+Use `reboot.agents.pydantic_ai.Agent`, a durable drop-in wrapper over
+`pydantic_ai.Agent`, inside a `Workflow` method: each model call is
+memoized with `at_least_once`, so replay returns the stored
+`ModelResponse` instead of re-billing the provider. Tools:
 `agent-tools.md`.
 
 ## Do this
@@ -30,9 +29,7 @@ re-hitting and re-billing the provider. Giving the agent tools is
 from reboot.agents.pydantic_ai import Agent
 from reboot.aio.contexts import WorkflowContext
 
-# Define the agent once, at module scope — not per request.
-# Pydantic AI reads the provider key from the standard env var
-# (`ANTHROPIC_API_KEY`); see `lifecycle-secrets.md`.
+# Once, at module scope. Key from `ANTHROPIC_API_KEY` (`lifecycle-secrets.md`).
 summarizer = Agent(
     "anthropic:claude-sonnet-4-6",
     name="summarizer",
@@ -42,19 +39,17 @@ summarizer = Agent(
 
 @classmethod
 async def summarize(cls, context: WorkflowContext) -> None:
-    # `context` first, then the prompt. The model call is memoized:
-    # a replay returns the cached response, no second API hit.
+    # `context` first, then the prompt; replay returns the cached response.
     result = await summarizer.run(context, "Summarize today's news.")
     summary = result.output
 ```
 
-To adopt an existing agent: `Agent.wrap(pydantic_ai.Agent(..., name="librarian"))`.
-Constructor arguments are `pydantic_ai.Agent`'s, plus the required
-`name=`, which scopes every memoization key for the agent's model and
-tool calls; it must be unique and stable.
-
-All four entry points take the `WorkflowContext` first (raw
-pydantic_ai takes the prompt first):
+- Constructor arguments are `pydantic_ai.Agent`'s plus the required
+  `name=`, which scopes every memo key for its model and tool calls;
+  unique and stable. Adopt an existing agent with
+  `Agent.wrap(pydantic_ai.Agent(..., name="librarian"))`.
+- All four entry points take `WorkflowContext` first (raw pydantic_ai
+  takes the prompt first):
 
 ```python
 result = await agent.run(context, "prompt")          # one-shot
@@ -63,27 +58,21 @@ async with agent.run_stream(context, "prompt") as s: ...
 async for event in agent.run_stream_events(context, "prompt"): ...
 ```
 
-An on-demand "do it now" method (an MCP tool, a button) is a
-`Writer`/`Transaction` that only schedules the workflow
-(`await self.ref().schedule().summarize(context)`), never one that
-makes the model call itself.
-
-Within one workflow method, or one `context.loop` iteration, every run
-must be distinguishable by `(user_prompt, variant, message_history)`.
-Repeat a prompt with a distinct `variant=`:
-
-```python
-first = await agent.run(context, "Draft a title.")
-second = await agent.run(context, "Draft a title.", variant="retry")
-```
-
-Identical runs in different loop iterations are fine; each iteration
-is a fresh scope.
+- An on-demand method (an MCP tool, a button) is a `Writer`/`Transaction`
+  that only schedules the workflow
+  (`await self.ref().schedule().summarize(context)`), never one that
+  calls the model.
+- Within one workflow method or `context.loop` iteration, runs must
+  differ by `(user_prompt, variant, message_history)`; repeat a prompt
+  with a distinct `variant=`:
+  `second = await agent.run(context, "Draft a title.", variant="retry")`.
+  Identical runs in different iterations are fine.
 
 ### Dependency
 
-Add the `anthropic` extra to the `reboot` requirement, keeping the pin
-(`lifecycle-project-setup.md`):
+Add the `anthropic` extra to `reboot`, keeping the pin
+(`lifecycle-project-setup.md`); `reboot` already pins
+`pydantic-ai-slim` and the extra adds a compatible Anthropic SDK:
 
 ```toml
 dependencies = [
@@ -91,61 +80,54 @@ dependencies = [
 ]
 ```
 
-`reboot` already pins `pydantic-ai-slim`; the extra adds the Anthropic
-SDK at a version that works with it.
-
 ## Never
 
 - `anthropic.Anthropic().messages.create(...)` or a bare
-  `pydantic_ai.Agent` in a workflow — it runs again on every replay,
-  re-bills, and returns a different answer, breaking deterministic
-  replay.
-- A model call in a `Transaction` or `Writer` — Reboot retries
-  transactions, so one logical request is billed several times, and
-  nothing memoizes it. The `Agent` refuses any non-workflow context.
+  `pydantic_ai.Agent` in a workflow — re-runs on every replay,
+  re-bills, and answers differently, breaking deterministic replay.
+- A model call in a `Transaction` or `Writer` — transactions are
+  retried, so one request bills several times, unmemoized. The `Agent`
+  refuses non-workflow contexts.
 - `agent.run("prompt")` (prompt first) — raises `UserError` naming the
   fix.
 - `run_sync` / `run_stream_sync` — raise; Reboot is async-only.
 - Starting an agent run from inside another (e.g. from a tool) —
-  nested runs raise `UserError`.
-- Setting `agent.name` after construction — raises; it would shift
-  every memoization key. Construct a new `Agent` to rename.
+  raises `UserError`.
+- Setting `agent.name` after construction — raises (it would shift
+  every memo key); construct a new `Agent`.
 - `parallel_execution_mode="parallel"` (pydantic_ai's default) —
-  rejected at construction; its completion-order events differ across
-  replays. The Reboot default `"parallel_ordered_events"` and
-  `"sequential"` are the accepted values.
+  rejected at construction; completion-order events differ across
+  replays. Accepted: the Reboot default `"parallel_ordered_events"`, or
+  `"sequential"`.
 - Adding `pydantic-ai-slim[anthropic]` or `anthropic` to
   `pyproject.toml` yourself — a fresh resolve picks an SDK built on
-  `httpx2`, which rejects the `httpx` client Pydantic AI hands it.
+  `httpx2`, which rejects the `httpx` client Pydantic AI passes.
 - Tool functions or `output_type` classes defined as local closures and
   passed per run — they must pickle; define them at module scope.
 
 ## Limits
 
-- Runs only in a `WorkflowContext`; unusable from readers, writers and
-  transactions.
+- `WorkflowContext` only; unusable from readers, writers, transactions.
 - Streaming is drained, not token-by-token: `run_stream`,
-  `run_stream_events` and `iter` work, but the model call is drained
-  and memoized inside `at_least_once`, so chunks arrive in one batch
-  when the model finishes. A chat UI shows nothing until then (~30–60 s
-  for a long document, mattprd at 1.4.1); there is no sanctioned
-  side channel for partial output at 1.6.0.
-- Model calls pass `effect_validation=EffectValidation.DISABLED`
-  (1.6.0 source), so development and the test harness do not call the
-  provider twice. Tool calls do not opt out (`agent-tools.md`). The
-  no-re-billing promise above covers replay plus this opt-out, not
-  every call your workflow makes around the agent.
+  `run_stream_events` and `iter` work, but the model call is drained and
+  memoized inside `at_least_once`, so chunks arrive in one batch at the
+  end. A chat UI shows nothing until then (~30–60 s for a long document,
+  mattprd at 1.4.1); no sanctioned side channel for partial output at
+  1.6.0.
+- Model calls pass `effect_validation=EffectValidation.DISABLED` (1.6.0
+  source), so dev and tests don't call the provider twice; tool calls do
+  not opt out (`agent-tools.md`). The no-re-billing promise covers
+  replay plus this opt-out, not other calls around the agent.
 - On replay the agent compares its configuration snapshot
-  (instructions, model, per-run kwargs) with the original run and logs
-  `*** POSSIBLE NON-DETERMINISM! ***` if anything changed; memoized
-  responses may then be stale.
+  (instructions, model, per-run kwargs) with the original and logs
+  `*** POSSIBLE NON-DETERMINISM! ***` on a change; memoized responses
+  may then be stale.
 - Per-run `toolsets=` / `output_type=` must be picklable.
 
 ## Scales as
 
-- One provider call per model step on first execution; zero on replay
-  (memoized). Tool-using runs make one model call per step plus tool
-  calls (framework design).
+- One provider call per model step on first execution, zero on replay;
+  tool-using runs add their tool calls (framework design).
 
 ## Errors you will see
 

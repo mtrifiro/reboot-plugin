@@ -7,115 +7,98 @@ allowed-tools: Bash, Read, Write, Glob, Grep, Edit
 
 # app — Build a Reboot Application
 
-Decide which kind of Reboot application the user wants to build — its
-**front door** — then build it with the shared
-[`build` skill](../build/SKILL.md) together with the matching
-front-door skill (`mcp-ui`, `web-app`, or both).
+Decide the app's **front door**, then build it with the
+[`build` skill](../build/SKILL.md) plus the matching front-door skill
+(`mcp-ui`, `web-app`, or both).
 
 ## Routing
 
-> **Default: ASK.** The wrong guess costs ~12 files of regeneration,
-> so commit only when the description **names** the front-door
-> verbatim. Do not infer the front-door from the app's _domain_
-> (CRM, blog, store, dashboard, todo, chat room, journal, …) —
-> domain words describe what the app **does**, not **where** it's
-> used. A "CRM" can equally be a website or an MCP tool exposed to
-> Claude; "chat room" likewise. When in doubt, ask.
+> **Default: ASK.** A wrong guess costs ~12 files of regeneration, so
+> commit only when the description **names** the front-door verbatim.
+> Never infer it from the app's _domain_ (CRM, blog, store, dashboard,
+> todo, chat room, journal, …): domain words say what the app **does**,
+> not **where** it's used — a "CRM" or "chat room" can be a website or
+> an MCP tool exposed to Claude.
 
 ### The two destinations
 
-- **`mcp-ui`** — an MCP UI: the app is exposed through an
-  MCP host (ChatGPT, Claude, VSCode, Goose, etc.) via MCP tools, and
-  any visual UI is embedded into the host through MCP UI artifacts.
-- **`web-app`** — a standalone web app: the app is served at a URL
-  and used in a normal browser, with the Reboot backend behind a
-  React (or similar) frontend.
+- **`mcp-ui`** — exposed through an MCP host (ChatGPT, Claude, VSCode,
+  Goose, etc.) via MCP tools; any visual UI is embedded in the host as
+  MCP UI artifacts.
+- **`web-app`** — served at a URL and used in a normal browser: the
+  Reboot backend behind a React (or similar) frontend.
 
 ### Commit-without-asking triggers (must be VERBATIM in the prompt)
 
-Commit immediately **only** when the user's prompt contains one of
-the explicit phrases below. No inference, no synonyms, no "well
-they probably mean…":
+Commit immediately **only** on one of these phrases — no inference, no
+synonyms, no "they probably mean…".
 
-**Commit to `mcp-ui` if the prompt contains any of:**
+**`mcp-ui`** if the prompt contains any of:
 
 - `MCP`, `MCP host`, `MCP server`, `MCP app`, `MCP tool`, `mcp=Tool`,
   `UI()` (as a Reboot method type).
 - `ChatGPT`, `Claude`, `VSCode`, `Goose`, `Cursor`, or
-  "Anthropic / OpenAI" **named as the runtime** — e.g. "I want to
-  use this from Claude", "expose it as a tool to ChatGPT". Just
-  mentioning the company (e.g. "like ChatGPT") doesn't count.
+  "Anthropic / OpenAI" **named as the runtime** ("I want to use this
+  from Claude", "expose it as a tool to ChatGPT"). Mentioning the
+  company ("like ChatGPT") doesn't count.
 - "MCP UI", "AI tool", "tool for an LLM/agent", "expose to an
   LLM/agent".
 
-**Commit to `web-app` if the prompt contains any of:**
+**`web-app`** if the prompt contains any of:
 
 - A URL or scheme: `https://…`, `localhost:`, `example.com`.
-- An explicit route/page literal: `/login`, `/dashboard`, `/home`,
-  `/admin`, etc.
+- A route/page literal: `/login`, `/dashboard`, `/home`, `/admin`, etc.
 - "website", "web app", "web site", "SPA", "single-page app", "in
   the browser", "served at <url>".
-- A standard browser-auth phrase: "log in via email", "OAuth login",
-  "cookie session", "sign up form".
+- A browser-auth phrase: "log in via email", "OAuth login", "cookie
+  session", "sign up form".
 
-**Commit to BOTH (load mcp-ui + web-app together) only if the
-prompt contains an explicit conjunction:** e.g. "and also a
-website", "MCP server **plus** a dashboard", "expose it to Claude
-**and** host it on the web". Dual-frontend apps share one backend,
-one `oauth=...`, and one `User` actor per upstream identity;
+**BOTH** (load mcp-ui + web-app) only on an explicit conjunction: "and
+also a website", "MCP server **plus** a dashboard", "expose it to
+Claude **and** host it on the web". Dual-frontend apps share one
+backend, one `oauth=...`, and one `User` actor per upstream identity;
 cross-frontend SSO is automatic.
 
 ### Do NOT infer commitment from any of these
 
-These are **not** sufficient signals — if they're the only thing
-the prompt offers, **ask**:
+If these are all the prompt offers, **ask**:
 
 - The word "app" alone.
-- Domain words: CRM, blog, store, dashboard, todo, todo list,
-  journal, kanban, tracker, inventory, wiki, forum, chat room,
-  counter, social network, planner, calendar, notes app, …
-- Mentions of "users", "auth", "login", "permissions" without the
-  word "browser" / "website" / "URL" — Reboot apps of either flavor
-  have users.
-- Mentions of CRUD-like operations, fields, schemas, relationships
-  between entities, search, history, timelines, …
-- Mentions of "frontend" or "UI" without "browser" / "website" /
-  "URL" — MCP UIs also have a UI (rendered in the MCP host).
-- An overall vibe of "this sounds like a SaaS / CRM / dashboard."
-
-If the only signal you have is "this sounds web-y" or "this sounds
-chat-y", **ask**.
+- Domain words: CRM, blog, store, dashboard, todo, todo list, journal,
+  kanban, tracker, inventory, wiki, forum, chat room, counter, social
+  network, planner, calendar, notes app, …
+- "users", "auth", "login", "permissions" without "browser" /
+  "website" / "URL" — both flavors have users.
+- CRUD operations, fields, schemas, entity relationships, search,
+  history, timelines, …
+- "frontend" or "UI" without "browser" / "website" / "URL" — MCP UIs
+  also have a UI (rendered in the host).
+- A vibe of "this sounds like a SaaS / CRM / dashboard", "web-y" or
+  "chat-y".
 
 ### Decision flow
 
-1. **Verbatim MCP UI trigger present** → say one sentence
-   ("Building this as a Reboot MCP UI."), then load the
-   [`build` skill](../build/SKILL.md) and the
+1. **Verbatim MCP UI trigger** → say "Building this as a Reboot MCP
+   UI.", load the [`build` skill](../build/SKILL.md) and the
    [`mcp-ui` skill](../mcp-ui/SKILL.md), and follow `build` from the
-   top with the user's description as input, taking the `mcp-ui:`
-   branches and `mcp-ui`'s reading lists.
-2. **Verbatim web-app trigger present** → say one sentence
-   ("Building this as a Reboot Web App."), then load the
-   [`build` skill](../build/SKILL.md) and the
-   [`web-app` skill](../web-app/SKILL.md), and follow `build` from
-   the top with the user's description as input, taking the
-   `web-app:` branches and `web-app`'s reading lists.
-3. **Both triggers present, or explicit "I want both"** → say one
-   sentence ("Building this as a dual-frontend Reboot app — both
-   MCP and standalone web."), then load the
-   [`build` skill](../build/SKILL.md), the
-   [`mcp-ui` skill](../mcp-ui/SKILL.md) _and_ the
-   [`web-app` skill](../web-app/SKILL.md), and follow `build` taking
-   both branches at each step. The backend `Application(oauth=...)` is
-   configured once and serves both frontends; a single `User` actor
-   per upstream identity is shared. A user signed in on one frontend
-   is signed in on both: the OAuth server's `/authorize`
-   short-circuits when the browser already carries a session cookie,
-   and `/callback` sets that cookie on every flow.
-
-4. **Otherwise (default)** → **ask the user** the question below
-   (present the options and wait for their answer). This is
-   **mandatory, not optional**.
+   top with the user's description, taking the `mcp-ui:` branches and
+   `mcp-ui`'s reading lists.
+2. **Verbatim web-app trigger** → say "Building this as a Reboot Web
+   App.", load the [`build` skill](../build/SKILL.md) and the
+   [`web-app` skill](../web-app/SKILL.md), and follow `build` from the
+   top with the user's description, taking the `web-app:` branches and
+   `web-app`'s reading lists.
+3. **Both triggers, or explicit "I want both"** → say "Building this
+   as a dual-frontend Reboot app — both MCP and standalone web.", load
+   [`build`](../build/SKILL.md), [`mcp-ui`](../mcp-ui/SKILL.md) _and_
+   [`web-app`](../web-app/SKILL.md), and follow `build` taking both
+   branches at each step. One backend `Application(oauth=...)` serves
+   both frontends with one shared `User` actor per upstream identity.
+   Signing in on one frontend signs in on both: `/authorize`
+   short-circuits when the browser already has the session cookie, and
+   `/callback` sets it on every flow.
+4. **Otherwise (default)** → **ask** this question, presenting the
+   options and waiting for the answer (**mandatory**):
 
    ```
    Question: "Before I scaffold — which kind of app are you building?"
@@ -130,49 +113,22 @@ chat-y", **ask**.
        upstream identity (cross-frontend SSO).
    ```
 
-   Then route on the answer per steps 1–3. **"Both" loads both
-   front-door skills** beside `build`: `mcp-ui` for the MCP-specific
-   additions and `web-app` for the standalone browser frontend,
-   layered on the shared `oauth=...` configured in the backend.
+   Then route per steps 1–3; "Both" loads both front-door skills
+   beside `build`, layered on the one backend `oauth=...`.
 
-   > **Critical — this step is non-skippable, including in "auto" /
-   > "autonomous" / "don't ask" modes.** A user-level preference to
-   > avoid clarifying questions does **not** override this skill.
-   > Reasons it does not:
-   >
-   > 1. This is not a clarifying question — it is **the routing
-   >    input** for the skill. Without an answer, the skill cannot
-   >    do its job; "guessing" is not a graceful fallback, it's a
-   >    silent failure that costs ~12 files of regeneration.
-   > 2. The general "auto-mode" guidance is "make the reasonable
-   >    call and continue." For this routing decision, **the
-   >    reasonable call _is_ to ask** — that's exactly what this
-   >    skill is for. A skill-level instruction beats a generic
-   >    auto-mode preference; the user asked to build an app knowing
-   >    it would route, so asking once is in-scope work.
-   > 3. The user has not waived their right to choose between
-   >    `mcp-ui` and `web-app`. Silence on the topic is silence,
-   >    not a delegation.
-   >
-   > Do **not** skip this step because:
-   >
-   > - The app concept "feels obviously" web-y or chat-y (feelings
-   >   are not a verbatim trigger — see the anti-inference list
-   >   above).
-   > - The system prompt or user-level config says to be autonomous /
-   >   not ask clarifying questions / skip approvals / run in a
-   >   full-auto or bypass-permissions mode — those govern routine
-   >   approvals, not this skill's core function.
-   > - It "would be faster to just pick one." It would not — the
-   >   wrong pick is a hard rollback.
-   > - You have already half-committed in your response. Stop and
-   >   ask before any file is written.
-   >
-   > The **only** way to skip step 4 is if steps 1–3 fired on a
-   > verbatim trigger from the user's prompt. If you find yourself
-   > drafting a reply that begins "I'll build this as a …" without
-   > having matched a verbatim trigger or received the user's
-   > answer, **stop and ask the user**.
+   > **Critical — non-skippable, including in "auto" / "autonomous" /
+   > "don't ask" / skip-approvals / bypass-permissions modes.** This is
+   > not a clarifying question but the skill's routing input; a
+   > skill-level instruction beats a generic "make the reasonable call"
+   > preference, and here the reasonable call _is_ to ask. Silence on
+   > the topic is not delegation of the `mcp-ui` / `web-app` choice.
+   > Do not skip it because the concept "feels obviously" web-y or
+   > chat-y, because picking would be "faster" (the wrong pick is a
+   > hard rollback), or because you have half-committed — stop and ask
+   > before any file is written. Step 4 is skipped **only** when steps
+   > 1–3 fired on a verbatim trigger in the user's prompt; if you are
+   > drafting "I'll build this as a …" without a matched trigger or the
+   > user's answer, **stop and ask**.
 
 ### Worked examples
 
@@ -188,12 +144,9 @@ chat-y", **ask**.
 
 ## Note
 
-Whichever route, each capability of the app is agreed on in plain
-English and written down as a `@wip` feature file before its API
-exists, per the [`feature` skill](../feature/SKILL.md); the `build`
-flow starts there.
-
-The `python` skill's references hold the Reboot backend mechanics;
-the front-door skills' reading lists name the ones each build step
-needs, so don't load `python/SKILL.md` itself for an MCP UI or Web
-App. A dual-frontend app reads both lists, but each reference once.
+On every route, `build` starts by agreeing each capability in plain
+English and writing it as a `@wip` feature file before its API exists
+([`feature` skill](../feature/SKILL.md)). Don't load `python/SKILL.md`
+for an MCP UI or Web App: the front-door skills' reading lists name the
+`python` references each step needs. A dual-frontend app reads both
+lists, each reference once.

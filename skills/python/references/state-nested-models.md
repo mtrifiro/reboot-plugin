@@ -15,11 +15,10 @@ docs: ""
 
 ## When you are here
 
-Your state has groups of fields that belong together (a shipping and a
-billing address), and you are deciding how to shape them. Whether a
-group is part of this actor or an actor of its own is decided by
-[`state-collections.md`](state-collections.md) (collections of
-entities) and [`state-actor-decomposition.md`](state-actor-decomposition.md)
+State has groups of fields that belong together (shipping and billing
+addresses). Whether a group is part of this actor or its own actor:
+[`state-collections.md`](state-collections.md) (entity collections) and
+[`state-actor-decomposition.md`](state-actor-decomposition.md)
 (unrelated concerns).
 
 ## Do this
@@ -41,16 +40,12 @@ class Address(Model):
 
 
 class OrderState(Model):
-    # A single nested `Model` field is Optional with `default=None`;
-    # see `api-pydantic.md`.
+    # A single nested `Model` is Optional, `default=None` (`api-pydantic.md`).
     shipping: Optional[Address] = Field(tag=1, default=None)
     billing: Optional[Address] = Field(tag=2, default=None)
-```
 
-Inside a writer or transaction, assign a whole sub-model, or set its
-fields one by one:
 
-```python
+# In a writer/transaction: assign a whole sub-model, or set fields one by one.
 async def update_shipping(
     self, context: WriterContext, request: Order.UpdateShippingRequest,
 ) -> None:
@@ -61,19 +56,18 @@ async def update_shipping(
     )
 ```
 
-A field that is `None` until first written needs a guard before
-field-by-field assignment (`if self.state.shipping is None: ...`).
-`list[Address]` and `dict[str, Address]` work too, with
-`default_factory=list` / `dict`.
+- Field-by-field assignment needs a guard while the field is `None`
+  (`if self.state.shipping is None: ...`).
+- `list[Address]` / `dict[str, Address]` use `default_factory=list` /
+  `dict`.
 
 ## Never
 
 - Use a **state** `Model` (one bound as `state=` in a `Type(...)`) as
-  a field of another state `Model`, alone or in a `list`/`dict` — that
-  collapses separate actors into one. Store the other actor's string
-  ID and reach it with `<OtherType>.ref(id)`. Which container holds
-  the IDs (`list[str]`, `dict[str, str]`, a stdlib `OrderedMap`) is
-  decided in `state-collections.md`.
+  a field of another state `Model`, alone or in a `list`/`dict` —
+  collapses separate actors into one. Store the other actor's string ID
+  and use `<OtherType>.ref(id)`; the ID container (`list[str]`,
+  `dict[str, str]`, a stdlib `OrderedMap`) is in `state-collections.md`.
 - Inline items that have their own identity, lifecycle or methods —
   they are a `Type` of their own (same rule, `state-collections.md`).
 
@@ -85,8 +79,8 @@ field-by-field assignment (`if self.state.shipping is None: ...`).
 
 ## Scales as
 
-- A nested `Model` is part of the actor's state, so it is read and
-  written with the whole actor; see `state-collections.md` § Scales as.
+- A nested `Model` is read and written with the whole actor; see
+  `state-collections.md` § Scales as.
 
 ## Errors you will see
 

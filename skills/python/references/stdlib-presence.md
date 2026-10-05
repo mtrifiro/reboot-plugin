@@ -16,17 +16,16 @@ docs: ""
 
 ## When you are here
 
-You need a who-is-online list (participants in a room, tabs on a
-document) or collaborative cursors. The stdlib ships three cooperating
-types for this, all importable from `reboot.std.presence.v1.presence`:
+Building a who-is-online list (room participants, tabs on a document)
+or collaborative cursors. Three types, all from
+`reboot.std.presence.v1.presence`:
 
 - **`Subscriber`** — one user/tab; counts live connections (`toggles`).
-- **`Presence`** — the set of currently present subscriber IDs for one
-  scope (e.g. a chat room).
-- **`MousePosition`** — optional per-subscriber cursor position.
+- **`Presence`** — the present subscriber IDs for one scope (e.g. a room).
+- **`MousePosition`** — optional per-subscriber cursor.
 
-Do not hand-roll ping/pong: connection lifetime is a long-lived
-`Subscriber.connect` reader whose cancellation the framework observes.
+Connection lifetime is a long-lived `Subscriber.connect` reader whose
+cancellation the framework observes; no ping/pong.
 
 ## Do this
 
@@ -42,9 +41,8 @@ async def main():
     ).run()
 ```
 
-`presence.servicers()` returns
-`[PresenceServicer, SubscriberServicer, MousePositionServicer]`. There
-is no `presence_library()` at 1.6.0.
+It returns `[PresenceServicer, SubscriberServicer, MousePositionServicer]`;
+there is no `presence_library()` at 1.6.0.
 
 ### Methods (1.6.0 proto)
 
@@ -64,25 +62,23 @@ is no `presence_library()` at 1.6.0.
 
 ### Connection lifecycle
 
-The order the 1.6.0 React component uses (and any client must follow):
+Any client must follow the 1.6.0 React component's order:
 
-1. `Subscriber.ref(subscriber_id).create(context)` — once; `connect`
-   is a reader and needs the actor to exist.
-2. Pick a fresh `nonce` (a UUID) and open
-   `Subscriber.ref(subscriber_id).connect(context, nonce=nonce)`. It
-   stays open while the client is connected.
-3. Concurrently, `Subscriber.ref(subscriber_id).toggle(context, nonce=nonce)`.
-   If `connect` hasn't registered yet it aborts `NotFound`; retry.
+1. `Subscriber.ref(subscriber_id).create(context)` once (`connect` is a
+   reader; the actor must exist).
+2. Open `Subscriber.ref(subscriber_id).connect(context, nonce=nonce)`
+   with a fresh UUID `nonce`; it stays open while connected.
+3. Concurrently `Subscriber.ref(subscriber_id).toggle(context, nonce=nonce)`;
+   it aborts `NotFound` until `connect` registers, so retry.
 4. `Presence.ref(scope_id).subscribe(context, subscriber_id=subscriber_id)`.
 
-When the client goes away the `connect` call is cancelled;
-`wait_for_disconnect` decrements `toggles` and `Presence.watch` removes
-the subscriber from `subscriber_ids`. To reconnect, repeat from step 2
-with a new nonce.
+On disconnect `connect` is cancelled, `wait_for_disconnect` decrements
+`toggles`, and `Presence.watch` removes the subscriber. Reconnect from
+step 2 with a new nonce.
 
 ### React
 
-`@reboot-dev/reboot-std-react` (npm, 1.6.0) wraps that whole protocol:
+`@reboot-dev/reboot-std-react` (npm, 1.6.0) wraps the protocol:
 
 ```tsx
 import {
@@ -106,52 +102,48 @@ function Participants() {
 ```
 
 `<MouseTracker arrow={<Cursor />}>…</MouseTracker>` (inside
-`<Presence>`) publishes this subscriber's cursor and renders everyone
-else's. The generated per-type hooks `usePresence`, `useSubscriber`
-and `useMousePosition` are in `@reboot-dev/reboot-std-api` under
+`<Presence>`) publishes this cursor and renders everyone else's.
+Per-type hooks `usePresence`, `useSubscriber`, `useMousePosition` are
+in `@reboot-dev/reboot-std-api` under
 `presence/v1/presence_rbt_react.js`,
 `presence/subscriber/v1/subscriber_rbt_react.js` and
 `presence/mouse_tracker/v1/mouse_position_rbt_react.js`.
 
 ### Building on top
 
-Your app's room/channel actor calls
+Your room actor calls
 `Presence.ref(channel_id).subscribe(context, subscriber_id=...)` and
-`Presence.ref(channel_id).list(context)` to render participants.
-Server-side Python uses the servicer API above; browser code uses the
-React package.
+`Presence.ref(channel_id).list(context)`; browser code uses the React
+package.
 
 ## Never
 
 - `from reboot.std.presence.subscriber.v1.subscriber import Subscriber`
-  or `...mouse_tracker.v1.mouse_position` — those are proto package
-  names, not Python modules (`ModuleNotFoundError`). Import all three
-  types from `reboot.std.presence.v1.presence`.
-- `import reboot.std.react.presence` — no such module. The React side
-  is the npm package `@reboot-dev/reboot-std-react/presence`.
+  or `...mouse_tracker.v1.mouse_position` — proto package names, not
+  Python modules (`ModuleNotFoundError`); import from
+  `reboot.std.presence.v1.presence`.
+- `import reboot.std.react.presence` — no such module; React is npm
+  `@reboot-dev/reboot-std-react/presence`.
 - `Subscriber.create(context, subscriber_id)` — `create` is a plain
-  writer, not a constructor, so there is no class-level form. Use
-  `Subscriber.ref(subscriber_id).create(context)`.
-- Calling `presence.subscribe` before the subscriber has toggled — it
-  aborts `FailedPrecondition` because `status` is not yet present.
+  writer, not a constructor; use `Subscriber.ref(subscriber_id).create(context)`.
+- Calling `presence.subscribe` before the subscriber has toggled —
+  aborts `FailedPrecondition` (`status` not yet present).
 - Reusing a `nonce` for a second `connect` while the first is open —
-  it aborts `AlreadyExists`.
+  aborts `AlreadyExists`.
 - Rolling your own heartbeat / ping-pong presence — use this protocol.
 
 ## Limits
 
-- All three servicers' `authorizer()` returns `allow()` at 1.6.0: any
-  caller can create, toggle, subscribe or update. Put a stricter check
-  in your own room actor if membership matters.
-- Disconnect tracking lives in process memory (`_disconnect_events` on
-  the servicer class). A `toggle` must reach the same server process
-  that holds its `connect`, which the long-lived call and the generated
-  client arrange.
-- `MousePosition.update` sets `context.sync = False`: positions trade
-  durability for speed and may be lost on a crash.
-- `@reboot-dev/reboot-std-react@1.6.0` imports `uuid` but does not list
-  it in its `dependencies`; install `uuid` in the frontend if the
-  bundler cannot resolve it.
+- All three servicers' `authorizer()` returns `allow()` at 1.6.0: anyone
+  can create, toggle, subscribe or update. Check membership in your own
+  room actor.
+- Disconnect tracking is in process memory (`_disconnect_events` on
+  the servicer class): a `toggle` must reach the process holding its
+  `connect` (the generated client arranges this).
+- `MousePosition.update` sets `context.sync = False`: positions may be
+  lost on a crash.
+- `@reboot-dev/reboot-std-react@1.6.0` imports `uuid` without listing
+  it in `dependencies`; install `uuid` if the bundler can't resolve it.
 - The React component retries `connect` with no backoff (a TODO in the
   1.6.0 source).
 

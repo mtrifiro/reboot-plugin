@@ -7,47 +7,43 @@ allowed-tools: Bash, Read, Edit
 
 # report — File a Project's Findings with the Reboot Team
 
-The skills improve only from what builders write down. Every Reboot
-project made from `build/templates/` has a `FINDINGS.md`; the agent
-appends to it whenever a skill is wrong or silent. This skill turns
-those items into GitHub issues — **one issue per item, filed only
-after the user approves the batch.** Filing an issue publishes it.
+Every project made from `build/templates/` has a `FINDINGS.md` the agent
+appends to whenever a skill is wrong or silent; the skills improve only
+from it. This skill files each item as a GitHub issue — **one issue per
+item, only after the user approves the batch.** Filing publishes it.
 
 ## Step 1 — Read the findings
 
-1. Find `FINDINGS.md` at the project root (or the path given).
-2. Collect every `### …` item that has no `- **Reported:** <url>`
-   line. Note its section (Framework / Reboot Cloud / reboot.bdd /
-   Plugin skills / Things that worked), severity, Reboot version and
-   the five fields.
-3. If an item is missing its Reboot version or "What happened", ask
-   the user to fill it in, or skip it. Don't invent repro steps.
+1. Open `FINDINGS.md` at the project root (or the given path).
+2. Collect every `### …` item with no `- **Reported:** <url>` line; note
+   its section (Framework / Reboot Cloud / reboot.bdd / Plugin skills /
+   Things that worked), severity, Reboot version and the five fields.
+3. Missing Reboot version or "What happened": ask the user to fill it
+   in, or skip it. Don't invent repro steps.
 
 ## Step 2 — Ask about the silent areas
 
-Silence is a measurement only if someone asked. Ask the user once,
-briefly, whether anything surprised them in these areas, which past
-findings almost never mention, and add any answers as items:
+Silence measures nothing unless someone asked. Ask once, briefly,
+whether anything surprised them in these rarely reported areas; add
+answers as items:
 
-- Codex (if they used it instead of Claude Code)
+- Codex (if used instead of Claude Code)
 - the `deploy` skill and Reboot Cloud, beyond secrets
 - proto-defined (rather than pydantic) APIs
 
 ## Step 3 — Check for existing issues
 
-For each item, search the plugin's issues for its key phrase (the
-error text, or the skill/reference name):
+Search for each item's key phrase (error text, or skill/reference name):
 
 ```sh
 gh issue list --repo reboot-dev/reboot-plugin --state all --search "<phrase>" --limit 5
 ```
 
-If an issue already covers it, plan a comment on that issue instead
-of a new one.
+If one covers it, plan a comment on it instead.
 
 ## Step 4 — Show the batch and get approval
 
-Show the user a table, one row per planned action:
+One row per planned action:
 
 | # | Action | Title | Labels | Section |
 | --- | --- | --- | --- | --- |
@@ -55,18 +51,17 @@ Show the user a table, one row per planned action:
 | 2 | comment on #123 | … | | Framework |
 
 Labels: the section (`framework`, `reboot-cloud`, `reboot-bdd`,
-`plugin-skills`, `worked`) and `severity:red|yellow|green`. Strip
-anything private first: customer names, emails, secrets, internal
-URLs, proprietary code beyond the minimal repro. Point out anything
-you removed.
+`plugin-skills`, `worked`) and `severity:red|yellow|green`. First strip
+anything private — customer names, emails, secrets, internal URLs,
+proprietary code beyond the minimal repro — and say what you removed.
 
-**Stop and wait.** File only the rows the user approves, as worded
-after their edits. No answer is not approval.
+**Stop and wait.** File only approved rows, as worded after the user's
+edits. No answer is not approval.
 
 ## Step 5 — File and record
 
-Issue body, in this order: Reboot version, What happened, Expected,
-Repro, Where in the skills — copied from the item — then a last line
+Body, in order, copied from the item: Reboot version, What happened,
+Expected, Repro, Where in the skills; last line
 `Reported via the report skill from FINDINGS.md`.
 
 ```sh
@@ -75,16 +70,15 @@ gh issue create --repo reboot-dev/reboot-plugin \
   --body-file <tempfile>
 ```
 
-If a label doesn't exist on the repo, file without it rather than
-creating labels. After each issue is created, append
-`- **Reported:** <issue url>` to the item in `FINDINGS.md` so it is
-never filed twice. Finish with the list of URLs.
+A label missing on the repo: file without it; don't create labels.
+After each issue, append `- **Reported:** <issue url>` to the item so it
+is never filed twice. Finish with the list of URLs.
 
 ## Never
 
 - File, comment, or create labels without the user's approval of that
   specific batch.
 - Merge several items into one issue — one item, one issue, so each
-  can be closed by the change that fixes it.
+  closes with its fix.
 - Delete or rewrite items in `FINDINGS.md`; only append the
   `Reported:` line.

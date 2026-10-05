@@ -16,17 +16,16 @@ docs: ""
 
 ## When you are here
 
-The app uses `Application(oauth=...)` and needs to know *about* the
-signed-in user (email, name, verified-email flag), not just their
-opaque `context.auth.user_id`. Claims are opt-in per provider and
-arrive in the `User` type's framework-provided `set_claims`
-transaction. Choosing providers is in the front-door skill's OAuth
-section; authorizer rules are in `servicer-authorizer.md`.
+The app uses `Application(oauth=...)` and needs facts *about* the user
+(email, name, verified-email flag), not just the opaque
+`context.auth.user_id`. Claims are opt-in per provider and arrive in the
+`User` type's framework-provided `set_claims` transaction. Choosing
+providers: the front-door skill's OAuth section; rules:
+`servicer-authorizer.md`.
 
 ## Do this
 
-Ask the provider for claims, in **every** arm, including
-`Development()`:
+Request claims in **every** arm, including `Development()`:
 
 ```python
 from reboot.aio.applications import Application
@@ -47,10 +46,9 @@ application = Application(
 )
 ```
 
-Override `set_claims` in the servicer for the type named `User`. It is
-a `Transaction` (so it may call other actors, e.g. a role lookup or a
-directory index), it reads and writes `self.state`, and it takes no
-`state` parameter:
+Override `set_claims` in the servicer for the type named `User`: a
+`Transaction` (may call other actors, e.g. a role lookup), using
+`self.state`, with no `state` parameter:
 
 ```python
 from reboot.aio.contexts import TransactionContext
@@ -63,18 +61,16 @@ class UserServicer(User.Servicer):
         context: TransactionContext,
         request: User.SetClaimsRequest,
     ) -> None:
-        # Full replace: a claim absent now is one the provider no
-        # longer asserts, so overwrite, never merge.
+        # Full replace: an absent claim is no longer asserted.
         self.state.email = request.claims.get("email", "")
         self.state.name = request.claims.get("name", "")
 ```
 
-`request.claims` is a `dict[str, Any]` holding the complete, current
-set of requested claims, keyed by claim name (or by the name you
-mapped it to: `claims={"email": "verified-email"}`). The framework
-constructs the `User` first (auto-construct, idempotent), then calls
-`set_claims`, on every sign-in. Re-delivering the same claims must be
-harmless.
+`request.claims` is a `dict[str, Any]` of the complete current requested
+claims, keyed by claim name (or your mapping:
+`claims={"email": "verified-email"}`). On every sign-in the framework
+auto-constructs the `User` (idempotent), then calls `set_claims`;
+re-delivery must be harmless.
 
 Claims each provider can deliver (1.6.0 `_AVAILABLE_CLAIMS`):
 
@@ -87,53 +83,46 @@ Claims each provider can deliver (1.6.0 `_AVAILABLE_CLAIMS`):
 | `Ory` | `email`, `email_verified`, `name`, `given_name`, `family_name`, `username`, `website`, `updated_at` |
 | `Anonymous` | none |
 
-Registered providers request the OAuth scopes the claims need
-automatically.
+Registered providers request the needed OAuth scopes automatically.
 
 ## Never
 
 - `Development()` with no `claims=` while expecting identity — the app
-  sees only `dev-{hash}`, `set_claims` is never called, and nothing
-  warns. Pass `claims=` in the dev arm too.
-- Override `set_claims(self, context, state, request)` — that is the
-  internal variant; mypy reports `Signature of "set_claims"
-  incompatible with supertype`. Use `(self, context, request)` and
-  `self.state`.
+  sees only `dev-{hash}`, `set_claims` never runs, nothing warns.
+- Override `set_claims(self, context, state, request)` — mypy:
+  `Signature of "set_claims" incompatible with supertype`. Use
+  `(self, context, request)` and `self.state`.
 - Request claims without overriding `set_claims` — the generated
   default raises `NotImplementedError` at sign-in.
 - Declare `set_claims` (or `create`) in the `User` API — both are
-  reserved and injected by the framework; override them in the servicer.
-- Merge claims into existing state — treat each delivery as the whole
-  truth.
-- Key roles or a directory by `Development()` user IDs — they are
-  opaque, differ per app and change after an expunge; there are only
-  five identities (Alice, Ben, Carlos, Dani, Esi). Key by the `email`
-  claim and look up the user ID at runtime.
+  reserved and injected; override in the servicer.
+- Merge claims into existing state — each delivery is the whole truth.
+- Key roles or a directory by `Development()` user IDs — opaque, per-app,
+  changed by an expunge; only five identities (Alice, Ben, Carlos, Dani,
+  Esi). Key by the `email` claim; look up the user ID at runtime.
 
 ## Limits
 
 - Only the type named `User` gets `create` / `set_claims`; claims reach
   no other type directly.
-- `set_claims` is callable only app-internally: the generated
-  middleware rejects any external call with `PermissionDenied` before
-  any authorizer runs, so no rule, not even `allow()`, exposes it
-  (1.6.0 source). reboot-crm-01 reported it web-callable under the
-  default `User` rule; on a runtime without that check, add
+- `set_claims` is app-internal only: generated middleware rejects external
+  calls with `PermissionDenied` before any authorizer, so not even
+  `allow()` exposes it (1.6.0 source). reboot-crm-01 saw it web-callable
+  under the default `User` rule; on a runtime without that check, add
   `User.Authorizer(set_claims=allow_if(all=[is_app_internal]))`.
-- Delivered on each authorization-code exchange (each sign-in), not on
-  token refresh; a refresh never clears earlier claims. Access tokens
-  last 24 h by default (`access_token_ttl_seconds=`).
+- Delivered per authorization-code exchange (sign-in), not on refresh;
+  a refresh never clears claims. Access tokens last 24 h by default
+  (`access_token_ttl_seconds=`).
 - `Ory(webhook_secret=...)` (requires `claims=`) also delivers changes
   between sign-ins, but only to `User`s that already exist.
-- A claim name the provider cannot deliver raises at construction,
-  naming the available ones; `Anonymous` rejects `claims=` entirely.
+- An undeliverable claim name raises at construction, listing available
+  ones; `Anonymous` rejects `claims=`.
 
 ## Scales as
 
-- Sign-in waits on the auto-construct and `set_claims` calls. Keep
-  `set_claims` small: it holds an exclusive lock on the `User` while it
-  runs, and a `User` locked by another transaction blocks sign-in (see
-  `servicer-transaction.md`, Limits).
+- Sign-in waits on auto-construct and `set_claims`. Keep `set_claims`
+  small: it holds an exclusive `User` lock, and a `User` locked by another
+  transaction blocks sign-in (`servicer-transaction.md`, Limits).
 
 ## Errors you will see
 

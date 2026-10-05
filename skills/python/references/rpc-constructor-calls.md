@@ -15,61 +15,46 @@ docs: ""
 
 ## When you are here
 
-You need an actor of a type that declares a `factory=True` method to
-come into existence, from a transaction, a workflow, `initialize`, a
-test or an external client. Writing the constructor's body is in
-`servicer-constructor.md`; calling ordinary methods is in `rpc-calls.md`.
+Bringing into existence an actor whose type declares a `factory=True`
+method, from a transaction, workflow, `initialize`, test or external
+client. Constructor body: `servicer-constructor.md`; ordinary calls:
+`rpc-calls.md`.
 
 ## Do this
 
-Every `factory=True` method is generated as a classmethod on the type,
-under the method's own name. Call it with the context, the new actor's
-id, and the request fields as kwargs. It returns a `(ref, response)`
-tuple (`response` is `None` when the method declares `response=None`).
+Each `factory=True` method is a classmethod on the type under its own
+name. Pass the context, the new id, and request fields as kwargs; it
+returns `(ref, response)` (`response` is `None` for `response=None`).
 Use the returned ref for follow-up calls.
 
-`api/bank/v1/account.py`:
-
 ```python
-open=Writer(
-    request=OpenRequest,
-    response=None,
-    factory=True,
-    description="Bring the account into existence with a zero balance.",
-    mcp=None,
-),
-```
-
-`main.py` (matches the [`reboot-bank-pydantic`](https://github.com/reboot-dev/reboot-bank-pydantic) example):
-
-```python
+# api/bank/v1/account.py: open=Writer(request=OpenRequest, response=None, factory=True, ...)
+# main.py, matches the reboot-bank-pydantic example
+# (https://github.com/reboot-dev/reboot-bank-pydantic):
 account, _ = await Account.open(context, account_id)
 await account.deposit(context, amount=request.initial_deposit)
 ```
 
-`Bank.create(context, SINGLETON_BANK_ID)` is the same thing for a
-factory method named `create`; there is no built-in `create`. A type
-with **no** `factory=True` method has no constructor to call: its first
-writer or transaction call constructs it implicitly (see
-`lifecycle-initialize-hook.md`).
-
-From `initialize`, a bare constructor call is safe to leave in place:
-its persisted idempotency key replays the stored result on every later
-boot, and the body does not run again (`lifecycle-initialize-hook.md`).
+- `Bank.create(context, SINGLETON_BANK_ID)` is the same for a factory
+  named `create`; there is no built-in `create`.
+- A type with **no** `factory=True` method has no constructor: its
+  first writer or transaction call constructs it implicitly.
+- A bare constructor call in `initialize` is safe to leave: its
+  persisted idempotency key replays the stored result every later boot
+  and the body does not rerun (`lifecycle-initialize-hook.md`).
 
 ## Never
 
 - `await Account.ref(account_id).open(context)` — constructors are not
-  on the ref. mypy: `"WeakReference" has no attribute "open"`; at
-  runtime `AttributeError: 'WeakReference' object has no attribute
-  'open'` (observed at 1.6.0). Use `Account.open(context, account_id)`.
+  on the ref. mypy: `"WeakReference" has no attribute "open"`; runtime:
+  `AttributeError: 'WeakReference' object has no attribute 'open'`
+  (observed at 1.6.0).
 - `Lab.create(context, id)` on a type with no `factory=True` method —
-  no `create` is generated (mypy: `"type[Lab]" has no attribute
-  "create"`, showtime-32, 1.4.1; confirmed at 1.6.0). Call a writer.
-- Calling a constructor a second time and expecting a no-op. Outside a
-  key that was already used, it aborts with `StateAlreadyConstructed`;
-  from a retrying workflow this loops forever (reboot-crm-68, 1.6.0).
-  Get-or-create:
+  not generated (mypy: `"type[Lab]" has no attribute "create"`,
+  showtime-32, 1.4.1; confirmed at 1.6.0). Call a writer.
+- Expecting a second constructor call to be a no-op. Outside an
+  already-used key it aborts `StateAlreadyConstructed`; a retrying
+  workflow loops forever (reboot-crm-68, 1.6.0). Get-or-create:
 
   ```python
   from rbt.v1alpha1.errors_pb2 import StateAlreadyConstructed
@@ -82,15 +67,14 @@ boot, and the body does not run again (`lifecycle-initialize-hook.md`).
       logo = Logo.ref(host)
   ```
 
-- `except Seat.PlaceAborted: pass` around a constructor to tolerate
-  "already exists". `<Method>Aborted` also carries system errors: a
-  ping timeout under load arrived as `PlaceAborted` and was silently
-  swallowed, leaving actors missing (theater-network-15, 1.4.0). Check
-  `aborted.error` and re-raise anything else, as above.
-- Stamping the caller's identity inside a constructor reached from
-  another servicer — the nested call is app-internal and
-  `context.auth` is `None`; pass the owner as a request field
-  (reboot-crm-03, 1.6.0; `servicer-authorizer.md` § Never).
+- `except Seat.PlaceAborted: pass` to tolerate "already exists" —
+  `<Method>Aborted` also carries system errors: a ping timeout under
+  load arrived as `PlaceAborted` and was swallowed, leaving actors
+  missing (theater-network-15, 1.4.0). Check `aborted.error` and
+  re-raise the rest, as above.
+- Stamping caller identity in a constructor reached from another
+  servicer — `context.auth` is `None` there; pass the owner as a
+  request field (reboot-crm-03, 1.6.0; `servicer-authorizer.md` § Never).
 
 ## Limits
 

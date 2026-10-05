@@ -16,22 +16,20 @@ docs: ""
 
 ## When you are here
 
-You are writing the code that loads a catalog, demo data or a
-realistic development dataset, called from `initialize` and from test
-fixtures. How a call in `initialize` is keyed (once ever, versioned
-aliases for migrations, no user identity) is covered in
-[`lifecycle-initialize-hook.md`](lifecycle-initialize-hook.md). Read
-that first. Stopping, expunging and restarting a dev app is covered in
-[`../../run/SKILL.md`](../../run/SKILL.md).
+Loading a catalog, demo data or a realistic dev dataset from
+`initialize` and test fixtures. Read
+[`lifecycle-initialize-hook.md`](lifecycle-initialize-hook.md) first
+(keying: once ever, versioned aliases for migrations, no user identity).
+Stop/expunge/restart: [`../../run/SKILL.md`](../../run/SKILL.md).
 
 ## Do this
 
-Write the seed as **one function with its size as parameters**.
-`initialize` calls it with production values, and tests call it with
-a fraction. Each **batch is one transaction**: it creates its actors
-and adds them to the shared index with one bulk `insert(entries=...)`.
-Batches run **one at a time**, and each call carries an **alias built
-from what that batch contains**.
+- **One function, size as parameters**: `initialize` passes production
+  values, tests a fraction.
+- **One transaction per batch**: it creates its actors and adds them to
+  the shared index with one bulk `insert(entries=...)`.
+- **Batches one at a time**, each call with an **alias built from the
+  batch's contents**.
 
 `backend/src/seed.py`:
 
@@ -54,9 +52,8 @@ async def seed_chain(
     ids = [f"theater-{n:03d}" for n in range(theaters)]
     for start in range(0, len(ids), batch_size):
         batch = ids[start:start + batch_size]
-        # Same method, same actor, every iteration: each call needs
-        # its own alias. Built from the batch's ids, it also lets a
-        # restarted seed skip the batches that already landed.
+        # Same method on the same actor each iteration: each needs its own
+        # alias; built from the ids, it lets a restarted seed skip landed batches.
         await chain.idempotently(f"add-theaters-{batch[0]}").add_theaters(
             context, theater_ids=batch, seats_per_row=seats_per_row,
         )
@@ -91,114 +88,92 @@ async def add_theaters(
     )
 ```
 
-In a test, call the same function with less data:
+Tests call the same function smaller:
 `await seed_chain(self.rbt.create_external_context(name="seed", app_internal=True), theaters=2, seats_per_row=5)`.
-Assert against seed constants, not literals: `LAB_SHOWINGS`, not `48`.
+Assert against seed constants (`LAB_SHOWINGS`), not literals (`48`).
 
 ## Never
 
 - **Concurrent seeding transactions** (`asyncio.gather` over batches,
-  `asyncio.Semaphore(12)`). If the transactions share actors (an
-  index, a parent, a term), they queue on each other's locks. Twelve
-  concurrent bulk imports stalled indefinitely at 0-2% CPU, with no
-  error, retry or timeout in the log. The same imports run one at a
-  time took five to seven seconds each (student-sor, 1.5.0). Even with
-  no reads inside the transaction and a fixed lock order, four at a
-  time ran at one-sixth of sequential throughput. Seed sequentially.
-- **A loop that calls a shared actor without an alias per
-  iteration.** A loop that creates N actors needs no alias, because
-  each call goes to a different actor. A loop that registers each one
-  with a shared chain or index calls the same method on the same actor
-  N times. Each of those calls needs a distinct alias, such as
-  `chain.idempotently(f"reg-{theater.id}").register_theater(...)`
-  (cineloop, 1.4.1).
-- **Aliases built from anything that changes between runs** (wall
-  clock, a random value). The alias is what lets a restarted seed
-  resume correctly. Build it from the record's id or date.
-- **One transaction per record.** Roughly 3,600 calls at about 1.5 s
-  each in dev made a seed that had not finished after five minutes
-  (student-sor, 1.5.0). Batch the records into one transaction per
-  parent, with bulk `entries=` inserts.
-- **Hundreds of creates and one shared `OrderedMap` in a single
-  transaction.** See Limits. Split it into batches.
-- **A big `list[Entity]` held inline on an actor the seed keeps
-  writing.** Every write re-serialises the whole actor. One actor held
-  8,878 records and re-wrote all of them for each progress update
-  (client-portal). Put an unbounded collection in an `OrderedMap`. A
-  list bounded by the domain (200 seats on one showing) can stay
-  inline. See [`state-collections.md`](state-collections.md).
-- **The full production seed in every test.** Keep it for the few
-  tests whose assertion is the production size, and merge those tests.
-  Every other test seeds the minimum it asserts on, through an
-  `app_internal=True` context (showtime, cineloop).
-- **Seeding through a user context in a test.** A method that only
-  `initialize` calls is usually internal-only, so a user context gets
-  `PermissionDenied`. Use
-  `rbt.create_external_context(name=..., app_internal=True)`. This is
-  the test-side equivalent of `initialize`.
-- **Debugging dev state that has lived through incompatible designs**
-  (method kinds changed, scheduled tasks pointing at reworked methods).
-  Stop the app, run
-  `rbt dev expunge --application-name=<name> --yes` and reseed
-  (theater-network, 1.4.0). Never expunge while `rbt dev run` is still
-  running. Reload every open browser tab afterwards.
+  `asyncio.Semaphore(12)`) — transactions sharing actors (index, parent,
+  term) queue on each other's locks. Twelve concurrent bulk imports
+  stalled indefinitely at 0-2% CPU, nothing logged; sequentially each
+  took five to seven seconds (student-sor, 1.5.0). With no reads inside
+  and a fixed lock order, four at a time still ran at one-sixth of
+  sequential throughput.
+- **A shared actor called in a loop without a per-iteration alias**
+  (registering N theaters with one chain): e.g.
+  `chain.idempotently(f"reg-{theater.id}").register_theater(...)`.
+  Creating N distinct actors needs none (cineloop, 1.4.1).
+- **Aliases from values that change between runs** (wall clock, random)
+  — a restarted seed can't resume; use the record's id or date.
+- **One transaction per record** — ~3,600 calls at ~1.5 s each in dev,
+  unfinished after five minutes (student-sor, 1.5.0).
+- **Hundreds of creates and one shared `OrderedMap` in one
+  transaction** (Limits).
+- **A big `list[Entity]` inline on an actor the seed keeps writing** —
+  every write re-serialises it (8,878 records rewritten per progress
+  update, client-portal). Unbounded collections go in an `OrderedMap`;
+  a domain-bounded list (200 seats on one showing) can stay inline
+  ([`state-collections.md`](state-collections.md)).
+- **The full production seed in every test** — only in the few
+  (merged) tests asserting production size; others seed the minimum
+  through an `app_internal=True` context (showtime, cineloop).
+- **Seeding through a user context in a test** — `initialize`-only
+  methods are usually internal-only (`PermissionDenied`); use
+  `rbt.create_external_context(name=..., app_internal=True)`.
+- **Debugging dev state that lived through incompatible designs**
+  (changed method kinds, tasks pointing at reworked methods) — stop the
+  app, `rbt dev expunge --application-name=<name> --yes`, reseed, reload
+  open tabs (theater-network, 1.4.0). Never expunge under a running
+  `rbt dev run`.
 
 ## Limits
 
-- **No documented transaction size ceiling, but one is reachable.**
-  One transaction creating 138 actors and inserting them into one
-  shared `OrderedMap` worked. The same transaction with 360 hung the
-  app at startup, and the log filled with lock waits instead of an
-  error (reboot-air, 1.4.1). Keep each batch to tens of creates.
-- A per-actor lock wait gives up after 30 s and is retried
-  (`LOCK_ACQUIRE_DEADLINE_DEFAULT`, 1.6.0 source). So an oversized or
-  contended seed shows as a loop of lock waits, not a failure.
-- **Seeding `User` actors has no public API.** The only path is the
-  semi-private
-  `await UserServicer._authenticated(context, state_id=user_id)`. It
-  is on the servicer class, not the state type (`User._authenticated`
-  does not exist), and it constructs the user idempotently through a
-  fixed key, so it is safe to call from `initialize` (1.6.0 source).
-- A seed run from `initialize` cannot act as a user. See
-  [`lifecycle-initialize-hook.md`](lifecycle-initialize-hook.md).
-- `rbt dev expunge` without `--yes` waits for confirmation. With no
-  terminal attached, it blocks forever.
+- **No documented transaction size ceiling, but one is reachable**: 138
+  creates plus inserts into one shared `OrderedMap` worked; 360 hung the
+  app at startup, the log filling with lock waits, no error
+  (reboot-air, 1.4.1). Keep batches to tens of creates.
+- A per-actor lock wait gives up after 30 s and retries
+  (`LOCK_ACQUIRE_DEADLINE_DEFAULT`, 1.6.0 source): an oversized or
+  contended seed loops on lock waits rather than failing.
+- **Seeding `User` actors has no public API**; use the semi-private
+  `await UserServicer._authenticated(context, state_id=user_id)` — on
+  the servicer class (`User._authenticated` doesn't exist); idempotent
+  via a fixed key, safe from `initialize` (1.6.0 source).
+- A seed from `initialize` can't act as a user
+  ([`lifecycle-initialize-hook.md`](lifecycle-initialize-hook.md)).
+- `rbt dev expunge` without `--yes` blocks forever with no terminal.
 
 ## Scales as
 
-- In `rbt dev run`, a four-hop transaction (two reads, one create, one
-  `OrderedMap` insert) took about 1.5 s with effect validation on
-  (student-sor, 1.5.0).
-- **Effect validation roughly doubles mutation latency.** One
-  measurement went from about 10.6 s to 5.7 s, and another from about
-  1.9 s to 1.4 s (bluesky, team memo). For a large seed, start the app
-  with `rbt dev run --effect-validation=disabled`. The choices are
-  `enabled`, `quiet` and `disabled`, and the default is `quiet`. In
-  the harness, use
+- `rbt dev run`, validation on: a four-hop transaction (two reads, one
+  create, one `OrderedMap` insert) ~1.5 s (student-sor, 1.5.0).
+- **Effect validation roughly doubles mutation latency** (~10.6 s →
+  5.7 s, ~1.9 s → 1.4 s disabled; bluesky, team memo). Large seeds:
+  `rbt dev run --effect-validation=disabled` (`enabled`, `quiet`,
+  `disabled`; default `quiet`); harness:
   `rbt.up(..., effect_validation=EffectValidation.DISABLED)` (1.6.0
-  source). With validation on, a log line saying
-  `Re-running method X.Create to validate effects` for each seeded
-  create is normal.
-- One measured redesign, sequential and with validation disabled: 193
-  admits at about one per second, then about 6 s per bulk student
-  import. That came to about 15 minutes end to end on an M-series
-  laptop. A restart mid-seed resumed correctly through the aliases
+  source). With it on, `Re-running method X.Create to validate effects`
+  per seeded create is normal.
+- One sequential redesign, validation disabled: 193 admits at ~one per
+  second, then ~6 s per bulk student import, ~15 minutes total on an
+  M-series laptop; a mid-seed restart resumed via the aliases
   (student-sor, 1.5.0).
-- In tests, each harness test has a floor of about 2 s even with
-  nothing seeded. A full production seed added about 30 s per test.
-  Switching to a parameterised seed took one suite from 7m50s to 3m52s.
-  To compare fixtures, run `pytest --durations` on one trivial test
-  per fixture (cineloop, 1.4.1).
+- Harness tests have a ~2 s floor; a full production seed added ~30 s
+  each. A parameterised seed cut one suite from 7m50s to 3m52s. Compare
+  fixtures with `pytest --durations` on one trivial test each
+  (cineloop, 1.4.1).
 
 ## Errors you will see
 
 | Error text (stable prefix) | Meaning | Fix |
 | --- | --- | --- |
-| `StateNotConstructed { requires_constructor: true }` | A test called into an actor that production's `initialize` constructs, but the test fixture did not | Construct it in the fixture, or pass the production `initialize=` to `rbt.up(...)` |
-| `PermissionDenied` (on a seed call in a test) | An internal-only method was called with a user context | Seed through `create_external_context(..., app_internal=True)` |
-| `ValueError: To call '...' of '...' more than once using the same context an idempotency alias or key must be specified` | A loop called the same method on a shared actor without an alias per iteration | Add `.idempotently(f"...-{id}")` |
+| `StateNotConstructed { requires_constructor: true }` | Test called an actor production's `initialize` constructs but the fixture didn't | Construct it in the fixture, or pass the production `initialize=` to `rbt.up(...)` |
+| `PermissionDenied` (on a seed call in a test) | Internal-only method called with a user context | Seed through `create_external_context(..., app_internal=True)` |
+| `ValueError: To call '...' of '...' more than once using the same context an idempotency alias or key must be specified` | Loop called the same method on a shared actor without per-iteration aliases | Add `.idempotently(f"...-{id}")` |
 | `database.cc Check failed` | Dev state from an incompatible earlier design | Stop the app, run `rbt dev expunge --application-name=<name> --yes`, reseed |
-| `is presumed deadlocked with it; aborting so that the older transaction proceeds` | Concurrent transactions are contending for the same actors | Seed sequentially |
+| `is presumed deadlocked with it; aborting so that the older transaction proceeds` | Concurrent transactions contending for the same actors | Seed sequentially |
 
 ## See also
 

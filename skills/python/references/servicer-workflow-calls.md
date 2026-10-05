@@ -17,57 +17,51 @@ docs: ""
 
 ## When you are here
 
-You are writing the body of a `@classmethod` workflow and are about to
-`await` something. Everything a workflow does may be re-run on replay
-(after a restart, or after a later step fails), so every `await` needs
-the primitive that makes a second run safe. This file classifies the
-call and covers Bucket 1, calls into Reboot. External calls are in
-[`servicer-workflow-external.md`](servicer-workflow-external.md),
-waiting in [`servicer-workflow-wait.md`](servicer-workflow-wait.md).
+You are about to `await` in a workflow body. Anything may re-run on
+replay, so every `await` needs the primitive that makes a rerun safe.
+External calls:
+[`servicer-workflow-external.md`](servicer-workflow-external.md);
+waiting: [`servicer-workflow-wait.md`](servicer-workflow-wait.md).
 
 ## Do this
 
 ### Classify before you write the call
 
-| What you're calling | Bucket | Primitive |
-| --- | --- | --- |
-| `SomeType.ref(id).method(context, …)` — reader / writer / transaction / workflow on another (or this) actor | Reboot | `.per_workflow(alias)` / `.per_iteration(alias)` / `.always()` |
-| `Service.ref().write(context, fn)` — inline mutation of this workflow's actor | Reboot | same scope chain |
-| `agent.run(context, prompt)` — Reboot `Agent` (LLM) | Reboot | none; the `Agent` memoizes the model call ([`agent-pydantic-ai.md`](agent-pydantic-ai.md)) |
-| HTTP, Stripe, Twilio, S3, the clock, randomness — anything outside Reboot | External | `at_least_once` (default) or `at_most_once` |
-| Block until Reboot state satisfies a condition | Reactive wait | `until` / `until_changes` |
+| Call | Primitive |
+| --- | --- |
+| `SomeType.ref(id).method(context, …)` — any method on any actor | `.per_workflow(alias)` / `.per_iteration(alias)` / `.always()` |
+| `Service.ref().write(context, fn)` — inline mutation of this actor | same scope chain |
+| `agent.run(context, prompt)` — Reboot `Agent` (LLM) | none; it memoizes the model call ([`agent-pydantic-ai.md`](agent-pydantic-ai.md)) |
+| HTTP, Stripe, Twilio, S3, the clock, randomness — external | `at_least_once` (default) or `at_most_once` |
+| Block until Reboot state satisfies a condition | `until` / `until_changes` |
 
-Delayed or background work on an actor is Bucket 1 too, but from a
-workflow it is `spawn(when=…)`, never `schedule(when=…)`
+Delayed/background work on an actor is Reboot too, but from a workflow
+it is `spawn(when=…)`, never `schedule(when=…)`
 ([`servicer-workflow-declare.md`](servicer-workflow-declare.md)).
 
-### Name aliases: stable and descriptive
+### Aliases: stable and descriptive
 
 Every alias (scope chain, `at_least_once`, `at_most_once`, `until`,
-`until_changes`) is both the memo key and the step's title.
+`until_changes`) is the memo key and the step's title in logs:
 
-- **Stable.** Identical across replays: never built from wall-clock
-  time, fresh UUIDs or randomness, and never renamed once a workflow has
-  run. Replay-stable inputs are fine: the `iteration` from
-  `context.loop(...)` (`f"Process batch {iteration}"`) or an id from the
-  request (`f"Reset {showing_id}"`).
-- **Descriptive.** Verb + object — `"Charge customer"`,
-  `"Send login SMS"` — not `"Charge"`. It surfaces in logs and tooling.
+- **Stable**: never from the clock, fresh UUIDs or randomness; never
+  renamed after a run. Loop `iteration` (`f"Process batch {iteration}"`)
+  and request ids (`f"Reset {showing_id}"`) are fine.
+- **Descriptive**: verb + object (`"Charge customer"`,
+  `"Send login SMS"`, not `"Charge"`).
 
-### Bucket 1: pick a scope
+### Reboot calls: pick a scope
 
-Reboot calls are already durable: a writer/transaction commits or rolls
-back atomically and inline writes are checkpointed with the workflow.
-The only decision is how often the call runs across replays:
+Reboot calls are already durable; choose only how often one runs
+across replays:
 
-- **`.per_workflow(alias)`** — once for the workflow's lifetime; replays
-  return the memoized result. One-shot setup, recording a decision,
-  starting a child workflow.
+- **`.per_workflow(alias)`** — once per workflow lifetime; replays return
+  the memo. Setup, recording a decision, starting a child workflow.
 - **`.per_iteration(alias)`** — once per `context.loop` iteration.
-- **`.always()`** — never memoized; a live read every time the workflow
-  wakes.
+- **`.always()`** — never memoized; a live read on every wake.
 
 ```python
+from uuid import uuid4
 from reboot.aio.contexts import WorkflowContext
 
 
@@ -75,116 +69,90 @@ from reboot.aio.contexts import WorkflowContext
 async def control_loop(
     cls, context: WorkflowContext, request: ControlLoopRequest,
 ) -> None:
-    # One-shot: send the welcome notification once for this workflow.
     await Notifier.ref(request.user_id).per_workflow(
         "Welcome notification",
     ).notify_signup(context, name=request.name)
 
-    # Inline state seed, once per workflow lifetime.
-    async def seed(state):
-        state.owner = request.name
-
-    await MyType.ref().per_workflow("Seed state").write(context, seed)
-
-    async for iteration in context.loop("Process"):
-        # Per-iteration: a fresh scope each tick.
-        batch = await Queue.ref(queue_id).per_iteration(
-            "Dequeue batch",
-        ).dequeue(context, bulk=True)
-
-        # `.always()` — re-read the live config every iteration.
-        config = await ConfigService.ref().always().read(context)
-```
-
-Omitting the scope picks a default: `PER_WORKFLOW` outside a loop,
-`PER_ITERATION` inside one (`always()` inside an `until` callable). The
-same applies to `at_least_once`, `at_most_once` and `until`;
-`until_changes` is loop-only. The enum form (`("alias", PER_WORKFLOW)`,
-from `reboot.aio.workflows`) equals the chain methods; prefer the chain
-at call sites.
-
-`.idempotently("alias")` is the older sibling of `.per_workflow("alias")`
-(same default, not deprecated). In a workflow body replace it with
-`.per_workflow`, `.per_iteration` or `.always()`. Outside workflows
-(`initialize`) `.idempotently` is the right tool, because `.per_iteration`
-is rejected there ([`lifecycle-initialize-hook.md`](lifecycle-initialize-hook.md)).
-
-### Mutating and reading this actor's state
-
-```python
-@classmethod
-async def control_loop(
-    cls, context: WorkflowContext, request: ControlLoopRequest,
-):
+    # Inline write to this actor: `async def`, parameter named `state`.
     async def add_post_for_approval(state):
         state.posts_for_approval.append(
-            Post(id=str(uuid4()), author=request.name, text=text),
+            Post(id=str(uuid4()), author=request.name, text=request.text),
         )
 
     await Chatbot.ref().per_workflow(
         "Add post for approval",
     ).write(context, add_post_for_approval)
+
+    async for iteration in context.loop("Process"):
+        batch = await Queue.ref(queue_id).per_iteration(
+            "Dequeue batch",
+        ).dequeue(context, bulk=True)
+        config = await ConfigService.ref().always().read(context)
 ```
 
-The callback is an **`async def`** whose parameter is named **`state`**
-(the runtime calls `writer(state=typed_state)`). Mutate `state`
-directly; the change commits with the workflow checkpoint, and on
-replay the scope decides whether the write re-fires or returns its
-cached result. The callback may return a value, which `.write(...)`
-returns — the basis of atomic check-and-update
-([`servicer-workflow-wait.md`](servicer-workflow-wait.md)).
+- Default scope when omitted: `PER_WORKFLOW` outside a loop,
+  `PER_ITERATION` inside (`always()` inside an `until` callable); same
+  for `at_least_once`, `at_most_once`, `until`; `until_changes` is
+  loop-only. The enum form (`("alias", PER_WORKFLOW)`, from
+  `reboot.aio.workflows`) is equivalent; prefer the chain.
+- `.idempotently("alias")` is the older sibling of `.per_workflow("alias")`
+  (same default, not deprecated). In a workflow use the chain; outside
+  workflows (`initialize`) `.idempotently` is right, because
+  `.per_iteration` is rejected there
+  ([`lifecycle-initialize-hook.md`](lifecycle-initialize-hook.md)).
 
-Reads use the same chain: `await Chatbot.ref().read(context)` is the
-default-scoped form; `Chatbot.ref().always().read(context)` re-reads
-live each iteration.
+### This actor's state
 
-Inline `.read()` / `.write()` exist only on the no-arg `ref()`. To change
-**another** actor, call its declared `Writer`/`Transaction` with a scope;
-to observe it, call a declared `Reader`.
-
-To create actors and mutate several states atomically, declare a
-`Transaction` on the workflow's own actor and call it once:
-`Thread.ref(context.state_id).per_workflow("Finalize").finalize_response(context, …)`.
-One memoized Reboot call; a replay returns the cached result instead of
-creating duplicates (observed working at 1.4.1; the authorizer must
-admit app-internal calls).
+- The write callback is called as `writer(state=typed_state)`: mutate
+  `state`; it commits with the checkpoint. `.write(...)` returns the
+  callback's return value, the basis of atomic check-and-update
+  ([`servicer-workflow-wait.md`](servicer-workflow-wait.md)).
+- Reads use the same chain: `await Chatbot.ref().read(context)`
+  (default scope), `Chatbot.ref().always().read(context)` (live).
+- Inline `.read()` / `.write()` exist only on the no-arg `ref()`. For
+  **another** actor call its declared `Writer`/`Transaction` (scoped) or
+  `Reader`.
+- To create actors / mutate several states atomically, call one
+  `Transaction` on the workflow's own actor:
+  `Thread.ref(context.state_id).per_workflow("Finalize").finalize_response(context, …)`.
+  A replay returns the cached result, not duplicates (observed working
+  at 1.4.1; the authorizer must admit app-internal calls).
 
 ## Never
 
 - `at_least_once(...)` / `at_most_once(...)` / `.idempotently(...)`
-  around a Reboot call — redundant at best; `at_most_once` adds a
-  poison-the-alias failure mode to a call that never needed one.
+  around a Reboot call — redundant; `at_most_once` adds a
+  poison-the-alias failure mode.
 - `async def make_move(s):` — the parameter must be named `state`.
-- `def try_claim(state) -> bool:` passed to `.write` — the callback is
-  awaited, so a plain `def` fails. Use `async def`.
+- `def try_claim(state) -> bool:` passed to `.write` — it is awaited;
+  use `async def`.
 - `Other.ref(id).read(context)` / `.write(context, fn)` — no inline
-  read/write on a ref with an id. Use the actor's declared methods.
-- `asyncio.gather` over **transaction** calls in one workflow — sibling
-  transactions contend through the shared workflow root and all die at
-  their lock deadline (8 concurrent, observed at 1.4.0). Issue
-  transactions sequentially. Gathering **writer** calls is fine.
+  read/write on a ref with an id; use declared methods.
+- `asyncio.gather` over **transaction** calls in one workflow — siblings
+  contend through the shared workflow root and all die at their lock
+  deadline (8 concurrent, observed at 1.4.0). Run transactions
+  sequentially; gathering **writer** calls is fine.
 - Calling the same method on the same actor twice with a bare
-  `.per_workflow()` / `.per_iteration()` — the auto-generated key
-  collides. Give each call its own alias.
+  `.per_workflow()` / `.per_iteration()` — the auto key collides; give
+  each its own alias.
 - Calling a factory constructor from a workflow on an actor that may
-  already exist — it aborts `StateAlreadyConstructed` and the workflow
-  retries forever (observed at 1.6.0). Construct once, then call a writer.
+  already exist — aborts `StateAlreadyConstructed` and retries forever
+  (observed at 1.6.0). Construct once, then call a writer.
 
 ## Limits
 
-- A memoized call returns its **first** execution's response on every
-  replay; fields describing "what happened" (counts, `created` flags)
-  describe that first run.
-- Reusing an alias with a different request is refused (see Errors), so
-  request arguments under one alias must be replay-stable too.
-- Results of scoped calls type as `Any`; mypy cannot catch a wrong field
-  name on them (observed at 1.4.0).
+- A memoized call returns its **first** run's response on every replay;
+  "what happened" fields (counts, `created` flags) describe that run.
+- Reusing an alias with a different request is refused (see Errors):
+  requests under one alias must be replay-stable too.
+- Scoped call results type as `Any`; mypy misses wrong field names
+  (observed at 1.4.0).
 
 ## Scales as
 
-- Gathered writer calls from one workflow: about 20 concurrent was the
-  sweet spot; about 54 concurrent made calls ping out and retry-loop
-  (103 s vs. 15.7 s for the same 216 creations, measured at 1.4.0).
+- Gathered writer calls from one workflow: ~20 concurrent was the sweet
+  spot; ~54 concurrent made calls ping out and retry-loop (103 s vs.
+  15.7 s for the same 216 creations, measured at 1.4.0).
 
 ## Errors you will see
 

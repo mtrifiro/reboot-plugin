@@ -15,35 +15,22 @@ docs: ""
 
 ## When you are here
 
-You are writing the pydantic API file of an MCP UI: a `User` front-door
-type plus one `Type` per application entity, deciding which methods the
-AI may call and where each `UI()` goes. This file is only the MCP-UI
-delta. The generic rules — zero-value defaults, `Optional[X] = None` for
-a nested `Model`, field tags, generated `<Type>.<Method>Request` names —
-are in
-[`api-pydantic.md`](../../python/references/api-pydantic.md); which
-factory to pick and the servicer signature each obliges are in
+Writing an MCP UI's pydantic API: a `User` front-door type plus one `Type`
+per application entity, choosing AI-callable methods and where each `UI()`
+goes. MCP-UI delta only; generic rules (zero-value defaults,
+`Optional[X] = None` for a nested `Model`, field tags,
+`<Type>.<Method>Request` names) are in
+[`api-pydantic.md`](../../python/references/api-pydantic.md); factory
+choice and servicer signatures in
 [`api-methods.md`](../../python/references/api-methods.md).
 
 ## Do this
 
 ```python
 from reboot.api import (
-    API,
-    Exclusive,
-    UI,
-    Field,
-    Methods,
-    Model,
-    Reader,
-    Tool,
-    Transaction,
-    Type,
-    Writer,
+    API, Exclusive, UI, Field, Methods, Model, Reader, Tool, Transaction,
+    Type, Writer,
 )
-
-
-# -- User models. --
 
 
 class CreateCounterResponse(Model):
@@ -52,9 +39,6 @@ class CreateCounterResponse(Model):
 
 class UserState(Model):
     pass
-
-
-# -- Counter models. --
 
 
 class CounterState(Model):
@@ -67,7 +51,6 @@ class ValueResponse(Model):
 
 
 class AmountRequest(Model):
-    """Request with an amount parameter."""
     amount: int = Field(tag=1, default=0)
 
 
@@ -89,24 +72,20 @@ api = API(
     ),
     Counter=Type(
         state=CounterState,
-        # What the state type is for, shown by the dev dashboard
-        # beside its name and file.
+        # Shown by the dev dashboard beside the type's name.
         description="One counter the user created, and the "
         "consistency boundary its value changes on.",
         methods=Methods(
-            # `show_clicker` lives on `Counter` (not `User`)
-            # because it shows ONE specific Counter. The AI calls
-            # the generated `counter_show_clicker` tool with the
-            # target Counter's state ID; the React hook resolves
-            # that ID automatically.
+            # On `Counter`, not `User`: it shows ONE Counter. The AI calls
+            # `counter_show_clicker` with the Counter's state ID; the
+            # React hook resolves it.
             show_clicker=UI(
                 request=None,
                 path="frontend/mcp/clicker",
                 title="Counter Clicker",
                 description="Interactive clicker UI for the counter.",
             ),
-            # Not an MCP tool, and still worth describing: the dev
-            # dashboard shows `description=` for every method.
+            # Not a tool; `description=` still shows in the dashboard.
             create=Writer(
                 request=None,
                 response=None,
@@ -137,53 +116,39 @@ api = API(
 )
 ```
 
-The shape, piece by piece:
-
-- **`User` is the front door.** Empty (or near-empty) state, and a
-  `Transaction` per application type that creates an instance and
-  returns its ID (servicer side:
-  [`servicer-patterns.md`](servicer-patterns.md)).
-- **`factory=True` on each application type's `create` Writer.** That
-  is what generates the `Counter.create(context)` the `User` transaction
-  calls (mechanics:
-  [`servicer-constructor.md`](../../python/references/servicer-constructor.md)).
-- **Every method states its exposure.** `mcp=Tool()` makes it an
-  AI-callable tool, on `User` as on every other type; `mcp=None` hides
-  it (human-only actions, or to keep the AI's tool list small).
-  `Tool(name="...", title="...")` overrides the tool name or adds a
-  human-readable title. The tool's description is the method's
-  `description=`. `Workflow(...)` needs `mcp=` too, usually `None`.
-- **`UI()` opens a React UI inside the MCP host.** It takes `request=`
-  (a config `Model` or `None`), `path=` (the UI's web directory,
-  relative to the project root, e.g. `"frontend/mcp/clicker"`),
-  `title=`, `description=`. It has no servicer implementation — the
+- **`User` is the front door**: empty state, one `Transaction` per
+  application type that creates an instance and returns its ID
+  ([`servicer-patterns.md`](servicer-patterns.md)).
+- **`factory=True` on each type's `create` Writer** generates the
+  `Counter.create(context)` the `User` transaction calls
+  ([`servicer-constructor.md`](../../python/references/servicer-constructor.md)).
+- **Every method states exposure**, `User`'s and `Workflow(...)`
+  included: `mcp=Tool()` makes an AI-callable tool (its description is
+  the method's `description=`); `mcp=None` hides it (human-only, or to
+  keep the tool list small). `Tool(name="...", title="...")` overrides
+  the name or adds a title.
+- **`UI()` opens a React UI in the MCP host**: `request=` (config `Model`
+  or `None`), `path=` (relative to the project root, e.g.
+  `"frontend/mcp/clicker"`), `title=`, `description=`. No servicer: the
   React app is the implementation.
 
 ### Where a `UI()` goes
 
-Ask: "is the AI handing this UI an entity ID to operate on?"
-
-- **Yes** ("show this Person", "edit this Task") → `UI(request=None)`
-  on that entity's `Type`. The generated tool takes that Type's state ID
-  as its target, and the UI's zero-argument `use<Type>()` hook resolves
-  it ([`react-app-tsx.md`](react-app-tsx.md)). The AI calls
-  `person_show(person_id=...)` and the UI materializes for exactly that
-  Person.
-- **No, it is user-scoped** ("my dashboard", "browse all my Persons") →
-  `UI()` on `User`.
-- **It takes free-form config the AI fills in** (a personalization
-  string, a layout hint) → `request=<Model>` on whichever Type the UI
-  belongs to. The `Model`'s fields arrive as props on the React
-  component (camelCased):
+- **The AI hands it an entity ID** ("show this Person") →
+  `UI(request=None)` on that entity's `Type`. The tool takes that Type's
+  state ID as target (`person_show(person_id=...)`) and the zero-argument
+  `use<Type>()` hook resolves it ([`react-app-tsx.md`](react-app-tsx.md)).
+- **User-scoped** ("my dashboard", "browse all my Persons") → `UI()` on
+  `User`.
+- **Free-form config the AI fills in** → `request=<Model>` on the UI's
+  Type; fields arrive as camelCased props:
 
 ```python
 class DashboardConfig(Model):
-    """Configuration the AI provides when opening the dashboard."""
     personalized_message: str = Field(tag=1, default="")
 
 
-# On `Counter`: the Counter ID is still the implicit tool-call target;
-# `request=` carries only the personalization string.
+# On `Counter`: the Counter ID stays the implicit target.
 show_dashboard=UI(
     request=DashboardConfig,
     path="frontend/mcp/dashboard",
@@ -195,8 +160,7 @@ show_dashboard=UI(
 
 ```tsx
 export const DashboardApp: FC<DashboardConfig> = ({ personalizedMessage }) => {
-  // No `id` argument — resolved from the tool-call target. The handle
-  // is `undefined` until it resolves; see `react-app-tsx.md`.
+  // No `id`: resolved from the tool-call target; `undefined` until then.
   const { counter } = useCounter();
   return counter && (
     <CounterValue counter={counter} label={personalizedMessage} />
@@ -204,45 +168,38 @@ export const DashboardApp: FC<DashboardConfig> = ({ personalizedMessage }) => {
 };
 ```
 
-"The User is the front door" is about **creating and locating**
-entities. Once the AI holds an entity's ID, everything specific to that
-entity — Readers, Writers, UIs — goes on that entity's `Type`.
+`User` creates and locates entities; once the AI holds an ID, that
+entity's Readers, Writers and UIs go on its own `Type`.
 
 ## Never
 
 - `show_person=UI(request=ShowPersonProps)` on `User`, where
-  `ShowPersonProps` carries `person_id: str` — the AI must plumb the ID
-  through a tool input where it can confuse it with another entity's
-  ID, the component must call `usePerson({ id: personId })` by hand, and
-  the UI sits apart from every other per-Person method; in MCPJam it
-  shows up as a tool with a leaky entity-ID input. Put
-  `show=UI(request=None, path="frontend/mcp/person", ...)` on `Person`.
-  Entity IDs never belong in a `request=<Model>` field.
-- A method with no `mcp=` — not even `Workflow`, which is easy to miss
-  because workflows are rarely AI-callable. Codegen rejects it; write
-  `mcp=None`.
+  `ShowPersonProps` carries `person_id: str` — the AI can confuse the ID with
+  another entity's, the component must call `usePerson({ id: personId })`
+  by hand, and MCPJam shows a leaky entity-ID input. Put
+  `show=UI(request=None, path="frontend/mcp/person", ...)` on `Person`;
+  entity IDs never go in a `request=<Model>` field.
+- A method with no `mcp=` — not even `Workflow`, which is easy to miss;
+  codegen rejects it. Write `mcp=None`.
 - An application type whose `create` Writer lacks `factory=True` — no
-  `create` is generated, so the `User` front-door transaction has
-  nothing to call.
-- `UI(path=...)` without `request=` — `request` has no default; write
-  `request=None` for a UI with no props.
-- `UI(path="mcp/clicker")` or an absolute path — `path=` is relative to
-  the project root: `"frontend/mcp/<name>"`.
+  `create` is generated for the `User` transaction to call.
+- `UI(path=...)` without `request=` — no default; write `request=None`.
+- `UI(path="mcp/clicker")` or an absolute path — use
+  `"frontend/mcp/<name>"`, relative to the project root.
 - `mcp=Resource()` — rejected at 1.6.0; use `Tool()`.
 
 ## Limits
 
-- `Tool` has only `name` and `title` (1.6.0 `reboot/api.py`); generated
-  tools carry no MCP annotations (`readOnlyHint` etc.), so a host such as
-  Claude asks permission before every call, Readers included, and
-  "Always allow" is per tool. No application-side workaround (reboot-crm,
-  1.6.0).
+- `Tool` has only `name` and `title` (1.6.0 `reboot/api.py`); tools carry
+  no MCP annotations (`readOnlyHint` etc.), so Claude asks permission
+  before every call, Readers included, "Always allow" is per tool, and
+  there is no application-side workaround (reboot-crm, 1.6.0).
 - `UI()` has no `response=` and no servicer method.
 
 ## Scales as
 
-- Every `mcp=Tool()` method adds a tool to the AI's context; hide
-  UI-only and human-only methods with `mcp=None`.
+- Each `mcp=Tool()` method adds a tool to the AI's context; hide UI-only
+  and human-only methods with `mcp=None`.
 
 ## Errors you will see
 

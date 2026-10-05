@@ -16,14 +16,11 @@ docs: ""
 
 ## When you are here
 
-You declared a `Workflow(...)` method. A workflow is a durable function
-attached to an actor: its body may re-execute on replay, and memoized
-steps return their cached results. This file routes you to the part you
-need at each moment; read each part when you reach that moment.
+You declared a `Workflow(...)` method: a durable function on an actor
+whose body may re-execute on replay while memoized steps return cached
+results. Read each part below when you reach its moment.
 
 ## Do this
-
-Read in build order:
 
 | Part | Read it when |
 | --- | --- |
@@ -37,8 +34,8 @@ Read in build order:
 ## Never
 
 - `self` or `self.state` in a workflow — it is a `@classmethod`.
-- A plain `await` on anything with effects — every `await` takes a
-  primitive chosen by what it calls (calls part).
+- A plain `await` on anything with effects — every `await` takes the
+  primitive for what it calls (calls part).
 - `schedule(...)` from a workflow — use `spawn(...)` (declare part).
 - A wall-clock or random value read directly in the body — capture it
   with `at_least_once` (external part).

@@ -15,16 +15,15 @@ docs: ""
 
 ## When you are here
 
-You are inside a servicer (or a test or `initialize`) and need a handle
-on an actor, possibly your own, to call a method on it, or to ask
-whether it exists yet. How to pass arguments is in `rpc-calls.md`;
-constructing an actor is in `rpc-constructor-calls.md`.
+You need a handle on an actor (possibly your own) to call it or to ask
+whether it exists. Arguments: `rpc-calls.md`; constructing:
+`rpc-constructor-calls.md`.
 
 ## Do this
 
 `Service.ref(id)` returns a typed handle (a `WeakReference`) to the
-actor with that string ID. It is cheap, does not touch storage, and
-does **not** create the actor.
+actor with that string ID; it is cheap, touches no storage, and does
+**not** create the actor.
 
 ```python
 from chat_room.v1.chat_room_rbt import ChatRoom
@@ -35,63 +34,37 @@ await chat_room.send(context, message="Hello!")
 
 ### Your own actor and its ID
 
-A servicer instance has no `self.state_id`. Get the ID from the ref or
-the context, depending on the method kind:
+A servicer has no `self.state_id`:
 
 | Context                                                  | Get the actor's state ID via |
 | -------------------------------------------------------- | ---------------------------- |
 | `ReaderContext` / `WriterContext` / `TransactionContext` | `self.ref().state_id`        |
 | `WorkflowContext`                                        | `context.state_id`           |
 
-```python
-async def tick(self, context: WriterContext, request) -> None:
-    rng = random.Random(hash((self.ref().state_id, ...)))
-
-@classmethod
-async def control_loop(cls, context: WorkflowContext, request):
-    queue = Queue.ref(f"{context.state_id}-messages-queue")
-    ...
-```
-
-`self.ref()` is also how a servicer schedules itself:
-
-```python
-async def open(
-    self, context: WriterContext, request: OpenRequest,
-) -> OpenResponse:
-    await self.ref().schedule(when=timedelta(seconds=1)).interest(context)
-    return OpenResponse()
-```
+`self.ref()` also schedules the servicer on itself:
+`await self.ref().schedule(when=timedelta(seconds=1)).interest(context)`.
 
 ### IDs are caller-supplied strings
 
-The ID is whatever string the caller chooses: a semantic key (account
-ID, room name), an ID derived from the parent
-(`f"{self.ref().state_id}-accounts"`, which needs no stored field and
-can always be re-derived), or a UUID minted at creation and stored:
+Any string the caller chooses: a semantic key (account ID, room name),
+one derived from the parent (`f"{self.ref().state_id}-accounts"`, no
+stored field, always re-derivable), or a UUID minted once and stored
+(`self.state.account_ids_map_id = str(uuid4())`; an `OrderedMap` is
+constructed implicitly on its first `insert`).
 
-```python
-from uuid import uuid4
-
-self.state.account_ids_map_id = str(uuid4())
-# OrderedMap is constructed implicitly on the first `insert`.
-```
-
-Minting `uuid4()` inside a writer, transaction or constructor and
-storing it in the same call is safe. Dev-mode effect validation runs
-the body, aborts it (discarding every effect, including actors a
-transaction constructed), runs it again and commits only the second
-run; it never compares the two runs (1.6.0 source,
-`maybe_raise_effect_validation_retry`). A random ID is a bug only where
-something must re-derive it later: a second call that recomputes it, or
-a workflow body outside a memoized step.
+Minting `uuid4()` in a writer, transaction or constructor and storing
+it in the same call is safe: dev-mode effect validation runs the body,
+aborts it (discarding every effect, including actors a transaction
+constructed), reruns and commits only the second run, never comparing
+them (1.6.0 source, `maybe_raise_effect_validation_retry`). A random ID
+is a bug only where something re-derives it later: a second call that
+recomputes it, or a workflow body outside a memoized step.
 
 ### "Does this actor exist?"
 
-A reader on an actor that was never constructed **aborts** with
-`StateNotConstructed`, for every type, with or without a `factory=True`
-constructor (1.6.0 source: any reader on missing state raises it).
-Probe by catching the reader's `<Method>Aborted`:
+A reader on a never-constructed actor **aborts** `StateNotConstructed`
+for every type, with or without a `factory=True` constructor (1.6.0
+source). Probe by catching the reader's `<Method>Aborted`:
 
 ```python
 from rbt.v1alpha1.errors_pb2 import StateNotConstructed
@@ -107,40 +80,36 @@ async def airport_exists(context, iata: str) -> bool:
     return True
 ```
 
-A writer on a type with no explicit constructor implicitly constructs
-the actor and proceeds. On a type that has a `factory=True`
-constructor, a non-constructor writer also aborts with
-`StateNotConstructed` (`requires_constructor: true`): only the
-constructor brings it into existence.
+A writer on a type with no explicit constructor constructs the actor
+implicitly; on a type with a `factory=True` constructor it aborts
+`StateNotConstructed` (`requires_constructor: true`).
 
 ## Never
 
 - Assume a reader on a missing actor returns zero-valued state — it
-  aborts with `StateNotConstructed`. A validation path built on "empty
-  field means unknown" fails only in the negative-path test. Wrap
-  cross-actor reads in the probe above unless the caller guarantees
-  existence, and decide what a failed decorative lookup means
-  (default it) before deciding what it returns.
-- `self.state_id` — raises `AttributeError: 'XServicer' object has no
-  attribute 'state_id'`. Use `self.ref().state_id` (or
-  `context.state_id` in a workflow).
-- `ChatRoomServicer().send(...)` — servicer instances belong to Reboot.
-  Call through `ChatRoom.ref(id)`.
-- Hold one ref and use it from two contexts (e.g. `program =
-  Program.ref("BS-CS")`, then call as the registrar's context and again
-  as a second user's) — raises `MixedContextsError` even with no
-  concurrency. Keep the ID; call `Program.ref(id)` inline per context.
-- Expect `Service.create(...)` / a factory on an existing actor to run
-  its body again — a repeat with a fresh key aborts with
-  `StateAlreadyConstructed`; a repeat with a key already used
+  aborts, so "empty field means unknown" validation fails only in the
+  negative-path test. Wrap cross-actor reads in the probe unless the
+  caller guarantees existence; decide what a failed decorative lookup
+  means (default it) first.
+- `self.state_id` — `AttributeError: 'XServicer' object has no
+  attribute 'state_id'`. Use `self.ref().state_id` (`context.state_id`
+  in a workflow).
+- `ChatRoomServicer().send(...)` — servicer instances belong to Reboot;
+  call through `ChatRoom.ref(id)`.
+- One ref used from two contexts (e.g. `program =
+  Program.ref("BS-CS")`, called as the registrar and again as a second
+  user) — `MixedContextsError` even without concurrency. Keep the ID;
+  call `Program.ref(id)` inline per context.
+- Expect `Service.create(...)` / a factory on an existing actor to rerun
+  its body — a fresh key aborts `StateAlreadyConstructed`; a used key
   (`initialize`'s automatic per-(actor, method) key, or the same
-  `.idempotently(alias)`) returns the memoized result without running
-  the body. A field added to the constructor later is never
-  back-filled on existing actors (`InvalidStateRefError: The 'state_id'
-  option must be at least 1 character(s) long` when it is used as a
-  ref). Allocate such a field lazily: `if self.state.x == "": ...`.
-- Expect the caller's identity to travel through a ref call from
-  inside a servicer — it does not; see `servicer-authorizer.md`.
+  `.idempotently(alias)`) returns the memoized result. A field added to
+  the constructor later is never back-filled on existing actors
+  (`InvalidStateRefError: The 'state_id' option must be at least 1
+  character(s) long` when used as a ref); allocate lazily:
+  `if self.state.x == "": ...`.
+- Expect the caller's identity to travel through a ref call from inside
+  a servicer — it does not (`servicer-authorizer.md`).
 
 ## Limits
 
@@ -157,9 +126,8 @@ constructor brings it into existence.
 
 ## Scales as
 
-- A ref costs nothing; each call through it is an RPC. An existence
-  probe is a full reader call (see
-  `patterns-load-and-benchmarking.md`).
+- A ref costs nothing; each call is an RPC; an existence probe is a
+  full reader call (`patterns-load-and-benchmarking.md`).
 
 ## Errors you will see
 

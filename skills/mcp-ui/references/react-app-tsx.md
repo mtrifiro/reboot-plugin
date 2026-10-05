@@ -15,15 +15,13 @@ docs: ""
 
 ## When you are here
 
-You are writing `frontend/mcp/<ui-name>/App.tsx`, the React component
-for one `UI()` method. This file covers what is specific to a UI inside
-an MCP host: where the hook's actor ID comes from, the import path, the
-Counter example, and rendering many actors through one subscription.
-The generated client contract shared with web apps — the `use<Type>()`
-overloads, `Use<Type>Api`, reader fields, `{ response, aborted }`
-mutations, camelCase naming, Zod types — is in
+Writing `frontend/mcp/<ui-name>/App.tsx`, the component for one `UI()`
+method: where the hook's actor ID comes from, the import path, and
+rendering many actors through one subscription. The client contract
+shared with web apps (`use<Type>()` overloads, `Use<Type>Api`, reader
+fields, `{ response, aborted }` mutations, camelCase, Zod types) is
 [`react-generated-client.md`](../../python/references/react-generated-client.md);
-where client-side state lives on top of those hooks is in
+client-side state on top of the hooks is
 [`patterns-react-state.md`](../../python/references/patterns-react-state.md).
 
 ## Do this
@@ -38,22 +36,20 @@ import {
 } from "@api/<pkg>/v1/<name>_rbt_react";
 ```
 
-The path is `@api/<pkg>/v1/<name>_rbt_react` — `<pkg>` and `<name>` are
-the API file's package and module (`api/<pkg>/v1/<name>.py`); the
-`@api/*` alias comes from the scaffolded `vite.config.ts`
-([`react-scaffolding.md`](react-scaffolding.md)).
+`<pkg>`/`<name>` are the API file's package and module
+(`api/<pkg>/v1/<name>.py`); the `@api/*` alias is in the scaffolded
+`vite.config.ts` ([`react-scaffolding.md`](react-scaffolding.md)).
 
 ### Resolve the actor, then render a child with the handle
 
-For a `UI()` declared on an application `Type`
-(`Counter.show_clicker=UI(...)`), call `use<Type>()` with **no `id`**.
-It resolves the actor ID from the MCP tool call's target and returns
-`{ <typeLowerCamel>, isLoading }`; the handle is `undefined` until the
-ID resolves. Readers and mutations are hooks on the handle, so they live
-in a child that only renders once the handle exists:
+For a `UI()` on an application `Type` (`Counter.show_clicker=UI(...)`),
+call `use<Type>()` with **no `id`**: it resolves the ID from the tool
+call's target and returns `{ <typeLowerCamel>, isLoading }`, the handle
+`undefined` until resolved. Readers and mutations are hooks on the handle,
+so put them in a child rendered once the handle exists:
 
 ```tsx
-import { useEffect, useRef, useState, type FC } from "react";
+import { useState, type FC } from "react";
 import {
   type UseCounterApi,
   useCounter,
@@ -65,10 +61,8 @@ export const ClickerApp: FC = () => {
   const { counter, isLoading } = useCounter();
   if (counter === undefined) {
     return (
-      <div className={css.container}>
-        <div className={css.loading}>
-          {isLoading ? "loading..." : "no counter"}
-        </div>
+      <div className={css.loading}>
+        {isLoading ? "loading..." : "no counter"}
       </div>
     );
   }
@@ -78,26 +72,6 @@ export const ClickerApp: FC = () => {
 const Clicker: FC<{ counter: UseCounterApi }> = ({ counter }) => {
   const [isPending, setIsPending] = useState(false);
   const { response, isLoading } = counter.useGet();
-
-  const prevValueRef = useRef<number | null>(null);
-  const [trend, setTrend] = useState<"up" | "down" | "same" | null>(null);
-
-  const value = response?.value ?? 0;
-
-  useEffect(() => {
-    if (response?.value !== undefined) {
-      if (prevValueRef.current !== null) {
-        if (response.value > prevValueRef.current) {
-          setTrend("up");
-        } else if (response.value < prevValueRef.current) {
-          setTrend("down");
-        } else {
-          setTrend("same");
-        }
-      }
-      prevValueRef.current = response.value;
-    }
-  }, [response?.value]);
 
   const change = async (amount: number) => {
     setIsPending(true);
@@ -113,86 +87,52 @@ const Clicker: FC<{ counter: UseCounterApi }> = ({ counter }) => {
     }
   };
 
-  const trendIcon = trend === "up" ? "↑" : trend === "down" ? "↓" : "→";
-  const trendClass =
-    trend === "up" ? css.trendUp : trend === "down" ? css.trendDown : "";
-
   if (isLoading && response === undefined) {
-    return (
-      <div className={css.container}>
-        <div className={css.loading}>loading...</div>
-      </div>
-    );
+    return <div className={css.loading}>loading...</div>;
   }
 
   return (
     <div className={css.container}>
-      <div className={css.row}>
-        <button onClick={() => change(-1)} disabled={isPending}
-          className={css.buttonDecrement}>−</button>
-        <div className={`${css.counter} ${trendClass} ${
-          isPending ? css.pending : ""}`}>
-          {value}
-        </div>
-        {trend && <span className={trendClass}>{trendIcon}</span>}
-        <button onClick={() => change(1)} disabled={isPending}
-          className={css.buttonIncrement}>+</button>
+      <button onClick={() => change(-1)} disabled={isPending}
+        className={css.buttonDecrement}>−</button>
+      <div className={`${css.counter} ${isPending ? css.pending : ""}`}>
+        {response?.value ?? 0}
       </div>
-      <span className={`${css.syncStatus} ${isPending ? css.visible : ""}`}>
-        syncing...
-      </span>
+      <button onClick={() => change(1)} disabled={isPending}
+        className={css.buttonIncrement}>+</button>
     </div>
   );
 };
 ```
 
-`App.module.css` sits next to it and themes through the CSS variables in
-the scaffolded `index.css`:
-
-```css
-.container { background: var(--color-bg); color: var(--color-text);
-  font-family: var(--font-mono); display: flex; flex-direction: column;
-  align-items: center; padding: 24px 20px 16px; gap: 12px; }
-.row { display: flex; align-items: center; gap: 12px; }
-.counter { font-size: 36px; font-weight: bold; transition: color 0.15s ease; }
-.pending { opacity: 0.7; }
-.trendUp { color: var(--color-green); }
-.trendDown { color: var(--color-pink); }
-.button { width: 40px; height: 40px; border: none; border-radius: 6px;
-  cursor: pointer; }
-.button:disabled { cursor: not-allowed; opacity: 0.6; }
-.buttonIncrement { composes: button; background: var(--color-green);
-  color: var(--color-bg-dark); }
-.buttonDecrement { composes: button; background: var(--color-pink);
-  color: var(--color-bg-dark); }
-.syncStatus { color: var(--color-yellow); font-size: 11px; opacity: 0; }
-.syncStatus.visible { opacity: 1; }
-.loading { color: var(--color-text-muted); font-size: 12px; }
-```
+`App.module.css` sits beside it and themes through the scaffolded
+`index.css` variables (`var(--color-bg)`, `var(--color-text)`,
+`var(--color-pink)`, `var(--font-mono)`); copy the template's
+`build/templates/mcp-ui/frontend/mcp/clicker/App.module.css` and add the
+classes the component uses.
 
 ### Other actors: pass an explicit `id`
 
-For a UI declared on `User`, or a component talking to a different
-entity than the tool-call target, pass `{ id }`; that overload returns
-the handle directly:
+For a UI on `User`, or a component talking to an entity other than the
+tool-call target, pass `{ id }`; that overload returns the handle
+directly:
 
 ```tsx
 const relatedPerson = usePerson({ id: relationship.otherPersonId });
 ```
 
 `useMcpToolData()` from `@reboot-dev/reboot-react` returns the raw tool
-input the framework received, for following a chain to another entity.
+input, for following a chain to another entity.
 
 ### Many actors: one composing reader
 
-When a collection is correctly decomposed — each item its own `Type`,
-indexed by an `OrderedMap` on the parent (Shape C in
-[`state-collections.md`](../../python/references/state-collections.md))
-— keep it decomposed and give the front-door type a `Reader` that pages
-the index and reads each item; the UI keeps one subscription and the
-fan-out runs server-side
+For a correctly decomposed collection — each item its own `Type`, indexed
+by an `OrderedMap` on the parent (Shape C in
+[`state-collections.md`](../../python/references/state-collections.md)) —
+keep it decomposed and give the front-door type a `mcp=None` `Reader` that
+pages the index and reads each item: one UI subscription, fan-out
+server-side
 ([`patterns-cross-actor-reads.md`](../../python/references/patterns-cross-actor-reads.md)).
-Declare it `mcp=None`; it feeds the UI, not the AI.
 
 ```python
 async def dashboard(
@@ -200,8 +140,8 @@ async def dashboard(
     context: ReaderContext,
     request: User.DashboardRequest,
 ) -> User.DashboardResponse:
-    # `items_index_id` is a field on the parent's state, allocated once
-    # in its constructor — never synthesized from the state ID.
+    # `items_index_id`: a parent state field allocated once in its
+    # constructor — never synthesized from the state ID.
     page = await OrderedMap.ref(self.state.items_index_id).range(
         context, start_key=request.cursor or None, limit=32,
     )
@@ -252,42 +192,41 @@ const DashboardPage: FC<{ user: UseUserApi }> = ({ user }) => {
 };
 ```
 
-`setCursor` advances to the next page; to render an ever-growing list,
-accumulate `response.items` into component state instead.
+`setCursor` replaces the page; for an ever-growing list, accumulate
+`response.items` into component state.
 
 ## Never
 
 - `const counter = useCounter(); counter.useGet()` — the no-id overload
   returns `{ counter, isLoading }` (since 1.3.0), so `counter.useGet` is
-  not a function. Destructure, then render a child that takes
+  not a function. Destructure, then render a child taking
   `UseCounterApi`.
-- `counter?.useGet()` behind a condition in the same component — a hook
-  called conditionally breaks the rules of hooks. Split the component.
+- `counter?.useGet()` behind a condition in the same component — breaks
+  the rules of hooks. Split the component.
 - `show_person=UI(request=...)` on `User` plus `usePerson({ id: personId })`
   from a prop — put the UI on `Person` and use the no-id hook
   ([`api-method-types.md`](api-method-types.md)).
 - Flattening a decomposed collection back into `list[Item]` on one actor
-  to regain a single subscription — use the composing reader above.
-- An unguarded `useMcpApp().sendMessage(...)` — `useMcpApp()` can
-  return `null` on early renders while the host connection is set up;
-  use `app?.`.
-- Importing hooks from anything but `<name>_rbt_react` — the hooks are
-  emitted only there.
+  to regain a single subscription — use the composing reader.
+- An unguarded `useMcpApp().sendMessage(...)` — `useMcpApp()` can return
+  `null` on early renders; use `app?.`.
+- Importing hooks from anything but `<name>_rbt_react` — they are emitted
+  only there.
 
 ## Limits
 
 - ID resolution order (1.6.0 generated hook): explicit `{ id }`, then a
-  `?<pkg>.v1.<Type>.id=<id>` URL parameter (dev), then the default-ID
-  map the framework fills from the tool-call target, keyed by the state's
-  full name (`<pkg>.v1.<Type>`). With none, the handle is `undefined` and
+  `?<pkg>.v1.<Type>.id=<id>` URL parameter (dev), then the default-ID map
+  filled from the tool-call target, keyed by the state's full name
+  (`<pkg>.v1.<Type>`). With none, the handle is `undefined` and
   `isLoading` turns `false`.
-- The provider renders your UI immediately; nothing waits for the host
-  to deliver the tool input, so the first renders see `isLoading: true`.
+- The provider renders the UI immediately without waiting for the tool
+  input, so first renders see `isLoading: true`.
 
 ## Scales as
 
-- One composing reader replaces N per-item subscriptions; subscription
-  costs and the ~15-per-page threshold are in
+- One composing reader replaces N per-item subscriptions; costs and the
+  ~15-per-page threshold are in
   [`patterns-react-state.md`](../../python/references/patterns-react-state.md).
 
 ## Errors you will see

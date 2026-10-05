@@ -7,34 +7,29 @@ allowed-tools: Bash, Read, Write, Glob, Grep, Edit
 
 # web-app — Build Reboot Web Apps
 
-> **Version notices:** if `rbt` reports a version mismatch or that a
-> newer Reboot is available, the [upgrade skill](../upgrade/SKILL.md)
-> says how and when to react.
+> **Version notices:** if `rbt` reports a version mismatch or a newer
+> Reboot, follow the [upgrade skill](../upgrade/SKILL.md).
 
-**Follow [`../build/SKILL.md`](../build/SKILL.md)** — the design phase,
-state model assessment, build steps and update flow every Reboot app
-shares. This skill holds what differs for a standalone Web App: a
-Reboot backend behind a plain React SPA in a top-level `web/` Vite
-shell, opened at a normal URL; the `VITE_REBOOT_URL` backend URL;
-`<RebootClientProvider>`; browser sign-in; `allowed_origins`; and the
-reading list for each build step. Backend mechanics are the `python`
-skill's references, reached through the lists below. A dual-frontend
-app (a browser SPA plus an MCP front door, one backend) also loads the
-[`mcp-ui` skill](../mcp-ui/SKILL.md) for `mcp=Tool()`, `UI()` and
-MCPJam; see the [`app` skill](../app/SKILL.md) for what they share.
+**Follow [`../build/SKILL.md`](../build/SKILL.md)** (design phase, state
+model assessment, build steps, update flow). This skill holds the Web
+App differences: a plain React SPA in a top-level `web/` Vite shell at a
+normal URL, `VITE_REBOOT_URL`, `<RebootClientProvider>`, browser
+sign-in, `allowed_origins`, and each step's reading list. A
+dual-frontend app (browser SPA plus MCP front door, one backend) also
+loads the [`mcp-ui` skill](../mcp-ui/SKILL.md) for `mcp=Tool()`, `UI()`
+and MCPJam; see the [`app` skill](../app/SKILL.md) for what they share.
 
 ## When to Use
 
 - Building or changing a Reboot Web App.
-- Running an existing one (e.g. at the start of a session): load the
+- Running an existing one (e.g. at session start): the
   [`run` skill](../run/SKILL.md).
-- Putting a finished one in production: the
-  [`deploy` skill](../deploy/SKILL.md) — backend on Reboot Cloud,
-  frontend on a static host under the user's own domain.
+- Production: the [`deploy` skill](../deploy/SKILL.md) — backend on
+  Reboot Cloud, frontend on a static host under the user's own domain.
 
 ## How a Web App Differs From an MCP UI
 
-The Reboot backend is identical. The deltas are on the frontend:
+The backend is identical; the deltas are on the frontend:
 
 | Concern      | MCP UI (`mcp-ui`)                                        | Web App (this skill)                                                                      |
 | ------------ | -------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
@@ -47,25 +42,25 @@ The Reboot backend is identical. The deltas are on the frontend:
 
 ## Auth in Web Apps
 
-Identity, rules-before-tests, the production provider choice and
-`allowed_origins` are build Step 4. What is specific to browsers:
+Identity, rules-before-tests, the production provider and
+`allowed_origins` are build Step 4. Browser specifics:
 
 - Reboot mounts its OAuth Authorization Server at `/__/oauth/*` and
-  brokers sign-in against the upstream IdP. The browser session is an
-  HttpOnly `rbt_session` cookie set by `/__/oauth/finish`, read as a
-  bearer on every RPC, so servicers see only `context.auth.user_id`
-  (same shape as MCP). `Development()` signs in at `/__/oauth/start`.
-- **`allowed_origins`.** The SPA is cross-origin from its backend by
-  construction (Vite's port in dev, its own host in production), so
-  set `OAuth(..., allowed_origins=["https://app.example.com"])` when
-  you set `oauth=`. `rbt dev run` allows any `localhost` /
-  `127.0.0.1` port automatically, so a missing list shows only as a
-  startup warning — until production refuses to start.
-- **Safari and WKWebView can't sign in locally over plain http.** The
-  sign-in cookies are marked `Secure`; the framework relies on browsers
-  exempting `http://localhost`, which WebKit does not, so the flow ends
-  on `Missing pending-flow cookie. The sign-in flow may have expired`.
-  Retrying does not help; sign in locally from another browser.
+  brokers sign-in against the upstream IdP. The session is an HttpOnly
+  `rbt_session` cookie set by `/__/oauth/finish` and read as a bearer on
+  every RPC, so servicers see only `context.auth.user_id` (as in MCP).
+  `Development()` signs in at `/__/oauth/start`.
+- **`allowed_origins`:** the SPA is always cross-origin from its backend
+  (Vite's port in dev, its own host in production), so set
+  `OAuth(..., allowed_origins=["https://app.example.com"])` with
+  `oauth=`. `rbt dev run` auto-allows any `localhost` / `127.0.0.1`
+  port, so a missing list is only a startup warning — until production
+  refuses to start.
+- **Safari and WKWebView can't sign in locally over plain http:** the
+  sign-in cookies are `Secure` and WebKit doesn't exempt
+  `http://localhost`, so the flow ends on
+  `Missing pending-flow cookie. The sign-in flow may have expired`.
+  Retrying doesn't help; sign in locally from another browser.
 
 ```python
 from reboot.aio.applications import Application
@@ -77,7 +72,7 @@ from reboot.aio.auth.oauth_providers import (
 )
 ```
 
-The providers (all arguments keyword-only):
+Providers (all arguments keyword-only):
 
 | provider        | required arguments                        |
 | --------------- | ----------------------------------------- |
@@ -88,37 +83,39 @@ The providers (all arguments keyword-only):
 | `Auth0(...)`    | `domain=`, `client_id=`, `client_secret=` |
 | `Ory(...)`      | `domain=`, `client_id=`, `client_secret=` |
 
-Every provider but `Anonymous` takes `claims=` — `Development()`
-included (`claims=["email", "name"]` fabricates them). The registered
-providers (all but `Development` and `Anonymous`) also take `scopes=`
-and `store_tokens=`. Register `/__/oauth/callback` as the redirect URI
-with the provider. Add `claims=[...]` when you need the user's email
-or name: without it the app gets only an opaque user id and
-`set_claims` is never called — don't build a form asking a signed-in
-user to retype them (`python/references/auth-claims.md`). Read
-`mcp-ui/references/auth-oauth-providers.md` (frontend-neutral) only
-to write a custom provider or debug one provider's flow.
+- Every provider but `Anonymous` takes `claims=`, `Development()`
+  included (`claims=["email", "name"]` fabricates them). The registered
+  providers (all but `Development` and `Anonymous`) also take `scopes=`
+  and `store_tokens=`.
+- Register `/__/oauth/callback` as the redirect URI with the provider.
+- Add `claims=[...]` to get the user's email or name: without it the app
+  gets only an opaque user id and `set_claims` is never called. Never
+  build a form asking a signed-in user to retype them
+  (`python/references/auth-claims.md`).
+- Read `mcp-ui/references/auth-oauth-providers.md` (frontend-neutral)
+  only to write a custom provider or debug one provider's flow.
 
-**Feeding identity into hooks.** With `oauth=` the signed-in user's
-own state needs no id-threading: call the `User` hook with **no
-arguments**. An explicit-id hook's id must be real on every render,
-never a placeholder (`references/react-client.md`).
+**Feeding identity into hooks.** With `oauth=`, call the `User` hook
+with **no arguments** for the signed-in user's own state. An
+explicit-id hook's id must be real on every render, never a placeholder
+(`references/react-client.md`).
 
-**Calling external APIs as the user.** Store that service's OAuth
-tokens in an `OAuthTokenManager` and call inside a `Workflow`. For the
-IdP you already sign in with (`Google` / `GitHub` / `Auth0`), add the
-`scopes=[...]` and `store_tokens=True` (Path A of
-`python/references/auth-external-api-calls.md`); for any other
-service, run its OAuth flow with your own authorize/callback HTTP
-endpoints (callback registered `app_internal=True`) and call
-`OAuthTokenManager.store` (Path B); a pasted **API key** goes through
-`Ciphertext` (Path C). Never keep tokens in a plain `str` field or
-hand-roll `Ciphertext` (`python/references/stdlib-oauth-tokens.md`).
+**Calling external APIs as the user** — tokens in an
+`OAuthTokenManager`, call inside a `Workflow`
+(`python/references/auth-external-api-calls.md`):
 
-**Browser-side wiring** — the provider and its `url`, the generated
-hooks, sign-in/sign-out, typed errors — is all in
-`references/react-client.md`. Read it at the frontend step; don't
-reconstruct it from memory.
+- Path A, the IdP you sign in with (`Google` / `GitHub` / `Auth0`): add
+  `scopes=[...]` and `store_tokens=True`.
+- Path B, any other service: run its OAuth flow with your own
+  authorize/callback HTTP endpoints (callback registered
+  `app_internal=True`) and call `OAuthTokenManager.store`.
+- Path C, a pasted **API key**: `Ciphertext`.
+- Never keep tokens in a plain `str` field or hand-roll `Ciphertext`
+  (`python/references/stdlib-oauth-tokens.md`).
+
+**Browser-side wiring** (provider and its `url`, generated hooks,
+sign-in/sign-out, typed errors): read `references/react-client.md` at
+the frontend step; don't reconstruct it from memory.
 
 ## Project Layout
 
@@ -158,33 +155,29 @@ reconstruct it from memory.
                              # (output of `rbt generate --react=`)
 ```
 
-Starting files: `../build/templates/web-app/`. In `.rbtrc`, the React
-codegen points at `web/src/api` (`generate --react=web/src/api` and
-`generate --web=web/src/api`). `VITE_REBOOT_URL` must be set in dev:
-the default resolves to Vite's origin, not the backend
-(`references/react-client.md`).
+Starting files: `../build/templates/web-app/`. `.rbtrc` points React
+codegen at `web/src/api` (`generate --react=web/src/api` and
+`generate --web=web/src/api`). Set `VITE_REBOOT_URL` in dev: the default
+resolves to Vite's origin, not the backend (`references/react-client.md`).
 
 ## Which References to Read, and When
 
-Each group below is what to read at one step of the build flow in
-[`../build/SKILL.md`](../build/SKILL.md). Read each at its step, once,
-one per tool call; each reference appears in exactly one group.
-Pattern references (`patterns-*.md`) are off the build path; read one
-when its situation comes up (catalog in the `python` skill).
+One group per step of [`../build/SKILL.md`](../build/SKILL.md). Read
+each at its step, once, one per tool call; each appears in exactly one
+group. Pattern references (`patterns-*.md`) are off the build path; read
+one when its situation comes up (catalog in the `python` skill).
 
 <!-- The lists below are generated from each reference's frontmatter
 by tools/gen-index.py. Edit the frontmatter, not the lists. -->
 
-> **Never read `mcp-ui/references/*` for a web app.** They cover
-> the MCP frontend — `UI()` artifacts, the MCPJam inspector, the
-> nested `frontend/mcp/<name>/` Vite output, `mcp=Tool()` markers,
-> popping a widget out into a web app. Reaching into them costs
-> context and produces MCP-UI-shaped code (`mcp=Tool()` and `UI()`
-> in an app with no MCP frontend). The web equivalents are
+> **Never read `mcp-ui/references/*` for a web app.** They cover the MCP
+> frontend (`UI()` artifacts, MCPJam, nested `frontend/mcp/<name>/`
+> Vite output, `mcp=Tool()` markers, popping a widget out into a web
+> app) and produce MCP-UI-shaped code. Use
 > [`references/react-client.md`](references/react-client.md) and the
-> `python` references named below. The single exception is
-> [mcp-ui/references/auth-oauth-providers.md](../mcp-ui/references/auth-oauth-providers.md),
-> which is frontend-neutral: read it when you pick a real provider.
+> `python` references below. Sole exception:
+> [mcp-ui/references/auth-oauth-providers.md](../mcp-ui/references/auth-oauth-providers.md)
+> is frontend-neutral; read it when you pick a real provider.
 
 **Before the API definition:**
 
@@ -271,11 +264,10 @@ Apps" above):
 - `python/references/testing-harness.md` — only when writing custom steps.
 <!-- generated:end -->
 
-The order of work around the feature files (agree in English, tag
-`@wip`, iterate on scenarios) is the [`feature` skill](../feature/SKILL.md).
+Order of work around feature files (agree in English, tag `@wip`,
+iterate on scenarios): the [`feature` skill](../feature/SKILL.md).
 
 **Before running the app:** the [`run` skill](../run/SKILL.md).
 
-If you find yourself grepping the framework's installed source or a
-generated file to answer a question, stop: build's "Never Read
-Generated or Installed Source in the Main Thread" is for you.
+Grepping installed framework source or a generated file? Stop: see
+build's "Never Read Generated or Installed Source in the Main Thread".

@@ -15,20 +15,19 @@ docs: ""
 
 ## When you are here
 
-A scenario needs to open the app's web frontend in a real browser
-(Playwright) against the same backend its backend steps call. The
-backend steps and the shape of a feature are
-[`testing-features.md`](testing-features.md). The
-[`reboot-bank-pydantic`](https://github.com/reboot-dev/reboot-bank-pydantic)
-example's `tests/web_test.py` and its `opening_accounts.feature`,
-`transfers.feature` and `sign_in.feature` are the reference.
+A scenario opens the web frontend in a real browser (Playwright)
+against the backend its backend steps call. Backend steps and feature
+shape: [`testing-features.md`](testing-features.md). Reference:
+[`reboot-bank-pydantic`](https://github.com/reboot-dev/reboot-bank-pydantic)'s
+`tests/web_test.py`, `opening_accounts.feature`, `transfers.feature`,
+`sign_in.feature`.
 
 ## Do this
 
-The web app steps find things the way a person does: a button by what
-it says, a field by its label, a table by its caption. They never take
-a CSS selector. A page they cannot find things on has an accessibility
-bug, fixed in the markup, not the scenario. Backend and web steps mix:
+Web app steps find things as a person does (a button by its text, a
+field by its label, a table by its caption), never by CSS selector. A
+page they can't drive has an accessibility bug: fix the markup, not the
+scenario. Backend and web steps mix:
 
 ```gherkin
 Scenario: Opening a first account in the web app
@@ -46,12 +45,7 @@ Scenario: Opening a first account in the web app
 
 ```toml
 [dependency-groups]
-dev = [
-    "reboot[dev]==<version>",
-    "playwright>=1.55.0",
-    "pytest-playwright>=0.7.1",
-    ...
-]
+dev = ["reboot[dev]==<version>", "playwright>=1.55.0", "pytest-playwright>=0.7.1", ...]
 ```
 
 ```sh
@@ -60,8 +54,8 @@ uv run playwright install chromium
 cd frontend && npm install   # the web app's own dependencies
 ```
 
-With `playwright` and `pytest-playwright` present, the `reboot` pytest
-plugin registers the web app steps and records every browser scenario.
+With both present, the `reboot` pytest plugin registers the web app
+steps and records browser scenarios.
 
 ### The `frontend` fixture and the application
 
@@ -87,20 +81,17 @@ def frontend() -> Iterator[Frontend]:
 
 @pytest.fixture
 def application(frontend: Frontend) -> Application:
-    # A web app calls the backend from its own origin.
     assert frontend.origin is not None
     development = Development()
     return Application(
         servicers=[...],
-        # The harness is neither `rbt dev run` nor `rbt serve`, so
-        # name the Development picker for both.
+        # The harness is neither `rbt dev run` nor `rbt serve`.
         oauth=OAuth(
             provider=OAuthProviderByEnvironment(
                 dev=development,
                 prod=development,
             ),
-            # The app's origin is the only one Envoy lets read
-            # `/whoami` cross-origin, as a deployment lists its host.
+            # The only origin Envoy lets read `/whoami` cross-origin.
             allowed_origins=[frontend.origin],
         ),
     )
@@ -110,16 +101,14 @@ scenarios('opening_accounts.feature', 'transfers.feature', 'sign_in.feature')
 ```
 
 The app is served from its own origin (Vite on `localhost`) and calls
-the backend cross-origin at `127.0.0.1`, so the session cookie, the
-`whoami` probe and Envoy's CORS allow-list are exercised as production
-exercises them. A project that serves its web app another way defines
-`frontend` against its own `Frontend` subclass; `in the web app`
-always means this fixture.
+the backend cross-origin at `127.0.0.1`, exercising the session cookie,
+the `whoami` probe and Envoy's CORS allow-list as production does. To
+serve the web app another way, define `frontend` with your own
+`Frontend` subclass; `in the web app` always means this fixture.
 
 ### The steps
 
-Every step names a user the scenario declared. **Each user gets a
-browser of their own.**
+Every step names a declared user. **Each user gets their own browser.**
 
 | Step | What it does |
 | --- | --- |
@@ -147,8 +136,8 @@ browser of their own.**
   `get_by_label` (the glyph is included).
 - **Quoted text may say `<name>`** for a saved value, in every step
   except the path of `opens the web app at`.
-- `eventually sees` takes `within`; `sees` takes none. A change the
-  page shows after a reactive read is always `eventually`.
+- `eventually sees` takes `within`; `sees` takes none. A change shown
+  after a reactive read is always `eventually`.
 - **Gestures other than a left click** (double, right, modifier-click,
   hover, drag) are custom steps over the Playwright `Page`:
 
@@ -164,10 +153,9 @@ def _double_clicks(web_app: WebApp, user: str, name: str, role: str) -> None:
     web_app.page(user=user).get_by_role(role, name=name, exact=True).dblclick()
 ```
 
-  A right-click is testable only if the frontend calls
-  `preventDefault()` and renders its own `role="menu"`; HTML5
-  drag-and-drop often defeats `drag_to()` and needs
-  `mouse.down()` / `move()` / `up()`.
+  Right-click is testable only if the frontend calls `preventDefault()`
+  and renders its own `role="menu"`; HTML5 drag-and-drop often defeats
+  `drag_to()`, so use `mouse.down()` / `move()` / `up()`.
 
 ### Signing in is clicked through, then bound
 
@@ -187,40 +175,38 @@ Scenario: Signing in and out with the Development picker
   And as "ben", `balances` on the `User` for "<ben user id>" aborts with `Unauthenticated`
 ```
 
-The Development picker lists accounts as links named by identity. A
-custom identity provider's page is driven with the same generic
-steps; only the binding step is Reboot's. `is signed in` waits for the
-browser to return to the app and asks the backend who the session is;
-from then on `as "ben",` calls as that user (the `with their user id
-saved as` part is optional). `is signed out` returns the user to
-calling with no token. A scenario not about sign-in declares people
-with `is an authenticated user`; their browsers arrive signed in.
+The Development picker lists accounts as links named by identity; a
+custom provider's page uses the same generic steps. `is signed in`
+waits for the browser to return to the app and asks the backend who
+the session is; then `as "ben",` calls as that user (`with their user
+id saved as` is optional). `is signed out` reverts to calling with no
+token. Scenarios not about sign-in use `is an authenticated user`;
+their browsers arrive signed in.
 
 ### Accessible markup the steps need
 
 - **A field's label is paired with it** (`<label htmlFor="amount">` +
-  `<input id="amount">`, or the input inside the label). A placeholder
-  or a nearby heading does not count.
+  `<input id="amount">`, or the input inside the label); not a
+  placeholder or nearby heading.
 - **A button, link, tab or menu item says what it does** in its text,
-  or in `aria-label` when it is only an icon.
+  or `aria-label` if icon-only.
 - **A table, list or region a step names has a caption or a labelled
   heading**: `<table aria-labelledby="your-accounts">` with
   `<h2 id="your-accounts">Your Accounts</h2>`, or a `<caption>`.
 - **A select is a `<select>` with a paired label**, its `<option>`s
   saying the value a scenario picks.
-- **A value a scenario reads back** (an id the app made up) carries
-  `data-testid` on the element whose text is exactly that value. This
-  is the only place a test id belongs.
-- **Text that changes on a backend event** is rendered as visible
-  text, not only an attribute or a canvas.
+- **A value a scenario reads back** (an app-generated id) carries
+  `data-testid` on the element whose text is exactly that value — the
+  only place a test id belongs.
+- **Text that changes on a backend event** is visible text, not only
+  an attribute or canvas.
 
-Build pages this way from the start; a screen reader needs the same.
+Build pages this way from the start; screen readers need the same.
 
 ### Recordings and running
 
-Every browser scenario is recorded: a video per user and a screenshot
-after the opening step and each assertion, the asserted element
-outlined:
+Each browser scenario records a video per user and a screenshot after
+the opening step and each assertion (asserted element outlined):
 
 ```
 tests/opening_accounts.recordings/
@@ -231,13 +217,13 @@ tests/opening_accounts.recordings/
       5.png
 ```
 
-The digest directory names what the scenario runs (name, background,
-steps, examples); a run keeps only the current one, and an outline's
-examples overwrite each other. `*.recordings/` goes in `.gitignore`;
-the dashboard's Features page shows the last run's, or "not recorded
-yet". `--recording-slowmo` (ms after each browser operation, default
-500) and `--recording-dwell` (ms an assertion stays on screen, default
-1000) pace only the browser; `0` turns either off.
+The digest directory hashes the scenario (name, background, steps,
+examples); a run keeps only the current one, and an outline's examples
+overwrite each other. `*.recordings/` goes in `.gitignore`; the
+dashboard's Features page shows the last run's, or "not recorded yet".
+`--recording-slowmo` (ms after each browser operation, default 500) and
+`--recording-dwell` (ms an assertion stays on screen, default 1000)
+pace only the browser; `0` disables either.
 
 ```sh
 uv run pytest tests/web_test.py
@@ -245,50 +231,49 @@ uv run pytest tests/web_test.py -k "first account"
 uv run pytest tests/web_test.py --recording-slowmo=0 --recording-dwell=0
 ```
 
-A CI run without a browser or `node_modules` passes
-`--ignore=tests/web_test.py`, as the bank's `.tests/test.sh` does.
+CI without a browser or `node_modules` passes
+`--ignore=tests/web_test.py` (as the bank's `.tests/test.sh` does).
 
 ## Never
 
-- **A CSS selector or a test id on a button** — a button with a test id
-  is a button without a name; fix the markup.
+- **A CSS selector or a test id on a button** — it means the button
+  has no name; fix the markup.
 - **A second `opens the web app` to test a reload** — it is a fresh
-  browser profile with empty storage. There is no reload step; use it
-  only to mean "the same user on another machine".
-- **A saved value in an `opens the web app at` path** — the path is
-  taken as written, so `"/l/<lead id>"` loads a page for an id that does
-  not exist. Reach the page by clicking, as a person does.
+  profile with empty storage (no reload step exists); it means only
+  "the same user on another machine".
+- **A saved value in an `opens the web app at` path** — taken
+  literally, `"/l/<lead id>"` loads a nonexistent id. Reach the page by
+  clicking.
 - **`saves the text of ...` after `Then`** — it is a `When`; under
   `Then` / `And` it fails "Step definition is not found".
-- **`sees "55"` when the text appears twice** — Playwright refuses
-  it with a strict-mode violation. Give the value a `data-testid` and save it, or
-  scope with `in the "..." table`.
+- **`sees "55"` when the text appears twice** — a Playwright
+  strict-mode violation. Save it via `data-testid`, or scope with
+  `in the "..." table`.
 - **`` fills ... with `Alice` ``** — the value is JSON; write
   `` `"Alice"` ``.
-- **Quoted web text containing ` has ` or ` with `** (a label such as
-  "Bad state has real consequences") — a catch-all step swallows it and
-  fails "Almost: each clause goes in backticks". Rename the label.
+- **Quoted web text containing ` has ` or ` with `** ("Bad state has
+  real consequences") — a catch-all step swallows it and fails "Almost:
+  each clause goes in backticks". Rename the label.
 - **`scope="module"` on the `frontend` fixture** — the second scenario
   fails `already serving`.
 
 ## Limits
 
-- **One Vite boot per browser scenario is intrinsic**: the backend URL
-  is passed to Vite at spawn and each scenario's backend gets a fresh
-  port (reboot-crm, 1.6.0).
+- **One Vite boot per browser scenario is intrinsic**: Vite gets the
+  backend URL at spawn and each scenario's backend has a fresh port
+  (reboot-crm, 1.6.0).
 - **Only a plain left click** is built in; everything else is a custom
   step (above).
-- **A user who opens the app twice leaves a stray video** named
-  `page@<guid>.webm`, which the dashboard shows as a second video; it
-  holds the first browser, sign-in included (reboot-crm, 1.6.0).
-- **A browser-only preference** (theme in `localStorage`) has no
-  reachable assertion, since a reopen is a new profile.
+- **A user who opens the app twice leaves a stray video**
+  `page@<guid>.webm` (shown on the dashboard as a second video) holding
+  the first browser, sign-in included (reboot-crm, 1.6.0).
+- **A browser-only preference** (theme in `localStorage`) can't be
+  asserted, since a reopen is a new profile.
 
 ## Scales as
 
-- A browser scenario cost about 11.6 s against about 1.6 s for a
-  backend one; 11% of a 482-scenario suite took 47% of the wall clock
-  (reboot-crm, 1.6.0).
+- A browser scenario cost about 11.6 s vs about 1.6 s for a backend
+  one; 11% of a 482-scenario suite took 47% of wall clock (reboot-crm, 1.6.0).
 
 ## Errors you will see
 

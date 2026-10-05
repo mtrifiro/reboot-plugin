@@ -18,83 +18,70 @@ docs: ""
 
 No shipped provider fits `Application(oauth=...)`. Reach here **last**:
 
-1. **`Google` / `GitHub`** when users sign in with one of those directly.
-2. **`Auth0`** for several login methods behind one provider or user
-   management beyond a bare user id (it brokers most IdPs, enterprise
-   SSO included); **`Ory`** when users live in an Ory Network project or
-   self-hosted Ory.
-3. **A custom provider** only for what none of those cover: a
-   self-hosted Keycloak, an internal SSO you can't put Auth0 in front
-   of, an OAuth service Auth0 can't broker.
+1. **`Google` / `GitHub`** for direct sign-in with those.
+2. **`Auth0`** for several login methods or user management (brokers most
+   IdPs, enterprise SSO included); **`Ory`** for Ory Network / self-hosted Ory.
+3. **Custom** only for the rest: self-hosted Keycloak, internal SSO you
+   can't front with Auth0, an OAuth service Auth0 can't broker.
 
-Choosing among shipped providers is `auth-oauth-providers.md`.
+Choosing shipped providers: `auth-oauth-providers.md`.
 
 ## Do this
 
 Subclass **`RegisteredOAuthProvider`** (`reboot.aio.auth.oauth_providers`)
 for an authorization-code IdP with a pre-registered `client_id` /
-`client_secret`; it already handles credentials, extra `scopes=`,
-`store_tokens=`, and a fail-fast `validate()`. Subclass `OAuthProvider`
-directly only for non-standard schemes (`Development` and `Anonymous` are
-the in-tree examples).
+`client_secret`; it handles credentials, extra `scopes=`, `store_tokens=`,
+and a fail-fast `validate()`. Subclass `OAuthProvider` only for
+non-standard schemes (in-tree: `Development`, `Anonymous`).
 
-**Start from the closest shipped provider** — read its source in the
-installed `reboot` package and change only the endpoint URLs,
-`_REQUIRED_SCOPE`, constructor extras (a base URL, realm, tenant), and
-`token_service_id`:
+**Copy the closest shipped provider's source** (installed `reboot`
+package), changing only endpoint URLs, `_REQUIRED_SCOPE`, constructor
+extras (base URL, realm, tenant), and `token_service_id`:
 
-- **`Auth0`** — the model for any OIDC IdP (Keycloak, Okta): code
-  exchange, user id from the ID token's `sub`, a constructor extra
-  (`domain=`) with its `validate()` check, full `store_tokens=True`
-  support including `offline_access`.
-- **`GitHub`** — the model for plain OAuth (no ID token): resolves the
-  user id by calling the IdP's user-info API with the new access token.
-- **`Google`** — a provider-specific refresh-token knob in
-  `authorization_url` (`access_type=offline`).
+- **`Auth0`** — model for OIDC IdPs (Keycloak, Okta): user id from the ID
+  token's `sub`, a constructor extra (`domain=`) checked in `validate()`,
+  full `store_tokens=True` incl. `offline_access`.
+- **`GitHub`** — model for plain OAuth (no ID token): user id from the
+  IdP's user-info API with the new access token.
+- **`Google`** — refresh-token knob in `authorization_url`
+  (`access_type=offline`).
 
-You implement two methods; Reboot's OAuth server does the rest (its
-`/__/oauth/...` endpoints, minting and verifying `state`, minting the
-app's own access tokens, populating `context.auth.user_id`):
+Implement two methods; Reboot's OAuth server does the rest (`/__/oauth/...`
+endpoints, minting/verifying `state`, minting app access tokens, setting
+`context.auth.user_id`):
 
-- **`authorization_url(state, redirect_uri) -> str`** — the IdP's
-  authorize URL with your `client_id`, the scopes, `response_type=code`,
-  and **`state` and `redirect_uri` passed through verbatim**: `state` is
-  a JWT the server verifies on callback (CSRF), `redirect_uri` is the
-  server's own `/__/oauth/callback`.
+- **`authorization_url(state, redirect_uri) -> str`** — IdP authorize URL
+  with `client_id`, scopes, `response_type=code`, and **`state` and
+  `redirect_uri` verbatim** (`state` is a JWT verified on callback for
+  CSRF; `redirect_uri` is the server's `/__/oauth/callback`).
 - **`exchange_code(code, redirect_uri) -> ExchangeResult`** — POST the
-  code to the token endpoint (plain `aiohttp` / `httpx`) and resolve the
-  user id: the OIDC `id_token`'s `sub`, or the IdP's user-info API.
-  Raising here is safe — the server logs it and redirects with
-  `access_denied`.
+  code to the token endpoint (plain `aiohttp` / `httpx`); user id from the
+  `id_token`'s `sub` or the user-info API. Raising is safe: the server
+  logs it and redirects with `access_denied`.
 
-**Identity claims** (optional): declare the claims the IdP can deliver,
-and the scope each needs, in the class-level `_AVAILABLE_CLAIMS`; accept
-`claims=` and pass it to `super().__init__` (which rejects unavailable
-claims and derives the scopes); pass the decoded ID token or userinfo
-response through `self._presented_claims(...)` into
-`ExchangeResult.claims`. That keeps only the requested claims, under
-their presented names, so protocol claims (`exp`, `nonce`, …) and
-IdP-specific names never leak; with no claims requested it returns
-`None` and nothing is delivered. Claims go to the `User` type's
-`set_claims` on every sign-in.
+**Identity claims** (optional): declare deliverable claims and each one's
+scope in class-level `_AVAILABLE_CLAIMS`; pass `claims=` to
+`super().__init__` (rejects unavailable claims, derives scopes); pass the
+decoded ID token / userinfo through `self._presented_claims(...)` into
+`ExchangeResult.claims` — it keeps only requested claims under their
+presented names (protocol claims like `exp`, `nonce`, … never leak) and
+returns `None` when none were requested. Claims reach `User.set_claims`
+on every sign-in.
 
 Optional hooks:
 
-- **`validate()`** — raise `InputError` on missing/invalid config.
-  Called once, when the provider is selected for the current
-  environment, so a misconfigured `prod=` arm fails at startup. Call
-  `super().validate()` first (see `Auth0.validate`).
-- **`mount_routes(http)`** — provider-specific HTTP routes, rarely
-  needed (`Development`'s login page; `Ory`'s settings-flow webhook). A
-  route delivering identity changes between sign-ins may call
-  `self._set_claims_if_exists(...)` (wired in by the OAuth server via
-  `use_set_claims_if_exists` before `mount_routes` runs). See
-  `Ory._webhook`.
+- **`validate()`** — raise `InputError` on bad config; called once when
+  the provider is selected, so a misconfigured `prod=` arm fails at
+  startup. Call `super().validate()` first (see `Auth0.validate`).
+- **`mount_routes(http)`** — provider-specific routes, rarely needed
+  (`Development`'s login page; `Ory`'s settings-flow webhook). A route
+  delivering identity changes between sign-ins may call
+  `self._set_claims_if_exists(...)` (wired via `use_set_claims_if_exists`
+  before `mount_routes` runs; see `Ory._webhook`).
 
 Wire it like a shipped provider, then **tell the user** to register the
-client in the IdP's console, obtain `client_id` / `client_secret`, and
-add `<base-url>/__/oauth/callback` to its redirect-URI allowlist — only
-they can, and the provider won't work until they do:
+client in the IdP console, get `client_id` / `client_secret`, and allow
+`<base-url>/__/oauth/callback` as redirect URI — only they can:
 
 ```python
 oauth=OAuth(
@@ -110,45 +97,42 @@ oauth=OAuth(
 
 ### Supporting `store_tokens=True`
 
-1. Override **`token_service_id`** with the state ID naming the service
-   (e.g. `"sso.example.com"`); apps read tokens with
-   `OAuthTokenManager.ref(<that id>).fetch(...)`.
+1. Override **`token_service_id`** with the service's state ID (e.g.
+   `"sso.example.com"`); apps call `OAuthTokenManager.ref(<that id>).fetch(...)`.
 2. When `self._store_tokens` is set, return `ExchangeResult.tokens` as
-   an `OAuthTokens` (`rbt.std.oauth.v1.oauth_rbt`) with `access_token`,
-   `refresh_token`, `expires_at`, `scopes`; otherwise `tokens=None`.
-3. Add any refresh-token knob (`access_type=offline`, `offline_access`)
-   in `authorization_url` only when `self._store_tokens` is set.
+   `OAuthTokens` (`rbt.std.oauth.v1.oauth_rbt`: `access_token`,
+   `refresh_token`, `expires_at`, `scopes`); else `tokens=None`.
+3. Add refresh-token knobs (`access_type=offline`, `offline_access`) in
+   `authorization_url` only when `self._store_tokens` is set.
 
-The server then stores the tokens encrypted and carries a prior
-`refresh_token` forward when a sign-in omits one, as for shipped
-providers (`auth-store-tokens.md`).
+The server stores them encrypted and carries a prior `refresh_token`
+forward (`auth-store-tokens.md`).
 
 ## Never
 
 - Return an unstable user id from `exchange_code` — it becomes
-  `context.auth.user_id` and the key of all user-keyed state. Use an
-  OIDC `sub` or numeric account id, never an email that can change or
-  anything session-scoped. It also fixes the user-ID namespace, so the
-  provider-permanence rule of `auth-oauth-providers.md` applies.
+  `context.auth.user_id`, the key of all user-keyed state. Use an OIDC
+  `sub` or numeric account id, never a changeable email or anything
+  session-scoped. It fixes the user-ID namespace
+  (provider-permanence rule, `auth-oauth-providers.md`).
 - Rewrite or re-mint `state` / `redirect_uri` in `authorization_url` —
   the server verifies both on callback.
-- Return tokens when `store_tokens` is off — apps that don't opt in
-  must never carry these secrets.
-- Put claims from an unverified source in `ExchangeResult.claims` —
-  only an ID token straight from the token endpoint over TLS, or the
-  userinfo endpoint over TLS.
+- Return tokens when `store_tokens` is off — non-opted-in apps must never
+  carry these secrets.
+- Put claims from an unverified source in `ExchangeResult.claims` — only
+  an ID token from the token endpoint, or the userinfo endpoint, over TLS.
 - A claims-delivering route in `mount_routes` that doesn't authenticate
-  its caller (a shared secret, a signature) — claims assert identity, so
-  the route decides who can impersonate users.
+  its caller (a shared secret, a signature) — it decides who can impersonate
+  users.
 - Write the provider from a blank page — adapt `Auth0` / `GitHub`.
 
 ## Limits
 
 - `_set_claims_if_exists` delivers only to a `User` that already exists;
   it never creates one (webhooks fire instance-wide).
-- Deliveries may repeat (`set_claims` is a full replace, idempotent by
-  contract), and ordering is last-write-wins: a delayed retry can
-  briefly overwrite a newer change until the next delivery or sign-in.
+- Deliveries may repeat (`set_claims` is a full replace, idempotent) and
+  are last-write-wins: a delayed retry can briefly overwrite a newer
+  change until the next delivery or sign-in.
 - `oauth=` takes one provider; the selector picks one per environment.
 - At 1.6.0, `store_tokens=True` fails at startup because the wheel lacks
   `reboot.std.oauth` (`auth-store-tokens.md` § Limits).

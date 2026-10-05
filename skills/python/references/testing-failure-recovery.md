@@ -17,19 +17,17 @@ docs: ""
 ## When you are here
 
 The app has a spawned task, a `Workflow` or scheduled work, and you
-want to prove it survives a crash. The harness can take the application
-down mid-flight and bring it back, which turns "survives a crash" into
-an ordinary assertion. This is the one kind of test that stays on the
-harness instead of in a feature file
-([`testing-features.md`](testing-features.md)); the harness itself is
-[`testing-harness.md`](testing-harness.md).
+want to prove it survives a crash: the harness takes the app down
+mid-flight and brings it back. This is the one test that stays on the
+harness rather than in a feature file ([`testing-features.md`](testing-features.md));
+harness basics: [`testing-harness.md`](testing-harness.md).
 
 ## Do this
 
-Test what the app had **in flight** when the process died (a task
-half-run, a workflow between steps, an effect that must land exactly
-once) and the invariants a partial recovery could break (a counter
-that must not double-count, a payment that must not go out twice).
+Test what was **in flight** when the process died (a task half-run, a
+workflow between steps, an effect that must land exactly once) and the
+invariants partial recovery could break (no double-count, no second
+payment).
 
 ### The restart primitive
 
@@ -38,29 +36,24 @@ that must not double-count, a payment that must not go out twice).
 
 ```python
 revision = await self.rbt.up(Application(servicers=[OrderServicer]))
-
-context = self.rbt.create_external_context(name=f"test-{self.id()}")
-order = Order.ref(f"order-{self.id()}")
-await order.place(context, sku="ABC", quantity=2)
-
-# The process dies.
-await self.rbt.down()
-
-# ...and comes back.
-await self.rbt.up(revision=revision)
+# ... calls ...
+await self.rbt.down()                    # the process dies
+await self.rbt.up(revision=revision)     # ...and comes back
 ```
 
-That restarts an idle application, which recovers trivially. A second
-`up()` may instead register a *different* `Application(...)`, which is
-how a test exercises an upgrade across a restart
+Restarting an idle app proves little. A second `up()` may register a
+*different* `Application(...)` to test an upgrade across a restart
 ([`api-schema-evolution.md`](api-schema-evolution.md)).
 `asyncTearDown` stays `await self.rbt.stop()`: `down()` stops the
 servers, `stop()` tears down the harness.
 
 ### Put the crash exactly where you want it
 
-Patch the method under test with one that blocks until the test has
-taken the app down:
+Patch the method under test (at its **import location in the consuming
+module**) with one that blocks until the app is down. `reached_mark_paid`
+proves the app is inside the method before the kill; `app_is_down`
+releases it only after. A servicer subclass overriding the method also
+works, and reads better when several tests share the stall.
 
 ```python
 import asyncio
@@ -71,15 +64,12 @@ async def test_fulfillment_survives_a_crash_mid_flight(self) -> None:
     reached_mark_paid = asyncio.Event()
     app_is_down = asyncio.Event()
 
-    # `mark_paid` is the writer the `fulfill` workflow calls once the
-    # payment goes through.
+    # `mark_paid` is the writer the `fulfill` workflow calls once paid.
     original_mark_paid = OrderServicer.mark_paid
 
     async def stalling_mark_paid(self, context, request):
         reached_mark_paid.set()
-        # Hold the method open until the test kills the app, so the
-        # crash lands inside `mark_paid` rather than between calls.
-        await app_is_down.wait()
+        await app_is_down.wait()  # crash lands inside `mark_paid`
         return await original_mark_paid(self, context, request)
 
     with mock.patch(
@@ -97,7 +87,6 @@ async def test_fulfillment_survives_a_crash_mid_flight(self) -> None:
         await order.place(context, sku="ABC", quantity=2)
         task = await order.spawn().fulfill(context)
 
-        # Wait until the app is provably inside `mark_paid`.
         await reached_mark_paid.wait()
 
         await self.rbt.down()
@@ -105,81 +94,58 @@ async def test_fulfillment_survives_a_crash_mid_flight(self) -> None:
 
         await self.rbt.up(revision=revision)
 
-        # The workflow was picked back up and ran to completion.
-        await task
+        await task  # the workflow resumed and completed
 
-    # The payment was recorded exactly once, despite the crash.
+    # Assert the invariant the app promises, not that data survived.
     response = await order.get(context)
     self.assertEqual(response.status, "fulfilled")
     self.assertEqual(len(response.payments), 1)
 ```
 
-The two events make it deterministic: `reached_mark_paid` proves the
-app got into the method before the kill, `app_is_down` releases it only
-after. Patch by the **import location in the consuming module**.
-Subclassing the servicer and overriding the method works too, and
-reads better when several tests share the stall.
+### Counting calls: disable effect validation
 
-### Assert state, not call counts
-
-```python
-# GOOD — the invariant the app actually promises.
-response = await order.get(context)
-self.assertEqual(len(response.payments), 1)
-
-# WEAK — this only re-tests Reboot's durability guarantee.
-self.assertEqual(response.quantity, 2)
-```
-
-If a test does count invocations of a writer or transaction body, turn
-effect validation off for that test. In unit tests the harness enables
-it by default: it deliberately aborts the first run of every writer and
-transaction body and runs it again (only the second run commits; the
-runs are not compared), to surface bodies that aren't safe to
-re-execute (see [`servicer-writer.md`](servicer-writer.md)). A
-`nonlocal` counter therefore reports more calls than the test made:
+The harness enables effect validation by default: it aborts the first
+run of every writer and transaction body and runs it again (only the
+second commits; runs are not compared), to surface bodies unsafe to
+re-execute ([`servicer-writer.md`](servicer-writer.md)). A `nonlocal`
+counter therefore over-reports. A test that counts invocations turns
+it off:
 
 ```python
 from reboot.aio.contexts import EffectValidation
 
 revision = await self.rbt.up(
     Application(servicers=[OrderServicer]),
-    # This test counts calls with a `nonlocal`, which effect
-    # validation's deliberate re-execution would inflate.
     effect_validation=EffectValidation.DISABLED,
 )
 ```
 
-For one external call inside a workflow, the switch is per call:
-`at_least_once(..., effect_validation=EffectValidation.DISABLED)`.
-Without it the callable runs twice and the **second** result is
-memoized.
+For one external call in a workflow it is per call:
+`at_least_once(..., effect_validation=EffectValidation.DISABLED)`;
+otherwise the callable runs twice and the **second** result is memoized.
 
 ### What's worth a recovery test
 
-- **A spawned task** — cancelled when the app goes down, picked up on
-  `up()`; assert it completes and its effect happened once.
-- **A `Workflow`** — its body re-executes from the top on replay;
-  assert the steps already finished did not happen twice: writer and
-  transaction calls under `.per_workflow(...)` / `.per_iteration(...)`,
-  and any `at_least_once` / `at_most_once` call.
-- **`schedule()`d work** — assert it still fires after a restart that
-  spans its due time.
+- **A spawned task** — cancelled at `down()`, picked up on `up()`;
+  assert it completes and its effect happened once.
+- **A `Workflow`** — its body replays from the top; assert finished
+  steps did not repeat: writer/transaction calls under
+  `.per_workflow(...)` / `.per_iteration(...)`, and any
+  `at_least_once` / `at_most_once` call.
+- **`schedule()`d work** — still fires after a restart spanning its due time.
 - **A half-finished multi-actor transaction** — fully applied or fully
   rolled back, never half.
 
 ## Never
 
 - **A test that "the data is still there" after a restart** —
-  committed state surviving is Reboot's guarantee, covered by its own
-  suite; re-asserting it checks Reboot, not the app.
+  that re-tests Reboot's guarantee, not the app.
 - **`revision=` together with `application=` / `servicers=`** — the
   revision already carries the configuration; pass it alone.
 - **A second `up()` without `down()`** — refused while the app is up.
 - **Awaiting a unary call from the test's context while the app is
-  down** — an `ExternalContext` retries `Unavailable` with no attempt
-  limit, so the call waits for the app instead of failing. Assert
-  what you can offline, then `up()` before the next call.
+  down** — an `ExternalContext` retries `Unavailable` without limit, so
+  it waits instead of failing; `up()` before the next call.
 - **A stand-in for an external call that answers from a counter** —
   under effect validation `at_least_once` keeps the second answer.
   Derive the answer from the input.
@@ -188,12 +154,11 @@ memoized.
 
 ## Limits
 
-- Calls made *inside* the app are not retried per call. A `Workflow`
-  recovers by re-running its body from the top; every memoizing
-  primitive (`at_least_once`, `at_most_once`, `until`,
-  `until_changes`, and Reboot calls scoped `.per_workflow(...)` /
-  `.per_iteration(...)`) returns its recorded result on replay instead
-  of redoing the work.
+- Calls *inside* the app are not retried per call; a `Workflow`
+  re-runs its body, and every memoizing primitive (`at_least_once`,
+  `at_most_once`, `until`, `until_changes`, Reboot calls scoped
+  `.per_workflow(...)` / `.per_iteration(...)`) returns its recorded
+  result on replay.
 - `effect_validation=` cannot be passed with `revision=`; the
   revision keeps the first `up()`'s setting (1.6.0 source).
 - Two transactions on one actor racing (a confirm against its hold's

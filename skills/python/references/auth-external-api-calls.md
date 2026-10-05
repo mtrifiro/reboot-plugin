@@ -16,15 +16,13 @@ docs: ""
 
 ## When you are here
 
-The app must act **as the user** at an external service — read their
-Google Calendar, open GitHub issues, post to their Slack — possibly from
-background work long after they left. Two halves, the same for MCP UIs
-and web apps: **capture** the user's credential once, encrypted; **use**
-it inside a `Workflow`. The `OAuthTokenManager` surface itself is
-`stdlib-oauth-tokens.md`; provider configuration for `store_tokens=True`
-is the `mcp-ui` skill's `auth-store-tokens.md`. A key **you** hold for
-the whole app (your Stripe or OpenAI key) is not per-user state: it is
-an application secret (`lifecycle-secrets.md`).
+The app acts **as the user** at an external service (their Google
+Calendar, GitHub issues, Slack), possibly from background work later. Same
+for MCP UIs and web apps: **capture** the credential once, encrypted;
+**use** it inside a `Workflow`. `OAuthTokenManager` surface:
+`stdlib-oauth-tokens.md`; `store_tokens=True` provider config: the `mcp-ui`
+skill's `auth-store-tokens.md`. An app-wide key **you** hold (Stripe,
+OpenAI) is an application secret (`lifecycle-secrets.md`).
 
 ## Do this
 
@@ -36,14 +34,13 @@ an application secret (`lifecycle-secrets.md`).
 | Any other service's OAuth token (sign in with Google, call Slack) | **B**: your own authorize + callback routes, then `OAuthTokenManager.store` | same three |
 | An API key / personal access token the user pastes | **C**: `Ciphertext.encrypt`, keep the returned `state_id` | `ciphertext_library()`, `ordered_map_library()` |
 
-**Path A** works on every frontend that signs in through `oauth=`. It
-captures the provider's **own** tokens only: through `Auth0` you get an
-Auth0 token, not the upstream Google/GitHub one — ask Auth0 for the
-federated token or use Path B.
+**Path A** works on every frontend signing in through `oauth=`, but
+captures only the provider's **own** tokens: `Auth0` yields an Auth0
+token, not the upstream Google/GitHub one (ask Auth0 for the federated
+token, or use Path B).
 
-**Path B.** Register both routes on the `Application` (it exposes the
-web framework as `.http`); the callback opts into an app-internal context
-because `OAuthTokenManager` is app-internal only:
+**Path B.** Register both routes on the `Application` (`.http`); the callback is
+app-internal because `OAuthTokenManager` is app-internal only:
 
 ```python
 application.http.get("/__/oauth/slack/authorize")(slack_authorize)
@@ -52,11 +49,10 @@ application.http.get("/__/oauth/slack/callback", app_internal=True)(
 )
 ```
 
-The **authorize** route redirects to the service's `/authorize` URL with
-your `client_id`, the scopes you need, the callback as `redirect_uri`,
-and an **HMAC-signed `state`** carrying the signed-in `user_id`. The
-**callback** verifies `state`, exchanges `code` at the token endpoint
-(plain `httpx` / `aiohttp`), and stores:
+**Authorize** redirects to the service's `/authorize` with your
+`client_id`, scopes, the callback as `redirect_uri`, and an **HMAC-signed
+`state`** carrying the signed-in `user_id`. **Callback** verifies `state`,
+exchanges `code` at the token endpoint (plain `httpx` / `aiohttp`), stores:
 
 ```python
 from reboot.aio.http import external_context
@@ -67,7 +63,7 @@ SLACK = "slack.com"  # any string naming the service.
 
 
 async def slack_callback(request):
-    # ... verify the signed `state`, recover `user_id`, exchange
+    # ... verify signed `state` -> `user_id`; exchange
     # `request.query_params["code"]` for the fields below ...
     tokens = OAuthTokens(
         access_token=access_token,
@@ -114,19 +110,18 @@ class UserServicer(User.Servicer):
         return User.ConnectAcmeResponse()
 ```
 
-Decrypt later with the **same** `associated_data`; an empty
-`acme_api_key_id` means "not connected"; erase with
+Decrypt with the **same** `associated_data`; empty `acme_api_key_id` =
+"not connected"; erase with
 `KeyManager.ref(APP_SHARED_KEY_MANAGER_ID).shred(context, scope=...)`
 (`stdlib-ciphertext.md`).
 
 ### Use: inside a `Workflow`
 
-Read the credential and make the outbound call in one `Workflow` (a
-`WorkflowContext` is app-internal, which the token store requires), the
-call wrapped in `at_least_once` — or `at_most_once` when a duplicate is
-itself the failure (`servicer-workflow-external.md`). Use
-`context.state_id` as the `user_id`; on a `User`-type servicer keyed by
-user ID it *is* the signed-in user.
+Read the credential and call out in one `Workflow` (`WorkflowContext` is
+app-internal, as the token store requires), wrapped in `at_least_once` —
+`at_most_once` when a duplicate is itself the failure
+(`servicer-workflow-external.md`). `context.state_id` is the `user_id` on
+a `User`-type servicer keyed by user ID.
 
 ```python
 from rbt.std.oauth.v1.oauth_rbt import OAuthTokenManager
@@ -162,12 +157,12 @@ class UserServicer(User.Servicer):
         return User.CreateEventResponse(ok=True, event=...)
 ```
 
-UI shape: the `Workflow` writes a **snapshot** into state, a `Reader`
-exposes it for the UI to subscribe to, and a UI-invoked `Writer`
-`schedule()`s the workflow (a `Writer` can't await one).
+UI shape: the `Workflow` writes a **snapshot** to state, a `Reader`
+exposes it, and a UI-invoked `Writer` `schedule()`s the workflow (a
+`Writer` can't await one).
 
-**Erase** a user's stored tokens for a service by shredding their scope
-in that service's key manager; `fetch` then reports `found=False`:
+**Erase** a user's tokens by shredding their scope in the service's key
+manager; `fetch` then reports `found=False`:
 
 ```python
 from rbt.std.ciphertext.v1.ciphertext_rbt import KeyManager
@@ -179,26 +174,23 @@ await KeyManager.ref(_key_manager_id(GOOGLE)).shred(context, scope=user_id)
 ## Never
 
 - The outbound HTTP call in a `Reader` / `Writer` / `Transaction` —
-  they re-execute under retries and effect validation and would re-issue
-  it. Only in a `Workflow`, wrapped in a durability primitive.
-- `context.auth.user_id` in that `Workflow` — a workflow is usually
-  reached by a scheduled or app-internal call, so `context.auth` isn't
-  reliably populated. Use `context.state_id`.
+  retries and effect validation re-issue it. Only in a `Workflow`, in a
+  durability primitive.
+- `context.auth.user_id` in that `Workflow` — scheduled / app-internal
+  calls don't reliably populate `context.auth`. Use `context.state_id`.
 - Tokens or API keys in a `str` field, or OAuth tokens in hand-rolled
   `Ciphertext` — use `OAuthTokenManager` (A, B) or `Ciphertext` (C).
-- A user API key in `OAuthTokenManager` — it is purpose-built for
-  OAuth tokens.
-- `app_internal=True` on a route that acts on unvalidated input — an
-  app-internal context bypasses authorizers and acts for **any**
-  caller. Only on a callback that runs after verifying the `state` you
-  issued.
+- A user API key in `OAuthTokenManager` — it is for OAuth tokens.
+- `app_internal=True` on a route that acts on unvalidated input — it
+  bypasses authorizers for **any** caller. Only on a callback that
+  verifies the `state` you issued.
 - `app_internal=True` on a templated path (`/x/{id}`) — the app-internal
-  context is handed out only when the request path equals the declared
-  path string, so a path parameter silently yields an ordinary external
-  context and every app-internal-only call is refused. Use a literal
-  path and put variables in the query string (1.6.0 `reboot/aio/http.py`).
-- Crashing on "not connected" — handle both `found=False` and
-  `FetchAborted` with a connect / re-authenticate path.
+  context is given only when the request path equals the declared string,
+  so a path parameter silently yields an external context and
+  app-internal-only calls are refused. Literal path; variables in the
+  query string (1.6.0 `reboot/aio/http.py`).
+- Crashing on "not connected" — handle `found=False` and `FetchAborted`
+  with a connect / re-authenticate path.
 
 ## Limits
 
@@ -208,17 +200,15 @@ await KeyManager.ref(_key_manager_id(GOOGLE)).shred(context, scope=user_id)
   `store_tokens=True` fails at startup with `ModuleNotFoundError`
   (tool-checks-01, open; `stdlib-oauth-tokens.md` § Limits). Path C
   needs only `ciphertext` and works.
-- Reboot stores what the token endpoint returns and carries a prior
-  `refresh_token` forward when a later capture omits it. It does **not**
-  refresh expired access tokens — check `expires_at` and call the
-  service's token endpoint yourself.
-- Refresh tokens by provider: **Google** returns one only on the first
-  consent (Reboot sends `access_type=offline`); **Auth0** only with
-  `offline_access`, which the provider adds when `store_tokens=True`;
-  **GitHub** OAuth Apps never issue one (the token doesn't expire), a
-  GitHub App with "Expire user authorization tokens" issues both.
-- `store` replaces the user's tokens wholesale; you can't read and write
-  the same manager in one transaction.
+- Reboot stores what the token endpoint returns, carrying a prior
+  `refresh_token` forward when a capture omits it. It does **not** refresh
+  expired access tokens: check `expires_at`, call the token endpoint yourself.
+- Refresh tokens: **Google** only on first consent (Reboot sends
+  `access_type=offline`); **Auth0** only with `offline_access` (added when
+  `store_tokens=True`); **GitHub** OAuth Apps never (token doesn't expire),
+  a GitHub App with "Expire user authorization tokens" issues both.
+- `store` replaces the user's tokens wholesale; no read and write of the
+  same manager in one transaction.
 - `REBOOT_CRYPTO_ROOT_KEYS` is auto-provisioned under `rbt dev run` and
   on Reboot Cloud.
 

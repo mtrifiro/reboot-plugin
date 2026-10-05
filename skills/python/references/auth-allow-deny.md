@@ -15,28 +15,21 @@ docs: ""
 
 ## When you are here
 
-You are about to return `allow()` or `deny()` from an `authorizer()`,
-or a test just failed with `PermissionDenied` and `allow()` looks like
-the quick fix. Both are valid rule instances with one narrow use each;
-neither is a default. When to write rules at all is
-`servicer-authorizer.md`; composing real rules is `auth-allow-if.md`.
+You are about to return `allow()` / `deny()`, or `allow()` looks like the fix
+for a `PermissionDenied` test. Each has one narrow use; neither is a default.
+Composing real rules: `auth-allow-if.md`.
 
 ## Do this
 
-Write the real rule **before the tests**. `rbt dev` allows calls on a
-servicer with no `authorizer()` (with a warning), but the `Reboot()`
-test harness denies them with `PermissionDenied`, as production does
-(`servicer-authorizer.md`). Under `oauth=` every caller already has a
-verified identity (`dev-{hash}` under `Development()`), so a real
-`allow_if(...)` rule works from day one.
-
-Use `allow()` only for an endpoint you have consciously decided is
-public — any caller on the internet, anonymously: a health check, an
-unauthenticated catalog read, a public sign-up. Open access is the
-product, not an accident.
-
-Use `deny()` only to switch a method off without removing it from the
-API (e.g. a deprecated endpoint not yet deleted):
+- Write the real rule **before the tests**: `rbt dev` allows (with a
+  warning) calls to a servicer with no `authorizer()`; the `Reboot()` harness
+  and production deny them (`servicer-authorizer.md`). Under `oauth=` every
+  caller has a verified identity (`dev-{hash}` under `Development()`), so
+  `allow_if(...)` works from day one.
+- `allow()` only for a deliberately public, anonymous endpoint: health
+  check, public catalog read, sign-up.
+- `deny()` only to switch a method off without removing it (deprecated
+  endpoint).
 
 ```python
 from reboot.aio.auth.authorizers import allow, deny
@@ -52,59 +45,47 @@ class LegacyServicer(Legacy.Servicer):
         return deny()
 ```
 
-To give one method of a type `allow()` / `deny()` and the rest a real
-rule, use `<Type>.Authorizer(<method>=allow(), _default=...)`
-(`servicer-authorizer.md`).
-
-A rule's decision is one of:
+- One method `allow()` / `deny()`, the rest a real rule:
+  `<Type>.Authorizer(<method>=allow(), _default=...)` (`servicer-authorizer.md`).
+- Everything else gets `allow_if(...)` (`auth-built-in-predicates.md`,
+  `auth-custom-predicates.md`).
 
 | Outcome | Meaning |
 | --- | --- |
-| `Ok` | Allow the call. `allow()` always returns it. |
-| `Unauthenticated` | No valid identity attached; the caller should retry with credentials. |
-| `PermissionDenied` | Identity is fine but not allowed. `deny()` always returns it. |
-
-Everything reachable from a browser, an MCP client, an external
-service, or any caller you'd want to identify gets an `allow_if(...)`
-rule built from `auth-built-in-predicates.md` / `auth-custom-predicates.md`.
+| `Ok` | Allow. `allow()` always returns it. |
+| `Unauthenticated` | No valid identity; caller should retry with credentials. |
+| `PermissionDenied` | Identity fine but not allowed. `deny()` always returns it. |
 
 ## Never
 
 - `return allow` — the function, not a rule. `return allow()`.
 - `allow()` on every servicer to silence the `rbt dev` missing-authorizer
   warning — the warning is the TODO list for real rules.
-- `allow()` "for now, tighten before shipping" — you lose track of which
-  servicers needed real rules, and the `allow()` survives into production.
-- `allow()` because "there's no auth yet" — wire identity instead:
+- `allow()` "for now, tighten before shipping" — it survives into production.
+- `allow()` because "there's no auth yet" — wire identity:
   `Application(oauth=OAuth(provider=OAuthProviderByEnvironment(dev=Development(), prod=...)))`
-  gives every caller a real identity in dev and prod; an app on
-  `token_verifier=...` writes its rules once the verifier is wired, and
-  no later than the first harness test.
+  identifies every caller in dev and prod; an app on `token_verifier=...`
+  writes rules once the verifier is wired, no later than the first harness test.
 - `allow()` for "methods only called from inside the app" — every Reboot
-  method is reachable from the internet; no network boundary makes one
-  app-internal. Say so: `allow_if(all=[is_app_internal])`.
+  method is internet-reachable; use `allow_if(all=[is_app_internal])`.
 - `allow()` "to make the example work" in examples, tutorials, or
-  scaffolding — write the real rule; the example is what gets copied.
-- `allow()` to get tests past `PermissionDenied` — omitting
-  `authorizer()` doesn't work either (the harness denies). Impersonate:
-  `await rbt.create_external_context_as(name, user_id)`; use
-  `app_internal=True` contexts for internal paths. Web apps keep their
-  production `token_verifier=...`: the harness's OAuth server verifies
-  the token `create_external_context_as` mints, and a hand-built bearer
-  still hits the app's verifier (`testing-harness.md`, "Test Against the
-  Real Authorizers", including its last-resort carve-out).
+  scaffolding — the example is what gets copied.
+- `allow()` to get tests past `PermissionDenied` — omitting `authorizer()`
+  fails too (harness denies). Impersonate:
+  `await rbt.create_external_context_as(name, user_id)`; `app_internal=True`
+  contexts for internal paths; web apps keep their production
+  `token_verifier=...` (`testing-harness.md`, "Test Against the Real
+  Authorizers").
 - Subclassing each servicer in tests to override `authorizer()` with
   `allow()` — the app's authorization goes untested.
-- `deny()` for "only other servicers may call this" — `deny()` blocks
-  **every** caller, app-internal ones included. Use
-  `allow_if(all=[is_app_internal])`.
+- `deny()` for "only other servicers may call this" — it blocks **every**
+  caller, app-internal included. Use `allow_if(all=[is_app_internal])`.
 
 ## Limits
 
-- `allow()` and `deny()` ignore `context`, `state`, and `request`; their
-  decision is fixed.
-- One `authorizer()` per servicer; it covers every method unless it
-  returns `<Type>.Authorizer(...)` with per-method rules.
+- `allow()` / `deny()` ignore `context`, `state`, `request`; decision is fixed.
+- One `authorizer()` per servicer, covering every method unless it returns
+  `<Type>.Authorizer(...)` with per-method rules.
 
 ## Scales as
 
@@ -114,7 +95,7 @@ rule built from `auth-built-in-predicates.md` / `auth-custom-predicates.md`.
 
 | Error text (stable prefix) | Meaning | Fix |
 | --- | --- | --- |
-| `aborted with 'PermissionDenied': You are not authorized to call` | In the test harness, often a servicer with no `authorizer()`, or a `deny()` | Write the real `allow_if(...)` rule; impersonate users in tests, not `allow()` |
+| `aborted with 'PermissionDenied': You are not authorized to call` | Harness: often no `authorizer()`, or a `deny()` | Real `allow_if(...)`; impersonate users in tests |
 | `IS MISSING AUTHORIZATION` | `rbt dev` allowed a call to a servicer with no `authorizer()` | Write the rule before the tests |
 
 ## See also

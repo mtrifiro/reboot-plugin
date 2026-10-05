@@ -17,13 +17,12 @@ docs: ""
 
 ## When you are here
 
-Your workflow should repeat a body: a consumer that drains a queue, a
-control loop that reacts to messages, a poller, a pass over N items
-that each need their own checkpoint. `context.loop(alias)` is an async
-iterator that checkpoints every iteration, so a restart resumes at the
-current iteration instead of the first. Scoping the calls inside the
-loop is in [`servicer-workflow-calls.md`](servicer-workflow-calls.md);
-reacting to a changed value per iteration is `until_changes` in
+The workflow repeats a body: a queue consumer, a control loop, a poller,
+a pass over N items each needing a checkpoint. `context.loop(alias)` is
+an async iterator that checkpoints every iteration, so a restart resumes
+at the current one. Call scoping:
+[`servicer-workflow-calls.md`](servicer-workflow-calls.md); reacting to
+a changed value: `until_changes` in
 [`servicer-workflow-wait.md`](servicer-workflow-wait.md).
 
 ## Do this
@@ -35,65 +34,58 @@ async def control_loop(
     context: WorkflowContext,
     request: ControlLoopRequest,
 ):
-    channel = Channel.ref(request.channel_id)
     topic = Topic.ref(f"{request.channel_id}-messages")
     queue = Queue.ref(f"{context.state_id}-messages-queue")
 
+    # Setup: re-runs as Python on replay, but per_workflow-scoped by default.
     await topic.subscribe(context, queue_id=queue.state_id)
 
     async for iteration in context.loop("Control loop"):
+        # per_iteration-scoped by default.
         dequeue = await queue.dequeue(context, bulk=True)
-
         message_ids = [as_str(item.value) for item in dequeue.items]
         # ... process this iteration's batch ...
 ```
 
-- **Each iteration is a checkpoint.** The iteration counter is persisted
-  when an iteration completes; after a restart the workflow resumes at
-  the iteration that had not completed.
-- **Setup before the loop** re-executes as Python on every replay, but
-  its Reboot calls default to `per_workflow` scope and return their
-  memoized results, so one-shot setup such as the `subscribe` above
-  takes effect once.
-- **Calls inside the loop** default to `per_iteration` scope: each
-  iteration is a fresh memo scope, replay-safe within the iteration.
-- **`iteration`** is the iteration index (from 0). It is replay-stable,
-  so it is safe inside aliases (`f"Process batch {iteration}"`).
-- **`break` or `return`** ends the loop; the workflow then continues
-  after the `async for` or completes.
-- **Pacing:** `context.loop("Poll", interval=timedelta(seconds=30))`
-  waits `interval` after each completed iteration before starting the
-  next.
+- The counter persists when an iteration completes; a restart resumes at
+  the incomplete one.
+- Reboot calls before the loop default to `per_workflow` (one-shot setup
+  like `subscribe` takes effect once); inside, `per_iteration`.
+- `iteration` is the index from 0, replay-stable, safe in aliases
+  (`f"Process batch {iteration}"`).
+- `break` / `return` ends the loop; the workflow continues after the
+  `async for` or completes.
+- Pacing: `context.loop("Poll", interval=timedelta(seconds=30))` waits
+  `interval` after each completed iteration.
 
 ## Never
 
-- `while True:` in a workflow — there is no iteration boundary, so
-  replay re-runs every iteration from the start.
+- `while True:` in a workflow — no iteration boundary, so replay re-runs
+  every iteration from the start.
 - Renaming the loop alias after work has started — it is the replay
   correlation key; renaming invalidates progress tracking.
 - A second `context.loop(...)` in the same workflow, sequential or
-  nested — raises. Split the work into two workflows.
+  nested — raises. Split into two workflows.
 - `await asyncio.sleep(n)` between iterations for pacing — use
   `interval=`.
 - A `break` decision derived from a non-memoized external read or the
-  clock — the last iteration is re-run (see Limits) and must break
-  again. Base the decision on memoized values or Reboot state.
+  clock — the last iteration re-runs (see Limits) and must break again.
+  Base it on memoized values or Reboot state.
 
 ## Limits
 
 - One loop per workflow (1.6.0 runtime).
 - The **final** iteration's completion is never recorded: after a
-  restart, and under dev-mode effect validation, the last iteration
-  runs again. Its memoized steps return cached results, and it must
-  reach the same `break`/`return`.
-- Setup code that is not a scoped Reboot call or a memoized primitive
-  (a print, a plain external call) runs again on every replay.
+  restart, and under dev-mode effect validation, it runs again (memoized
+  steps return cached results) and must reach the same `break`/`return`.
+- Setup that is not a scoped Reboot call or memoized primitive (a print,
+  a plain external call) runs on every replay.
 
 ## Scales as
 
 - A `context.loop` workflow issuing plain writer calls replaced a
-  self-scheduling tick transaction that serialized every operation and
-  capped a load simulator at about 1 op/s (observed at 1.4.0).
+  self-scheduling tick transaction that serialized everything and capped
+  a load simulator at about 1 op/s (observed at 1.4.0).
 
 ## Errors you will see
 

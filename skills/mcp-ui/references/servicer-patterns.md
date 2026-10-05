@@ -15,14 +15,12 @@ docs: ""
 
 ## When you are here
 
-You are implementing the servicers for an MCP UI API
-([`api-method-types.md`](api-method-types.md)): a `UserServicer` whose
-Transactions create application-type instances, one servicer per
-application type, and possibly a workflow started when an instance is
-created. The base servicer rules (kwargs not Request wrappers,
-`self.ref().state_id`, typed `<Method>Aborted`) are in the python
-skill's `servicer-*.md`, `rpc-*.md` and `api-errors.md`. Writing a
-workflow body is not covered here: start at
+Implementing an MCP UI's servicers ([`api-method-types.md`](api-method-types.md)):
+a `UserServicer` whose Transactions create application-type instances,
+one servicer per application type, maybe a workflow started on creation.
+Base servicer rules (kwargs not Request wrappers, `self.ref().state_id`,
+typed `<Method>Aborted`) are in the python skill's `servicer-*.md`,
+`rpc-*.md` and `api-errors.md`; workflow bodies start at
 [`servicer-workflow.md`](../../python/references/servicer-workflow.md).
 
 ## Do this
@@ -44,11 +42,8 @@ class UserServicer(User.Servicer):
         self,
         context: TransactionContext,
     ) -> User.CreateCounterResponse:
-        """Create a new Counter and return its ID."""
-        # Factory create: pass request fields as keyword args directly
-        # — do NOT wrap in a Request object.
-        # No-args:    Counter.create(context)
-        # With args:  Counter.create(context, title="...", count=0)
+        # Factory create takes request fields as kwargs, never a Request:
+        #   Counter.create(context, title="...", count=0)
         counter, _ = await Counter.create(context)
         return User.CreateCounterResponse(
             counter_id=counter.state_id,
@@ -58,8 +53,7 @@ class UserServicer(User.Servicer):
 class CounterServicer(Counter.Servicer):
 
     async def create(self, context) -> None:
-        # State is initialized with zero defaults; nothing to do.
-        pass
+        pass  # zero defaults; nothing to do
 
     async def increment(
         self,
@@ -82,10 +76,9 @@ class CounterServicer(Counter.Servicer):
         return Counter.GetResponse(value=self.state.value)
 ```
 
-One servicer class per type, all registered in `Application(servicers=[...])`.
-`<X>.create(context)` with no ID mints a fresh one and returns
-`(ref, response)`; return `ref.state_id` so the AI can pass it to later
-tool calls.
+Register every servicer in `Application(servicers=[...])`.
+`<X>.create(context)` with no ID mints one and returns `(ref, response)`;
+return `ref.state_id` so the AI can pass it to later tool calls.
 
 ### Starting a workflow on the instance you just created
 
@@ -98,10 +91,9 @@ class UserServicer(User.Servicer):
         request: User.CreateGameRequest,
     ) -> User.CreateGameResponse:
         game, _ = await Game.create(context, ...)
-        # Schedule the workflow; it starts when this transaction commits.
-        # Empty request: just pass `context`.
+        # Starts when this transaction commits. Empty request: just `context`.
         await Game.ref(game.state_id).schedule().autoplay(context)
-        # Workflow with fields: pass them as kwargs.
+        # Fields as kwargs.
         await Game.ref(game.state_id).schedule().do_ping_periodically(
             context,
             num_pings=10,
@@ -110,24 +102,24 @@ class UserServicer(User.Servicer):
         return User.CreateGameResponse(game_id=game.state_id)
 ```
 
-`.schedule(when=timedelta(...))` delays the start. To start the workflow
-from the application type's own factory instead, the factory
-Writer/Transaction calls `self.ref().schedule().<workflow>(context)`.
-Which context may start a workflow, and how, is the table in
+`.schedule(when=timedelta(...))` delays the start. From the type's own
+factory Writer/Transaction: `self.ref().schedule().<workflow>(context)`.
+Which context may start a workflow:
 [`servicer-workflow-declare.md`](../../python/references/servicer-workflow-declare.md).
 
 ### Inside the workflow
 
-The body is a `@classmethod` taking `WorkflowContext`, and the 1.6.0
-shapes are in the python workflow parts — follow them, don't improvise:
+The body is a `@classmethod` taking `WorkflowContext`; follow the 1.6.0
+python workflow parts, don't improvise:
 
-- Call back into this actor with the **state class** imported from
-  `<name>_rbt` and a no-argument ref: `MyType.ref()` (it reads the ID
-  from `WorkflowContext`; outside a workflow it raises). Calls get an
-  alias scope: `MyType.ref().per_iteration("Send ping").do_ping(context)`
+- Call this actor via the **state class** from `<name>_rbt` with a
+  no-argument ref, `MyType.ref()` (ID from `WorkflowContext`; raises
+  outside a workflow), under an alias scope:
+  `MyType.ref().per_iteration("Send ping").do_ping(context)`
   ([`servicer-workflow-calls.md`](../../python/references/servicer-workflow-calls.md)).
-- A mutation only this workflow performs needs no declared Writer: an
-  inline writer, `async def` with its parameter named `state`:
+- A mutation only this workflow performs uses an inline writer, an
+  `async def` whose parameter is named `state`; declare a Writer only if
+  it is also called from outside:
 
   ```python
   async def increment_count(state):
@@ -138,36 +130,33 @@ shapes are in the python workflow parts — follow them, don't improvise:
   ).write(context, increment_count)
   ```
 
-  Reserve declared Writers for operations also called from outside the
-  workflow.
 - Start other work from a workflow with `spawn()`, not `schedule()`
   ([`servicer-workflow-declare.md`](../../python/references/servicer-workflow-declare.md)).
-- Loops, external calls (LLMs included), waiting and exiting:
+- Loops, external calls (LLMs included), waiting, exiting:
   `servicer-workflow-loop.md`, `-external.md`, `-wait.md`, `-exit.md`.
 
 ## Never
 
 - `await Game.ref(game.state_id).autoplay(context)` from a Transaction,
-  Writer or Reader — a workflow cannot be awaited there. Schedule it as
-  above. Only `ExternalContext` and `WorkflowContext` may await one.
-- `.schedule().autoplay(context, request=Game.AutoplayRequest())` —
-  pass request fields as kwargs, never a `request=` wrapper.
-- `cls.ref()` or `self.ref()` in a workflow — `cls` is the
-  BaseServicer and there is no `self`; use `MyType.ref()`
+  Writer or Reader — schedule it; only `ExternalContext` and
+  `WorkflowContext` may await a workflow.
+- `.schedule().autoplay(context, request=Game.AutoplayRequest())` — pass
+  fields as kwargs.
+- `cls.ref()` or `self.ref()` in a workflow — `cls` is the BaseServicer
+  and there is no `self`; use `MyType.ref()`
   ([`servicer-workflow-declare.md`](../../python/references/servicer-workflow-declare.md)).
 - Wrapping an inline writer in `at_least_once` / `at_most_once` /
   `.idempotently(...)` — Reboot calls are already durable; scope is the
   only knob.
 - A model (LLM) call in the `create_<X>` Transaction — transactions
-  retry, so it is billed per retry. Schedule a workflow and call the
-  model there
+  retry, so it is billed per retry. Call it from a scheduled workflow
   ([`agent-pydantic-ai.md`](../../python/references/agent-pydantic-ai.md)).
 
 ## Limits
 
-- A factory method (`<X>.create`) accepts only a `TransactionContext`,
-  `WorkflowContext` or `ExternalContext` (1.6.0 generated client), which
-  is why the `User` front-door method is a `Transaction`.
+- A factory method (`<X>.create`) accepts only `TransactionContext`,
+  `WorkflowContext` or `ExternalContext` (1.6.0 generated client) — hence
+  the `User` front-door method is a `Transaction`.
 - Constructors cannot be scheduled; only non-constructor methods appear
   on `schedule()`.
 

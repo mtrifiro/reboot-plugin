@@ -15,18 +15,15 @@ docs: ""
 
 ## When you are here
 
-You are writing `backend/src/main.py`, the file `.rbtrc`'s
-`dev run --application=` / `serve run --application=` line points at.
-What `initialize` should do (seeding, singletons) is in
-[`lifecycle-initialize-hook.md`](lifecycle-initialize-hook.md);
-`.rbtrc` itself is in [`lifecycle-rbtrc.md`](lifecycle-rbtrc.md).
+You are writing `backend/src/main.py`, the target of `.rbtrc`'s
+`dev run --application=` / `serve run --application=` line
+([`lifecycle-rbtrc.md`](lifecycle-rbtrc.md)). What `initialize` does:
+[`lifecycle-initialize-hook.md`](lifecycle-initialize-hook.md).
 
 ## Do this
 
-Every Reboot Python application has an `async def main()` that
-constructs an `Application` with the list of Servicer classes and any
-standard-library components, then awaits `.run()`. The `__main__`
-block runs it under `asyncio.run`:
+`async def main()` constructs an `Application` and awaits `.run()`;
+`__main__` runs it under `asyncio.run`:
 
 ```python
 import asyncio
@@ -59,8 +56,9 @@ if __name__ == '__main__':
 
 ### Multiple servicers and stdlib libraries
 
-Combine your Servicer classes with stdlib `servicers()` factories, and
-put each stdlib state type's `<name>_library()` in `libraries=[...]`:
+A stdlib type is wired in **two** places: its `servicers()` list joins
+`servicers=[...]`, and its `<name>_library()` (where it has one) goes in
+`libraries=[...]`:
 
 ```python
 import reboot.thirdparty.mailgun
@@ -79,29 +77,23 @@ async def main():
     ).run()
 ```
 
-A stdlib type is wired in **two** places: its `servicers()` list goes
-into `servicers=[...]`, and its `<name>_library()` factory (where it
-has one) goes into `libraries=[...]`. Each stdlib reference says
-exactly what to register:
+What each stdlib type registers:
 
 - [`stdlib-ordered-map.md`](stdlib-ordered-map.md) — `ordered_map.servicers()` + `ordered_map_library()`
-- [`stdlib-queue.md`](stdlib-queue.md) — `queue.servicers()` + the stdlib map library (`Queue` uses a stdlib sorted-map actor under the hood)
-- [`stdlib-pubsub.md`](stdlib-pubsub.md) — `pubsub.servicers()` (transitively pulls `queue.servicers()`) + the stdlib map library
-- [`stdlib-presence.md`](stdlib-presence.md) — `presence.servicers()` (returns three Servicers; no library factory)
+- [`stdlib-queue.md`](stdlib-queue.md) — `queue.servicers()` + the stdlib map library (`Queue` uses a stdlib sorted-map actor)
+- [`stdlib-pubsub.md`](stdlib-pubsub.md) — `pubsub.servicers()` (pulls in `queue.servicers()`) + the stdlib map library
+- [`stdlib-presence.md`](stdlib-presence.md) — `presence.servicers()` (three Servicers; no library factory)
 
 ## Never
 
-- `Application(servicers=[ChatRoomServicer()])` — an instance. Pass
-  the **class**, `servicers=[ChatRoomServicer]`; Reboot constructs
-  instances per actor as needed.
-- `ChatRoomServicer().serve()` or a sync `main` with no `Application`
-  wrapper — Reboot Servicers run inside the `Application`'s event
-  loop; there is no other way to start them.
-- Registering a stdlib type's `servicers()` but not its
-  `<name>_library()` (or the reverse) — either omission is a runtime
-  error about an unknown state type when the type is first called,
-  not a startup check. Only a library whose own dependency library is
-  missing fails at startup (`Missing required libraries: …`).
+- `Application(servicers=[ChatRoomServicer()])` — an instance. Pass the
+  **class**; Reboot constructs instances per actor.
+- `ChatRoomServicer().serve()` or a sync `main` with no `Application` —
+  Servicers run only inside the `Application`'s event loop.
+- Registering a stdlib type's `servicers()` without its
+  `<name>_library()` (or the reverse) — a runtime unknown-state-type
+  error on first call, not a startup check. Only a library missing its
+  own dependency library fails at startup (`Missing required libraries: …`).
 
 ## Limits
 

@@ -58,7 +58,10 @@ def facts(text: str) -> dict[str, set[str]]:
             out["code"].add(norm(t))
     prose = FENCE.sub("", text)
     for span in INLINE.findall(prose):
-        out["inline"].add(norm(span))
+        # A span starting with punctuation is a backtick-pairing artifact
+        # from a span that wrapped across lines, not a fact.
+        if not re.match(r"^[\s.,;:)*]", span):
+            out["inline"].add(norm(span))
     for n in NUMBER.findall(prose):
         out["number"].add(norm(n))
     for target in LINK.findall(text):
@@ -75,8 +78,14 @@ def facts(text: str) -> dict[str, set[str]]:
             lead = " ".join(bullet.split())
             bold = re.match(r"\*\*(.+?)\*\*", lead)
             lead = bold.group(1) if bold else re.split(r" — |\. ", lead)[0]
-            out["never"].add(norm(lead)[:90])
+            out["never"].add(norm(lead).rstrip(".:;,`")[:60])
     return out
+
+
+def similar(a: str, b: str) -> bool:
+    words = lambda s: set(re.findall(r"[a-z0-9_]{3,}", s))
+    wa, wb = words(a), words(b)
+    return bool(wa and wb) and len(wa & wb) / min(len(wa), len(wb)) >= 0.6
 
 
 def tree_files(base: str | None) -> dict[str, str]:
@@ -117,6 +126,12 @@ def main() -> int:
             continue
         old = facts(before[name])
         lost = {k: sorted(v - after_all[k]) for k, v in old.items() if k in kinds}
+        if "never" in lost:
+            # Never leads may be reworded; count one as kept when a lead in
+            # the same file shares most of its words.
+            mine = facts(after.get(name, ""))["never"]
+            lost["never"] = [x for x in lost["never"]
+                             if not any(similar(x, y) for y in mine)]
         lost = {k: v for k, v in lost.items() if v}
         if not lost:
             continue
