@@ -97,9 +97,17 @@ def render(kind: str, args: dict, host_skill: str, refs: list[Ref]) -> str:
                     b += f" (via `{r.via}`)"
                 out.append(b + "\n")
             out.append("\n")
+        lookups = sorted((r for r in mine if "-" not in r.path.stem), key=lambda r: r.name)
+        if lookups:
+            out.append("**Lookups**\n")
+            for r in lookups:
+                LISTED.add(r.rel)
+                out.append(f"- {display(r, host_skill)} — {r.title}\n")
         return "".join(out).rstrip("\n") + "\n"
     if kind == "never-digest":
         return never_digest(refs, host_skill)
+    if kind == "error-index":
+        return error_index(refs, host_skill)
     raise ValueError(f"unknown block kind {kind!r}")
 
 
@@ -126,13 +134,77 @@ def never_items(ref: Ref) -> list[str]:
     return items
 
 
+ERROR_SECTION = re.compile(
+    r"^## (?:Errors you will see|Known issues)\s*$(.*?)(?=^## |\Z)", re.S | re.M)
+DUPLICATE_ERRORS: list[str] = []  # error text found under more than one file
+
+
+def table_rows(section: str) -> list[list[str]]:
+    rows = []
+    for line in section.splitlines():
+        if not line.startswith("|") or re.match(r"^\|[\s|:-]+\|$", line):
+            continue
+        # Split on unescaped pipes outside backticks.
+        cells, buf, tick = [], "", False
+        for ch in line.strip().strip("|"):
+            if ch == "`":
+                tick = not tick
+            if ch == "|" and not tick:
+                cells.append(buf.strip()); buf = ""
+            else:
+                buf += ch
+        cells.append(buf.strip())
+        rows.append(cells)
+    return rows[1:]  # drop the header row
+
+
+def error_sources(refs: list[Ref]) -> list[tuple[str, Path]]:
+    """(name as shown in the index, file) for every file with an error table."""
+    out = [(f"{r.skill}/references/{r.name}", r.path) for r in refs
+           if r.name != "errors.md"]
+    out += [(f"{p.parent.name}/SKILL.md", p) for p in sorted(SKILLS.glob("*/SKILL.md"))]
+    return out
+
+
+def error_index(refs: list[Ref], host_skill: str) -> str:
+    """One row per distinct error text across every error table."""
+    merged: dict[str, dict] = {}
+    for shown, path in error_sources(refs):
+        text = path.read_text(encoding="utf-8")
+        for m in ERROR_SECTION.finditer(text):
+            for cells in table_rows(m.group(1)):
+                if len(cells) < 2 or not cells[0] or cells[0].lower().startswith("none"):
+                    continue
+                key = re.sub(r"\s+", " ", cells[0].strip("` ").lower())
+                if key in merged:
+                    if shown not in merged[key]["read"]:
+                        merged[key]["read"].append(shown)
+                        DUPLICATE_ERRORS.append(cells[0])
+                    continue
+                merged[key] = {"error": cells[0], "meaning": cells[1],
+                               "fix": cells[2] if len(cells) > 2 else "",
+                               "read": [shown]}
+                if path.name != "SKILL.md":
+                    LISTED.add(str(path.relative_to(SKILLS)))
+    lines = ["| Error text (stable prefix) | Meaning | Fix | Read |",
+             "| --- | --- | --- | --- |"]
+    for key in sorted(merged, key=lambda k: re.sub(r"[^a-z0-9]+", " ", k).strip()):
+        e = merged[key]
+        read = ", ".join(f"`{r}`" for r in e["read"])
+        # Relative links in copied cells would point nowhere from here.
+        cells = [re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", c)
+                 for c in (e["error"], e["meaning"], e["fix"])]
+        lines.append(f"| {cells[0]} | {cells[1]} | {cells[2]} | {read} |")
+    return "\n".join(lines) + "\n"
+
+
 def never_digest(refs: list[Ref], host_skill: str) -> str:
     """Every converted reference's Never list, one line per item."""
     out = []
     order = {p: i for i, (p, _) in enumerate(concepts())}
     for r in sorted(refs, key=lambda r: (r.skill != "python", order.get(r.concept, 99), r.name)):
         items = never_items(r)
-        if not items or r.name == "patterns-common-gotchas.md":
+        if not items or r.name in ("patterns-common-gotchas.md", "errors.md"):
             continue
         LISTED.add(r.rel)
         where = (f"`{r.name}`" if r.skill == host_skill else f"`{r.skill}/references/{r.name}`")
@@ -174,7 +246,8 @@ def check_invariants(refs: list[Ref], listed: set[str]) -> tuple[list[str], list
         for fd in r.applies:
             if fd not in FRONT_DOORS:
                 errors.append(f"{r.rel}: applies names unknown front door {fd!r}")
-        if r.skill == "python" and r.concept not in known:
+        # A name with no `prefix-` is a lookup file (errors.md), not a concept.
+        if r.skill == "python" and "-" in r.path.stem and r.concept not in known:
             errors.append(f"{r.rel}: prefix {r.concept!r} is not a concept in _sections.md")
         if r.via:
             router = r.path.parent / r.via
@@ -229,6 +302,8 @@ def main() -> int:
                 path.write_text(after, encoding="utf-8")
 
     errors, warnings = check_invariants(refs, LISTED)
+    for e in sorted(set(DUPLICATE_ERRORS)):
+        warnings.append(f"error text in more than one file's table: {e[:80]}")
     for e in errors:
         print(f"error: {e}")
     if not args.quiet:

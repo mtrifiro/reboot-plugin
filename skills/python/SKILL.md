@@ -499,6 +499,9 @@ the lists above say when. The full catalog:
 
 **React**
 - `references/react-generated-client.md` — The Generated React Client Contract
+
+**Lookups**
+- `references/errors.md` — Look Up an Error
 <!-- generated:end -->
 
 ## External References
