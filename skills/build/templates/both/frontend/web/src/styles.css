@@ -4,6 +4,7 @@
    pairing; keep the names. Components never carry raw hex.
 
    Classes: topbar (.brand), page-head, panel / panel-head, card, cards,
+   field / field-row (forms),
    spacer; buttons .primary / .ghost / .danger; pill .ok / .warm /
    .cold / .danger; tabs / tab; table-wrap; skeleton; empty (.actions);
    error; mono, small, muted, visually-hidden. Dark mode follows
@@ -38,6 +39,7 @@
 }
 
 /* Base */
+*, *::before, *::after { box-sizing: border-box; }
 html { font-family: var(--font-text); color: var(--ink); background: var(--bg); font-size: 15px; -webkit-font-smoothing: antialiased; }
 body { margin: 0; }
 h1, h2, h3 { font-family: var(--font-display); margin: 0 0 var(--space-2); line-height: 1.15; }
@@ -66,10 +68,19 @@ button.primary { background: var(--accent); border-color: var(--accent); color: 
 button.ghost { background: transparent; }
 button.danger { background: var(--danger); border-color: var(--danger); color: var(--on-accent); }
 button:disabled { opacity: 0.55; cursor: default; }
-input, select, textarea { font: inherit; color: var(--ink); background: var(--bg-2); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 7px 10px; }
+input, select, textarea { font: inherit; color: var(--ink); background: var(--bg-2); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 7px 10px; max-width: 100%; }
 select { appearance: none; padding-right: 28px; background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6'><path d='M0 0l5 6 5-6z' fill='%236b7280'/></svg>"); background-repeat: no-repeat; background-position: right 10px center; }
 .inline-select { width: auto; padding: 4px 28px 4px 8px; font-size: 13px; }
 input:focus, select:focus, textarea:focus, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+/* Forms: a label above its control; rows of fields that never overflow
+   their card. A date or number input won't shrink below its built-in
+   width, so a plain `1fr 1fr` grid overflows a narrow card; these
+   columns can shrink to zero and the controls fill them. */
+.field { display: grid; gap: var(--space-1); min-width: 0; }
+.field > label { font-size: 13px; color: var(--muted); }
+.field > input, .field > select, .field > textarea { width: 100%; }
+.field-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 140px), 1fr)); gap: var(--space-3); }
 
 /* Status: pills, colored by meaning, the same everywhere */
 .pill { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; background: var(--bg-glow); color: var(--ink); border: 1px solid var(--line); }
@@ -86,8 +97,10 @@ td { padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: to
 tr:hover td { background: var(--bg-glow); }
 
 /* Tabs */
-.tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--line); margin-bottom: var(--space-4); }
-.tab { background: none; border: 0; border-bottom: 2px solid transparent; border-radius: 0; padding: 8px 12px; color: var(--muted); }
+/* Tabs scroll inside their own row, so a long set never widens the page. */
+.tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--line); margin-bottom: var(--space-4); overflow-x: auto; scrollbar-width: none; }
+.tabs::-webkit-scrollbar { display: none; }
+.tab { flex: none; white-space: nowrap; background: none; border: 0; border-bottom: 2px solid transparent; border-radius: 0; padding: 8px 12px; color: var(--muted); }
 .tab.active, .tab[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--highlight); }
 
 /* Live data: skeletons, not "Loading…" */

@@ -345,7 +345,12 @@ scenarios before handoff**, in the built-in steps of
 
 Run `uv run pytest`, then `uv run mypy backend/ tests/` from the project
 root (config: `python/references/lifecycle-project-setup.md`); proceed
-only when every scenario passes (or is `@blocked`) and mypy is green. Point the user at the dashboard's Features page (web-app:
+only when every scenario passes (or is `@blocked`) and mypy is green.
+Each scenario boots the app, so the suite takes minutes: run it in the
+foreground with a timeout that covers the whole run and wait for the
+result. Never leave it in the background and end your turn: nothing
+brings you back to report it. A run silent for several minutes is
+stuck on a scenario; rerun with `-x -v` to name it. Point the user at the dashboard's Features page (web-app:
 and the browser recordings).
 
 ### Step 7 — Run
@@ -358,9 +363,10 @@ never bare `rbt dev run` / `npm run dev`.
 - web-app: check the page at the URL a person would type
   (`localhost`).
 
-**Hand off** with the app's URL and, unless the user asked for only one
-front door, the one-line offer of the other (`app` skill, "At
-handoff").
+**Hand off** only after the final test run has finished: the app's
+URL, the result (scenarios passed, mypy clean, anything `@blocked`),
+and, unless the user asked for only one front door, the one-line offer
+of the other (`app` skill, "At handoff").
 
 ## Update Flow
 

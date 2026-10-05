@@ -51,7 +51,10 @@ pill on its object, with its start time.
 - `alert()`, `confirm()`, `prompt()`: they block the scenarios too.
 - Raw hex in components; use a token.
 - A page broken at phone width (16 px gutters, wide tables in
-  `table-wrap`) or in either color scheme.
+  `table-wrap`, tabs scrolling in their own row) or in either color
+  scheme.
+- Form fields in a `1fr 1fr` grid: a date or number input won't shrink
+  and overflows its card. Use `field-row` and `field`.
 - An app without the light/dark toggle, or a palette with only one
   scheme.
 - Removing labels to restyle; use `visually-hidden`.

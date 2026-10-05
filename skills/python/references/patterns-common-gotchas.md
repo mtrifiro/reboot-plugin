@@ -622,7 +622,8 @@ section. Add or change a trap in its owning reference, not here. -->
 - An empty list without a next action
 - `alert()`, `confirm()`, `prompt()`: they block the scenarios too
 - Raw hex in components
-- A page broken at phone width (16 px gutters, wide tables in `table-wrap`) or in either color scheme
+- A page broken at phone width (16 px gutters, wide tables in `table-wrap`, tabs scrolling in their own row) or in either color scheme
+- Form fields in a `1fr 1fr` grid: a date or number input won't shrink and overflows its card
 - An app without the light/dark toggle, or a palette with only one scheme
 - Removing labels to restyle
 <!-- generated:end -->
