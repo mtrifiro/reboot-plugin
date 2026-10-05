@@ -65,18 +65,19 @@ method types mean regenerating a dozen or more files.
 2. Run the State Model Assessment below.
 3. State the design:
    - Application types: state shape (fields, types, tags).
-   - Method map: each operation's method type
-     (Reader/Writer/Transaction/Workflow).
+   - Method map, one line per method: its method type
+     (Reader/Writer/Transaction/Workflow) and its AI role (a tool the
+     AI calls, a `UI()` view, or human-only), even when the MCP UI
+     comes later.
    - Auth per method: anonymous, signed-in, owner only, app-internal.
    - Ready for both front doors, whichever is built first: a `User`
-     type; per method its AI role (a tool the AI calls, a `UI()` view,
-     or human-only) and a `description=` written for the AI. A
+     type, and a `description=` on every method written for the AI. A
      description can't be edited once deployed; switching `mcp=` later
      can (`python/references/api-schema-evolution.md`).
    - The look: **highly visual unless the user asks otherwise** — a
      view that shows the data's shape (board, timeline, chart, map),
-     not only tables or text; a deliberate palette with light and dark
-     modes and a toggle between them.
+     not only tables or text; a deliberate palette in light and dark;
+     and a toggle between them, named in the design.
    - mcp-ui: the `User` type and its methods (the front door that
      creates and locates application-type instances); which methods get
      `UI()`; the AI's tool surface; ~3 example prompts, most ending on a

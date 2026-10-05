@@ -16,6 +16,15 @@ skills front-load (which front door, the design) and before any code.
 | `route-both` | Both named: both front doors on one backend |
 | `design-ready-for-both` | The design has a `User` type, each method's AI role, AI-facing descriptions, a hero view and light/dark modes with a toggle |
 
+Plain Claude also builds a web app without asking on the `route-*`
+prompts, so those cases guard against regressions more than they show
+a gain over no plugin. `mcp-ready` and the design case are where the
+plugin's effect shows (no plugin: 0–1 of 3 and 0 of 3).
+
+LLM graders use the default Haiku judge unless you pass
+`--judge-model sonnet`, which is more reliable on these rubrics; each
+grader asks the judge to quote the sentence it relied on.
+
 `tool_used: Skill` graders show which skills loaded; the runner doesn't
 score them in the with/without comparison, so every behavior that counts
 has its own scored grader.

@@ -2,4 +2,4 @@
 type: llm
 weight: 1
 ---
-PASS only if the response EXPLICITLY says the backend or design will also be ready for (or easily extended to) a standalone web app / website later, or plans to offer one at handoff. Quote the sentence that satisfies this. FAIL if a web app is not mentioned as a future option.
+PASS if the response says the backend or design will also be ready for, or can later add, a standalone web app / browser app / website. FAIL only if no later web app is mentioned. Quote the sentence you relied on.
