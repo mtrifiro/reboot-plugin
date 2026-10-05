@@ -92,12 +92,12 @@ here. -->
 | `'--env-file' '.env' does not exist.` | Warning only; the app starts without those variables | Create the file, or ignore until the app needs secrets | `python/references/lifecycle-rbtrc.md` |
 | `error: the following arguments are required: --application-url` | Every `rbt inspect` command needs the URL, even against local dev | Pass `--application-url=http://localhost:<port>` (the URL `rbt dev run` prints) | `inspect/SKILL.md` |
 | `error TS2688: Cannot find type definition file for 'node'.` | `"types": ["node"]` without `@types/node` | Copy the template's `package.json` | `web-app/references/react-client.md` |
-| `error TS2769` … `is missing the following properties` | A request field with no default (or, before 1.6.0, any field) was omitted | Pass the field; see Limits | `python/references/react-generated-client.md` |
+| `error TS2769` … `is missing the following properties` | Omitted a request field with no default (before 1.6.0, any field) | Pass it (Limits) | `python/references/react-generated-client.md` |
 | `Error while parsing option value for "method": Message type "rbt.v1alpha1.WorkflowMethodOptions" has no field named "constructor".` | `factory=True` on a `Workflow` (or `Reader`) | Move `factory=True` to a `Writer`/`Transaction` | `python/references/api-methods.md` |
 | Every reader fails with `Unavailable: ping timeout` for about 10 minutes after each restart; Envoy at several hundred % CPU | Envoy's LuaJIT on macOS arm64 (reboot-crm, 1.6.0) | Wait for the window to pass; restart less often; report it upstream | `run/references/stop-restart-reset.md` |
 | ``Exactly one of `all` or `any` must be passed`` | Both or neither keyword given | Pass one of `all=` / `any=` | `python/references/auth-allow-if.md` |
 | `expected --type=VALUE, missing '=VALUE'` | `--type` (and the other flags) take only the `=` form | Write `--type=<full.Type.Name>` | `inspect/SKILL.md` |
-| `Expecting either a response or a status` | The one case a mutation promise rejects | Treat as transport failure in the handler's `try/finally` | `python/references/react-generated-client.md` |
+| `Expecting either a response or a status` | The one case a mutation promise rejects | Transport failure; handle in `try/finally` | `python/references/react-generated-client.md` |
 | `Failed to construct 'WebSocket'` | `#` in a subscribed actor id | Change the id scheme | `python/references/react-generated-client.md` |
 | `Failed to find 'protoc-gen-reboot_python'. Please report this bug to the maintainers.` | `rbt` was run outside `uv run`, so the venv's `bin/` is not on `PATH` | `uv run rbt ...` (or `uv run --project <repo> rbt ...`) | `python/references/lifecycle-rbtrc.md` |
 | `Failed to flush monotonic clock high water mark: IO error: No such file or directory` | State was expunged under a running app | Stop, then restart, per `../../run/SKILL.md` | `python/references/lifecycle-dev-loop.md`, `python/references/lifecycle-rbtrc.md` |
@@ -116,7 +116,7 @@ here. -->
 | `IdempotencyUncertainError: Because we don't know if the mutation` | The context was reused after a denied or failed mutation | Use a fresh context for each expected failure | `python/references/testing-harness.md` |
 | `IdempotencyUncertainError: Because we don't know if the mutation from calling` | An earlier call from this context failed in a way the client cannot classify | Give this mutation an alias or key, or use a fresh context | `python/references/patterns-idempotency.md`, `python/references/testing-external-context.md` |
 | `initialize for application '...' failed with ...; will retry after backoff ...` | `initialize` raises on every attempt. This is the cause of a "hung" `up()` | Fix the named exception | `python/references/lifecycle-dev-loop.md`, `python/references/lifecycle-initialize-hook.md` |
-| `Invalid discriminated union option at index "0"` | A field-less error model, 1.5.0 codegen; module throws at import, page is blank | Upgrade to 1.6.0, or give the error model one field | `python/references/react-generated-client.md` |
+| `Invalid discriminated union option at index "0"` | Field-less error model, 1.5.0 codegen; throws at import, blank page | Upgrade to 1.6.0, or add one field | `python/references/react-generated-client.md` |
 | ``Invalid `http_client` argument`` | Hand-added `anthropic` resolved an `httpx2` SDK | Use `reboot[anthropic]==1.6.0` only | `python/references/agent-pydantic-ai.md` |
 | `InvalidStateRefError: The 'state_id' option must be at least 1 character(s) long` | A new ID field was never back-filled | Allocate lazily | `python/references/api-schema-evolution.md`, `python/references/rpc-refs.md`, `python/references/servicer-workflow-wait.md`, `python/references/state-collections.md` |
 | `` is a non-optional `Model` type and cannot have a `default` value. Use `Optional` for `Model` types with empty default. `` | `default=` on a nested `Model` | `Optional[X] = Field(tag=N, default=None)` | `python/references/api-pydantic.md` |
@@ -183,12 +183,12 @@ here. -->
 | `Re-running method` | Info, not an error: effect validation re-runs the body; the second run commits | None needed; make external calls in a workflow | `python/references/patterns-time-and-randomness.md`, `python/references/servicer-writer.md` |
 | `` `read()` is currently only supported within workflows `` | Inline `read()` on a ref with an id | Call a declared `Reader` | `python/references/servicer-workflow-calls.md` |
 | Reads succeed, every write fails, after a restart or expunge | An orphan is serving from a deleted store (1.6.0) | Stop completely, then start | `run/references/stop-restart-reset.md` |
-| `[Reboot] Caught unknown exception: Not expecting stream to ever be done` | Each open subscription during a dev-server restart | None; it reconnects | `python/references/react-generated-client.md` |
+| `[Reboot] Caught unknown exception: Not expecting stream to ever be done` | Open subscriptions during a dev-server restart | None; it reconnects | `python/references/react-generated-client.md` |
 | `'REBOOT_CRYPTO_ROOT_KEYS' entry` … `is not of the form 'vN:key'` | `MalformedRootKeys` | Fix the env value | `python/references/crypto-root-keys.md` |
 | `'REBOOT_CRYPTO_ROOT_KEYS' is not set` | `MissingRootKeys`: running outside `rbt dev` / Cloud without the env var | Provision it (`lifecycle-secrets.md`) | `python/references/crypto-root-keys.md` |
 | `Reboot options for method` … `updated from...` | A method's options changed, usually `description=` | Restore the exact old options | `python/references/api-schema-evolution.md` |
 | `Reboot options for method` `...` `updated from` | A persisted constructor's kind changed between `Writer` and `Transaction` | Revert the kind; construct the other actor elsewhere | `python/references/servicer-constructor.md` |
-| `[Reboot] '<Type>.<Method>' aborted with` | Console warning on every aborted call | Handle `aborted`; the warning is expected | `python/references/react-generated-client.md` |
+| `[Reboot] '<Type>.<Method>' aborted with` | Console warning on every aborted call | Expected; handle `aborted` | `python/references/react-generated-client.md` |
 | `` `ref()` called without a `state_id` can only be used within a Workflow. `` | `Type.ref()` with no id outside a workflow | `self.ref()` or `Type.ref(id)` | `python/references/servicer-workflow-declare.md` |
 | ``requires a non-empty `client_id`.`` | The selected provider's credential env var is unset | Set it (`rbt cloud secret set ...` in production) | `mcp-ui/references/auth-oauth-providers.md` |
 | `'Resource()' is not yet supported; use 'Tool()' instead` | `mcp=Resource()` | `mcp=Tool()` | `mcp-ui/references/api-method-types.md`, `python/references/api-methods.md` |

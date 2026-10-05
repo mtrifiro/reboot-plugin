@@ -46,7 +46,8 @@ GENERATED = re.compile(r"<!-- generated:start.*?<!-- generated:end -->", re.S)
 
 
 def norm(s: str) -> str:
-    return re.sub(r"\s+", " ", s.strip().strip("`").lower())
+    s = re.sub(r"\s+", " ", s.strip().strip("`").lower())
+    return re.sub(r"(\d) (?=[a-z%×])", r"\1", s)  # "15 s" == "15s"
 
 
 def facts(text: str) -> dict[str, set[str]]:

@@ -15,18 +15,15 @@ docs: ""
 
 ## When you are here
 
-You are writing a React component against the client
-`rbt generate --react=<dir>` emitted. It is the same in a browser SPA
-and inside an MCP host. Where the files live, how the backend URL is found and how
-a user signs in are in
+Writing a React component against `rbt generate --react=<dir>` output
+(identical in a browser SPA and an MCP host). File locations, backend
+URL, sign-in:
 [`web-app/references/react-client.md`](../../web-app/references/react-client.md)
-or
-[`mcp-ui/references/react-scaffolding.md`](../../mcp-ui/references/react-scaffolding.md).
-Idioms on top of this client are in
-[`patterns-react-state.md`](patterns-react-state.md).
+or [`mcp-ui/references/react-scaffolding.md`](../../mcp-ui/references/react-scaffolding.md).
+Idioms on top: [`patterns-react-state.md`](patterns-react-state.md).
 
-**Do not read the generated `*_rbt_react.ts`.** It runs to tens of
-thousands of lines, each re-sent on every later turn.
+**Do not read the generated `*_rbt_react.ts`** (tens of thousands of
+lines).
 
 ## Do this
 
@@ -72,39 +69,33 @@ export type FooBazAbortedError = /* your declared errors | framework errors */;
 export class FooBazAborted extends reboot_api.Aborted { /* .error, .message */ }
 ```
 
-`Foo.PartialBazRequest` is not `Partial<…>`: see Limits.
+`Foo.PartialBazRequest` is not `Partial<…>` (see Limits).
 
-### Naming rules
+### Naming
 
-Write the call before you read anything:
-
-- Python snake_case → TypeScript camelCase, for fields and methods
+- Python snake_case → TypeScript camelCase for fields and methods
   (`from_index` → `fromIndex`, `open_task_count` → `openTaskCount`).
 - Request and response types are Zod-validated.
-- A method's failure type is `<Type><Method>Aborted`, and
-  `aborted.error.type` is the Python error class's name. Framework
-  errors (`StateNotConstructed`, `Unknown`, timeouts) arrive through
-  the same `aborted`, so switch on `.type` rather than assuming any
-  abort is one of yours.
+- Failure type: `<Type><Method>Aborted`; `aborted.error.type` is the
+  Python error class's name. Framework errors (`StateNotConstructed`,
+  `Unknown`, timeouts) use the same `aborted`, so switch on `.type`.
 
 ### Readers return three fields
 
-`response`, `isLoading`, **and** `aborted`. A reader can abort — a
-denied `authorizer()`, for instance — and that surfaces as `aborted`
-rather than by throwing.
+`response`, `isLoading` **and** `aborted` (a denied `authorizer()`
+aborts; it doesn't throw).
 
-Guard on `response !== undefined` before touching data; use
-`isLoading` for connection state. They diverge — an aborted reader is `!isLoading` with
-no `response`, a reconnect is `isLoading` with a stale `response` — and
-transport disconnects auto-reconnect without surfacing as `aborted`, so
-don't build an online/offline indicator out of it.
-
-Reader hooks are push-based subscriptions: when any session mutates
-the state, every mounted reader re-renders. No polling, no refetch.
+- Guard data on `response !== undefined`; use `isLoading` for
+  connection state. An aborted reader is `!isLoading` with no
+  `response`; a reconnect is `isLoading` with a stale `response`.
+- Disconnects auto-reconnect without surfacing as `aborted`; don't
+  build an online/offline indicator from it.
+- Readers are push subscriptions: any session's mutation re-renders
+  every mounted reader. No polling or refetch.
 
 ### Mutations resolve, they do not throw
 
-They resolve to `{ response, aborted }`. Branch on `aborted`:
+Branch on `aborted` in the resolved `{ response, aborted }`:
 
 ```tsx
 const { aborted } = await foo.baz({ title });
@@ -116,101 +107,84 @@ if (aborted !== undefined) {
 
 ### Hook ids must be real on every render
 
-An explicit-id hook is not SWR-style: there is no "pass `undefined` to
-skip" mode. Identity often resolves asynchronously, so don't mount the
-component until the id is real: guard at the parent and pass a
-guaranteed-real id down.
+No SWR-style "pass `undefined` to skip". Identity often resolves
+asynchronously: guard at the parent, mount the child with a real id.
 
 ## Never
 
-- `try { await foo.baz(…) } catch { … }` as the failure path — a
-  mutation's failure is in `aborted`; the `catch` catches nothing from
-  it. Keep a `try/finally` around the *handler* anyway (id minting,
-  transport teardown, a deadline can throw), or a `setBusy(true)`
-  never unwinds.
+- `try { await foo.baz(…) } catch { … }` as the failure path —
+  failure is in `aborted`, not `catch`. Still wrap the *handler* in `try/finally`
+  (id minting, transport teardown, a deadline can throw), or a
+  `setBusy(true)` never unwinds.
 - `useFoo({ id: id || '__none__' })` while identity loads — every
-  loading session subscribes to the same shared actor. Mount the
-  component only once the id is real.
-- `ReturnType<typeof useFoo>` as a prop type — it resolves to the
-  no-argument overload (`{ foo, isLoading }`). Type a handle as
-  `UseFooApi`.
+  loading session subscribes to one shared actor.
+- `ReturnType<typeof useFoo>` as a prop type — it's the no-argument
+  overload (`{ foo, isLoading }`); use `UseFooApi`.
 - `ids.map(id => useFoo({ id }))` — breaks the rules of hooks; render
-  one child component per id (see
-  [`patterns-react-state.md`](patterns-react-state.md)).
+  one child per id ([`patterns-react-state.md`](patterns-react-state.md)).
 - `#` in a subscribed actor id — it rides a WebSocket URL and `#`
   truncates it as a fragment; `@`, `:`, `~` are safe (observed 1.4.0).
-- An error model with no fields at 1.5.0 or earlier — the generated
-  client threw at import (blank page). At 1.6.0 codegen always emits
-  the `type` literal, so it is safe; on older pins give it one field.
+- An error model with no fields at 1.5.0 or earlier — the client throws at
+  import (blank page); give it one field. Safe at 1.6.0 (codegen
+  always emits the `type` literal).
 
 ## Limits
 
-- **Request fields with no default are required.** `Partial<Method>Request`
-  is the Zod schema's input type (`z.input`) at 1.6.0: a field declared
-  with a default (`default=""`, `0`, `False`, `None`, the first
-  `Literal`, or `default_factory=list|dict` — the only defaults the
-  pydantic API accepts) may be left out; every other field must be
-  passed, or `tsc` fails with TS2769, `{}` included. Before 1.6.0 (observed 1.4.1, 1.5.0) the type was
-  `z.infer` and *every* field was required, defaulted or not; on those
-  pins pass the empty value explicitly (`cursor: ""`, `limit: 0`).
-  Adding a field without a default breaks every existing call site.
-- A model used in several places is emitted structurally at each use
-  site, not as one shared type. TypeScript's structural typing makes
-  the copies interchangeable; derive a prop type from either
+- **Request fields with no default are required.** At 1.6.0
+  `Partial<Method>Request` is `z.input`: fields with a default
+  (`default=""`, `0`, `False`, `None`, the first `Literal`, or
+  `default_factory=list|dict`, the only defaults the pydantic API
+  accepts) may be omitted; omitting any other fails `tsc` with TS2769,
+  `{}` included. Before 1.6.0 (observed 1.4.1, 1.5.0) it was `z.infer`
+  and *every* field was required: pass `cursor: ""`, `limit: 0`.
+  Adding a field without a default breaks every call site.
+- A model used in several places is emitted structurally per site; the
+  copies are interchangeable, so derive a prop type from either
   (`Foo.ListResponse["planes"][number]`).
-- A mutation's promise resolves only after the readers mounted on the
-  same actor have observed it, so a same-actor reader already shows the
-  new state when `response` arrives. A reader on another actor updates
-  on its own push.
+- A mutation resolves only after same-actor mounted readers observed
+  it, so they already show the new state; other actors' readers update
+  on their own push.
 - On `UNAUTHENTICATED` a mutation refreshes the token and retries once.
-- A subscribed reader is transitively reactive: it re-runs when any
-  actor it read through other actors' readers changes (verified at
-  1.4.1 and 1.6.0). One aggregating reader can replace N subscriptions;
-  the backend shape is in
-  [`patterns-cross-actor-reads.md`](patterns-cross-actor-reads.md).
-- Reactivity tracks committed writes only. A value a reader computes
-  from the clock (an expired hold) never pushes; see
-  [`patterns-react-state.md`](patterns-react-state.md).
-- A subscription to an unconstructed actor aborts `StateNotConstructed`
+- A subscribed reader is transitively reactive (verified 1.4.1 and
+  1.6.0), so one aggregating reader can replace N subscriptions
+  ([`patterns-cross-actor-reads.md`](patterns-cross-actor-reads.md)).
+- Reactivity tracks committed writes only; a value computed from the
+  clock (an expired hold) never pushes
+  ([`patterns-react-state.md`](patterns-react-state.md)).
+- Subscribing to an unconstructed actor aborts `StateNotConstructed`
   and retries about once a second forever, tearing the page's shared
-  channel under every other subscription (observed at 1.4.0).
-  Construct it first, then mount the subscribing component. After
-  `rbt dev expunge`, open tabs keep such subscriptions and freeze at
-  their last frame: reload every tab after an expunge.
-- Each reader subscription holds a streaming fetch; HTTP/1.1 allows
-  about 6 per host, and Reboot logs a warning naming the fix (HTTP/2
-  via TLS).
-- Transport: gRPC server-streaming over `https:`, a WebSocket multiplex
-  otherwise (a local `http://` dev server). Cross-origin WebSocket
-  frames carry no cookies, so the session JWT rides in the request
-  payload, not a `Cookie` header.
+  channel under every subscription (observed 1.4.0): construct, then
+  mount. After `rbt dev expunge` open tabs freeze; reload them all.
+- Each subscription holds a streaming fetch; HTTP/1.1 allows about 6
+  per host (Reboot's warning names the fix: HTTP/2 via TLS).
+- Transport: gRPC server-streaming over `https:`, else a WebSocket
+  multiplex (local `http://`). Cross-origin WebSocket frames carry no
+  cookies, so the session JWT rides in the request payload, not a
+  `Cookie` header.
 
 ## Scales as
 
-- Each pushed update carries the whole reader response, to every
-  subscriber, on every change. Subscribing 48 cards to a reader that
-  returns 200 seats streams 48 × 200 records per change; a summary
-  reader of eight integers does not (theater-chain, 1.4.1).
-- Subscription setup is cheap alone (~100ms) and slow in a burst on
-  `rbt dev run`: 48 subscriptions filled in over ~10s; 60 took ~15s;
-  50 had a slowest of ~6.8s (1.4.1). Give each subscription its own
-  loading state; a page-level spinner sits through the whole ramp.
-- One reader returning a page of snapshots cut first paint from
-  ~5–7s to ~1.5s (bluesky, 1.4.1). Budget and fix:
-  [`patterns-react-state.md`](patterns-react-state.md).
+- Each push carries the whole reader response to every subscriber: 48
+  cards on a reader returning 200 seats stream 48 × 200 records per
+  change; an eight-integer summary reader doesn't (theater-chain, 1.4.1).
+- Setup is ~100ms alone, slow in a burst on `rbt dev run` (48 over
+  ~10s, 1.4.1; more in [`patterns-load-and-benchmarking.md`](patterns-load-and-benchmarking.md)):
+  give each subscription its own loading state.
+- One page-of-snapshots reader cut first paint from ~5–7s to ~1.5s
+  (bluesky, 1.4.1); budgets in [`patterns-react-state.md`](patterns-react-state.md).
 
 ## Errors you will see
 
 | Error text (stable prefix) | Meaning | Fix |
 | --- | --- | --- |
-| `state ID must have a length of at least 1` | An explicit-id hook got `id: ''` | Mount the component only once the id is real |
+| `state ID must have a length of at least 1` | An explicit-id hook got `id: ''` | Mount only once the id is real |
 | `stateIdToRef` (in the stack) | An explicit-id hook got `id: undefined` | Same |
-| `error TS2769` … `is missing the following properties` | A request field with no default (or, before 1.6.0, any field) was omitted | Pass the field; see Limits |
-| `Invalid discriminated union option at index "0"` | A field-less error model, 1.5.0 codegen; module throws at import, page is blank | Upgrade to 1.6.0, or give the error model one field |
+| `error TS2769` … `is missing the following properties` | Omitted a request field with no default (before 1.6.0, any field) | Pass it (Limits) |
+| `Invalid discriminated union option at index "0"` | Field-less error model, 1.5.0 codegen; throws at import, blank page | Upgrade to 1.6.0, or add one field |
 | `Failed to construct 'WebSocket'` | `#` in a subscribed actor id | Change the id scheme |
-| `[Reboot] '<Type>.<Method>' aborted with` | Console warning on every aborted call | Handle `aborted`; the warning is expected |
-| `[Reboot] Caught unknown exception: Not expecting stream to ever be done` | Each open subscription during a dev-server restart | None; it reconnects |
-| `Expecting either a response or a status` | The one case a mutation promise rejects | Treat as transport failure in the handler's `try/finally` |
+| `[Reboot] '<Type>.<Method>' aborted with` | Console warning on every aborted call | Expected; handle `aborted` |
+| `[Reboot] Caught unknown exception: Not expecting stream to ever be done` | Open subscriptions during a dev-server restart | None; it reconnects |
+| `Expecting either a response or a status` | The one case a mutation promise rejects | Transport failure; handle in `try/finally` |
 | `Maximum update depth exceeded` | A derived array in an effect's deps | See [`patterns-react-state.md`](patterns-react-state.md) |
 
 ## See also

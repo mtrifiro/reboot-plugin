@@ -7,480 +7,364 @@ allowed-tools: Bash, Read, Write, Glob, Grep, Edit
 
 # build — Design and Build a Reboot App
 
-> **Version notices:** if `rbt` reports a version mismatch or that a
-> newer Reboot is available, the [upgrade skill](../upgrade/SKILL.md)
-> says how and when to react.
+> **Version notices:** if `rbt` reports a version mismatch or a newer
+> Reboot, follow the [upgrade skill](../upgrade/SKILL.md).
 
-This is the one build flow for every Reboot app with a frontend. You
-arrive here from a **front-door skill** — [`mcp-ui`](../mcp-ui/SKILL.md)
-(an MCP host such as ChatGPT or Claude) or [`web-app`](../web-app/SKILL.md)
-(a standalone browser SPA) — or from both for a dual-frontend app.
-Keep the front-door skill open beside this one: it holds the concepts
-specific to that front door, the project layout, and, under
-**"Which References to Read, and When"**, the reading list for each
-step below. Where a step differs by front door this file says so
-inline (`mcp-ui: … / web-app: …`); a dual-frontend app does both
-branches. Backend-only work (no frontend) starts from the
-[`python` skill](../python/SKILL.md) instead.
+The build flow for every Reboot app with a frontend, reached from a
+**front-door skill**: [`mcp-ui`](../mcp-ui/SKILL.md) (an MCP host such
+as ChatGPT or Claude), [`web-app`](../web-app/SKILL.md) (a standalone
+browser SPA), or both. Keep the front-door skill open: it holds that
+front door's concepts, the project layout, and each step's reading list
+under **"Which References to Read, and When"**. Differences are marked
+inline (`mcp-ui: … / web-app: …`); a dual-frontend app does both.
+Backend-only work starts from the [`python` skill](../python/SKILL.md).
 
 ## Reading References
 
-Everything you read stays in the conversation and is re-sent on
-every later turn, so **read each reference at the step that needs
-it**, not all up front, and read each one **once**. Read **one
-reference per tool call**: `cat`-ing several at once can exceed the
-tool's output limit and be cut off without reaching you. A reading
-list line ending *only when …* is skipped unless that is true of
-your app.
+Everything read is re-sent every later turn:
+
+- Read each reference **once**, at the step that needs it.
+- **One reference per tool call**; `cat`-ing several can exceed the
+  output limit and be cut off unseen.
+- Skip a reading-list line ending *only when …* unless it holds.
 
 ### Never Read Generated or Installed Source in the Main Thread
 
-`*_rbt.py`, `*_rbt_react.ts`, `site-packages/`, `node_modules/`, and
-codegen templates run to tens of thousands of lines. Every one you
-open is re-sent on every remaining turn, which makes reading them
-the most expensive way in the system to learn a fact.
+`*_rbt.py`, `*_rbt_react.ts`, `site-packages/`, `node_modules/` and
+codegen templates run to tens of thousands of lines. Use the references
+instead:
 
-The generated surfaces you need are written out in the references:
-the React client contract in `python/references/react-generated-client.md`
-(web-app also `web-app/references/react-client.md`), the servicer
-signature each declaration obliges in `python/references/api-methods.md`,
-the backend shapes in the rest of `python/references/`. Use them. In
-particular, never open `frontend/api/**` or `web/src/api/**/*_rbt_react.ts`
-to check a call. When a scenario fails for what looks like a reason
-inside the framework, check `python/references/patterns-idempotency.md`
-and `patterns-common-gotchas.md` before anything in `site-packages`.
+- React client: `python/references/react-generated-client.md` (web-app
+  also `web-app/references/react-client.md`). Never open
+  `frontend/api/**` or `web/src/api/**/*_rbt_react.ts` to check a call.
+- Servicer signatures: `python/references/api-methods.md`; other backend
+  shapes: the rest of `python/references/`.
+- A scenario failing for a seemingly framework reason:
+  `python/references/patterns-idempotency.md` and
+  `patterns-common-gotchas.md` before `site-packages`.
 
-If something genuinely isn't covered, bound the output hard: a
-targeted `grep -n … | head -40`, or `sed -n '<start>,<end>p'` over a
-known range. Never a whole generated file, never an unbounded
-recursive grep.
+Uncovered? Bound the output: `grep -n … | head -40` or
+`sed -n '<start>,<end>p'` over a known range — never a whole generated
+file or an unbounded recursive grep.
 
 ## Settle the Design, Then Build
 
-**Always settle the design before writing code.** The state model is
-the foundation — getting entities, field types, or method types wrong
-means regenerating a dozen or more files across the project.
+**Settle the design before code**: wrong entities, field types or
+method types mean regenerating a dozen or more files.
 
 ### Design Phase
 
-0. For each capability the app has, follow the
-   [`feature` skill](../feature/SKILL.md): agree on it in plain
-   English with the user and write it down as a `@wip` feature file
-   before the API exists. The design is derived from those features.
-1. **Implement the brief literally.** Build the interactions the user
-   described, the way they described them — not a pattern that is
-   "common on sites like this". If you think a deviation is needed
-   (an extra confirm step, a staging area, batching), list each one
-   with its reason and ask before building it. An invented
-   select-then-confirm flow where the brief said "click to hold" is
-   rework, and a panel explaining the invention makes it worse.
-2. Analyze the description with the State Model Assessment below.
-3. State the design you are about to build:
+0. Per capability, follow the [`feature` skill](../feature/SKILL.md):
+   agree on it in plain English and write a `@wip` feature file before
+   the API exists. The design derives from those features.
+1. **Implement the brief literally** — the interactions the user
+   described, not a pattern "common on sites like this". List any
+   deviation (extra confirm step, staging area, batching) with its
+   reason and ask first (select-then-confirm where the brief said
+   "click to hold" is rework).
+2. Run the State Model Assessment below.
+3. State the design:
    - Application types: state shape (fields, types, tags).
-   - Method map: which operations, which method type
+   - Method map: each operation's method type
      (Reader/Writer/Transaction/Workflow).
-   - Auth: who may call each method — anonymous, signed-in, the
-     owning user only, app-internal only.
+   - Auth per method: anonymous, signed-in, owner only, app-internal.
    - mcp-ui: the `User` type and its methods (the front door that
-     creates and locates application-type instances); which methods
-     get `UI()`; the tool surface the AI will see; ~3 example prompts,
-     most ending on a turn that renders a `UI()` (see the mcp-ui skill).
-   - web-app: the route surface — which pages the SPA has and which
-     methods each calls; whether there is per-user state (then a
-     `User` type owns it).
-4. Then follow the Step-by-Step Build Flow.
-
-For updates to existing apps, still work the design first: read the
-current state, state the changes, then modify (Update Flow below).
+     creates and locates application-type instances); which methods get
+     `UI()`; the AI's tool surface; ~3 example prompts, most ending on a
+     turn that renders a `UI()`.
+   - web-app: the SPA's pages and the methods each calls; whether there
+     is per-user state (then a `User` type owns it).
+Updates start with the design too (Update Flow).
 
 ### Writing the Design for a Human Reader
 
-The design is read by a **human who has not read the skill files**.
-They are judging the design — entities, collections, methods, routes,
-auth — not verifying that you followed the skill. Write so it stands
-on its own.
+The reader hasn't read the skill files; make the design stand alone:
 
-**Don't quote skill-internal terms** when presenting the design.
-They mean nothing outside the skills:
+- **No skill-internal terms.** `Shape A` / `Shape B` / `Shape C` → the
+  structure (`list[Sub]` of inline sub-records, `list[str]` of foreign
+  state IDs, `OrderedMap` of foreign state IDs). "Non-state `Model`" →
+  "a sub-record with no identity of its own". Drop citations like
+  `Gotcha #N`, `state-collections.md`, `api-pydantic.md`, `gotchas.md`;
+  explain the rule inline if it matters. `factory=True`,
+  `Field(tag=N)` and raw pydantic spellings only when the spelling is
+  the decision.
+- **Every choice gets what + why**: the structure, method type or
+  route, plus a one-clause domain reason ("grows without bound, so we
+  paginate"; "logged-in users only, because the document is
+  per-account"). A precise type name is fine when paired with that
+  reason; the rule is no bare jargon.
 
-- `Shape A` / `Shape B` / `Shape C` — name the actual data structure:
-  `list[Sub]` of inline sub-records, `list[str]` of foreign state
-  IDs, `OrderedMap` of foreign state IDs.
-- "non-state `Model`" — say "a flat sub-record that lives and dies
-  with the parent" or "no identity of its own", in domain terms.
-- `Gotcha #N` and filenames like `state-collections.md` /
-  `api-pydantic.md` / `gotchas.md` — drop the citation; if the rule
-  matters to the design, explain it inline.
-- `factory=True`, `Field(tag=N)`, raw pydantic spellings — fine to
-  mention briefly when the spelling itself is the design decision,
-  but never as the explanation.
-
-**For every design choice, give the what + the why.** The _what_ is
-the concrete data structure, method type, or route. The _why_ is a
-one-clause reason rooted in the user's domain ("grows without bound,
-so we need pagination"; "no methods or auth of its own, so it lives
-inline"; "logged-in users only, because the document is per-account").
-
-Collection shape — BAD, uses skill-internal terms:
-
-> `people_index_id: str` — ID of an OrderedMap actor that holds this
-> user's Persons (Shape C from state-collections.md — unbounded).
-
-Collection shape — GOOD:
-
-> `people_index_id: str` — points to an OrderedMap that holds this
-> user's Persons. An OrderedMap (rather than an inline list) because a
-> PRM grows without bound and the UI will paginate / sort by recency.
-
-Nested model — BAD: "Relationship and Event are non-state Models —
-Shape A." GOOD:
-
-> Relationship and Event live inline on Person as
-> `list[Relationship]` / `list[Event]`. They don't get their own state
-> actors because they have no lifecycle, methods, or auth independent
-> of the Person they belong to.
-
-**Escape hatch.** When the precise type name _is_ what the reader
-needs to see ("I'm proposing `OrderedMap` here, not `list[str]`"),
-name the type — but pair it with the plain-English reason in the same
-sentence. The rule is "no bare jargon", not "no technical terms".
+> BAD: `people_index_id: str` — ID of an OrderedMap actor that holds
+> this user's Persons (Shape C from state-collections.md — unbounded).
+>
+> GOOD: `people_index_id: str` — points to an OrderedMap that holds
+> this user's Persons. An OrderedMap (rather than an inline list)
+> because a PRM grows without bound and the UI will paginate / sort by
+> recency.
 
 ## State Model Assessment
 
-Before writing code, analyze the user's request:
-
-1. **Application types — decompose aggressively.** List every
-   distinct entity the user is going to add / edit / list / find over
-   time (people, posts, tasks, documents, accounts, …). **Each entity
-   becomes its own `Type` with its own state**, even when "each user
-   only has a few of them". Anything you can imagine being `add`-ed /
-   `remove`-d / `find`-ed by name has its own identity and belongs in
-   its own actor. The default wrong move is packing everything into
-   one parent's state (usually `User`) as `list[Person]` (or
-   `list[Post]`, `list[Task]`, …) — that flattens N actors into one,
-   prevents per-entity auth/methods, and forces a full rewrite when
-   the collection grows. A collection the app **syncs or scrapes from
-   an external system** (a repo's issues, a mailbox, an RSS feed) is
-   an entity collection too, and unbounded by definition, even though
-   the user never "adds" to it. Full signal list:
+1. **Application types — decompose aggressively.** Every entity the
+   user will add / edit / list / `find` over time (people, posts,
+   tasks, documents, accounts) is its own `Type` with its own state,
+   even if each user has only a few. Packing them into one parent
+   (usually `User`) as `list[Person]` / `list[Post]` / `list[Task]`
+   flattens N actors, blocks per-entity auth/methods, and
+   forces a rewrite as it grows. A collection **synced or scraped from
+   an external system** (a repo's issues, a mailbox) is an entity
+   collection, unbounded by definition. Signals:
    `python/references/state-collections.md` Step 1.
-2. **`User`?**
-   - mcp-ui: always — `User` is the MCP front door.
-   - web-app: only when there is per-user state; then route creation
-     through `User` exactly as an MCP UI does (the pattern is
-     independent of MCP). Anonymous apps, or apps where all users
-     share state, skip it.
-
-   Either way `User` holds identity and the **IDs** of what it owns;
-   unrelated concerns (auth/session, persona, background-engine
-   config, caches) are their own Types, or its writers serialize
+2. **`User`?** mcp-ui: always — it is the MCP front door. web-app: only
+   with per-user state, then route creation through `User` exactly as
+   an MCP UI does; anonymous or fully shared-state apps skip it. `User`
+   holds identity and the **IDs** of what it owns; unrelated concerns
+   (auth/session, persona, background-engine config, caches) are their
+   own Types, or its writers serialize
    (`python/references/state-actor-decomposition.md`).
-3. **Container shape for each collection.** Once an entity is its own
-   `Type`, the parent stores **references**, not objects. Three shapes
-   (full table and a worked example in `state-collections.md`):
+3. **Container shape per collection** — the parent stores
+   **references**, not objects (table and worked example in
+   `state-collections.md`):
    - `list[Sub]` of non-state `Model`s — bounded sub-records with no
-     identity of their own (line items on an Order, tags on a Post).
-     NOT for entity collections.
+     identity (line items, tags). NOT for entity collections.
    - `list[str]` of foreign state IDs — a bounded entity collection
-     (low hundreds, occasionally low thousands) you always read whole.
-   - `OrderedMap` of foreign state IDs — grows without bound, needs
+     (low hundreds, occasionally low thousands) always read whole.
+   - `OrderedMap` of foreign state IDs — unbounded, or needs
      pagination, range queries or ordered iteration. The default for
-     any "list of things the user keeps adding to" and for anything
-     synced from an external source.
+     anything the user keeps adding to or that is externally synced.
 
-   **Boundedness is a domain fact, not a number you pick.** If you
-   catch yourself adding a size cap (`MAX_ITEMS = 40`) so a collection
-   counts as bounded, it is unbounded — use `OrderedMap`.
-4. **Creation methods.** Each application type is created by a
-   `Transaction` on its owner (typically `User`) that calls
-   `<Type>.create(context)` and registers the new ID in the owner's
-   container. The type's own constructor is a `create` Writer with
-   `factory=True`.
-5. **State shape (per type).** Fields — lists, nested objects,
-   primitives — each with `Field(tag=N)`, a zero-value default and a
-   `description=`. A nested `Model` owned 1:1 by a parent state must
-   be `Optional[X] = Field(tag=N, default=None)` and hydrated in the
-   parent's factory `create` Writer; non-Optional `Model`-typed fields
-   reject `default=` / `default_factory=`. Full rules in
-   `python/references/api-pydantic.md` (mcp-ui also
-   `mcp-ui/references/api-state-shapes.md`).
-6. **Operations → method type.**
-   - `Reader` — read-only queries.
-   - `Writer` — single-state mutations.
-   - `Transaction` — multi-state atomic operations (a transfer between
-     two accounts; `User` creating an application-type instance). If
-     any operation touches more than one state instance, it is a
-     `Transaction`.
-   - `Workflow` — long-running control flows with loops, scheduling,
-     and idempotency helpers; every call to an external service.
-7. **Identity per type.** A single well-known instance (a singleton
-   created in `initialize`) or many, each with its own ID?
-8. **Stdlib before your own types.** A durable FIFO is `Queue`, a
-   sorted/paginated map `OrderedMap`, who's-online `Presence`,
-   broadcast `Topic` (PubSub), payload envelopes `Item`, a provider's
-   OAuth tokens `OAuthTokenManager`, a secret/API key/PII field
-   `Ciphertext`. Import the stdlib actor — never declare a `Model`
-   with one of those names, which forfeits durability, ordering and
-   concurrency guarantees. Each stdlib reference gives its
-   `<thing>_library()` registration. Forgetting it fails only when the
-   type is first called, with an unknown-state-type error; a library
-   whose own dependency (e.g. `ordered_map_library()` for `Ciphertext`)
-   is missing fails at startup with `Missing required libraries: …`.
-9. **Backend LLM calls** go through the durable
-   `reboot.agents.pydantic_ai.Agent`, never a raw `anthropic` /
-   `openai` SDK or a bare `pydantic_ai.Agent`, which re-bills the
-   provider on every workflow replay
-   (`python/references/agent-pydantic-ai.md`).
-10. **Front-door surface.**
-    - mcp-ui: which methods get `mcp=Tool()` (the AI may call them)
-      vs. `mcp=None`; where each `UI()` goes — on the entity's own
-      `Type` when the AI passes an entity ID, on `User` when the UI is
-      about the user as a whole (mcp-ui skill, "UI Placement").
-    - web-app: which pages exist and which methods each calls; the
-      generated React hooks wrap the calls.
+   **Boundedness is a domain fact**: if you add a cap
+   (`MAX_ITEMS = 40`) to make a collection bounded, it is unbounded —
+   use `OrderedMap`.
+4. **Creation.** Each application type is created by a `Transaction` on
+   its owner (typically `User`) that calls `<Type>.create(context)` and
+   registers the new ID in the owner's container; the type's own
+   constructor is a `create` Writer with `factory=True`.
+5. **State shape.** Every field has `Field(tag=N)`, a zero-value default
+   and `description=`. A nested `Model` owned 1:1 by a parent state is
+   `Optional[X] = Field(tag=N, default=None)`, hydrated in the parent's
+   factory `create` Writer; non-Optional `Model`-typed fields reject
+   `default=` / `default_factory=`. Rules: `python/references/api-pydantic.md`
+   (mcp-ui also `mcp-ui/references/api-state-shapes.md`).
+6. **Method type.** `Reader`: read-only. `Writer`: one state.
+   `Transaction`: anything touching more than one state instance (a
+   transfer; `User` creating an application-type instance). `Workflow`:
+   long-running control flow (loops, scheduling, idempotency helpers)
+   and every external-service call.
+7. **Identity.** A singleton created in `initialize`, or many with
+   their own IDs?
+8. **Stdlib before your own types**: durable FIFO `Queue`;
+   sorted/paginated map `OrderedMap`; who's-online `Presence`;
+   broadcast `Topic` (PubSub); payload envelopes `Item`; a provider's
+   OAuth tokens `OAuthTokenManager`; a secret/API key/PII field
+   `Ciphertext`. Never declare a `Model` with one of those names — it
+   forfeits durability, ordering and concurrency guarantees. Register
+   each with its `<thing>_library()`: a missing one fails on first call
+   with an unknown-state-type error; a missing library dependency (e.g.
+   `ordered_map_library()` for `Ciphertext`) fails at startup with
+   `Missing required libraries: …`.
+9. **Backend LLM calls** use the durable
+   `reboot.agents.pydantic_ai.Agent`, never a raw `anthropic` / `openai`
+   SDK or bare `pydantic_ai.Agent` (re-bills the provider on every
+   workflow replay) (`python/references/agent-pydantic-ai.md`).
+10. **Front-door surface.** mcp-ui: `mcp=Tool()` (AI-callable) vs.
+    `mcp=None` per method; a `UI()` goes on the entity's own `Type` when
+    the AI passes an entity ID, on `User` when it is about the user as a
+    whole (mcp-ui skill, "UI Placement"). web-app: the pages and the
+    methods each calls, through generated React hooks.
 
 ### When Correct Decomposition Fights the UI
 
-The easy frontend path is one reactive hook on one actor, and it
-quietly pressures you to flatten an entity collection into
-`list[Item]` on a single actor so a page can read it in one
-subscription. **The data model wins.** Keep the collection decomposed
-— one actor per item, an `OrderedMap` index on the parent — and add a
-**composing reader** on the parent: a `Reader` that ranges one page of
-IDs, reads each item actor, and returns fully-hydrated items plus a
-`next_cursor`. The page subscribes to that one reader; the fan-out
-happens server-side. A demo-correct `list[Item]` that must be torn
-apart once real data arrives is the failure this flow exists to
-prevent.
-- mcp-ui: the backend reader + React subscription are in
-  `mcp-ui/references/react-app-tsx.md`.
-- web-app: summary vs. detail readers, server-side aggregation and
-  per-caller views are in `python/references/patterns-cross-actor-reads.md`.
+One hook on one actor tempts you to flatten a collection into
+`list[Item]`. **The data model wins**: keep one actor per item with an `OrderedMap` index on the
+parent, and add a **composing reader** on the parent — a `Reader` that
+ranges one page of IDs, reads each item actor, and returns hydrated
+items plus a `next_cursor`. The page subscribes to that reader;
+fan-out is server-side. mcp-ui: `mcp-ui/references/react-app-tsx.md`.
+web-app (summary vs. detail readers, aggregation, per-caller views):
+`python/references/patterns-cross-actor-reads.md`.
 
 ## Step-by-Step Build Flow
 
-**All commands run from the application directory.** At each step,
-**read the references your front-door skill lists under that step**
-before writing the step's files.
+**Run all commands from the application directory**; before each step,
+read its front-door reading list.
 
-**Before step 1 — start the developer dashboard.** Load the
-[`dashboard` skill](../dashboard/SKILL.md) and follow it, so the user
-can watch the API take shape while you write it (it puts stub
-`pyproject.toml` / `.rbtrc` files in place if none exist). If it fails
-to come up, say so in one sentence and keep building; do not stop to
-debug it.
+**Before step 1, start the developer dashboard** with the
+[`dashboard` skill](../dashboard/SKILL.md) so the user watches the API
+take shape (it stubs `pyproject.toml` / `.rbtrc` if absent). If it
+fails, say so in a sentence and keep building.
 
 ### Step 1 — API definition
 
-Read the "Before any code" and "Before the API definition" lists.
-Name the project once, in the design: a kebab-case `<project>`
-(`todo-list`) and a snake_case `<app>` (`todo_list`) that is the API
-package and module. Write `api/<app>/v1/<app>.py` from the design:
-every `Field` with a tag, zero-value default and `description=`;
-every method with a
-`description=` and an explicit `mcp=` (the keyword is required on all
-four factories).
+Read "Before any code" and "Before the API definition". Name the project
+once, in the design: kebab-case `<project>` (`todo-list`) and snake_case
+`<app>` (`todo_list`), the API package and module; `<app>` also names
+the `.mypy.ini` ignore stanza (`[mypy-<app>.v1.<app>_rbt]`), imports and
+test module, so fix it before step 2. Write `api/<app>/v1/<app>.py`:
+every `Field` with a tag, zero-value default and `description=`; every
+method with `description=` and an explicit `mcp=` (required on all four
+factories).
 - mcp-ui: `mcp=Tool()` on what the AI calls, `mcp=None` otherwise;
   `UI()` methods per the design.
-- web-app: `mcp=None` on every method; no `UI()`.
-
-`<app>` is what the shell's `.mypy.ini` ignore stanza
-(`[mypy-<app>.v1.<app>_rbt]`), imports and test module are named
-after, so pick it before step 2.
+- web-app: `mcp=None` everywhere; no `UI()`.
 
 ### Step 2 — Project shell
 
-Read the "Before the project shell" list. Copy `templates/<front-door>/`
-(see [`templates/README.md`](templates/README.md)) — a complete
-minimal project — never retype a scaffold file from memory or a
-reference. Its `copy.sh` fills the `__project__` / `__app__` /
-`__Title__` placeholders and renames paths, but refuses a directory
-that already has an `.rbtrc` and would overwrite your API file with
-the sample. So copy into an empty scratch directory, delete the
-dashboard's stub `.rbtrc` and `pyproject.toml`, and merge without
-clobbering (`cp -Rn <scratch>/. .`) so step 1's API file stays. The
-template's sample servicer, feature, test module and UI (a counter)
-are replaced in steps 3, 5 and 6. A dual-frontend app needs pieces of
-both templates. Then:
+Read "Before the project shell". Copy `templates/<front-door>/` (see
+[`templates/README.md`](templates/README.md)); never retype a scaffold
+file from memory or a reference. Its `copy.sh` fills `__project__` /
+`__app__` / `__Title__` and renames paths, but refuses a directory with
+an `.rbtrc` and would overwrite your API file with the sample. So copy
+into an empty scratch directory, delete the dashboard's stub `.rbtrc`
+and `pyproject.toml`, and merge with `cp -Rn <scratch>/. .` to keep
+step 1's API file. The sample servicer, feature, test module and UI (a
+counter) are replaced in steps 3, 5 and 6; a dual-frontend app takes
+pieces of both templates. Then:
 
 1. `uv sync`.
-2. `uv run rbt generate`. Don't read what it wrote: the signature your
-   servicer must match is in `python/references/api-methods.md` ("The
-   Servicer Signature Each Declaration Obliges").
+2. `uv run rbt generate`. Don't read the output; the servicer signature
+   is in `python/references/api-methods.md` ("The Servicer Signature
+   Each Declaration Obliges").
 3. Adapt `backend/src/main.py`
    (`python/references/lifecycle-application-entry.md`): servicer
-   classes (not instances), stdlib libraries, `initialize`, and
-   `oauth=` (Step 4).
-   - mcp-ui: also `backend/src/example_prompts.py`, passed as
-     `Application(example_prompts=...)` (`mcp-ui/references/project-shell.md`).
+   classes (not instances), stdlib libraries, `initialize`, `oauth=`
+   (Step 4). mcp-ui: also `backend/src/example_prompts.py` →
+   `Application(example_prompts=...)` (`mcp-ui/references/project-shell.md`).
 
 ### Step 3 — Servicer
 
-Read the "Before the servicer" list. Write
-`backend/src/servicers/<app>.py`: one `async def` per method, the
-context type matching the factory. Writers mutate one actor only;
-cross-actor and external calls go in a `Transaction` or `Workflow`.
-Seeding goes in `initialize` per `python/references/lifecycle-seeding.md`
-(aliased, batched, sequential).
-- mcp-ui: the `UserServicer` front door and `<X>.create(context)`
-  pattern are in `mcp-ui/references/servicer-patterns.md`.
+Read "Before the servicer". Write `backend/src/servicers/<app>.py`: an
+`async def` per method, context type matching the factory. Writers
+mutate one actor; cross-actor and external calls go in a `Transaction`
+or `Workflow`. Seed in `initialize` per
+`python/references/lifecycle-seeding.md` (aliased, batched, sequential).
+mcp-ui: `UserServicer` and `<X>.create(context)` in
+`mcp-ui/references/servicer-patterns.md`.
 
 ### Step 4 — Authorizers
 
-Read the "Before the authorizers" list. **Write a real `authorizer()`
-on every servicer now, before any test.** Without one, `rbt dev`
-allows the call and logs `*** <Type>.<Method> IS MISSING AUTHORIZATION ***`
-at most once a minute, but the `Reboot()` test harness — and so every
-scenario in Step 6 — denies it with `PermissionDenied`, as
-`rbt serve` and Reboot Cloud do. Deferring rules "until prod" only
-moves the failure to the first test.
+Read "Before the authorizers". **Write a real `authorizer()` on every
+servicer now, before any test**: `rbt dev` only logs
+`*** <Type>.<Method> IS MISSING AUTHORIZATION ***`, but the `Reboot()`
+test harness, `rbt serve` and Reboot Cloud deny with `PermissionDenied`
+(modes: `python/references/servicer-authorizer.md`).
 
-- **Identity** comes from `Application(oauth=OAuth(provider=OAuthProviderByEnvironment(dev=Development(), prod=...)))`
-  (`OAuth` from `reboot.aio.auth.oauth`; the providers from
-  `reboot.aio.auth.oauth_providers`), the same for both front doors.
-  `Development()` is a real provider under `rbt dev`: a fake account
-  picker with five identities (Alice, Ben, Carlos, Dani, Esi) issuing
-  a verified, stable `dev-{hash}` `context.auth.user_id`. Every other
-  environment gets `prod`. Both arms are required; a selected `None`
-  arm makes the app fail to start, so `prod=None` is fine until you
-  pick a real provider. Servicer code doesn't change between providers.
-- **Rules.** Identity is wired the same in dev and prod, so
-  production-shaped rules work immediately:
-  `allow_if(all=[state_id_is_user_id])` for state that belongs to one
-  user; `has_verified_token` or custom predicates for shared state. A
-  `User` servicer needs no `authorizer()`: its default
-  (`state_id_is_user_id` or `is_app_internal`) is enforced even in dev
-  and is production-worthy. List the tokenless call paths first —
-  `initialize`, `schedule()`, calls from other servicers are
-  app-internal and carry **no user identity** — and add
-  `is_app_internal` for them (`python/references/servicer-authorizer.md`).
+- **Identity**, same for both front doors:
+  `Application(oauth=OAuth(provider=OAuthProviderByEnvironment(dev=Development(), prod=...)))`
+  (`OAuth` from `reboot.aio.auth.oauth`, providers from
+  `reboot.aio.auth.oauth_providers`). `Development()` is a real
+  provider under `rbt dev`: a fake account picker with five identities
+  (Alice, Ben, Carlos, Dani, Esi) issuing a verified, stable `dev-{hash}`
+  `context.auth.user_id`; every other environment gets `prod`. Both arms
+  are required and a selected `None` arm fails startup, so `prod=None`
+  is fine until you pick a provider. Servicer code doesn't change
+  between providers.
+- **Rules** are production-shaped from day one:
+  `allow_if(all=[state_id_is_user_id])` for one user's state;
+  `has_verified_token` or custom predicates for shared state. A `User`
+  servicer needs no `authorizer()` (its enforced default is
+  production-worthy). Calls from `initialize`, `schedule()` and other
+  servicers are app-internal with **no user identity**; list them first
+  and add `is_app_internal`.
 - **`allow()` only for genuinely public endpoints** (health checks,
-  public sign-up, public catalog reads). It means "public on the
-  internet, no identity required" and survives into production; never
-  use it to quiet the dev warning or a test failure.
-- **Production provider — choose deliberately, before real users.**
-  User IDs are namespaced per provider, so switching later strands
-  every user-keyed piece of state. `Development` is dev-only; don't
-  launch on `Anonymous` planning to "upgrade later"; `Google` /
-  `GitHub` give a user id and nothing more; `Auth0` when the app needs
-  user management. Without `claims=[...]` the app receives only an
-  opaque user id and `set_claims` is never called
+  public sign-up or catalog reads); it survives into production, so
+  never use it to quiet the dev warning or a failing test.
+- **Pick the production provider before real users**, because user IDs
+  are namespaced per provider and switching strands all user-keyed
+  state. `Development` is dev-only; don't launch on `Anonymous` to
+  "upgrade later"; `Google` / `GitHub` give only a user id; `Auth0` when
+  the app needs user management. Without `claims=[...]` the app gets
+  only an opaque user id and `set_claims` is never called
   (`python/references/auth-claims.md`).
 - **`allowed_origins`.** Outside `rbt dev run`, an app with `oauth=`
-  refuses to start unless `OAuth(..., allowed_origins=[...])` is set
-  explicitly: list each browser origin that signs in cross-origin, or
-  pass `[]` for same-origin-only. `rbt dev run` allows
-  `http://localhost` and `http://127.0.0.1` on any port automatically,
-  so the gap is invisible until the first deploy (the
-  [`deploy` skill](../deploy/SKILL.md) covers production).
-  - mcp-ui with no browser SPA: `allowed_origins=[]`.
-  - web-app: the SPA is cross-origin from its backend by construction
-    (its own port in dev, its own host in prod) — list its origin.
-- **`token_verifier=`** is the escape hatch, not the default: for an
-  IdP no `oauth=` provider covers and you can't wrap as an
-  `OAuthProvider` subclass (an enterprise SAML/OIDC broker), or custom
-  token semantics. The two compose: Reboot's verifier runs first, and
-  any token that is not Reboot-minted falls through to yours.
+  won't start without explicit `OAuth(..., allowed_origins=[...])`:
+  each cross-origin sign-in origin, or `[]` for same-origin only.
+  `rbt dev run` auto-allows `http://localhost` and `http://127.0.0.1` on
+  any port, hiding the gap until first deploy
+  ([`deploy` skill](../deploy/SKILL.md)). mcp-ui with no browser SPA:
+  `[]`. web-app: the SPA is cross-origin by construction (own port in
+  dev, own host in prod); list its origin.
+- **`token_verifier=`** is the escape hatch: an IdP no `oauth=`
+  provider covers and you can't wrap as an `OAuthProvider` subclass (an
+  enterprise SAML/OIDC broker), or custom token semantics. They compose:
+  Reboot's verifier runs first; non-Reboot-minted tokens fall through
+  to yours.
 
 ### Step 5 — Frontend
 
-Read the "Before the frontend" list.
-1. The frontend shell came with the template — mcp-ui: `frontend/`,
-   one bundle per UI under `frontend/mcp/<name>/`; web-app: the SPA in
-   `web/`. Its versions are pinned to what the plugin ships; don't
-   regenerate it with `npm create vite@latest`, which emits React 19 /
-   TypeScript 6.
-2. `npm install` in `frontend/` (mcp-ui) or `web/` (web-app).
-3. `uv run rbt generate` again — the React bindings need
-   `node_modules` to resolve types.
-4. Write the UI from the references, not from the generated files.
-   - mcp-ui: `UI()` bundles per `mcp-ui/references/react-app-tsx.md`;
-     copy `vite.config.ts` exactly.
-   - web-app: provider, `VITE_REBOOT_URL`, sign-in and typed errors
-     per `web-app/references/react-client.md`; accessible markup
-     (paired labels, named buttons, captioned tables) from the start,
-     so scenarios can drive the page.
-5. `npm run build` in the same directory (sanity-check the bundle).
+Read "Before the frontend".
+1. The template brought the shell — mcp-ui: `frontend/`, one bundle per
+   UI under `frontend/mcp/<name>/`; web-app: `web/`. Versions are pinned
+   to what the plugin ships; don't regenerate with
+   `npm create vite@latest` (emits React 19 / TypeScript 6).
+2. `npm install` in `frontend/` or `web/`.
+3. `uv run rbt generate` again — the React bindings need `node_modules`.
+4. Write the UI from the references.
+   mcp-ui: `UI()` bundles per `mcp-ui/references/react-app-tsx.md`;
+   copy `vite.config.ts` exactly. web-app: provider, `VITE_REBOOT_URL`,
+   sign-in and typed errors per `web-app/references/react-client.md`;
+   accessible markup (paired labels, named buttons, captioned tables)
+   from the start so scenarios can drive the page.
+5. `npm run build` there (sanity check).
 
 ### Step 6 — Tests
 
-Read the "Before the tests" list. **Write and run the scenarios of
-every feature before handing the app off.** Each feature file from
-the design phase (the [`feature` skill](../feature/SKILL.md)) gets its
-scenarios now, in the built-in steps of
+Read "Before the tests". **Write and run every design feature's
+scenarios before handoff**, in the built-in steps of
 `python/references/testing-features.md`:
-- mcp-ui: every action the user should be able to _do_ through the
-  tool surface ("create a new todo list", "add an item and see it
-  listed"), calling the methods the tools call.
-- web-app: every action in the UI ("submit the form and see the
-  result"); the flows a person clicks through are web app scenarios
-  per `python/references/testing-web-app.md` (they need `playwright`,
-  `pytest-playwright` and `uv run playwright install chromium`).
+- mcp-ui: every action the user should _do_ through the tool surface
+  ("add an item and see it listed"), calling the methods the tools call.
+- web-app: every UI action ("submit the form and see the result");
+  click-through flows are web app scenarios per
+  `python/references/testing-web-app.md` (needs `playwright`,
+  `pytest-playwright`, `uv run playwright install chromium`).
 
-Every step names who calls; a signed-in user is declared with
-`"alice" is an authenticated user`, which is how the real authorizers
-get exercised. Register the **real** servicers and never subclass one
-to weaken its `authorizer()`. Leave `oauth=` out of the test's
-`Application(...)` (the harness installs a test provider; keep a
-production `token_verifier=` if the app has one). Seed per test, the
-minimum each scenario needs (`python/references/lifecycle-seeding.md`).
-Let factories make ids up. When a value depends on **who is calling**,
-assert it through every actor hop it crosses — shared state survives
-an actor boundary, the caller does not, and a green suite that never
-crossed the hop misses it. Tag what cannot pass yet `@blocked` with
-its reason; leave `@wip` where work continues.
+- Every step names its caller; `"alice" is an authenticated user`
+  exercises real authorizers.
+- Register the **real** servicers; never subclass one to weaken its
+  `authorizer()`.
+- Leave `oauth=` out of the test's `Application(...)` (the harness
+  installs a test provider); keep a production `token_verifier=`.
+- Seed per test, only what each scenario needs
+  (`python/references/lifecycle-seeding.md`); let factories make ids up.
+- When a value depends on **who is calling**, assert it across every
+  actor hop: shared state crosses an actor boundary, the caller does not.
+- Tag what can't pass yet `@blocked` with its reason; leave `@wip` where
+  work continues.
 
-Run `uv run pytest`, then `uv run mypy backend/ tests/` from the
-project root (config in `python/references/lifecycle-project-setup.md`),
-and fix every failure and error. Do not proceed until every scenario
-passes (or is `@blocked` with a reason) and mypy is green — together
-they catch contract bugs before the user does. Point the user at the
-dashboard's Features page to review the features (web-app: and at the
-recordings of the browser scenarios).
+Run `uv run pytest`, then `uv run mypy backend/ tests/` from the project
+root (config: `python/references/lifecycle-project-setup.md`); proceed
+only when every scenario passes (or is `@blocked`) and mypy is green. Point the user at the dashboard's Features page (web-app:
+and the browser recordings).
 
 ### Step 7 — Run
 
-Load the [`run` skill](../run/SKILL.md) and follow it — the single
-canonical "start the app" procedure. It makes sure dependencies and
-secrets are in place and starts the backend and frontend. Don't
-bypass it with bare `rbt dev run` / `npm run dev`.
-- mcp-ui: the handoff is the **setup wizard** at the backend root, not
-  the `/mcp` URL; MCPJam launches only on demand from the wizard
-  (mcp-ui skill, "Setup Wizard and MCPJam").
-- web-app: it hands the user the URLs and a first page to open; check
-  the page at the URL a person would type (`localhost`), not only the
-  one that happens to work.
+Follow the [`run` skill](../run/SKILL.md), the one start procedure;
+never bare `rbt dev run` / `npm run dev`.
+- mcp-ui: hand off the **setup wizard** at the backend root, not the
+  `/mcp` URL; MCPJam launches on demand from it (mcp-ui skill, "Setup
+  Wizard and MCPJam").
+- web-app: check the page at the URL a person would type
+  (`localhost`).
 
 ## Update Flow
 
-When modifying an existing app:
-
-1. Read `.rbtrc`, the API definition, servicer, `main.py`, and the
+1. Read `.rbtrc`, the API definition, servicer, `main.py` and the
    frontend entry (mcp-ui: `frontend/mcp/<ui-name>/App.tsx`; web-app:
    `web/src/App.tsx`).
-2. Assess state model changes. If the app has persisted state or has
-   been deployed, read `python/references/api-schema-evolution.md`
-   for the rules API schema evolution must follow.
-3. Agree on the changed or new feature in English and write it down
-   first, per the [`feature` skill](../feature/SKILL.md): the feature
-   file, tagged `@wip`, before the API changes.
-4. Update the API definition (every new property with a
-   `description=`) → `uv run rbt generate`.
+2. Assess state model changes; with persisted state or a deploy, follow
+   `python/references/api-schema-evolution.md`.
+3. Agree on the feature in English and write its `@wip` feature file
+   before the API changes ([`feature` skill](../feature/SKILL.md)).
+4. Update the API (every new property with `description=`) →
+   `uv run rbt generate`.
 5. Update servicer methods, and the authorizer of any servicer whose
    methods changed.
-6. Update the frontend.
-   - mcp-ui: when the change adds a user-facing capability, add or
-     update an example prompt in `backend/src/example_prompts.py`.
-   - web-app: components and routes, keeping the markup accessible.
-7. Update the scenarios (web-app: and a web app scenario for a flow a
-   person clicks through). Run `uv run mypy backend/ tests/` and
-   `uv run pytest`; fix every error and failure before handing back,
-   and ask before removing `@wip`.
-8. If the app isn't running, bring it up with the
-   [`run` skill](../run/SKILL.md). If it is running under
-   `rbt dev run`, the `--watch` globs reload it automatically — no
-   restart needed. Editing `.env` likewise triggers a restart, so a
-   new or changed secret is re-read by `--env-file`.
-
-Specific patterns and file shapes live in the references — read them
-on demand based on what's changing.
+6. Update the frontend. mcp-ui: a new user-facing capability gets an
+   example prompt in `backend/src/example_prompts.py`.
+   web-app: components and routes, markup kept accessible.
+7. Update the scenarios (web-app: plus a web app scenario per
+   click-through flow). Run `uv run mypy backend/ tests/` and
+   `uv run pytest`; fix everything; ask before removing `@wip`.
+8. Not running: start it with the [`run` skill](../run/SKILL.md).
+   Under `rbt dev run`, `--watch` globs reload code and editing `.env`
+   restarts it, so `--env-file` re-reads secrets.
