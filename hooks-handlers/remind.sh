@@ -125,6 +125,8 @@ Reboot plugin's skills (`build`, `python`, `feature`, `mcp-ui`,
 - Holding an error string? Grep a distinctive fragment of it in the
 `python` skill's `references/errors.md` first; each row names the
 reference that explains it.
+- When a skill turns out wrong or silent about something you hit,
+append an item to the project's `FINDINGS.md` (format inside it).
 - An application's behavior is specified and tested as `.feature`
 files (the `feature` skill): agree on a feature in English before
 writing its API or code, and iterate on its scenarios with the user.

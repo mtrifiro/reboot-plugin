@@ -53,6 +53,7 @@ Both front doors share the Python shell:
 | `.mypy.ini` | Source roots on `mypy_path`, `explicit_package_bases`, an ignore stanza naming only the generated `_rbt` module | A new API module (one stanza each) |
 | `pytest.ini` | `testpaths = tests`; `pythonpath` of `backend/src`, `backend/api`, `api` | Never |
 | `.gitignore` | Dev state, generated code, `.env`, recordings, venv, `node_modules/`, frontend build | Never; the generated-code paths match `.rbtrc` |
+| `FINDINGS.md` | Where the agent logs what surprised it (wrong or silent skill, framework behaviour); the plugin's `report` skill files these upstream | Append items; never delete them |
 | `api/__app__/v1/__app__.py` | Sample pydantic API | Always: the app's own types |
 | `backend/src/servicers/__app__.py` | Sample servicers | Always |
 | `backend/src/main.py` | `Application(...)` with `oauth=OAuth(provider=OAuthProviderByEnvironment(dev=Development(), prod=None), allowed_origins=[])` | Production provider and origins before deploy |

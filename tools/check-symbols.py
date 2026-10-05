@@ -166,8 +166,8 @@ def main() -> int:
     result = subprocess.run(
         [str(UV), "run", "--no-project", "--quiet", f"--python={PYTHON}",
          f"--with=reboot[{EXTRAS}]=={version}",
-         # reboot.bdd.web imports playwright, which the extras don't pull in.
-         "--with=playwright", "python", "-c", CHECKER],
+         # reboot.bdd.web imports pytest_playwright, which the extras don't pull in.
+         "--with=pytest-playwright", "python", "-c", CHECKER],
         input=json.dumps(payload), capture_output=True, text=True, timeout=600,
     )
     if result.returncode != 0:
@@ -181,7 +181,17 @@ def main() -> int:
         if key in errors:
             sites[key].append(item)
 
-    real = {k: v for k, v in sites.items() if not all(s["incorrect"] for s in v)}
+    known_defects = json.loads((ROOT / "tools" / "known-defects.json").read_text())
+    known_defects.pop("_comment", None)
+
+    def tracked(key: tuple) -> str | None:
+        symbol = ".".join([key[0], *key[1]])
+        return next((fid for prefix, fid in known_defects.items()
+                     if symbol == prefix or symbol.startswith(prefix + ".")), None)
+
+    known = {k: tracked(k) for k in sites if tracked(k)}
+    real = {k: v for k, v in sites.items()
+            if not all(s["incorrect"] for s in v) and k not in known}
 
     if args.json:
         print(json.dumps([
@@ -195,8 +205,11 @@ def main() -> int:
             print(f"{'.'.join([key[0], *key[1]])}: {errors[key]}")
             for s in where:
                 print(f"    {s['file']}:{s['line']}")
+        for key, fid in sorted(known.items()):
+            print(f"known upstream defect ({fid}): {'.'.join([key[0], *key[1]])}")
         print(f"\nreboot=={version}: checked {len(distinct)} distinct symbols "
-              f"from {len(items)} mentions; {len(real)} unresolved")
+              f"from {len(items)} mentions; {len(real)} unresolved, "
+              f"{len(known)} tracked as known upstream defects")
     return 1 if real else 0
 
 

@@ -184,3 +184,29 @@ more of them conditional. web-app grew against the baseline because it
 now reads references only mcp-ui used to list (`state-actor-decomposition`,
 the Never/Limits/Errors content every reference gained) — the cost of
 the facts the findings showed were missing.
+
+---
+
+# After Phases 4–5 (2026-10-04)
+
+- **Error index.** `python/references/errors.md` is generated from every
+  "Errors you will see" and "Known issues" table: 212 distinct error
+  strings, each with its meaning, fix and owning file. 40 error strings
+  are documented in more than one file (reported as warnings — the next
+  single-source cleanup). The hook reminder says to grep it first.
+- **Regression guards.** `tools/check-all.sh` (fast) and `--full`
+  (CLI flags, reboot symbols, both templates built from scratch) pass;
+  CI runs both. Reading-budget ceilings are enforced per front door and
+  only move down; the README's budget table is generated.
+- **Feedback loop.** Every project made from the templates gets a
+  `FINDINGS.md`; the hook reminder tells the agent to append to it when
+  a skill is wrong or silent; the `report` skill files items as GitHub
+  issues after the user approves the batch.
+- **Known upstream defect.** `reboot.std.oauth` (tool-checks-01) is
+  tracked in `tools/known-defects.json` until Reboot ships it.
+
+| Front door | Baseline | Now | Ceiling | Target |
+| --- | ---: | ---: | ---: | ---: |
+| mcp-ui | 48,306 | 42,897 | 43,000 | 30,000 |
+| web-app | 37,127 | 39,094 | 39,200 | 30,000 |
+| backend-only | — | 29,893 | 30,000 | 30,000 |

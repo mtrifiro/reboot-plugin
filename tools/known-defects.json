@@ -1,0 +1,4 @@
+{
+  "_comment": "Symbols the skills name that the pinned Reboot does not provide because of an upstream defect. Each maps a symbol prefix to the finding that tracks it. check-symbols.py reports them on every run but does not fail on them. Remove an entry when the upstream fix ships.",
+  "reboot.std.oauth": "tool-checks-01"
+}

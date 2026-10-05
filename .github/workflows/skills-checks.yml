@@ -1,0 +1,29 @@
+name: skills checks
+
+on:
+  pull_request:
+    paths: ["skills/**", "tools/**", "hooks-handlers/**", "findings/**"]
+  push:
+    branches: [main]
+
+jobs:
+  fast:
+    # Generated indices in sync, references in the template, findings
+    # schema, reading-budget ceilings. No network.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: tools/check-all.sh
+
+  full:
+    # Every rbt flag and reboot symbol against the pinned Reboot, and both
+    # starter templates built from scratch.
+    runs-on: ubuntu-latest
+    needs: fast
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: tools/check-all.sh --full

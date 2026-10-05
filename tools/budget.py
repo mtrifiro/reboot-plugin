@@ -272,14 +272,48 @@ def print_table(report: Report) -> None:
         print("unresolved references: " + ", ".join(sorted(set(report.unresolved))) + "\n")
 
 
+README_LABELS = {"mcp-ui": "MCP UI", "web-app": "Web App", "backend-only": "Backend only"}
+
+
+def readme(reports: list[Report], mode: str) -> int:
+    limits = json.loads((ROOT / "tools" / "budget-ceilings.json").read_text())
+    rows = ["| Front door | Words on the minimal path | Ceiling | Target |",
+            "| --- | ---: | ---: | ---: |"]
+    for r in reports:
+        rows.append(f"| {README_LABELS[r.front_door]} | {r.total(True):,} | "
+                    f"{limits.get(r.front_door, 0):,} | {limits.get('target', 0):,} |")
+    path = ROOT / "README.md"
+    text = path.read_text(encoding="utf-8")
+    m = re.search(r"(<!-- budget:start[^>]*-->\n)(.*?)(<!-- budget:end -->)", text, re.S)
+    if not m:
+        print("README.md has no budget:start/budget:end region", file=sys.stderr)
+        return 1
+    new = text[: m.start(2)] + "\n".join(rows) + "\n" + text[m.end(2):]
+    if mode == "check":
+        if new != text:
+            print("drift: README.md budget table is stale (run tools/budget.py --readme write)",
+                  file=sys.stderr)
+            return 1
+        return 0
+    path.write_text(new, encoding="utf-8")
+    return 0
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("--json", action="store_true")
     parser.add_argument("--ceiling", type=int, help="max words on any minimal path")
+    parser.add_argument("--ceilings", type=Path, nargs="?", const=ROOT / "tools" / "budget-ceilings.json",
+                        help="per-front-door ceilings from a JSON file (default tools/budget-ceilings.json)")
     parser.add_argument("--verbose", "-v", action="store_true", help="list every file")
+    parser.add_argument("--readme", choices=("write", "check"),
+                        help="rewrite (or check) the README's budget table")
     args = parser.parse_args()
 
     reports = [measure(fd) for fd in FRONT_DOORS]
+
+    if args.readme:
+        return readme(reports, args.readme)
 
     if args.json:
         print(json.dumps(
@@ -308,6 +342,25 @@ def main() -> int:
                     flag = " (conditional)" if i.conditional else ""
                     print(f"  {i.step:<12}{words(i.path):>6}  {i.rel}{flag}")
                 print()
+
+    if args.ceilings is not None:
+        limits = json.loads(args.ceilings.read_text())
+        failed = False
+        for r in reports:
+            limit, actual = limits.get(r.front_door), r.total(True)
+            if limit is None:
+                continue
+            if actual > limit:
+                failed = True
+                print(f"FAIL: {r.front_door} minimal path is {actual:,} words, "
+                      f"ceiling is {limit:,} ({args.ceilings.name})", file=sys.stderr)
+            elif limit - actual >= 500:
+                print(f"note: {r.front_door} is {limit - actual:,} words under its ceiling; "
+                      f"lower it to {actual:,} in {args.ceilings.name}")
+        target = limits.get("target")
+        if target:
+            print(f"target: {target:,} words per front door")
+        return 1 if failed else 0
 
     if args.ceiling is not None:
         over = [r for r in reports if r.total(True) > args.ceiling]
