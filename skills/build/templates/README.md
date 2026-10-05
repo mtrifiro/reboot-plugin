@@ -73,13 +73,16 @@ Both front doors share the Python shell:
 
 | File | What it is |
 | --- | --- |
-| `web/package.json` | React 18, TypeScript 5.9, Vite 6, `@types/node`, the two Reboot packages; `build` is `tsc -b && vite build` |
+| `web/package.json` | React 18, TypeScript 5.9, Vite 6, `@types/node`, `zod` 4, the two Reboot packages pinned to the backend's `reboot`; `build` is `tsc -b && vite build`. npm installs the `@bufbuild/protobuf` peer itself |
 | `web/vite.config.ts` | Stock config plus `resolve.dedupe`, `server.host: true`, a project port (`5273`), `strictPort: true` |
-| `web/tsconfig.json`, `tsconfig.app.json`, `tsconfig.node.json` | Split app / Vite-config projects; `tsconfig.node.json` has `"types": ["node"]` |
+| `web/tsconfig.json`, `tsconfig.app.json`, `tsconfig.node.json` | Split app / Vite-config projects (React 18 / TypeScript 5); `tsconfig.node.json` has `"types": ["node"]`; the app half includes `src/`, generated client and all, and type-checks cleanly at 1.6.0 |
 | `web/.env.development` | `VITE_REBOOT_URL=http://localhost:9991` |
-| `web/index.html`, `web/src/main.tsx` | Entry; `RebootClientProvider url={REBOOT_URL}` |
-| `web/src/App.tsx` | Sign-in gate on `useUser()`, one reader and one mutation |
+| `web/index.html`, `web/src/main.tsx` | Entry; `RebootClientProvider url={REBOOT_URL}`; Google Fonts links; imports `styles.css` |
+| `web/src/styles.css` | Design tokens (light and dark), base elements, standard classes (`web-app/references/ui-design.md`) |
+| `web/src/App.tsx` | Sign-in gate on `useUser()`, one reader and one mutation, built on `styles.css` |
+| `web/src/theme.tsx` | `ThemeToggle` (light/dark, saved in `localStorage`, OS setting until chosen) and `applySavedTheme()`, called in `main.tsx` before render |
 | `web/src/vite-env.d.ts` | Vite client types for `import.meta.env` |
+
 
 ## Versions
 

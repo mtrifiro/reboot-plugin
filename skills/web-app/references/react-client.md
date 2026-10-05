@@ -29,27 +29,14 @@ MCP-host-specific. The hook surface is
 `web/` arrives with the template (`copy.sh web-app ...`; see
 [`build/templates/README.md`](../../build/templates/README.md)); do not
 run `npm create vite@latest`. Then `cd web && npm install`, `rbt generate`
-again, and `npm run build` to check the bundle. Why the files look so:
+again, and `npm run build` to check the bundle. Every file is explained
+in the templates README; two are load-bearing:
 
-- **`package.json`** — `@reboot-dev/reboot-api` and
-  `@reboot-dev/reboot-react` pinned to the backend's `reboot` version;
-  React 18, `zod` 4; dev dependencies `@types/node`,
-  `@types/react(-dom)`, `@vitejs/plugin-react`, `typescript` 5.9,
-  `vite` 6. npm installs `@bufbuild/protobuf`, a `reboot-react` peer
-  dependency, itself.
-- **`vite.config.ts`** — stock plus three load-bearing additions:
-  `resolve.dedupe: ["react", "react-dom", "zod"]` (two copies break
-  hooks and schema identity at runtime); `server.host: true` (Vite's
-  `localhost` binds IPv6 `[::1]` only, so a forwarded IPv4 port gets
-  connection refused with no dev-server error — the most common "starts
-  fine, won't open"); a project port (`5273`) with `strictPort: true`
-  (change it if another local project uses it).
-- **`tsconfig.app.json` / `tsconfig.node.json`** — React 18 /
-  TypeScript 5; the node half has `"types": ["node"]` for
-  `vite.config.ts`. The app half includes `src/`, generated client and
-  all, and type-checks cleanly at 1.6.0.
-- **`.env.development`**, **`src/main.tsx`** — the backend URL, below.
-  **`src/vite-env.d.ts`** types `import.meta.env`.
+- **`vite.config.ts`** — `resolve.dedupe: ["react", "react-dom", "zod"]`
+  (two copies break hooks and schema identity at runtime);
+  `server.host: true` (Vite's `localhost` binds IPv6 `[::1]` only, so a
+  forwarded IPv4 port is refused with no dev-server error — the most
+  common "starts fine, won't open").
 - **`src/App.tsx`** — the sign-in gate and one signed-in component;
   replace its body.
 

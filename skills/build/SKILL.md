@@ -68,12 +68,17 @@ method types mean regenerating a dozen or more files.
    - Method map: each operation's method type
      (Reader/Writer/Transaction/Workflow).
    - Auth per method: anonymous, signed-in, owner only, app-internal.
+   - The look: **highly visual unless the user asks otherwise** — a
+     view that shows the data's shape (board, timeline, chart, map),
+     not only tables or text; a deliberate palette with light and dark
+     modes and a toggle between them.
    - mcp-ui: the `User` type and its methods (the front door that
      creates and locates application-type instances); which methods get
      `UI()`; the AI's tool surface; ~3 example prompts, most ending on a
      turn that renders a `UI()`.
    - web-app: the SPA's pages and the methods each calls; whether there
-     is per-user state (then a `User` type owns it).
+     is per-user state (then a `User` type owns it); the visual brief
+     per `web-app/references/ui-design.md`.
 Updates start with the design too (Update Flow).
 
 ### Writing the Design for a Human Reader
@@ -303,8 +308,10 @@ Read "Before the frontend".
    copy `vite.config.ts` exactly. web-app: provider, `VITE_REBOOT_URL`,
    sign-in and typed errors per `web-app/references/react-client.md`;
    accessible markup (paired labels, named buttons, captioned tables)
-   from the start so scenarios can drive the page.
-5. `npm run build` there (sanity check).
+   from the start so scenarios can drive the page; the look per
+   `web-app/references/ui-design.md`.
+5. `npm run build` there (sanity check). web-app: open every route;
+   fix what `ui-design.md` forbids.
 
 ### Step 6 — Tests
 
@@ -345,7 +352,6 @@ never bare `rbt dev run` / `npm run dev`.
   Wizard and MCPJam").
 - web-app: check the page at the URL a person would type
   (`localhost`).
-
 ## Update Flow
 
 1. Read `.rbtrc`, the API definition, servicer, `main.py` and the

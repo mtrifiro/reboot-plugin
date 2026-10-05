@@ -50,12 +50,6 @@ Identity, rules-before-tests, the production provider and
   `rbt_session` cookie set by `/__/oauth/finish` and read as a bearer on
   every RPC, so servicers see only `context.auth.user_id` (as in MCP).
   `Development()` signs in at `/__/oauth/start`.
-- **`allowed_origins`:** the SPA is always cross-origin from its backend
-  (Vite's port in dev, its own host in production), so set
-  `OAuth(..., allowed_origins=["https://app.example.com"])` with
-  `oauth=`. `rbt dev run` auto-allows any `localhost` / `127.0.0.1`
-  port, so a missing list is only a startup warning — until production
-  refuses to start.
 - **Safari and WKWebView can't sign in locally over plain http:** the
   sign-in cookies are `Secure` and WebKit doesn't exempt
   `http://localhost`, so the flow ends on
@@ -88,10 +82,8 @@ Providers (all arguments keyword-only):
   providers (all but `Development` and `Anonymous`) also take `scopes=`
   and `store_tokens=`.
 - Register `/__/oauth/callback` as the redirect URI with the provider.
-- Add `claims=[...]` to get the user's email or name: without it the app
-  gets only an opaque user id and `set_claims` is never called. Never
-  build a form asking a signed-in user to retype them
-  (`python/references/auth-claims.md`).
+- With `claims=[...]`, never build a form asking a signed-in user to
+  retype their email or name (`python/references/auth-claims.md`).
 - Read `mcp-ui/references/auth-oauth-providers.md` (frontend-neutral)
   only to write a custom provider or debug one provider's flow.
 
@@ -113,52 +105,13 @@ explicit-id hook's id must be real on every render, never a placeholder
 - Never keep tokens in a plain `str` field or hand-roll `Ciphertext`
   (`python/references/stdlib-oauth-tokens.md`).
 
-**Browser-side wiring** (provider and its `url`, generated hooks,
-sign-in/sign-out, typed errors): read `references/react-client.md` at
-the frontend step; don't reconstruct it from memory.
-
 ## Project Layout
 
-```
-<project-root>/
-├── .python-version
-├── .rbtrc                   # generate --react=web/src/api, --web=web/src/api
-├── .mypy.ini                # Type-check config (python skill)
-├── pytest.ini               # testpaths: tests; pythonpath: backend/src backend/api api
-├── pyproject.toml
-├── api/
-│   └── <pkg>/v1/
-│       └── <name>.py        # API definition (pydantic)
-├── backend/
-│   └── src/
-│       ├── main.py          # Application entrypoint
-│       └── servicers/
-│           └── <name>.py    # Servicer implementation
-├── tests/
-│   ├── <capability>.feature  # One feature per capability
-│   ├── <name>_test.py       # `application` fixture + `scenarios(...)`
-│   └── web_test.py          # The scenarios that open the app
-└── web/
-    ├── .env.development     # VITE_REBOOT_URL=http://localhost:9991
-    ├── package.json
-    ├── tsconfig.json
-    ├── tsconfig.app.json
-    ├── tsconfig.node.json
-    ├── vite.config.ts       # Stock Vite SPA config
-    ├── index.html           # Single SPA entry, top of web/
-    └── src/
-        ├── main.tsx         # RebootClientProvider entry
-        ├── App.tsx          # Routes + top-level component
-        ├── pages/
-        │   └── <page>.tsx
-        └── api/             # Generated TypeScript client
-                             # (output of `rbt generate --react=`)
-```
-
-Starting files: `../build/templates/web-app/`. `.rbtrc` points React
-codegen at `web/src/api` (`generate --react=web/src/api` and
-`generate --web=web/src/api`). Set `VITE_REBOOT_URL` in dev: the default
-resolves to Vite's origin, not the backend (`references/react-client.md`).
+The template's tree (`../build/templates/web-app/`, each file in its
+README), plus pages under `web/src/pages/`, one
+`tests/<capability>.feature` per capability, and `tests/web_test.py` for
+the scenarios that open the app. `.rbtrc` points React codegen at
+`web/src/api` (`generate --react=` and `--web=`).
 
 ## Which References to Read, and When
 
@@ -250,6 +203,7 @@ Apps" above):
 <!-- generated:start reading-list front-door=web-app step=frontend -->
 - `references/react-client.md` — An unset `VITE_REBOOT_URL` points at Vite's origin; copy `build/templates/web-app/web/`; own port, `strictPort`, sign-in, typed errors.
 - `python/references/react-generated-client.md` — Mutations resolve to `{ response, aborted }`, never throw; `rbt generate --react=` output: `use<Type>()` overloads, reader returns, naming.
+- `references/ui-design.md` — Unless asked for plain: brief, hero view beyond tables, template `styles.css`, skeletons, empty states with next actions.
 <!-- generated:end -->
 
 **Before the tests:**
