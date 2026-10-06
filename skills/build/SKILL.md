@@ -69,15 +69,29 @@ method types mean regenerating a dozen or more files.
      (Reader/Writer/Transaction/Workflow) and its AI role (a tool the
      AI calls, a `UI()` view, or human-only), even when the MCP UI
      comes later.
-   - Auth per method: anonymous, signed-in, owner only, app-internal.
+   - Auth per method: anonymous, signed-in, owner only, app-internal,
+     or by role. Where the domain has roles (front desk and
+     housekeeping, editors and readers), name them and the methods each
+     may call; roles live in state, checked by a custom predicate
+     (`python/references/auth-custom-predicates.md`).
+   - Demo data: a believable dev dataset (a dozen rooms on three floors,
+     not one), seeded only under `rbt dev`, so every view has something
+     to show the first time it opens
+     (`python/references/lifecycle-seeding.md`, "Demo data").
    - Ready for both front doors, whichever is built first: a `User`
      type, and a `description=` on every method written for the AI. A
      description can't be edited once deployed; switching `mcp=` later
      can (`python/references/api-schema-evolution.md`).
-   - The look: **highly visual unless the user asks otherwise** — a
-     view that shows the data's shape (board, timeline, chart, map),
-     not only tables or text; a deliberate palette in light and dark;
-     and a toggle between them, named in the design.
+   - The look: a five-line visual brief (who and on what screen, the
+     task, the one question the primary view answers, the accent and its
+     real source (the user's or organization's brand) or "Reboot
+     default, no brand supplied", the type choice) and the primary view chosen for
+     the task: a list for triage and lookup, a board for a few items
+     through stages, a chart or timeline over time
+     (`web-app/references/ui-design.md`, principles 01–02). Light and
+     dark both designed; web-app: a toggle between them in the first
+     build, named in the design; mcp-ui: the host's theme, followed
+     (`mcp-ui/references/ui-design.md`).
    - mcp-ui: the `User` type and its methods (the front door that
      creates and locates application-type instances); which methods get
      `UI()`; the AI's tool surface; ~3 example prompts, most ending on a
@@ -316,8 +330,12 @@ Read "Before the frontend".
    accessible markup (paired labels, named buttons, captioned tables)
    from the start so scenarios can drive the page; the look per
    `web-app/references/ui-design.md`.
-5. `npm run build` there (sanity check). web-app: open every route;
-   fix what `ui-design.md` forbids.
+5. `npm run build` there (sanity check). web-app: with the app
+   running, `uv run --with playwright python scripts/screenshots.py <routes>` saves every
+   route at desktop and phone width, light and dark; open and check each
+   against `ui-design.md` principles 03–09 and its Never list, fix
+   what fails in one pass, then pin it with a look scenario per page.
+   Name any deviation from the plan's own specs in the handoff.
 
 ### Step 6 — Tests
 

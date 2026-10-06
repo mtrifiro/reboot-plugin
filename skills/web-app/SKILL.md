@@ -203,7 +203,7 @@ Apps" above):
 <!-- generated:start reading-list front-door=web-app step=frontend -->
 - `references/react-client.md` — An unset `VITE_REBOOT_URL` points at Vite's origin; copy `build/templates/web-app/web/`; own port, `strictPort`, sign-in, typed errors.
 - `python/references/react-generated-client.md` — Mutations resolve to `{ response, aborted }`, never throw; `rbt generate --react=` output: `use<Type>()` overloads, reader returns, naming.
-- `references/ui-design.md` — Unless asked for plain: brief, hero view beyond tables, template `styles.css`, skeletons, empty states with next actions.
+- `references/ui-design.md` — Brief, Reboot's brand by default (a user's brand replaces it), primary view by task, page anatomy, labelled controls, light/dark toggle, restyle by token values, screenshot review.
 <!-- generated:end -->
 
 **Before the tests:**

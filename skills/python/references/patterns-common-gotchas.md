@@ -600,7 +600,7 @@ section. Add or change a trap in its owning reference, not here. -->
 - `window.open(url)` alone
 - `mcpApp.openLink(...)` without `?.`
 - Calling `useMcpApp()` after the `counter === undefined` early return
-- A hardcoded `localhost` origin in a deployed app
+- A hardcoded origin, or `window.location.origin` alone, in a deployed app
 
 **`mcp-ui/references/project-shell.md`**
 - `dev run --default=hmr`
@@ -615,17 +615,33 @@ section. Add or change a trap in its owning reference, not here. -->
 - A second instance of the same app needs its own directory
 - Assuming a stop worked
 
+**`mcp-ui/references/ui-design.md`**
+- Web fonts in an MCP UI, the Reboot default's included: a host may block loading them in its frame
+- A light/dark toggle, or a theme that ignores the host's
+- "loading..." or a bare spinner
+- A whole app in one UI (tabs of tables): one view per `UI()`
+- Raw hex in components
+
 **`web-app/references/ui-design.md`**
-- Browser default fonts
-- A table as the only view of the domain
+- Browser default styling: an unstyled `<button>`, `<select>` or `<input>`, or the default serif
 - "Loading…" or a bare spinner
 - An empty list without a next action
 - `alert()`, `confirm()`, `prompt()`: they block the scenarios too
 - Raw hex in components
 - A page broken at phone width (16 px gutters, wide tables in `table-wrap`, tabs scrolling in their own row) or in either color scheme
 - Form fields in a `1fr 1fr` grid: a date or number input won't shrink and overflows its card
-- An app without the light/dark toggle, or a palette with only one scheme
-- Removing labels to restyle
+- A first build without the light/dark toggle, or a palette with only one scheme
+- A placeholder as a control's only label, or labels removed to restyle (use `visually-hidden`)
+- Saturated color on two data dimensions at once
+- A summary label that is cut off or overlaps
+- Keeping a plan's number after the screenshots show it hurts
+- A brand source nobody gave, or the Reboot default kept while the user named another brand
+- A restyle that appends an override layer instead of changing the token values
+- A logo or favicon with a hard-coded color
+- A green, amber or red accent in either scheme, including a brand's green highlight promoted to the dark accent
+- Font-specific `font-feature-settings` left after the font changes
+- Truncating the main text of a row or card
+- Uppercase on identifiers or data (`text-transform` turns "A.14b" into "A.14B")
 <!-- generated:end -->
 
 ## Never

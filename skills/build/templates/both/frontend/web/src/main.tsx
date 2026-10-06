@@ -2,6 +2,12 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { RebootClientProvider } from "@reboot-dev/reboot-react";
 import { App } from "./App";
+// Reboot's typefaces, bundled so the app needs no font CDN (styles.css
+// names them in --font-display, --font-text and --font-mono).
+import "@fontsource-variable/space-grotesk";
+import "@fontsource-variable/dm-sans";
+import "@fontsource/dm-mono/400.css";
+import "@fontsource/dm-mono/500.css";
 import "./styles.css";
 import { applySavedTheme } from "./theme";
 

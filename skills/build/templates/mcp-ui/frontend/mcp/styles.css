@@ -1,34 +1,30 @@
-/* The app's one stylesheet: tokens, base elements, and the classes the
-   page anatomy is built from (web-app/references/ui-design.md). It ships
-   in Reboot's brand. To rebrand, change the token VALUES in :root and both
-   dark blocks; never append a later block that re-pins them. Keep the
-   names. Components never carry raw hex.
+/* The MCP UIs' one stylesheet: the same tokens and classes as the web
+   app's `web/src/styles.css`, so both front doors look like one product
+   (mcp-ui/references/ui-design.md). Each UI's `index.css` imports it.
+   It ships in Reboot's brand; to rebrand, change the token VALUES (the
+   whole accent, page and ink family) in :root and both dark blocks.
 
-   Anatomy: topbar (.brand, nav) → brand-band (a page-head on the deep
-   accent: .eyebrow, h1, .lede, .actions) → stats / stat (.label, .value,
-   .meter; .selected; a <button class="stat"> filters) → filter-panel
-   (.search, .filters of field) → list-card (group-band, row with .title,
-   .meta, .secondary; row-grid with --row-cols for many columns) → drawer
-   over the list (drawer-backdrop, drawer-head, drawer-body, drawer-foot).
-   Other primary views: board / board-col (board-col-head, .count) of
-   cards; feed (a dated timeline of li with <time>); chart (an <svg>
-   with .axis / .grid, a .legend; series colors --series-1..4). Detail:
-   kv (a <dl> of label and value). Actions: confirm-bar (.message), the
-   in-page confirm; notice (.toast to float it) after an action. Also:
-   panel / panel-head, card, cards, field / field-row (forms), spacer;
-   buttons .primary / .ghost / .danger; pill; dot, tally; tabs / tab;
+   Differences from the web app: `.ui`, the root inside the host's frame;
+   no theme toggle, because the host owns light and dark, applied by
+   `useHostTheme()` (`host-theme.ts`), which sets data-theme on <html>
+   exactly as the web app's toggle does; and no web fonts, since a host
+   may block loading them inside its frame (keep the system stack).
+
+   A widget uses: ui; page-head (.eyebrow, h1, .lede, .actions); stats /
+   stat (.label, .value, .meter, .selected); list-card, group-band, row
+   (.title, .meta, .secondary; row-grid); dot, tally; kv (one record);
+   feed; chart (--series-1..4); board / board-col for a small board;
+   confirm-bar; notice; panel / panel-head, card, cards, spacer; buttons
+   .primary / .ghost / .danger; field / field-row; pill; tabs / tab;
    table-wrap; skeleton; empty (.actions); error; mono, small, muted,
-   visually-hidden; density-compact on any ancestor of rows.
+   visually-hidden; density-compact. The page-level classes (topbar,
+   brand-band, filter-panel, drawer) are here only to keep one file in
+   step with the web app; a widget has no app bar, band, filters or
+   drawer.
 
-   Color: the accent family (accent, deep, tint) carries the brand;
-   neutrals carry the rest. --good, --warn and --bad (pill and dot .good
-   / .warn / .bad, tally) encode ONE data dimension, such as severity;
-   every other status is a plain neutral pill. Contrast: --ink 7:1 or
-   better on --bg and --panel, --muted 4.5:1 or better.
-
-   Dark mode follows prefers-color-scheme until the user picks one with
-   ThemeToggle (theme.tsx), which sets data-theme="light|dark" on <html>.
-   Type scale: 12 / 13 / 15 / 18 / 28 px; one radius, one shadow. */
+   Color: the accent family carries the brand. --good, --warn and --bad
+   (pill and dot .good / .warn / .bad) encode ONE data dimension; every
+   other status is a plain neutral pill. */
 
 :root {
   /* The brand: Reboot's (reboot.dev), the default when the user names no
@@ -116,6 +112,8 @@ a { color: var(--accent); text-decoration: none; } a:hover { text-decoration: un
 .brand-band + main > .stats:first-child { margin-top: calc(-1 * (var(--space-8) + var(--space-6))); }
 main { max-width: 1280px; margin: 0 auto; padding: var(--space-6) var(--space-4); display: grid; gap: var(--space-4); align-content: start; }
 main > * { min-width: 0; }  /* a wide child scrolls inside itself, never widens the page */
+.ui { --topbar-h: 0px; --font-display: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; --font-text: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-family: var(--font-text); padding: var(--space-4); display: grid; gap: var(--space-3); align-content: start; }  /* an MCP UI's root, inside the host's frame; system fonts, since a host may block web fonts */
+.ui > * { min-width: 0; }
 .page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--space-4); flex-wrap: wrap; }
 .page-head h1 { margin: 0; }
 .page-head .eyebrow { font-size: 13px; font-weight: 600; color: var(--muted); margin: 0 0 var(--space-1); }

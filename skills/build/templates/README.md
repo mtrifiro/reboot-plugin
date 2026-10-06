@@ -71,6 +71,8 @@ Both front doors share the Python shell:
 | `frontend/tsconfig.json`, `tsconfig.app.json`, `tsconfig.node.json` | Split app / Vite-config projects; `@api/*` path alias |
 | `frontend/vite-env.d.ts` | Vite client types (CSS modules, `import.meta.env`) |
 | `frontend/mcp/clicker/` | One UI: `index.html`, `main.tsx`, `App.tsx`, `App.module.css`, `index.css`. Its directory is the `UI(path="frontend/mcp/clicker")` of `Counter.show`; rename both together |
+| `frontend/mcp/styles.css` | The web app's tokens and classes (Reboot's brand by default) with system fonts (the `.ui` rule resets `--font-*`), shared by every UI (`mcp-ui/references/ui-design.md`) |
+| `frontend/mcp/host-theme.ts` | `useHostTheme()`: applies the host's light/dark theme and follows changes |
 
 ### `web-app/` adds
 
@@ -80,11 +82,13 @@ Both front doors share the Python shell:
 | `web/vite.config.ts` | Stock config plus `resolve.dedupe`, `server.host: true`, a project port (`5273`), `strictPort: true` |
 | `web/tsconfig.json`, `tsconfig.app.json`, `tsconfig.node.json` | Split app / Vite-config projects (React 18 / TypeScript 5); `tsconfig.node.json` has `"types": ["node"]`; the app half includes `src/`, generated client and all, and type-checks cleanly at 1.6.0 |
 | `web/.env.development` | `VITE_REBOOT_URL=http://localhost:9991` |
-| `web/index.html`, `web/src/main.tsx` | Entry; `RebootClientProvider url={REBOOT_URL}`; Google Fonts links; imports `styles.css` |
-| `web/src/styles.css` | Design tokens (light and dark), base elements, standard classes (`web-app/references/ui-design.md`) |
-| `web/src/App.tsx` | Sign-in gate on `useUser()`, one reader and one mutation, built on `styles.css` |
+| `web/index.html`, `web/src/main.tsx` | Entry; `RebootClientProvider url={REBOOT_URL}`; imports Reboot's typefaces from `@fontsource` (Space Grotesk, DM Sans, DM Mono; no font CDN), then `styles.css` |
+| `web/src/styles.css` | Design tokens in Reboot's brand by default (cream page, navy ink and accent, sage tint, `--good`/`--warn`/`--bad` for one data dimension; light and dark; `web-app/references/ui-design.md`, "The default look"), base elements, and classes for the page anatomy (`topbar`, `page-head`, `stats`), each primary view (`filter-panel`/`list-card`/`row`, `board`, `chart`, `feed`), detail (`drawer`, `kv`) and actions (`confirm-bar`, `notice`), listed at its top (`web-app/references/ui-design.md`) |
+| `web/src/App.tsx` | Sign-in gate on `useUser()`, one reader and one mutation, laid out in the page anatomy (title block with a lede, then a stat tile) |
 | `web/src/theme.tsx` | `ThemeToggle` (light/dark, saved in `localStorage`, OS setting until chosen) and `applySavedTheme()`, called in `main.tsx` before render |
 | `web/src/vite-env.d.ts` | Vite client types for `import.meta.env` |
+| `tests/conftest.py` | The look steps (phone fit, no loading text, own fonts, light and dark, no clipped labels); defined only when Playwright is installed (`python/references/testing-web-app.md`, "Look steps") |
+| `scripts/screenshots.py` | Signs in through the Development picker and saves every route at 1440 and 375 px, light and dark, to `screenshots/` (gitignored) for the design review (`web-app/references/ui-design.md`, principle 12) |
 
 ### `both/` adds
 
@@ -95,7 +99,10 @@ web app can find the user's counters) and the SPA beside the MCP UIs:
 | --- | --- |
 | `frontend/web/index.html`, `src/main.tsx` | The SPA entry; served by the backend at `/__/frontend/web/`, so the provider's default origin is the backend (no `.env.development`) |
 | `frontend/web/src/App.tsx` | Sign-in gate, the user's counters as cards, `useCounter({ id })` per card; imports the one generated client via `@api/…` |
-| `frontend/web/src/styles.css`, `theme.tsx` | The same stylesheet and light/dark toggle as `web-app/` |
+| `frontend/styles.css` | The one shared stylesheet (the same tokens and classes as `web-app/`); `web/src/styles.css` and `mcp/styles.css` `@import` it and add only their own rules, so the front doors can't drift |
+| `frontend/web/src/styles.css`, `theme.tsx` | The web app's import of the shared sheet, and the light/dark toggle as in `web-app/` |
+| `frontend/mcp/web-app-url.ts` | `webAppUrl(path)`: the web app's address for an MCP UI's "Open in web app": `VITE_WEB_APP_URL` in production, the backend's `/__/frontend/web/` in dev |
+| `scripts/screenshots.py` | As in `web-app/`, pointed at the backend's `/__/frontend/web` |
 
 `frontend/vite.config.ts` and `build.mjs` already serve and build
 `web/`. `tools/templates-smoke.sh` builds this template and runs its
