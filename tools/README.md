@@ -15,6 +15,7 @@ the plugin pins.
 | `lint-references.py` | Frontmatter on every reference; the seven template sections on converted ones | a field or section is missing or out of order |
 | `lint-frontmatter.py` | Front matter on every other Markdown file (below) | a file has no front matter block, or lacks its category's keys |
 | `run-evals.sh` | Behavior: what a fresh agent decides with and without the plugin (`evals/`, via `claude plugin eval`) | not run in CI (it costs model calls); exits 1 if a case scores under `--threshold` |
+| `style-check.py` | The four template stylesheets agree (web is the source; MCP adds `.ui`); `--browser` renders `style-check.html`, a page using every class, at 320/375/1280 px in light and dark (`--screenshots DIR` saves PNGs) | a copy drifts; the page overflows a screen or cuts off a short label |
 | `findings.py` | Schema + summary of `findings/` | an item breaks the schema, or a `resolved_by` section doesn't exist |
 
 `check-all.sh` runs them in order (`--full` adds the CLI, symbol and

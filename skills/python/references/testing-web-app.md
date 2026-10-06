@@ -157,6 +157,30 @@ def _double_clicks(web_app: WebApp, user: str, name: str, role: str) -> None:
   and renders its own `role="menu"`; HTML5 drag-and-drop often defeats
   `drag_to()`, so use `mouse.down()` / `move()` / `up()`.
 
+### Look steps (template `tests/conftest.py`)
+
+The web-app template ships five `Then` steps that fail a page breaking
+the floor of `web-app/references/ui-design.md`. One scenario per page,
+after it has loaded:
+
+```gherkin
+Then "alice" sees the web app fit a phone screen
+And "alice" sees no loading text in the web app
+And "alice" sees the web app use its own fonts
+And "alice" sees the web app work in light and dark
+And "alice" sees no clipped labels in the web app
+```
+
+Phone fit: no horizontal page scroll at 375 px. Loading text:
+"Loading…" or "Loading...". Own fonts: the body's font isn't the
+browser's default serif, and a named web font actually loaded (a system
+stack passes). Light and dark: the `Switch to … mode` toggle, required
+in a first build, changes the page background. Clipped labels: no short
+label (stat tile, group band, header, pill, tab, button) is cut off.
+
+These steps are a floor; the screenshot review (build Step 5) is where
+the design is judged.
+
 ### Signing in is clicked through, then bound
 
 ```gherkin

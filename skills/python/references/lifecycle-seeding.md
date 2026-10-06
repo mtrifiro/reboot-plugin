@@ -88,6 +88,23 @@ async def add_theaters(
     )
 ```
 
+### Demo data, in development only
+
+A believable dataset makes every view show something the first time it
+opens. Seed it only under `rbt dev`:
+
+```python
+from reboot.run_environments import running_rbt_dev
+
+
+async def initialize(context: InitializeContext):
+    if running_rbt_dev():  # false in tests, `rbt serve` and Reboot Cloud
+        await seed_demo(context, rooms=12, guests=8)
+```
+
+`running_rbt_dev()` is true under `rbt dev run` and false under the test
+harness (observed at 1.6.0); scenarios seed what each needs themselves.
+
 Tests call the same function smaller:
 `await seed_chain(self.rbt.create_external_context(name="seed", app_internal=True), theaters=2, seats_per_row=5)`.
 Assert against seed constants (`LAB_SHOWINGS`), not literals (`48`).

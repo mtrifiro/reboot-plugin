@@ -3,6 +3,7 @@ import {
   type UseCounterApi,
   useCounter,
 } from "@api/__app__/v1/__app___rbt_react";
+import { useHostTheme } from "../host-theme";
 import css from "./App.module.css";
 
 // `Counter.show=UI(...)` puts this UI on `Counter`, so the zero-arg
@@ -10,9 +11,10 @@ import css from "./App.module.css";
 // returns `{ counter, isLoading }`; `counter` is `undefined` until the
 // id resolves.
 export const CounterApp: FC = () => {
+  useHostTheme();
   const { counter } = useCounter();
   if (counter === undefined) {
-    return <div className={css.container}>loading...</div>;
+    return <Skeleton />;
   }
   return <CounterView counter={counter} />;
 };
@@ -32,16 +34,30 @@ const CounterView: FC<{ counter: UseCounterApi }> = ({ counter }) => {
   };
 
   if (isLoading && response === undefined) {
-    return <div className={css.container}>loading...</div>;
+    return <Skeleton />;
   }
 
   return (
-    <div className={css.container}>
-      <div className={css.value}>{response?.value ?? 0}</div>
-      <button onClick={increment} disabled={isPending}>
-        Increment
-      </button>
-      {error !== null && <div className={css.error}>{error}</div>}
-    </div>
+    <main className="ui">
+      <section className="panel" aria-labelledby="counter-label">
+        <h2 id="counter-label">Counter</h2>
+        <div className={css.value}>{response?.value ?? 0}</div>
+        <button className="primary" onClick={increment} disabled={isPending}>
+          Increment
+        </button>
+        {error !== null && <p className="error">{error}</p>}
+      </section>
+    </main>
   );
 };
+
+// Shaped like the real panel, so the frame doesn't jump when it loads.
+const Skeleton: FC = () => (
+  <main className="ui" aria-busy="true">
+    <section className="panel">
+      <div className="skeleton" style={{ width: 96, height: 18 }} />
+      <div className="skeleton" style={{ width: 64, height: 48, margin: "12px 0" }} />
+      <div className="skeleton" style={{ width: 110, height: 34 }} />
+    </section>
+  </main>
+);

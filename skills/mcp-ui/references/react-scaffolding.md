@@ -59,8 +59,11 @@ cd frontend && npm run build  # tsc -b, then build.mjs
   imports and `import.meta.env`.
 - **`frontend/mcp/clicker/`** — one UI: `index.html`, `main.tsx`
   (`RebootClientProvider` with no `url`; the backend serves the UI),
-  `App.tsx`, `App.module.css`, `index.css` (theme variables, with a
-  `[data-theme="light"]` override).
+  `App.tsx` (calls `useHostTheme()`), `App.module.css`, `index.css`
+  (imports the shared `frontend/mcp/styles.css`).
+- **`frontend/mcp/styles.css`, `frontend/mcp/host-theme.ts`** — the
+  tokens and classes every UI shares, and the hook that follows the
+  host's light/dark theme (`ui-design.md`).
 
 ### Adding a UI
 

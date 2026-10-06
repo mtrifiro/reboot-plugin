@@ -1,5 +1,5 @@
 ---
-description: "The design is ready for both front doors and highly visual by default."
+description: "The design is ready for both front doors, with a visual brief and a light/dark toggle."
 tags: [design]
 runs: 3
 max_turns: 40

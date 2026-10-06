@@ -42,27 +42,40 @@ export function App() {
 }
 
 // Mounted only once `user` exists, so every hook below it is called
-// with a real id.
+// with a real id. The page anatomy every page follows: a title block on
+// the brand band (what the page is for, what to do here, the main
+// action), then the summary overlapping the band's edge, then the content.
 function SignedIn({ user }: { user: UseUserApi }) {
   const { response } = user.useGet();
   return (
-    <main>
-      <div className="page-head">
-        <h1>__Title__</h1>
+    <>
+      <div className="brand-band">
+        <div className="page-head">
+          <div>
+            <h1>__Title__</h1>
+            <p className="lede">Your own count, saved to your account.</p>
+          </div>
+          <div className="actions">
+            <button className="primary" onClick={() => user.increment({ amount: 1 })}>
+              Increment
+            </button>
+          </div>
+        </div>
       </div>
-      <section className="panel" aria-labelledby="count-label">
-        <h2 id="count-label">Count</h2>
-        {response === undefined ? (
-          <div className="skeleton" style={{ width: 64, height: 40 }} />
-        ) : (
-          <p className="mono" style={{ fontSize: 40, margin: 0 }} data-testid="count">
-            {response.value ?? 0}
-          </p>
-        )}
-        <button className="primary" onClick={() => user.increment({ amount: 1 })}>
-          Increment
-        </button>
-      </section>
-    </main>
+      <main>
+        <section className="stats" aria-label="Summary">
+          <div className="stat">
+            <div className="label">Count</div>
+            {response === undefined ? (
+              <div className="skeleton" style={{ width: 64, height: 34 }} />
+            ) : (
+              <div className="value" data-testid="count">
+                {response.value ?? 0}
+              </div>
+            )}
+          </div>
+        </section>
+      </main>
+    </>
   );
 }

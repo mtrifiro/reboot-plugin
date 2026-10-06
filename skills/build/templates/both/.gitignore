@@ -21,3 +21,6 @@ __pycache__/
 # Frontend dependencies and build output.
 node_modules/
 frontend/dist/
+
+# Design-review screenshots, made by scripts/screenshots.py.
+screenshots/

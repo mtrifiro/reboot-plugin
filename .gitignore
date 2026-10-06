@@ -1,3 +1,4 @@
 
 # claude plugin eval output
 evals/results/
+.gstack/

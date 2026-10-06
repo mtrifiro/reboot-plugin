@@ -26,6 +26,7 @@ via `oauth=...` are not covered here.
 ```tsx
 import { useMcpApp } from "@reboot-dev/reboot-react";
 import { useCounter } from "@api/<pkg>/v1/<name>_rbt_react";
+import { webAppUrl } from "../web-app-url"; // `both` template: dev origin, or VITE_WEB_APP_URL
 
 export const ClickerApp = () => {
   // Both hooks before any early return.
@@ -41,8 +42,7 @@ export const ClickerApp = () => {
 
   const handlePopOut = async () => {
     // The web app reads this param on load and renders that entity.
-    const url =
-      "https://your-web-app.example/?counter=" + encodeURIComponent(counterId);
+    const url = webAppUrl("?counter=" + encodeURIComponent(counterId));
 
     // `window.open` is blocked in the sandboxed iframe: ask the host first,
     // fall back when not under a host or the host declines.
@@ -80,8 +80,11 @@ export const ClickerApp = () => {
   host and on early renders.
 - Calling `useMcpApp()` after the `counter === undefined` early return —
   hooks must run on every render.
-- A hardcoded `localhost` origin in a deployed app — take the web app's
-  origin from config.
+- A hardcoded origin, or `window.location.origin` alone, in a deployed
+  app — the widget runs on the backend's origin but the web app is on its
+  own domain. Use `webAppUrl()` (`frontend/mcp/web-app-url.ts`), which
+  reads `VITE_WEB_APP_URL` from `web/.env.production` (the `deploy`
+  skill sets it).
 
 ## Limits
 

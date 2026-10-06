@@ -121,6 +121,14 @@ Detect the layout (as the [run skill](../run/SKILL.md) does):
    VITE_REBOOT_URL=https://<application-id>.<cell>.rbt.cloud:9991
    ```
 
+   Dual-frontend: add the web app's own address in the same file. The
+   MCP UIs' builds read it too, so their "Open in web app" link
+   (`webAppUrl()`) leaves the backend for the published site:
+
+   ```sh
+   VITE_WEB_APP_URL=https://<your custom domain>/
+   ```
+
 2. **Add `_redirects`** to the SPA's `public/` (Vite copies it). The
    standard SPA fallback, so a hard load of `/some/route` isn't a 404:
 

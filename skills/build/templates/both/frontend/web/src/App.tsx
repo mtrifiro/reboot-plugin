@@ -57,26 +57,38 @@ function SignedIn({ user }: { user: UseUserApi }) {
     </button>
   );
   return (
-    <main>
-      <div className="page-head">
-        <h1>__Title__</h1>
-        {ids !== undefined && ids.length > 0 && create}
+    <>
+      <div className="brand-band">
+        <div className="page-head">
+          <div>
+            <h1>__Title__</h1>
+            <p className="lede">
+              Your counters, here and in Claude: one made in either shows up
+              in both.
+            </p>
+          </div>
+          {ids !== undefined && ids.length > 0 && (
+            <div className="actions">{create}</div>
+          )}
+        </div>
       </div>
-      {ids === undefined ? (
-        <div className="skeleton" style={{ width: 280, height: 120 }} />
-      ) : ids.length === 0 ? (
-        <div className="empty">
-          <h2>No counters yet</h2>
-          <div className="actions">{create}</div>
-        </div>
-      ) : (
-        <div className="cards">
-          {ids.map((id, i) => (
-            <CounterCard key={id} id={id} label={`Counter ${i + 1}`} />
-          ))}
-        </div>
-      )}
-    </main>
+      <main>
+        {ids === undefined ? (
+          <div className="skeleton" style={{ width: 280, height: 120 }} />
+        ) : ids.length === 0 ? (
+          <div className="empty">
+            <h2>No counters yet</h2>
+            <div className="actions">{create}</div>
+          </div>
+        ) : (
+          <section className="stats" aria-label="Your counters">
+            {ids.map((id, i) => (
+              <CounterCard key={id} id={id} label={`Counter ${i + 1}`} />
+            ))}
+          </section>
+        )}
+      </main>
+    </>
   );
 }
 
@@ -84,18 +96,20 @@ function CounterCard({ id, label }: { id: string; label: string }) {
   const counter = useCounter({ id });
   const { response } = counter.useGet();
   return (
-    <section className="card" aria-label={label}>
-      <h2>{label}</h2>
+    <div className="stat" aria-label={label}>
+      <div className="label">{label}</div>
       {response === undefined ? (
-        <div className="skeleton" style={{ width: 64, height: 40 }} />
+        <div className="skeleton" style={{ width: 64, height: 34 }} />
       ) : (
-        <p className="mono" style={{ fontSize: 40, margin: 0 }}>
-          {response.value ?? 0}
-        </p>
+        <div className="value">{response.value ?? 0}</div>
       )}
-      <button onClick={() => counter.increment({ amount: 1 })}>
+      <button
+        className="ghost small"
+        style={{ marginTop: "var(--space-2)" }}
+        onClick={() => counter.increment({ amount: 1 })}
+      >
         Increment
       </button>
-    </section>
+    </div>
   );
 }

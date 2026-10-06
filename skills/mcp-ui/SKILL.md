@@ -270,6 +270,7 @@ servicer before the first test):
 - `references/react-scaffolding.md` — Flattening `vite.config.ts` output breaks UI discovery at `frontend/dist/mcp/<name>/index.html`; copy `build/templates/mcp-ui/frontend/`; `npm install` before second `rbt generate`.
 - `references/react-app-tsx.md` — No-id `use<Type>()` returns `{ <type>, isLoading }`: render a child once the handle exists; `_rbt_react` imports; composing readers.
 - `python/references/react-generated-client.md` — Mutations resolve to `{ response, aborted }`, never throw; `rbt generate --react=` output: `use<Type>()` overloads, reader returns, naming.
+- `references/ui-design.md` — The web app's principles inside a host: shared `frontend/mcp/styles.css`, `useHostTheme()` (the host owns light/dark), one focused view, skeletons.
 - `references/pop-out-to-web-app.md` — only when a widget needs a "pop out into the web app" button.
 <!-- generated:end -->
 

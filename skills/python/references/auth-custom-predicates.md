@@ -91,6 +91,11 @@ async def is_team_member(*, context, state, **kwargs):
 allow_if(all=[has_verified_token, is_team_member])
 ```
 
+**Roles** are the same shape: the roster's reader returns each member's
+roles, and the predicate checks the one the method needs; give each
+method its rule in `<Type>.Authorizer(...)` (front desk checks guests
+in, housekeeping marks rooms clean).
+
 A predicate shared by several methods that reads `request` gets the union
 of their request models: annotate `request: Any = None` (or the union) and
 narrow with `isinstance` before reading a model-specific field.
