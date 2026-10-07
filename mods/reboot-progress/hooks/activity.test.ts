@@ -26,13 +26,15 @@ describe('activity', () => {
       done: 'Finished the backend',
     })
     expect(parseSummary('now: "Choosing chart colors"\ndone: NONE')).toEqual({ now: 'Choosing chart colors', done: null })
-    // Unlabeled, as Haiku sometimes replies: the first line is Now, the second Done.
+    // Unlabeled, as the model sometimes replies: the first line is Now, the second Done.
     expect(parseSummary('Designing the chart series\nNONE')).toEqual({ now: 'Designing the chart series', done: null })
     expect(parseSummary('Writing tests\nFinished the servicers')).toEqual({ now: 'Writing tests', done: 'Finished the servicers' })
     expect(parseSummary('Writing tests')).toEqual({ now: 'Writing tests', done: null })
     expect(parseSummary('DONE: Finished the backend')).toBe(null)
     expect(parseSummary('  \n')).toBe(null)
-    expect(parseSummary(`NOW: ${'x'.repeat(100)}`)!.now.length).toBe(60)
+    // NOW: NONE when the text only explains or plans: Now stays as it was.
+    expect(parseSummary('NOW: NONE\nDONE: NONE')).toEqual({ now: null, done: null })
+    expect(parseSummary(`NOW: ${'x'.repeat(100)}`)!.now!.length).toBe(60)
   })
 
   test('falls back to the first sentence', () => {
@@ -50,6 +52,11 @@ describe('activity', () => {
     })
   })
 
+  test('a text that only explains keeps Now', () => {
+    const shown = { justCompleted: null, now: 'Writing the code that builds the report' }
+    expect(startTask({ now: null, done: null }, shown)).toEqual(shown)
+  })
+
   test('the end of a turn waits and keeps Just completed', () => {
     expect(endTurn({ justCompleted: 'Finished the backend', now: 'x' })).toEqual({
       justCompleted: 'Finished the backend',
@@ -60,6 +67,6 @@ describe('activity', () => {
 
   test('the prompt carries the text and asks for a short phrase', () => {
     expect(summaryPrompt('Build it.', 'request')).toContain('<text>\nBuild it.\n</text>')
-    expect(summaryPrompt('Build it.', 'narration')).toContain('Plans, next steps')
+    expect(summaryPrompt('Build it.', 'narration')).toContain('not a programmer')
   })
 })

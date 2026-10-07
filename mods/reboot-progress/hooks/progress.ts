@@ -13,6 +13,20 @@ export const STEPS = [
 ] as const
 
 export const RUN = STEPS.length - 1
+
+/** The major steps the bar fills by, each covering one or more of STEPS. */
+export const MAJOR_STEPS: readonly (readonly number[])[] = [
+  [0], // planning
+  [1, 2], // data model, setup
+  [3, 4], // backend, access rules
+  [5], // screens
+  [6], // tests
+  [7], // launch
+]
+
+/** The major step a step belongs to, by index. */
+export const majorOf = (step: number): number =>
+  Math.max(0, MAJOR_STEPS.findIndex(steps => steps.includes(step)))
 const BACKEND = 3
 const TESTS = 6
 
@@ -105,27 +119,24 @@ export type Bar = {
   /** Filled cells, then empty ones; together `width`. */
   filled: number
   empty: number
-  /** `Backend · 4 of 8`, or `Done · 8 of 8`. */
-  label: string
 }
 
 /**
- * The progress bar for a build at `step`: the steps before it count as
- * done, so Design shows an empty bar and a finished build a full one.
+ * The progress bar for a build at `step`, over the major steps: those
+ * before the current one count as done, so planning shows an empty bar
+ * and a finished build a full one.
  */
 export function progressBar(step: number, isDone: boolean, width: number): Bar {
-  const done = isDone ? STEPS.length : step
-  const filled = Math.round((done / STEPS.length) * width)
-  const label = isDone
-    ? `Done · ${STEPS.length} of ${STEPS.length}`
-    : `${STEPS[step]} · ${step + 1} of ${STEPS.length}`
+  const major = majorOf(step)
+  const done = isDone ? MAJOR_STEPS.length : major
+  const filled = Math.round((done / MAJOR_STEPS.length) * width)
 
-  return { filled, empty: width - filled, label }
+  return { filled, empty: width - filled }
 }
 
-/** Bar cells for a band `columns` wide: what the label and Hide leave, 10 to 30. */
+/** Bar cells for a band `columns` wide: what its label leaves, 10 to 40. */
 export const barWidth = (columns: number): number =>
-  Math.max(10, Math.min(30, columns - 'Reboot Progress  '.length - '  Access rules · 5 of 8'.length - ' [ Hide ]'.length))
+  Math.max(10, Math.min(40, columns - 'Reboot  '.length))
 
 export type BuildState = { step: number; isDone: boolean; isRestored?: boolean }
 
@@ -172,4 +183,42 @@ export function asBuild(value: unknown): BuildState | null {
   return typeof step === 'number' && step >= 0 && step <= RUN && typeof isDone === 'boolean'
     ? { step, isDone }
     : null
+}
+
+// The bar's gradient: orange at its left end to green at its right, by hue
+// (through yellow) so the middle stays bright rather than olive.
+const FROM = { h: 25, s: 95, l: 53 } // orange, about #F97316
+const TO = { h: 142, s: 71, l: 45 } // green, about #22C55E
+
+function hex(h: number, s: number, l: number): string {
+  const a = (s / 100) * Math.min(l / 100, 1 - l / 100)
+  const channel = (n: number) => {
+    const k = (n + h / 30) % 12
+    const v = l / 100 - a * Math.max(-1, Math.min(k - 3, 9 - k, 1))
+    return Math.round(v * 255).toString(16).padStart(2, '0')
+  }
+
+  return `#${channel(0)}${channel(8)}${channel(4)}`
+}
+
+/**
+ * The filled cells as runs of one color each, left to right. A cell's color
+ * is its place along the whole bar, so a short fill is all orange and a
+ * full bar sweeps to green.
+ */
+export function barRuns(filled: number, width: number): { color: string; cells: number }[] {
+  const runs: { color: string; cells: number }[] = []
+  for (let i = 0; i < filled; i++) {
+    const t = width <= 1 ? 1 : i / (width - 1)
+    const color = hex(
+      FROM.h + (TO.h - FROM.h) * t,
+      FROM.s + (TO.s - FROM.s) * t,
+      FROM.l + (TO.l - FROM.l) * t,
+    )
+    const last = runs[runs.length - 1]
+    if (last && last.color === color) last.cells += 1
+    else runs.push({ color, cells: 1 })
+  }
+
+  return runs
 }

@@ -22,7 +22,7 @@ for (const surface of ['terminal', 'desktop'] as const) {
     })
 
     const empty = await $.ui.mount({ plugin: PLUGIN, surface, component: 'AbovePrompt', props: BAND as never })
-    expect(await empty.findAll({ text: /Progress/ })).toEqual([])
+    expect(await empty.findAll({ text: /Reboot/ })).toEqual([])
     await empty.unmount()
 
     await $.tool.call({ tool: 'Skill', skill: 'reboot:build' })
@@ -34,11 +34,12 @@ for (const surface of ['terminal', 'desktop'] as const) {
     })
 
     const band = await $.ui.mount({ plugin: PLUGIN, surface, component: 'AbovePrompt', props: BAND as never })
-    expect((await band.findAll({ type: 'Text', text: /Access rules · 5 of 8/ })).length).toBe(1)
-    expect((await band.findAll({ type: 'Text', text: /^█+$/ })).length).toBe(1)
+    // The bar alone: no stage label beside it.
+    expect(await band.findAll({ type: 'Text', text: /access rules|backend|screens|·/ })).toEqual([])
+    expect((await band.findAll({ type: 'Text', text: /^█+$/ })).length).toBeGreaterThan(0)
 
-    await band.press({ key: 'hide' })
-    expect(await band.findAll({ text: /Progress/ })).toEqual([])
+    await $.command.run({ command: 'reboot-progress', args: 'hide' } as never)
+    expect(await band.findAll({ text: /Reboot/ })).toEqual([])
   })
 }
 
@@ -50,7 +51,7 @@ for (const surface of ['terminal', 'desktop'] as const) {
 
       return h(Box, {}) as never
     })
-    // Haiku names the task in both tenses; the prompt goes through.
+    // The model names the task; the prompt goes through.
     on('model.complete', () => ({ value: { isAnswered: true, text: 'Writing the servicers\nWrote the servicers' } }) as never)
     on('prompt.submit', ($, e) => ({ text: e.text }) as never)
 
@@ -58,7 +59,7 @@ for (const surface of ['terminal', 'desktop'] as const) {
     await wait(50) // the summary runs in the background
 
     const band = await $.ui.mount({ plugin: PLUGIN, surface, component: 'AbovePrompt', props: BAND as never })
-    for (const text of ['Just completed', 'Now', 'Writing the servicers']) {
+    for (const text of ['Just completed', 'nothing this session', 'Now', 'Writing the servicers']) {
       expect((await band.findAll({ type: 'Text', text })).length).toBeGreaterThan(0)
     }
   })

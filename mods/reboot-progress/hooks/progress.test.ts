@@ -3,6 +3,7 @@ import { describe, expect, test } from 'claude-code/testing'
 import {
   asBuild,
   backendPort,
+  barRuns,
   barWidth,
   formatStatus,
   listeningPorts,
@@ -70,15 +71,20 @@ describe('status line', () => {
 
 describe('progress bar', () => {
   test('fills with the steps done', () => {
-    expect(progressBar(0, false, 16)).toEqual({ filled: 0, empty: 16, label: 'Planning · 1 of 8' })
-    expect(progressBar(3, false, 16)).toEqual({ filled: 6, empty: 10, label: 'Backend · 4 of 8' })
-    expect(progressBar(7, true, 16)).toEqual({ filled: 16, empty: 0, label: 'Done · 8 of 8' })
+    expect(progressBar(0, false, 12)).toEqual({ filled: 0, empty: 12 })
+    // Data model and Setup are one major step, as are Backend and Access rules.
+    expect(progressBar(1, false, 12)).toEqual({ filled: 2, empty: 10 })
+    expect(progressBar(2, false, 12)).toEqual({ filled: 2, empty: 10 })
+    expect(progressBar(4, false, 12)).toEqual({ filled: 4, empty: 8 })
+    expect(progressBar(5, false, 12)).toEqual({ filled: 6, empty: 6 })
+    expect(progressBar(7, false, 12)).toEqual({ filled: 10, empty: 2 })
+    expect(progressBar(7, true, 12)).toEqual({ filled: 12, empty: 0 })
   })
 
-  test('sizes to the band, 10 to 30 cells', () => {
-    expect(barWidth(40)).toBe(10)
-    expect(barWidth(60)).toBe(11)
-    expect(barWidth(200)).toBe(30)
+  test('sizes to the band, 10 to 40 cells', () => {
+    expect(barWidth(15)).toBe(10)
+    expect(barWidth(40)).toBe(32)
+    expect(barWidth(200)).toBe(40)
   })
 })
 
@@ -127,5 +133,23 @@ describe('build state', () => {
     expect(asBuild({ step: 99, isDone: false })).toBe(null)
     expect(asBuild('nonsense')).toBe(null)
     expect(asBuild(undefined)).toBe(null)
+  })
+})
+
+describe('bar colors', () => {
+  test('orange at the left end, green at the right', () => {
+    const full = barRuns(10, 10)
+    expect(full[0]!.color).toBe('#f97415') // orange
+    expect(full[full.length - 1]!.color).toBe('#21c45d') // green
+    // Through yellow, not olive: the middle cell is bright.
+    expect(full[4]!.color).toBe('#ace814')
+    expect(full.reduce((n, r) => n + r.cells, 0)).toBe(10)
+  })
+
+  test('a short fill stays at the orange end', () => {
+    const short = barRuns(2, 20)
+    expect(short[0]!.color).toBe('#f97415')
+    expect(short.reduce((n, r) => n + r.cells, 0)).toBe(2)
+    expect(barRuns(0, 20)).toEqual([])
   })
 })

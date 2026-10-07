@@ -8,6 +8,7 @@ import {
   RUN,
   asBuild,
   backendPort,
+  barRuns,
   barWidth,
   formatStatus,
   isBuildSkill,
@@ -27,9 +28,6 @@ const root = atom({ plugin: 'reboot-progress', key: 'root' } as const, null)
 const activity = atom({ plugin: 'reboot-progress', key: 'activity' } as const, null)
 
 const POLL_MS = 5000
-
-// The Hide button and the space before it.
-const HIDE_COLUMNS = ' [ Hide ]'.length
 
 const parent = (path: string) => path.replace(/\/[^/]*$/, '') || '/'
 
@@ -131,13 +129,13 @@ async function showTask($: EngineInterface, task: Task) {
   )
 }
 
-/** Summarizes `text` with a small model in the background, newest wins. */
+/** Summarizes `text` with Sonnet in the background, newest wins. */
 async function summarize($: EngineInterface, text: string, kind: 'narration' | 'request') {
   const id = ++latestSummary
   let task: Task | null = null
   try {
     const reply = await $.model.complete({
-      model: 'haiku',
+      model: 'sonnet',
       prompt: summaryPrompt(text, kind),
       maxTokens: 60,
       timeoutMs: 15000,
@@ -280,36 +278,38 @@ export const register: Register = on => {
     const act = await read($, activity)
     if (e.props.hasSurvey || (b === null && act === null) || (await read($, isHidden))) return next(e)
 
-    const { Box, Button, Text } = $.ui.resolve(e)
+    const { Box, Text } = $.ui.resolve(e)
     const bar = b && progressBar(b.step, b.isDone, barWidth(e.props.bodyColumns))
-    const hide = <Button key="hide" label="Hide" onPress={() => update($, isHidden, () => true)} />
 
-    // Reboot Progress on top with Hide; below it two columns, each a label over its status.
-    const column = Math.max(16, Math.floor((e.props.bodyColumns - HIDE_COLUMNS) / 2))
+    // The Reboot bar on top; below it two columns, each a label over its status.
+    const column = Math.max(16, Math.floor(e.props.bodyColumns / 2))
 
     return (
       <Box flexDirection="column">
         {bar && (
           <Box flexDirection="row" flexWrap="wrap">
-            <Text bold>Reboot Progress  </Text>
-            <Text color="green">{'█'.repeat(bar.filled)}</Text>
+            <Text bold>Reboot  </Text>
+            {barRuns(bar.filled, bar.filled + bar.empty).map(run => (
+              <Text color={run.color}>{'█'.repeat(run.cells)}</Text>
+            ))}
             <Text dimColor>{'░'.repeat(bar.empty)}</Text>
-            <Text>  {bar.label}  </Text>
-            {hide}
           </Box>
         )}
         {act !== null && (
           <Box flexDirection="row">
             <Box flexDirection="column" width={column}>
               <Text bold>Just completed</Text>
-              {/* Blank until this session finishes a task; the label stays put. */}
-              <Text dimColor wrap="truncate-end">{act.justCompleted ?? ''}</Text>
+              {/* Until this session finishes a task. */}
+              {act.justCompleted === null ? (
+                <Text dimColor italic>nothing this session</Text>
+              ) : (
+                <Text dimColor wrap="truncate-end">{act.justCompleted}</Text>
+              )}
             </Box>
             <Box flexDirection="column" width={column}>
               <Text bold>Now</Text>
               <Text wrap="truncate-end">{act.now}</Text>
             </Box>
-            {bar === null && hide}
           </Box>
         )}
       </Box>

@@ -5,10 +5,11 @@
 import type { Activity } from '../types'
 
 /**
- * What one text says, as Haiku reads it: what is being done now, and what
- * it says was just finished (null when it says nothing is).
+ * What one text says, as the model reads it: what is being done now (null
+ * when the text only explains or plans, so Now stays), and what it says
+ * was just finished (null when it says nothing is).
  */
-export type Task = { now: string; done: string | null }
+export type Task = { now: string | null; done: string | null }
 
 export const WAITING = 'Waiting for you'
 
@@ -32,15 +33,22 @@ export const isWorthSummarizing = (text: string): boolean => text.length >= 40
 
 export const summaryPrompt = (text: string, kind: 'narration' | 'request'): string =>
   (kind === 'narration'
-    ? 'Below is what a coding assistant just told the user.'
+    ? 'Below is what a coding assistant just told the user while building their app.'
     : 'Below is what a user just asked a coding assistant to do.') +
-  ' Reply with exactly two lines and nothing else:\n' +
-  'NOW: what the assistant is doing at this moment, in 3 to 8 words, as a present-tense ' +
-  'phrase starting with a verb ending in -ing ("Writing the Google access servicers"). ' +
-  'Plans, next steps and anything it says it will do later are not what it is doing now.\n' +
-  'DONE: what the text says the assistant has just finished, in 3 to 8 words in the past ' +
-  'tense ("Finished the backend"), or NONE. Only work the text clearly says is finished ' +
-  'counts; never planned, upcoming or ongoing work.\n' +
+  ' The user is not a programmer. Reply with exactly two lines and nothing else:\n' +
+  'NOW: the work on the app happening at this moment, in 3 to 8 words, as a present-tense ' +
+  'phrase starting with a verb ending in -ing; or NONE if the text only explains, reports ' +
+  'or plans.\n' +
+  'DONE: work on the app the text says was just finished, in 3 to 8 words in the past ' +
+  'tense; or NONE. Never planned, upcoming or ongoing work.\n\n' +
+  'Both in everyday words the user would understand: say what the work does for the app ' +
+  'or its users, not how the code is organized. Never reuse the text\'s technical terms ' +
+  '(module, servicer, workflow, schema, pure, I/O, function or file names). Describe the ' +
+  'work, never the talking ("Describing", "Explaining", "Outlining").\n' +
+  'Bad: "Writing the pure report-shaping module". Good: "Writing the code that builds the ' +
+  'report".\n' +
+  'Good: "Building the dashboard page", "Fixing a failing test", "Adding sign-in with ' +
+  'Google", "Finished the data model".\n' +
   'No quotes, no trailing periods.\n\n<text>\n' +
   text.slice(0, 4000) +
   '\n</text>'
@@ -50,7 +58,7 @@ const cleanLine = (line: string) =>
   clip(line.trim().replace(/^[-*\d.)\s]+/, '').replace(/^["'`]+|["'`.]+$/g, ''), 60)
 
 /**
- * The task in a `NOW:` / `DONE:` reply. Haiku sometimes drops the labels:
+ * The task in a `NOW:` / `DONE:` reply. The model sometimes drops the labels:
  * then the first line is Now and the second Done. null when there is no Now.
  */
 export function parseSummary(reply: string): Task | null {
@@ -58,12 +66,14 @@ export function parseSummary(reply: string): Task | null {
   const labeled = (label: string) =>
     lines.find(l => l.toUpperCase().startsWith(`${label}:`))?.slice(label.length + 1)
   const nowText = labeled('NOW') ?? (lines.some(l => /^DONE:/i.test(l)) ? undefined : lines[0])
-  const now = nowText === undefined ? '' : cleanLine(nowText)
-  if (now === '') return null
+  if (nowText === undefined) return null
   const doneText = labeled('DONE') ?? (labeled('NOW') === undefined ? lines[1] : undefined)
-  const done = doneText === undefined ? null : cleanLine(doneText)
+  const phrase = (raw: string | undefined) => {
+    const line = raw === undefined ? '' : cleanLine(raw)
+    return line === '' || /^none$/i.test(line) ? null : line
+  }
 
-  return { now, done: done === null || done === '' || /^none$/i.test(done) ? null : done }
+  return { now: phrase(nowText), done: phrase(doneText) }
 }
 
 /** The first sentence of `text`, clipped: what shows when no summary comes back. */
@@ -82,7 +92,7 @@ const clip = (s: string, max: number) => (s.length <= max ? s : `${s.slice(0, ma
  */
 export const startTask = (task: Task, shown: Activity | null): Activity => ({
   justCompleted: task.done ?? shown?.justCompleted ?? null,
-  now: task.now,
+  now: task.now ?? shown?.now ?? WAITING,
 })
 
 /** The turn is over: Just completed stays, and Now waits. */
