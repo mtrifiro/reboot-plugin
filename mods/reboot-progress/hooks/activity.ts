@@ -13,7 +13,7 @@ import type { Decision } from './progress'
  */
 export type Summary = { now: string | null; done: string | null; decision: Decision | null }
 
-export const WAITING = 'Waiting for you'
+export const WAITING = 'Idle'
 
 /** Now, from the moment a prompt is sent until its summary names the work. */
 export const STARTING = 'Working on your request'

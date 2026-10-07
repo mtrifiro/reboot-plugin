@@ -141,7 +141,7 @@ for (const surface of ['terminal', 'desktop'] as const) {
 }
 
 for (const surface of ['terminal', 'desktop'] as const) {
-  test(`Now leaves "Waiting for you" the moment a prompt is sent on ${surface}`, async ($, on) => {
+  test(`Now leaves "Idle" the moment a prompt is sent on ${surface}`, async ($, on) => {
     on('fs.exists', () => ({ value: false }) as never)
     on('ui.render', { component: 'AbovePrompt' }, ($, e) => {
       const { Box } = $.ui.resolve(e)
@@ -155,6 +155,6 @@ for (const surface of ['terminal', 'desktop'] as const) {
     await $.prompt.submit({ text: "let's add the YOY feature" } as never)
 
     const band = await $.ui.mount({ plugin: PLUGIN, surface, component: 'AbovePrompt', props: BAND as never })
-    expect(await band.findAll({ type: 'Text', text: /Waiting for you/ })).toEqual([])
+    expect(await band.findAll({ type: 'Text', text: /^Idle$/ })).toEqual([])
   })
 }

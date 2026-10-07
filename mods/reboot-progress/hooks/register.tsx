@@ -290,7 +290,7 @@ export const register: Register = on => {
   // slash command now, or the prompt's summary saying it is new work.
   on('prompt.submit', async ($, e, next) => {
     isTurnActive = true
-    // Never "Waiting for you" while a turn runs: until the summary names the
+    // Never "Idle" while a turn runs: until the summary names the
     // work, Now says the request is being worked on.
     await update($, activity, shown => ({ justCompleted: shown?.justCompleted ?? null, now: STARTING }))
     const b = await read($, build)
