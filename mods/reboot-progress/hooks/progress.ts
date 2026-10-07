@@ -121,3 +121,37 @@ export function progressBar(step: number, isDone: boolean, width: number): Bar {
 /** Bar cells for a band `columns` wide: what the label and Hide leave, 10 to 30. */
 export const barWidth = (columns: number): number =>
   Math.max(10, Math.min(30, columns - 'Build  '.length - '  Authorizers · 5 of 8'.length - ' [ Hide ]'.length))
+
+export type BuildState = { step: number; isDone: boolean }
+
+/**
+ * The build after a call that is evidence of `step`. A build skill opens
+ * a new build unless one is under way; other evidence moves a build
+ * forward only, and starts one when none is known (a session resumed
+ * mid-build without the skill), short of Run, which a finished app's
+ * restart also shows.
+ */
+export function nextBuild(
+  b: BuildState | null,
+  step: number,
+  isBuildSkillCall: boolean,
+): BuildState | null {
+  if (isBuildSkillCall) return b && !b.isDone ? b : { step: 0, isDone: false }
+  if (b === null) return step >= 1 && step < RUN ? { step, isDone: false } : null
+  if (b.isDone) return b
+
+  return { step: Math.max(b.step, step), isDone: step === RUN }
+}
+
+/** The `$.store` key holding a project's build across sessions. */
+export const storeKey = (root: string): string => `build:${root}`
+
+/** A stored value, if it is a build. */
+export function asBuild(value: unknown): BuildState | null {
+  if (typeof value !== 'object' || value === null) return null
+  const { step, isDone } = value as Record<string, unknown>
+
+  return typeof step === 'number' && step >= 0 && step <= RUN && typeof isDone === 'boolean'
+    ? { step, isDone }
+    : null
+}

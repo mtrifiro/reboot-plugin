@@ -4,14 +4,17 @@ import type { EngineInterface, Register } from 'claude-code'
 import type { Build } from '../types'
 import {
   RUN,
+  asBuild,
   backendPort,
   barWidth,
   formatStatus,
   isBuildSkill,
   listeningPorts,
   metricsPort,
+  nextBuild,
   progressBar,
   stepOf,
+  storeKey,
 } from './progress'
 import type { Call, Health } from './progress'
 
@@ -110,6 +113,30 @@ function callOf(e: { tool: string } & Record<string, unknown>): Call | null {
 // The module's own; a reload starts them over.
 let wasBackendUp = false
 let isPolling = false
+let restoredRoot: string | null = null
+
+/** Sets the session's build and keeps it for the project across sessions. */
+async function saveBuild($: EngineInterface, b: Build | null) {
+  await update($, build, () => b)
+  // Keeping it for later sessions is a nicety; never let it cost the band.
+  try {
+    const dir = (await read($, root)) ?? (await findProject($))
+    if (!dir) return
+    if (b === null) await $.store.delete(storeKey(dir))
+    else await $.store.set(storeKey(dir), b)
+  } catch {
+    return
+  }
+}
+
+/** Once per project: a session that finds one picks up its stored build. */
+async function restoreBuild($: EngineInterface, dir: string) {
+  if (restoredRoot === dir) return
+  restoredRoot = dir
+  if ((await read($, build)) !== null) return
+  const stored = asBuild(await $.store.get(storeKey(dir)))
+  if (stored && !stored.isDone) await update($, build, () => stored)
+}
 
 async function poll($: EngineInterface) {
   if (isPolling) return
@@ -120,6 +147,7 @@ async function poll($: EngineInterface) {
       $.ui.status(undefined)
       return
     }
+    await restoreBuild($, dir)
     const h = await health($, dir)
     if (wasBackendUp && !h.backend) $.ui.toast('Reboot backend stopped')
     wasBackendUp = h.backend
@@ -145,7 +173,7 @@ export const register: Register = on => {
   on('command.run', { command: 'reboot-progress' }, async ($, e) => {
     const arg = e.args.trim()
     if (arg === 'reset') {
-      await update($, build, () => null)
+      await saveBuild($, null)
       return { text: 'Build progress cleared.' }
     }
     const hide = arg === 'hide' || (arg === '' && !(await read($, isHidden)))
@@ -168,16 +196,9 @@ export const register: Register = on => {
     const step = stepOf(call)
     if (step === null) return ran
 
-    await update($, build, (b): Build | null => {
-      // A build skill opens a new build unless one is under way.
-      if (call.tool === 'Skill' && isBuildSkill(call.skill)) {
-        return b && !b.isDone ? b : { step: 0, isDone: false }
-      }
-      // Other evidence only moves a build that is under way, and only forward.
-      if (b === null || b.isDone) return b
-
-      return { step: Math.max(b.step, step), isDone: step === RUN }
-    })
+    const b = await read($, build)
+    const after = nextBuild(b, step, call.tool === 'Skill' && isBuildSkill(call.skill))
+    if (JSON.stringify(after) !== JSON.stringify(b)) await saveBuild($, after)
     if (step === RUN) void poll($)
 
     return ran
@@ -186,7 +207,7 @@ export const register: Register = on => {
   // A finished build shows its last row until the next prompt, then clears.
   on('prompt.submit', async ($, e, next) => {
     const b = await read($, build)
-    if (b?.isDone) await update($, build, () => null)
+    if (b?.isDone) await saveBuild($, null)
 
     return next(e)
   }).catch(($, e, next) => next(e))

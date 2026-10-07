@@ -1,6 +1,16 @@
 import { describe, expect, test } from 'claude-code/testing'
 
-import { backendPort, barWidth, formatStatus, listeningPorts, metricsPort, progressBar, stepOf } from './progress'
+import {
+  asBuild,
+  backendPort,
+  barWidth,
+  formatStatus,
+  listeningPorts,
+  metricsPort,
+  nextBuild,
+  progressBar,
+  stepOf,
+} from './progress'
 
 const P = '/work/todo-list'
 const write = (path: string, text = '') => stepOf({ tool: 'Write', file_path: `${P}/${path}`, text })
@@ -66,5 +76,32 @@ describe('progress bar', () => {
     expect(barWidth(40)).toBe(10)
     expect(barWidth(60)).toBe(22)
     expect(barWidth(200)).toBe(30)
+  })
+})
+
+describe('build state', () => {
+  test('a build skill opens a build unless one is under way', () => {
+    expect(nextBuild(null, 0, true)).toEqual({ step: 0, isDone: false })
+    expect(nextBuild({ step: 3, isDone: false }, 0, true)).toEqual({ step: 3, isDone: false })
+    expect(nextBuild({ step: 7, isDone: true }, 0, true)).toEqual({ step: 0, isDone: false })
+  })
+
+  test('evidence starts a build a resumed session never saw open', () => {
+    expect(nextBuild(null, 3, false)).toEqual({ step: 3, isDone: false })
+    // Running a finished app is not a build.
+    expect(nextBuild(null, 7, false)).toBe(null)
+  })
+
+  test('evidence moves forward only, and Run finishes', () => {
+    expect(nextBuild({ step: 4, isDone: false }, 2, false)).toEqual({ step: 4, isDone: false })
+    expect(nextBuild({ step: 4, isDone: false }, 7, false)).toEqual({ step: 7, isDone: true })
+    expect(nextBuild({ step: 7, isDone: true }, 3, false)).toEqual({ step: 7, isDone: true })
+  })
+
+  test('only a well-formed stored build is restored', () => {
+    expect(asBuild({ step: 2, isDone: false })).toEqual({ step: 2, isDone: false })
+    expect(asBuild({ step: 99, isDone: false })).toBe(null)
+    expect(asBuild('nonsense')).toBe(null)
+    expect(asBuild(undefined)).toBe(null)
   })
 })
