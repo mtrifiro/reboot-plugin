@@ -30,7 +30,8 @@
       ],
       "dependencies": [
         "reboot-progress",
-        "reboot-schema-guard"
+        "reboot-schema-guard",
+        "reboot-activity"
       ]
     },
     {
@@ -42,6 +43,11 @@
       "name": "reboot-schema-guard",
       "description": "Claude Code only: stops API edits that would keep a Reboot app with persisted state from booting.",
       "source": "./mods/reboot-schema-guard"
+    },
+    {
+      "name": "reboot-activity",
+      "description": "Claude Code only: a status line saying, in a few words, what Claude is working on right now.",
+      "source": "./mods/reboot-activity"
     }
   ]
 }
