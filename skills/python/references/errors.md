@@ -142,6 +142,7 @@ here. -->
 | `Missing required libraries: reboot.std.collections.v1.sorted_map` | `queue_library()` registered without `sorted_map_library()` | Add `sorted_map_library()` | `python/references/stdlib-queue.md` |
 | `Missing tag for property '` | `Field` without `tag=` | Add a unique tag | `python/references/api-pydantic.md` |
 | `MixedContextsError` / `has previously been used by a different \`Context\`` | One `WeakReference` reused across contexts | Fresh `Type.ref(id)` per context | `python/references/rpc-refs.md` |
+| Models page shows types the project no longer has, no call lines, footer "API checked at" frozen at an earlier time | A dashboard from an earlier project in the same folder; the cwd check passes (1.6.0) | Step 3: stop it, start fresh, `uv run rbt generate` once | `dashboard/SKILL.md` |
 | `ModuleNotFoundError: No module named '<pkg>.v1.<name>'` | `api` missing from `pytest.ini`'s `pythonpath` | Copy the template's `pytest.ini` | `python/references/testing-project-setup.md` |
 | `ModuleNotFoundError: No module named 'reboot.std.oauth'` | The 1.6.0 wheel lacks the `oauth` library (Paths A/B) | Install the vendored `reboot-std-oauth` package (`stdlib-oauth-tokens.md`) | `python/references/auth-external-api-calls.md`, `python/references/stdlib-oauth-tokens.md` |
 | `ModuleNotFoundError: No module named 'reboot.std.presence.subscriber'` | Imported a proto package path | Import from `reboot.std.presence.v1.presence` | `python/references/stdlib-presence.md` |

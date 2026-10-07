@@ -82,7 +82,14 @@ pgrep -fl "rbt dashboard"
 lsof -a -d cwd -p <pid>
 ```
 
-- One runs from this project root: surface the URL and stop.
+- One you started in this session runs from this project root:
+  surface the URL and stop.
+- One from this project root you didn't start (an earlier session's):
+  the folder may have held another project since, whose API it still
+  shows, and it doesn't re-read a replaced one (1.6.0). Stop it
+  (`kill -INT <pid>`), start fresh (Step 4), then run
+  `uv run rbt generate` once so it draws the calls (Known issues,
+  "stale analysis").
 - Otherwise start this project's with `--port=<port>`; a later
   `rbt dev run` then needs `--dashboard-port=<port>`.
 - `pgrep` finds this project's but the probe fails: it outlived its port
@@ -133,6 +140,7 @@ continue the build.
 | "code checked at" an old time, deleted methods still drawn, or "Your API files changed since the generated code was written" right after `rbt generate` | Stale analysis after a dashboard restart (reboot-crm, 1.6.0) | Run `uv run rbt generate` once more |
 | Dashboard log keeps retrying an old app address (`WatchApi` ... `Connection refused`) after an expunge and restart | Watch tasks outlived their app (reboot-crm, 1.6.0) | Stop the dashboard, delete `.rbt/dashboard`, restart it |
 | Probe on 9871 succeeds but the page shows another project's API | Another project's dashboard got 9871 first | Step 3: start with `--port=<port>` |
+| Models page shows types the project no longer has, no call lines, footer "API checked at" frozen at an earlier time | A dashboard from an earlier project in the same folder; the cwd check passes (1.6.0) | Step 3: stop it, start fresh, `uv run rbt generate` once |
 | Tab shows "live" off; a fresh `rbt dev run` finds no dashboard; `rbt dashboard` processes still running | The dashboard outlived its 9871 listener (reboot-crm, 1.6.0) | Stop it and start a fresh one |
 | Next start fails with `cannot bind ... Address already in use` on 9871 | A killed dashboard left its Envoy holding the port (student-system, 1.5.0) | `lsof -t -iTCP:9871 -sTCP:LISTEN \| xargs kill`, after checking the holder (see the [run skill](../run/SKILL.md) § "Stop, restart, reset") |
 | `rbt: error: unrecognized arguments` | A flag `rbt dashboard` does not take (e.g. `--no-open-browser`, `--api-directory`) | Use only the four flags in Step 4 |
