@@ -2,6 +2,7 @@ import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
 import type { Build } from '../types'
+import { cleanSummary, fallback, isWorthSummarizing, summaryPrompt, textOf, waiting } from './activity'
 import {
   RUN,
   asBuild,
@@ -21,6 +22,7 @@ import type { Call, Health } from './progress'
 const build = atom({ plugin: 'reboot-progress', key: 'build' } as const, null)
 const isHidden = atom({ plugin: 'reboot-progress', key: 'isHidden' } as const, false)
 const root = atom({ plugin: 'reboot-progress', key: 'root' } as const, null)
+const activity = atom({ plugin: 'reboot-progress', key: 'activity' } as const, null)
 
 const POLL_MS = 5000
 
@@ -114,6 +116,33 @@ function callOf(e: { tool: string } & Record<string, unknown>): Call | null {
 let wasBackendUp = false
 let isPolling = false
 let restoredRoot: string | null = null
+let lastActivity: string | null = null
+let isTurnActive = false
+let latestSummary = 0 // the newest summary asked for; older replies are dropped
+
+/** Shows what is being worked on: `text`, or Waiting once the turn is over. */
+async function showActivity($: EngineInterface, text: string) {
+  lastActivity = text
+  await update($, activity, () => (isTurnActive ? text : waiting(text)))
+}
+
+/** Summarizes `text` with a small model in the background, newest wins. */
+async function summarize($: EngineInterface, text: string, kind: 'narration' | 'request') {
+  const id = ++latestSummary
+  let summary = ''
+  try {
+    const reply = await $.model.complete({
+      model: 'haiku',
+      prompt: summaryPrompt(text, kind),
+      maxTokens: 40,
+      timeoutMs: 15000,
+    })
+    if (reply.isAnswered) summary = cleanSummary(reply.text)
+  } catch {
+    summary = ''
+  }
+  if (id === latestSummary) await showActivity($, summary || fallback(text))
+}
 
 /** Sets the session's build and keeps it for the project across sessions. */
 async function saveBuild($: EngineInterface, b: Build | null) {
@@ -135,7 +164,7 @@ async function restoreBuild($: EngineInterface, dir: string) {
   restoredRoot = dir
   if ((await read($, build)) !== null) return
   const stored = asBuild(await $.store.get(storeKey(dir)))
-  if (stored && !stored.isDone) await update($, build, () => stored)
+  if (stored && !stored.isDone) await update($, build, () => ({ ...stored, isRestored: true }))
 }
 
 async function poll($: EngineInterface) {
@@ -161,9 +190,10 @@ export const register: Register = on => {
   on('session.start', async ($, e, next) => {
     await $.command.register({
       name: 'reboot-progress',
-      description: 'Show, hide or reset the Reboot build progress band',
+      description: 'Show, hide or reset the band above the prompt (activity and build progress)',
       argumentHint: '[show|hide|reset]',
     })
+    await update($, activity, () => waiting(null))
     void poll($)
     $.clock.every(POLL_MS, () => void poll($))
 
@@ -179,7 +209,7 @@ export const register: Register = on => {
     const hide = arg === 'hide' || (arg === '' && !(await read($, isHidden)))
     await update($, isHidden, () => hide)
 
-    return { text: hide ? 'Build progress hidden.' : 'Build progress shown.' }
+    return { text: hide ? 'Band hidden.' : 'Band shown.' }
   })
 
   on('tool.call', async ($, e, next) => {
@@ -206,26 +236,60 @@ export const register: Register = on => {
 
   // A finished build shows its last row until the next prompt, then clears.
   on('prompt.submit', async ($, e, next) => {
+    isTurnActive = true
+    if (e.text.trim()) void summarize($, e.text, 'request')
     const b = await read($, build)
     if (b?.isDone) await saveBuild($, null)
 
     return next(e)
   }).catch(($, e, next) => next(e))
 
+  // The model's own narration on the main thread, not a subagent's.
+  on('session.append', { door: 'response' }, async ($, e, next) => {
+    const appended = await next(e)
+    if (e.agentId === undefined && e.message.type === 'assistant') {
+      const text = textOf(e.message.content)
+      if (isWorthSummarizing(text)) void summarize($, text, 'narration')
+    }
+
+    return appended
+  }).catch(($, e, next) => next(e))
+
+  on('turn.complete', async ($, e, next) => {
+    isTurnActive = false
+    await update($, activity, () => waiting(lastActivity))
+
+    return next(e)
+  })
+
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
     const b = await read($, build)
-    if (e.props.hasSurvey || b === null || (await read($, isHidden))) return next(e)
+    const now = await read($, activity)
+    if (e.props.hasSurvey || (b === null && now === null) || (await read($, isHidden))) return next(e)
 
     const { Box, Button, Text } = $.ui.resolve(e)
-    const bar = progressBar(b.step, b.isDone, barWidth(e.props.bodyColumns))
+    const bar = b && progressBar(b.step, b.isDone, barWidth(e.props.bodyColumns))
+    const hide = <Button key="hide" label="Hide" onPress={() => update($, isHidden, () => true)} />
 
+    // "Now" above "Build"; Hide ends the first row.
     return (
-      <Box flexDirection="row" flexWrap="wrap">
-        <Text bold>Build  </Text>
-        <Text color="green">{'█'.repeat(bar.filled)}</Text>
-        <Text dimColor>{'░'.repeat(bar.empty)}</Text>
-        <Text>  {bar.label}  </Text>
-        <Button key="hide" label="Hide" onPress={() => update($, isHidden, () => true)} />
+      <Box flexDirection="column">
+        {now !== null && (
+          <Box flexDirection="row">
+            <Text bold>Now       </Text>
+            <Text wrap="truncate-end">{now}  </Text>
+            {hide}
+          </Box>
+        )}
+        {bar && (
+          <Box flexDirection="row" flexWrap="wrap">
+            <Text bold>Progress  </Text>
+            <Text color="green">{'█'.repeat(bar.filled)}</Text>
+            <Text dimColor>{'░'.repeat(bar.empty)}</Text>
+            <Text>  {bar.label}  </Text>
+            {now === null && hide}
+          </Box>
+        )}
       </Box>
     )
   })

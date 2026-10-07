@@ -67,14 +67,14 @@ describe('status line', () => {
 
 describe('progress bar', () => {
   test('fills with the steps done', () => {
-    expect(progressBar(0, false, 16)).toEqual({ filled: 0, empty: 16, label: 'Design · 1 of 8' })
-    expect(progressBar(3, false, 16)).toEqual({ filled: 6, empty: 10, label: 'Servicer · 4 of 8' })
+    expect(progressBar(0, false, 16)).toEqual({ filled: 0, empty: 16, label: 'Planning · 1 of 8' })
+    expect(progressBar(3, false, 16)).toEqual({ filled: 6, empty: 10, label: 'Backend · 4 of 8' })
     expect(progressBar(7, true, 16)).toEqual({ filled: 16, empty: 0, label: 'Done · 8 of 8' })
   })
 
   test('sizes to the band, 10 to 30 cells', () => {
     expect(barWidth(40)).toBe(10)
-    expect(barWidth(60)).toBe(22)
+    expect(barWidth(60)).toBe(18)
     expect(barWidth(200)).toBe(30)
   })
 })
@@ -84,6 +84,12 @@ describe('build state', () => {
     expect(nextBuild(null, 0, true)).toEqual({ step: 0, isDone: false })
     expect(nextBuild({ step: 3, isDone: false }, 0, true)).toEqual({ step: 3, isDone: false })
     expect(nextBuild({ step: 7, isDone: true }, 0, true)).toEqual({ step: 0, isDone: false })
+  })
+
+  test('a build skill restarts a build restored from an earlier session', () => {
+    expect(nextBuild({ step: 6, isDone: false, isRestored: true }, 0, true)).toEqual({ step: 0, isDone: false })
+    // Evidence in this session makes it this session's.
+    expect(nextBuild({ step: 6, isDone: false, isRestored: true }, 5, false)).toEqual({ step: 6, isDone: false })
   })
 
   test('evidence starts a build a resumed session never saw open', () => {

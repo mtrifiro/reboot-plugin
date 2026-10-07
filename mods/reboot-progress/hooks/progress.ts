@@ -2,14 +2,14 @@
 // line reads. Kept free of `$` so the tests can call it directly.
 
 export const STEPS = [
-  'Design',
-  'API',
-  'Shell',
-  'Servicer',
-  'Authorizers',
-  'Frontend',
+  'Planning', // design: agree on the app before any code
+  'Data model', // the API definition
+  'Setup', // the project shell from a template
+  'Backend', // the servicers
+  'Access rules', // the authorizers
+  'Screens', // the frontend
   'Tests',
-  'Run',
+  'Launch', // rbt dev run
 ] as const
 
 export const RUN = STEPS.length - 1
@@ -100,7 +100,7 @@ export type Bar = {
   /** Filled cells, then empty ones; together `width`. */
   filled: number
   empty: number
-  /** `Servicer · 4 of 8`, or `Done · 8 of 8`. */
+  /** `Backend · 4 of 8`, or `Done · 8 of 8`. */
   label: string
 }
 
@@ -120,13 +120,15 @@ export function progressBar(step: number, isDone: boolean, width: number): Bar {
 
 /** Bar cells for a band `columns` wide: what the label and Hide leave, 10 to 30. */
 export const barWidth = (columns: number): number =>
-  Math.max(10, Math.min(30, columns - 'Build  '.length - '  Authorizers · 5 of 8'.length - ' [ Hide ]'.length))
+  Math.max(10, Math.min(30, columns - 'Progress  '.length - '  Access rules · 5 of 8'.length - ' [ Hide ]'.length))
 
-export type BuildState = { step: number; isDone: boolean }
+export type BuildState = { step: number; isDone: boolean; isRestored?: boolean }
 
 /**
  * The build after a call that is evidence of `step`. A build skill opens
- * a new build unless one is under way; other evidence moves a build
+ * a new build unless this session has one under way (one restored from an
+ * earlier session doesn't count: the skill means a new flow); other
+ * evidence moves a build
  * forward only, and starts one when none is known (a session resumed
  * mid-build without the skill), short of Run, which a finished app's
  * restart also shows.
@@ -136,7 +138,7 @@ export function nextBuild(
   step: number,
   isBuildSkillCall: boolean,
 ): BuildState | null {
-  if (isBuildSkillCall) return b && !b.isDone ? b : { step: 0, isDone: false }
+  if (isBuildSkillCall) return b && !b.isDone && !b.isRestored ? b : { step: 0, isDone: false }
   if (b === null) return step >= 1 && step < RUN ? { step, isDone: false } : null
   if (b.isDone) return b
 

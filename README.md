@@ -163,14 +163,13 @@ differ because of Codex limitations:
   hooks can only _deny_ a tool, never approve one, so there is no
   equivalent — reduce prompts with Codex's own `approval_policy` /
   `sandbox_mode` (e.g. `workspace-write` with network access) instead.
-- **No mods.** Installing `reboot` in Claude Code also installs three
+- **No mods.** Installing `reboot` in Claude Code also installs two
   mods (function-hook plugins in `mods/`, listed as its
-  dependencies): `reboot-progress` shows the build's progress above the
-  prompt and the app's backend, frontend and tunnel health in the
-  status line; `reboot-activity` adds a status line saying what Claude
-  is working on, summarized by Haiku from its narration;
-  `reboot-schema-guard` refuses API edits that an app with persisted
-  dev state couldn't boot over. Codex has no
+  dependencies): `reboot-progress` shows, above the prompt, what Claude
+  is working on (summarized by Haiku from its narration) and the build's
+  progress, and the app's backend, frontend and tunnel health in the
+  status line; `reboot-schema-guard` refuses API edits that an app with
+  persisted dev state couldn't boot over. Codex has no
   equivalent, and its own catalog doesn't list them. The skills carry
   the same rules for both.
 
@@ -226,7 +225,7 @@ plugin/
 │                             # and the skill reminder (both CLIs)
 ├── mods/                     # Claude Code mods, installed as reboot's
 │                             # dependencies (reboot-progress,
-│                             # reboot-activity, reboot-schema-guard)
+│                             # reboot-schema-guard)
 └── skills/
     └── <name>/
         ├── SKILL.md          # skill definition (YAML frontmatter)

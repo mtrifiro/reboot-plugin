@@ -1,9 +1,0 @@
-{
-  "name": "reboot-activity",
-  "version": "0.1.0",
-  "description": "A status line saying, in a few words, what Claude is working on right now",
-  "author": {
-    "name": "Reboot",
-    "email": "team@reboot.dev"
-  }
-}

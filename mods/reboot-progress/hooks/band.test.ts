@@ -16,7 +16,7 @@ for (const surface of ['terminal', 'desktop'] as const) {
     })
 
     const empty = await $.ui.mount({ plugin: PLUGIN, surface, component: 'AbovePrompt', props: BAND as never })
-    expect(await empty.findAll({ text: /Build/ })).toEqual([])
+    expect(await empty.findAll({ text: /Progress/ })).toEqual([])
     await empty.unmount()
 
     await $.tool.call({ tool: 'Skill', skill: 'reboot:build' })
@@ -28,10 +28,10 @@ for (const surface of ['terminal', 'desktop'] as const) {
     })
 
     const band = await $.ui.mount({ plugin: PLUGIN, surface, component: 'AbovePrompt', props: BAND as never })
-    expect((await band.findAll({ type: 'Text', text: /Authorizers · 5 of 8/ })).length).toBe(1)
+    expect((await band.findAll({ type: 'Text', text: /Access rules · 5 of 8/ })).length).toBe(1)
     expect((await band.findAll({ type: 'Text', text: /^█+$/ })).length).toBe(1)
 
     await band.press({ key: 'hide' })
-    expect(await band.findAll({ text: /Build/ })).toEqual([])
+    expect(await band.findAll({ text: /Progress/ })).toEqual([])
   })
 }
