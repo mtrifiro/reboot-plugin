@@ -1,5 +1,5 @@
 // Pure logic: which step a tool call shows, how the current task moves
-// through its kind's phases, and how the status line reads. Kept free of `$` so the tests can call it directly.
+// through its steps, and how the status line reads. Kept free of `$` so the tests can call it directly.
 
 export const STEPS = [
   'Planning', // design: agree on the app before any code
@@ -19,21 +19,6 @@ const TESTS = 6
 
 /** The kind of work a task is: a whole new app, a feature, or a bug fix. */
 export type TaskKind = 'build' | 'feature' | 'fix'
-
-/**
- * Each kind's phases, the steps the bar fills by, each covering some of
- * STEPS. A feature follows the build skill's Update Flow; a fix is find,
- * fix, test.
- */
-export const PHASES: Record<TaskKind, readonly (readonly number[])[]> = {
-  build: [[0], [1, 2], [3, 4], [5], [6], [7]], // planning, data model, backend, screens, tests, launch
-  feature: [[0], [1, 2], [3, 4], [5], [6, 7]], // agree, data model, backend, screens, tests
-  fix: [[0], [1, 2, 3, 4, 5], [6, 7]], // find the cause, fix it, test it
-}
-
-/** The phase a step belongs to in a kind of task, by index. */
-export const phaseOf = (kind: TaskKind, step: number): number =>
-  Math.max(0, PHASES[kind].findIndex(steps => steps.includes(step)))
 
 export type Call =
   | { tool: 'Skill'; skill: string }
@@ -156,37 +141,6 @@ export function metricsPort(ps: string): number | null {
   return m ? Number(m[1]) : 4040
 }
 
-export type Bar = {
-  /** Filled cells, then empty ones; together `width`. */
-  filled: number
-  empty: number
-}
-
-/**
- * The progress bar for a task, over its kind's phases: those before the
- * current one count as done and the current one as half, so a task shows
- * a little from its start and a finished one a full bar.
- */
-export function progressBar(task: Task, width: number): Bar {
-  const phases = PHASES[task.kind].length
-  const done = task.isDone ? phases : phaseOf(task.kind, task.step) + 0.5
-  const filled = Math.round((done / phases) * width)
-
-  return { filled, empty: width - filled }
-}
-
-/** What the task is, before the bar: `Building`, `Adding Feature`, `Fixing`, or `Done`. */
-export const taskLabel = (t: Task): string =>
-  t.isDone ? 'Done' : { build: 'Building', feature: 'Adding Feature', fix: 'Fixing' }[t.kind]
-
-/**
- * Bar cells for a band `columns` wide: at most 48, and two-thirds of what
- * its labels leave; the last third is slack for a surface whose text runs
- * wider than its measured columns (the desktop app's proportional font).
- */
-export const barWidth = (columns: number): number =>
-  Math.max(8, Math.min(48, Math.floor(((columns - 'Adding Feature  '.length - '  Reboot'.length) * 2) / 3)))
-
 export type Task = { kind: TaskKind; step: number; isDone: boolean; isRestored?: boolean }
 
 /**
@@ -266,42 +220,4 @@ export function describeTask(t: Task | null): string {
   const what = { build: 'building a new app', feature: 'adding a feature', fix: 'fixing a bug' }[t.kind]
 
   return `${what}, at the ${STEPS[t.step]!.toLowerCase()} step`
-}
-
-// The bar's gradient: orange at its left end to green at its right, by hue
-// (through yellow) so the middle stays bright rather than olive.
-const FROM = { h: 25, s: 95, l: 53 } // orange, about #F97316
-const TO = { h: 142, s: 71, l: 45 } // green, about #22C55E
-
-function hex(h: number, s: number, l: number): string {
-  const a = (s / 100) * Math.min(l / 100, 1 - l / 100)
-  const channel = (n: number) => {
-    const k = (n + h / 30) % 12
-    const v = l / 100 - a * Math.max(-1, Math.min(k - 3, 9 - k, 1))
-    return Math.round(v * 255).toString(16).padStart(2, '0')
-  }
-
-  return `#${channel(0)}${channel(8)}${channel(4)}`
-}
-
-/**
- * The filled cells as runs of one color each, left to right. A cell's color
- * is its place along the whole bar, so a short fill is all orange and a
- * full bar sweeps to green.
- */
-export function barRuns(filled: number, width: number): { color: string; cells: number }[] {
-  const runs: { color: string; cells: number }[] = []
-  for (let i = 0; i < filled; i++) {
-    const t = width <= 1 ? 1 : i / (width - 1)
-    const color = hex(
-      FROM.h + (TO.h - FROM.h) * t,
-      FROM.s + (TO.s - FROM.s) * t,
-      FROM.l + (TO.l - FROM.l) * t,
-    )
-    const last = runs[runs.length - 1]
-    if (last && last.color === color) last.cells += 1
-    else runs.push({ color, cells: 1 })
-  }
-
-  return runs
 }

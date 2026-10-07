@@ -14,7 +14,7 @@ reads.
 
 | Mod | What it does |
 | --- | --- |
-| [`reboot-progress`](reboot-progress/) | The band above the prompt: the current task (Building, Adding Feature, Fixing, Done) with its progress bar, what is happening now, and buttons that open the dashboard and the app. App health (backend, frontend, tunnel) in the status line. |
+| [`reboot-progress`](reboot-progress/) | The band above the prompt: a Status heading, a sentence on what is being worked on now (the state types, methods and files involved), and buttons that open the dashboard and the app. App health (backend, frontend, tunnel) in the status line. |
 | [`reboot-schema-guard`](reboot-schema-guard/) | Refuses API edits an app with persisted dev state couldn't boot over (a deleted method, a reworded method description, a changed field tag or type, …), and holds other API edits until the model has read `api-schema-evolution.md` once per session. |
 
 ## How a mod works

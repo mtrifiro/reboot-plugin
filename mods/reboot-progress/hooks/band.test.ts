@@ -34,10 +34,12 @@ for (const surface of ['terminal', 'desktop'] as const) {
     })
 
     const band = await $.ui.mount({ plugin: PLUGIN, surface, component: 'AbovePrompt', props: BAND as never })
-    // The kind of work beside the bar, not the stage.
-    expect((await band.findAll({ type: 'Text', text: /^Building\s*$/ })).length).toBe(1)
+    // A static Status heading: neither the kind of work nor the stage.
+    expect((await band.findAll({ type: 'Text', text: /^Status$/ })).length).toBe(1)
+    expect(await band.findAll({ type: 'Text', text: /^(Building|Adding Feature|Fixing|Done)$/ })).toEqual([])
     expect(await band.findAll({ type: 'Text', text: /access rules|backend|screens|·/ })).toEqual([])
-    expect((await band.findAll({ type: 'Text', text: /^█+$/ })).length).toBeGreaterThan(0)
+    // No progress bar: the task's name alone.
+    expect(await band.findAll({ type: 'Text', text: /█|░/ })).toEqual([])
 
     await $.command.run({ command: 'reboot-progress', args: 'hide' } as never)
     expect(await band.findAll({ text: /Reboot/ })).toEqual([])
@@ -68,7 +70,7 @@ for (const surface of ['terminal', 'desktop'] as const) {
 }
 
 for (const surface of ['terminal', 'desktop'] as const) {
-  test(`a typed /reboot:app shows the bar at once on ${surface}`, async ($, on) => {
+  test(`a typed /reboot:app shows the band at once on ${surface}`, async ($, on) => {
     on('fs.exists', () => ({ value: false }) as never)
     on('ui.render', { component: 'AbovePrompt' }, ($, e) => {
       const { Box } = $.ui.resolve(e)
@@ -82,13 +84,12 @@ for (const surface of ['terminal', 'desktop'] as const) {
 
     const band = await $.ui.mount({ plugin: PLUGIN, surface, component: 'AbovePrompt', props: BAND as never })
     expect((await band.findAll({ type: 'Text', text: /Reboot/ })).length).toBe(1)
-    // Planning, the current step, already shows a little.
-    expect((await band.findAll({ type: 'Text', text: /^█+$/ })).length).toBeGreaterThan(0)
+    expect((await band.findAll({ type: 'Text', text: /^Status$/ })).length).toBe(1)
   })
 }
 
 for (const surface of ['terminal', 'desktop'] as const) {
-  test(`a prompt the summary calls a fix starts a bar on ${surface}`, async ($, on) => {
+  test(`a prompt the summary calls a fix shows its Now on ${surface}`, async ($, on) => {
     on('fs.exists', () => ({ value: false }) as never)
     on('ui.render', { component: 'AbovePrompt' }, ($, e) => {
       const { Box } = $.ui.resolve(e)
@@ -106,7 +107,7 @@ for (const surface of ['terminal', 'desktop'] as const) {
     const band = await $.ui.mount({ plugin: PLUGIN, surface, component: 'AbovePrompt', props: BAND as never })
     expect((await band.findAll({ type: 'Text', text: /^Reboot$/ })).length).toBe(1)
     expect((await band.findAll({ type: 'Text', text: 'Fixing the sign-in button' })).length).toBe(1)
-    expect((await band.findAll({ type: 'Text', text: /^Fixing\s*$/ })).length).toBe(1)
+    expect((await band.findAll({ type: 'Text', text: /^Status$/ })).length).toBe(1)
   })
 }
 
@@ -158,3 +159,20 @@ for (const surface of ['terminal', 'desktop'] as const) {
     expect(await band.findAll({ type: 'Text', text: /^Idle$/ })).toEqual([])
   })
 }
+
+test('the Reboot logo draws beside Reboot where the surface has Svg', async ($, on) => {
+  on('fs.exists', () => ({ value: false }) as never)
+  on('ui.render', { component: 'AbovePrompt' }, ($, e) => {
+    const { Box } = $.ui.resolve(e)
+
+    return h(Box, {}) as never
+  })
+  on('tool.call', () => ({ result: {}, text: 'ok' }) as never)
+  await $.tool.call({ tool: 'Skill', skill: 'reboot:build' })
+
+  const desktop = await $.ui.mount({ plugin: PLUGIN, surface: 'desktop', component: 'AbovePrompt', props: BAND as never })
+  expect((await desktop.findAll({ type: 'Svg' })).length).toBe(1)
+  const terminal = await $.ui.mount({ plugin: PLUGIN, surface: 'terminal', component: 'AbovePrompt', props: BAND as never })
+  expect(await terminal.findAll({ type: 'Svg' })).toEqual([])
+  expect((await terminal.findAll({ type: 'Text', text: /^Reboot$/ })).length).toBe(1)
+})

@@ -39,7 +39,8 @@ describe('activity', () => {
     expect(parseSummary('  \n')).toBe(null)
     // NOW: NONE when the text only explains or plans: Now stays as it was.
     expect(parseSummary('NOW: NONE\nDONE: NONE')).toEqual({ now: null, done: null, decision: null })
-    expect(parseSummary(`NOW: ${'x'.repeat(100)}`)!.now!.length).toBe(60)
+    expect(parseSummary(`NOW: ${'x'.repeat(300)}`)!.now!.length).toBe(200)
+    expect(parseSummary('NOW: Adding `compare_years` to Site')!.now).toBe('Adding compare_years to Site')
   })
 
   test('falls back to the first sentence', () => {
@@ -77,6 +78,6 @@ describe('activity', () => {
       '<assistant_last_message>\n1. Weekly email\n2. What changed\n</assistant_last_message>',
     )
     expect(summaryPrompt('Writing.', 'narration', 'none', 'x')).not.toContain('assistant_last_message')
-    expect(summaryPrompt('Build it.', 'narration')).toContain('not a programmer')
+    expect(summaryPrompt('Build it.', 'narration')).toContain('by their real names')
   })
 })

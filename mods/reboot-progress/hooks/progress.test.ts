@@ -5,8 +5,6 @@ import {
   appLinks,
   asTask,
   backendPort,
-  barRuns,
-  barWidth,
   beginTask,
   commandKind,
   describeTask,
@@ -14,11 +12,9 @@ import {
   formatStatus,
   listeningPorts,
   metricsPort,
-  progressBar,
   skillKind,
   stepOf,
   taskAfterPrompt,
-  taskLabel,
 } from './progress'
 import type { Task, TaskKind } from './progress'
 
@@ -105,32 +101,6 @@ describe('status line', () => {
   })
 })
 
-describe('progress bar', () => {
-  test('a build fills over six phases, the current one half', () => {
-    expect(progressBar(at('build', 0), 12)).toEqual({ filled: 1, empty: 11 })
-    // Data model and setup are one phase, as are backend and access rules.
-    expect(progressBar(at('build', 2), 12)).toEqual({ filled: 3, empty: 9 })
-    expect(progressBar(at('build', 4), 12)).toEqual({ filled: 5, empty: 7 })
-    expect(progressBar(at('build', 7), 12)).toEqual({ filled: 11, empty: 1 })
-    expect(progressBar(at('build', 7, { isDone: true }), 12)).toEqual({ filled: 12, empty: 0 })
-  })
-
-  test('a feature fills over five phases, a fix over three', () => {
-    expect(progressBar(at('feature', 3), 10)).toEqual({ filled: 5, empty: 5 })
-    expect(progressBar(at('feature', 6), 10)).toEqual({ filled: 9, empty: 1 })
-    // A fix: finding the cause, fixing it (any code), testing it.
-    expect(progressBar(at('fix', 0), 12)).toEqual({ filled: 2, empty: 10 })
-    expect(progressBar(at('fix', 5), 12)).toEqual({ filled: 6, empty: 6 })
-    expect(progressBar(at('fix', 6), 12)).toEqual({ filled: 10, empty: 2 })
-  })
-
-  test('sizes to two-thirds of the room beside its labels, 8 to 48 cells', () => {
-    expect(barWidth(20)).toBe(8)
-    expect(barWidth(80)).toBe(37)
-    expect(barWidth(200)).toBe(48)
-  })
-})
-
 describe('what starts a task', () => {
   test('skills and typed slash commands name a kind', () => {
     expect(skillKind('reboot:app')).toBe('build')
@@ -166,13 +136,6 @@ describe('what starts a task', () => {
     // After a finished task, or with none, new work of any kind starts one.
     expect(taskAfterPrompt(at('feature', 6, { isDone: true }), 'feature')).toEqual(at('feature', 0))
     expect(taskAfterPrompt(null, 'feature')).toEqual(at('feature', 0))
-  })
-
-  test('the bold label before the bar names the kind of work', () => {
-    expect(taskLabel(at('build', 3))).toBe('Building')
-    expect(taskLabel(at('feature', 3))).toBe('Adding Feature')
-    expect(taskLabel(at('fix', 3))).toBe('Fixing')
-    expect(taskLabel(at('fix', 6, { isDone: true }))).toBe('Done')
   })
 
   test('the current task is described for the summary', () => {
@@ -223,23 +186,5 @@ describe('how a task moves', () => {
     expect(asTask({ step: 2, isDone: false })).toEqual(at('build', 2))
     expect(asTask({ step: 99, isDone: false })).toBe(null)
     expect(asTask('nonsense')).toBe(null)
-  })
-})
-
-describe('bar colors', () => {
-  test('orange at the left end, green at the right', () => {
-    const full = barRuns(10, 10)
-    expect(full[0]!.color).toBe('#f97415') // orange
-    expect(full[full.length - 1]!.color).toBe('#21c45d') // green
-    // Through yellow, not olive: the middle cell is bright.
-    expect(full[4]!.color).toBe('#ace814')
-    expect(full.reduce((n, r) => n + r.cells, 0)).toBe(10)
-  })
-
-  test('a short fill stays at the orange end', () => {
-    const short = barRuns(2, 20)
-    expect(short[0]!.color).toBe('#f97415')
-    expect(short.reduce((n, r) => n + r.cells, 0)).toBe(2)
-    expect(barRuns(0, 20)).toEqual([])
   })
 })

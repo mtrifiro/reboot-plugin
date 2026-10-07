@@ -2,6 +2,7 @@ import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
 import type { Build } from '../types'
+import { REBOOT_LOGO } from './logo'
 import { STARTING, WAITING, endTurn, fallback, isWorthSummarizing, parseSummary, startTask, summaryPrompt, textOf } from './activity'
 import type { Summary } from './activity'
 import {
@@ -10,8 +11,6 @@ import {
   appLinks,
   asTask,
   backendPort,
-  barRuns,
-  barWidth,
   formatStatus,
   beginTask,
   commandKind,
@@ -21,8 +20,6 @@ import {
   metricsPort,
   skillKind,
   taskAfterPrompt,
-  taskLabel,
-  progressBar,
   stepOf,
   storeKey,
 } from './progress'
@@ -337,38 +334,32 @@ export const register: Register = on => {
       return next(e)
     }
 
-    const { Box, Button, Text } = $.ui.resolve(e)
-    const bar = b && progressBar(b, barWidth(e.props.bodyColumns))
-
-    // On top, the task in bold and its bar, with Reboot at the right
-    // margin; below it what is happening now on the left, the links on the right.
+    const elements = $.ui.resolve(e)
+    const { Box, Button, Text } = elements
+    // Svg is on every surface but the terminal's.
+    const Svg = 'Svg' in elements ? elements.Svg : null
+    // On top, a bold Status heading with Reboot at the right margin; below
+    // it what is happening now on the left, the links on the right.
 
     return (
       <Box flexDirection="column">
-        {/* The task and bar take the free width and never shrink, so a
-            surface can't squeeze them into a column (the desktop app did). */}
-        <Box flexDirection="row" flexWrap="nowrap">
-          <Box flexDirection="row" flexWrap="nowrap" flexGrow={1} flexShrink={0}>
-            {b && bar && <Text bold>{taskLabel(b)}  </Text>}
-            {b &&
-              bar &&
-              barRuns(bar.filled, bar.filled + bar.empty).map(run => (
-                <Text color={run.color} wrap="truncate-end">
-                  {'█'.repeat(run.cells)}
-                </Text>
-              ))}
-            {b && bar && <Text dimColor>{'░'.repeat(bar.empty)}</Text>}
+        <Box flexDirection="row" justifyContent="space-between">
+          <Box flexGrow={1}>
+            <Text bold>Status</Text>
           </Box>
-          <Box flexShrink={0}>
+          <Box flexShrink={0} flexDirection="row" gap={1} alignItems="center">
+            {/* The favicon where the surface draws Svg. */}
+            {Svg && <Svg source={REBOOT_LOGO} alt="Reboot logo" width={14} height={14} />}
             <Text bold>Reboot</Text>
           </Box>
         </Box>
         {(act !== null || hasLinks) && (
           <Box flexDirection="row" justifyContent="space-between">
-            <Box flexDirection="column">
-              {act !== null && <Text wrap="truncate-end">{act.now}</Text>}
+            {/* Now is a sentence: it takes the free width and wraps; the buttons keep theirs. */}
+            <Box flexDirection="column" flexGrow={1} flexShrink={1}>
+              {act !== null && <Text wrap="wrap">{act.now}</Text>}
             </Box>
-            <Box flexDirection="row" gap={1}>
+            <Box flexDirection="row" gap={1} flexShrink={0}>
               {to.dashboard !== null && (
                 <Button key="dashboard" label="Dashboard ↗" onPress={() => openUrl($, to.dashboard!)} />
               )}

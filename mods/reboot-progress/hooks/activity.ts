@@ -51,16 +51,15 @@ export const summaryPrompt = (
   (kind === 'narration'
     ? 'Below is what a coding assistant just told the user while building their app.'
     : 'Below is what a user just asked a coding assistant to do.') +
-  ' The user is not a programmer. Reply with exactly ' +
+  ' Reply with exactly ' +
   (kind === 'request' ? 'three' : 'two') +
   ' lines and nothing else:\n' +
   (kind === 'request'
-    ? 'NOW: the work the assistant now starts on for this request, in 3 to 8 words, as a ' +
-      'present-tense phrase starting with a verb ending in -ing ("Adding year-over-year ' +
-      'numbers"; for a question, "Looking into why the test failed"). Never NONE.\n'
-    : 'NOW: the work on the app happening at this moment, in 3 to 8 words, as a ' +
-      'present-tense phrase starting with a verb ending in -ing; or NONE if the text only ' +
-      'explains, reports or plans.\n') +
+    ? 'NOW: one sentence, 10 to 25 words, starting with a verb ending in -ing, on what the ' +
+      'assistant now starts on for this request (for a question, what it is looking ' +
+      'into). Never NONE.\n'
+    : 'NOW: one sentence, 10 to 25 words, starting with a verb ending in -ing, on the work ' +
+      'happening at this moment; or NONE if the text only explains, reports or plans.\n') +
   'DONE: work on the app the text says was just finished, in 3 to 8 words in the past ' +
   'tense; or NONE. A proposal, design or result the text hands the user to review counts ' +
   'as finished ("Drafted the design for your review"). Never planned, upcoming or ' +
@@ -74,14 +73,17 @@ export const summaryPrompt = (
       'that") starts that work; asking for ideas, suggestions or options does not.\n'
     : '') +
   '\n' +
-  'Both in everyday words the user would understand: say what the work does for the app ' +
-  'or its users, not how the code is organized. Never reuse the text\'s technical terms ' +
-  '(module, servicer, workflow, schema, pure, I/O, function or file names). Describe the ' +
-  'work, never the talking ("Describing", "Explaining", "Outlining").\n' +
-  'Bad: "Writing the pure report-shaping module". Good: "Writing the code that builds the ' +
-  'report".\n' +
-  'Good: "Building the dashboard page", "Fixing a failing test", "Adding sign-in with ' +
-  'Google", "Finished the data model".\n' +
+  'NOW is for the developer watching the build: name the concrete things the work ' +
+  'touches, by their real names from the text: state types, their methods and fields, ' +
+  'modules and files, screens, scenarios. Say what is happening to them (adding, ' +
+  'changing, wiring, testing) and why when the text says. Describe the work, never the ' +
+  'talking ("Describing", "Explaining", "Outlining"). Plain names, no backticks or ' +
+  'markdown.\n' +
+  'Good NOW: "Adding a compare_years reader to the Site state type and a Last year toggle ' +
+  'to Dashboard.tsx, so each number can show the same period a year earlier".\n' +
+  'Good NOW: "Running the what_changed scenarios after fixing the off-by-one in ' +
+  'sample.py that seeded 89 days instead of 90".\n' +
+  'DONE stays short and plain ("Finished the data model").\n' +
   'No quotes, no trailing periods.\n\n' +
   (kind === 'request' && lastReply
     ? `<assistant_last_message>\n${lastReply.slice(0, 2000)}\n</assistant_last_message>\n\n`
@@ -90,9 +92,12 @@ export const summaryPrompt = (
   text.slice(0, 4000) +
   '\n</text>'
 
-/** One phrase's cleanup: no quotes, list marks or trailing period, at most 60 characters. */
-const cleanLine = (line: string) =>
-  clip(line.trim().replace(/^[-*\d.)\s]+/, '').replace(/^["'`]+|["'`.]+$/g, ''), 60)
+/** One line's cleanup: no quotes, backticks, list marks or trailing period, at most `max` characters. */
+const cleanLine = (line: string, max = 60) =>
+  clip(line.trim().replace(/^[-*\d.)\s]+/, '').replace(/`/g, '').replace(/^["']+|["'.]+$/g, ''), max)
+
+/** How long Now may run: one descriptive sentence, wrapping onto a second line. */
+export const NOW_MAX = 200
 
 /** A TASK line's answer. */
 function decisionOf(raw: string | undefined): Decision | null {
@@ -116,12 +121,16 @@ export function parseSummary(reply: string): Summary | null {
   const nowText = labeled('NOW') ?? (lines.some(l => /^(DONE|TASK):/i.test(l)) ? undefined : lines[0])
   if (nowText === undefined) return null
   const doneText = labeled('DONE') ?? (labeled('NOW') === undefined ? lines[1] : undefined)
-  const phrase = (raw: string | undefined) => {
-    const line = raw === undefined ? '' : cleanLine(raw)
+  const phrase = (raw: string | undefined, max?: number) => {
+    const line = raw === undefined ? '' : cleanLine(raw, max)
     return line === '' || /^none$/i.test(line) ? null : line
   }
 
-  return { now: phrase(nowText), done: phrase(doneText), decision: decisionOf(labeled('TASK')) }
+  return {
+    now: phrase(nowText, NOW_MAX),
+    done: phrase(doneText),
+    decision: decisionOf(labeled('TASK')),
+  }
 }
 
 /** The first sentence of `text`, clipped: what shows when no summary comes back. */
@@ -129,7 +138,7 @@ export function fallback(text: string): string {
   const plain = text.replace(/[*_`#>]/g, '').replace(/\s+/g, ' ').trim()
   const sentence = plain.match(/^.+?[.!?](?=\s|$)/)?.[0] ?? plain
 
-  return clip(sentence.replace(/[.!?]$/, ''), 60)
+  return clip(sentence.replace(/[.!?]$/, ''), NOW_MAX)
 }
 
 const clip = (s: string, max: number) => (s.length <= max ? s : `${s.slice(0, max - 1).trimEnd()}…`)

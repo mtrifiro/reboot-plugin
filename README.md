@@ -165,10 +165,10 @@ differ because of Codex limitations:
   `sandbox_mode` (e.g. `workspace-write` with network access) instead.
 - **No mods.** Installing `reboot` in Claude Code also installs two
   mods (function-hook plugins in `mods/`, listed as its
-  dependencies): `reboot-progress` shows, above the prompt, what Claude
-  is working on (summarized by Sonnet from its narration) and the build's
-  progress, and the app's backend, frontend and tunnel health in the
-  status line; `reboot-schema-guard` refuses API edits that an app with
+  dependencies): `reboot-progress` shows, above the prompt, a sentence
+  on what Claude is working on (summarized by Sonnet
+  from its narration), and the app's backend, frontend and tunnel health
+  in the status line; `reboot-schema-guard` refuses API edits that an app with
   persisted dev state couldn't boot over. See
   [`mods/README.md`](mods/README.md). Codex has no
   equivalent, and its own catalog doesn't list them. The skills carry
