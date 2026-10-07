@@ -3,13 +3,15 @@
 // "Just completed" and "Now" move as tasks change.
 
 import type { Activity } from '../types'
+import type { Decision } from './progress'
 
 /**
  * What one text says, as the model reads it: what is being done now (null
- * when the text only explains or plans, so Now stays), and what it says
- * was just finished (null when it says nothing is).
+ * when the text only explains or plans, so Now stays), what it says was
+ * just finished (null when it says nothing is), and for a request whether
+ * it starts new work (null when the reply doesn't say).
  */
-export type Task = { now: string | null; done: string | null }
+export type Summary = { now: string | null; done: string | null; decision: Decision | null }
 
 export const WAITING = 'Waiting for you'
 
@@ -31,16 +33,35 @@ export function textOf(content: unknown): string {
 /** Short asides ("Done.", "Let me check.") aren't worth a summary. */
 export const isWorthSummarizing = (text: string): boolean => text.length >= 40
 
-export const summaryPrompt = (text: string, kind: 'narration' | 'request'): string =>
+/**
+ * The prompt for one summary. A request also asks whether it starts new
+ * work, judged against `current`, the work under way in a few words.
+ */
+export const summaryPrompt = (
+  text: string,
+  kind: 'narration' | 'request',
+  current = 'none',
+): string =>
   (kind === 'narration'
     ? 'Below is what a coding assistant just told the user while building their app.'
     : 'Below is what a user just asked a coding assistant to do.') +
-  ' The user is not a programmer. Reply with exactly two lines and nothing else:\n' +
+  ' The user is not a programmer. Reply with exactly ' +
+  (kind === 'request' ? 'three' : 'two') +
+  ' lines and nothing else:\n' +
   'NOW: the work on the app happening at this moment, in 3 to 8 words, as a present-tense ' +
   'phrase starting with a verb ending in -ing; or NONE if the text only explains, reports ' +
   'or plans.\n' +
   'DONE: work on the app the text says was just finished, in 3 to 8 words in the past ' +
-  'tense; or NONE. Never planned, upcoming or ongoing work.\n\n' +
+  'tense; or NONE. A proposal, design or result the text hands the user to review counts ' +
+  'as finished ("Drafted the design for your review"). Never planned, upcoming or ' +
+  'ongoing work.\n' +
+  (kind === 'request'
+    ? 'TASK: whether this request starts new work: NEW BUILD (a whole new app), NEW ' +
+      'FEATURE (a new capability, or a change to one, in an existing app), NEW FIX (fixing ' +
+      'something that is broken), or SAME (a follow-up, an answer, an approval or a small ' +
+      `tweak within the current work). The current work: ${current}.\n`
+    : '') +
+  '\n' +
   'Both in everyday words the user would understand: say what the work does for the app ' +
   'or its users, not how the code is organized. Never reuse the text\'s technical terms ' +
   '(module, servicer, workflow, schema, pure, I/O, function or file names). Describe the ' +
@@ -57,15 +78,26 @@ export const summaryPrompt = (text: string, kind: 'narration' | 'request'): stri
 const cleanLine = (line: string) =>
   clip(line.trim().replace(/^[-*\d.)\s]+/, '').replace(/^["'`]+|["'`.]+$/g, ''), 60)
 
+/** A TASK line's answer. */
+function decisionOf(raw: string | undefined): Decision | null {
+  const t = (raw ?? '').toUpperCase()
+  if (/\bSAME\b/.test(t)) return 'same'
+  if (/\bBUILD\b/.test(t)) return 'build'
+  if (/\bFEATURE\b/.test(t)) return 'feature'
+  if (/\bFIX\b/.test(t)) return 'fix'
+  return null
+}
+
 /**
- * The task in a `NOW:` / `DONE:` reply. The model sometimes drops the labels:
- * then the first line is Now and the second Done. null when there is no Now.
+ * The summary in a `NOW:` / `DONE:` (/ `TASK:`) reply. The model sometimes
+ * drops the labels: then the first line is Now and the second Done. null
+ * when there is no Now.
  */
-export function parseSummary(reply: string): Task | null {
+export function parseSummary(reply: string): Summary | null {
   const lines = reply.split('\n').map(l => l.trim()).filter(l => l.length > 0)
   const labeled = (label: string) =>
     lines.find(l => l.toUpperCase().startsWith(`${label}:`))?.slice(label.length + 1)
-  const nowText = labeled('NOW') ?? (lines.some(l => /^DONE:/i.test(l)) ? undefined : lines[0])
+  const nowText = labeled('NOW') ?? (lines.some(l => /^(DONE|TASK):/i.test(l)) ? undefined : lines[0])
   if (nowText === undefined) return null
   const doneText = labeled('DONE') ?? (labeled('NOW') === undefined ? lines[1] : undefined)
   const phrase = (raw: string | undefined) => {
@@ -73,7 +105,7 @@ export function parseSummary(reply: string): Task | null {
     return line === '' || /^none$/i.test(line) ? null : line
   }
 
-  return { now: phrase(nowText), done: phrase(doneText) }
+  return { now: phrase(nowText), done: phrase(doneText), decision: decisionOf(labeled('TASK')) }
 }
 
 /** The first sentence of `text`, clipped: what shows when no summary comes back. */
@@ -90,7 +122,7 @@ const clip = (s: string, max: number) => (s.length <= max ? s : `${s.slice(0, ma
  * A new text while working: Now follows it, and Just completed changes
  * only when the text says something was finished.
  */
-export const startTask = (task: Task, shown: Activity | null): Activity => ({
+export const startTask = (task: Summary, shown: Activity | null): Activity => ({
   justCompleted: task.done ?? shown?.justCompleted ?? null,
   now: task.now ?? shown?.now ?? WAITING,
 })

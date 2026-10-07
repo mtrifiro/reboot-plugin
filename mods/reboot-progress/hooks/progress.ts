@@ -1,5 +1,5 @@
-// Pure logic: which build step a tool call shows, and how the status
-// line reads. Kept free of `$` so the tests can call it directly.
+// Pure logic: which step a tool call shows, how the current task moves
+// through its kind's phases, and how the status line reads. Kept free of `$` so the tests can call it directly.
 
 export const STEPS = [
   'Planning', // design: agree on the app before any code
@@ -13,40 +13,58 @@ export const STEPS = [
 ] as const
 
 export const RUN = STEPS.length - 1
-
-/** The major steps the bar fills by, each covering one or more of STEPS. */
-export const MAJOR_STEPS: readonly (readonly number[])[] = [
-  [0], // planning
-  [1, 2], // data model, setup
-  [3, 4], // backend, access rules
-  [5], // screens
-  [6], // tests
-  [7], // launch
-]
-
-/** The major step a step belongs to, by index. */
-export const majorOf = (step: number): number =>
-  Math.max(0, MAJOR_STEPS.findIndex(steps => steps.includes(step)))
 const BACKEND = 3
+const SCREENS = 5
 const TESTS = 6
 
-// The skills that start (or re-enter) the build flow.
-const BUILD_SKILL = /^(reboot:)?(app|build|mcp-ui|web-app)$/
+/** The kind of work a task is: a whole new app, a feature, or a bug fix. */
+export type TaskKind = 'build' | 'feature' | 'fix'
+
+/**
+ * Each kind's phases, the steps the bar fills by, each covering some of
+ * STEPS. A feature follows the build skill's Update Flow; a fix is find,
+ * fix, test.
+ */
+export const PHASES: Record<TaskKind, readonly (readonly number[])[]> = {
+  build: [[0], [1, 2], [3, 4], [5], [6], [7]], // planning, data model, backend, screens, tests, launch
+  feature: [[0], [1, 2], [3, 4], [5], [6, 7]], // agree, data model, backend, screens, tests
+  fix: [[0], [1, 2, 3, 4, 5], [6, 7]], // find the cause, fix it, test it
+}
+
+/** The phase a step belongs to in a kind of task, by index. */
+export const phaseOf = (kind: TaskKind, step: number): number =>
+  Math.max(0, PHASES[kind].findIndex(steps => steps.includes(step)))
 
 export type Call =
   | { tool: 'Skill'; skill: string }
   | { tool: 'Bash'; command: string }
   | { tool: 'Write' | 'Edit'; file_path: string; text: string }
 
-export const isBuildSkill = (skill: string): boolean => BUILD_SKILL.test(skill)
+/** The kind of task a skill starts: the build skills a build, `feature` a feature. */
+export function skillKind(skill: string): TaskKind | null {
+  if (/^(reboot:)?(app|build|mcp-ui|web-app)$/.test(skill)) return 'build'
+  if (/^(reboot:)?feature$/.test(skill)) return 'feature'
+  return null
+}
 
 /**
- * The build step a call is evidence of, or null when it says nothing.
+ * The kind of task a prompt the person typed starts by its slash command
+ * (`/reboot:app build a todo app`). Namespaced only: a bare `/app` may be
+ * another plugin's.
+ */
+export function commandKind(text: string): TaskKind | null {
+  const m = text.match(/^\s*\/(reboot:[\w-]+)(\s|$)/)
+
+  return m ? skillKind(m[1]!) : null
+}
+
+/**
+ * The step a call is evidence of, or null when it says nothing.
  * Paths follow the layouts in the mcp-ui and web-app skills.
  */
 export function stepOf(call: Call): number | null {
   if (call.tool === 'Skill') {
-    return isBuildSkill(call.skill) ? 0 : null
+    return skillKind(call.skill) !== null ? 0 : null
   }
   if (call.tool === 'Bash') {
     const c = call.command
@@ -122,67 +140,101 @@ export type Bar = {
 }
 
 /**
- * The progress bar for a build at `step`, over the major steps: those
- * before the current one count as done, so planning shows an empty bar
- * and a finished build a full one.
+ * The progress bar for a task, over its kind's phases: those before the
+ * current one count as done and the current one as half, so a task shows
+ * a little from its start and a finished one a full bar.
  */
-export function progressBar(step: number, isDone: boolean, width: number): Bar {
-  const major = majorOf(step)
-  const done = isDone ? MAJOR_STEPS.length : major
-  const filled = Math.round((done / MAJOR_STEPS.length) * width)
+export function progressBar(task: Task, width: number): Bar {
+  const phases = PHASES[task.kind].length
+  const done = task.isDone ? phases : phaseOf(task.kind, task.step) + 0.5
+  const filled = Math.round((done / phases) * width)
 
   return { filled, empty: width - filled }
 }
 
 /** Bar cells for a band `columns` wide: what its label leaves, 10 to 40. */
 export const barWidth = (columns: number): number =>
-  Math.max(10, Math.min(40, columns - 'Reboot  '.length))
+  Math.max(10, Math.min(40, columns - 'Reboot Progress  '.length))
 
-export type BuildState = { step: number; isDone: boolean; isRestored?: boolean }
+export type Task = { kind: TaskKind; step: number; isDone: boolean; isRestored?: boolean }
 
 /**
- * The build after a call that is evidence of `step`. A build skill opens
- * a new build unless this session has one under way (one restored from an
- * earlier session doesn't count: the skill means a new flow); other
- * evidence moves a build
- * forward only, and starts one when none is known (a session resumed
- * mid-build without the skill), short of Run, which a finished app's
- * restart also shows.
+ * The task after a skill (or a typed slash command) of `kind`: a new one,
+ * unless this session has a task under way, which the skill is part of
+ * (the build flow calls the feature skill for its spec; an update enters
+ * the build skill). One restored from an earlier session doesn't count.
  */
-export function nextBuild(
-  b: BuildState | null,
-  step: number,
-  isBuildSkillCall: boolean,
-): BuildState | null {
-  if (isBuildSkillCall) return b && !b.isDone && !b.isRestored ? b : { step: 0, isDone: false }
-  // The spec's test module is written right after Planning (the feature
-  // skill), so test evidence counts only once the backend exists.
-  if (step === TESTS && (b === null || b.step < BACKEND)) return b
-  if (b === null) return step >= 1 && step < RUN ? { step, isDone: false } : null
-  if (b.isDone) return b
-  // A build restored from an earlier session may be stale or wrong: the
-  // first evidence in this session says where it really is.
-  if (b.isRestored) return { step, isDone: false }
+export const beginTask = (t: Task | null, kind: TaskKind): Task =>
+  t && !t.isDone && !t.isRestored ? t : { kind, step: 0, isDone: false }
 
-  // Starting the app is Launch, not done: the model runs it mid-build too.
-  return { step: Math.max(b.step, step), isDone: false }
+/** What the prompt summary says a request is: new work of a kind, or the same work. */
+export type Decision = TaskKind | 'same'
+
+/**
+ * The task after the person's prompt, as the summary judged it. A follow-up
+ * keeps the task; new work starts one, except new work of the same kind
+ * while this session's task of that kind is under way, which is most likely
+ * an answer or approval read as new ("yes, build it").
+ */
+export function taskAfterPrompt(t: Task | null, decision: Decision | null): Task | null {
+  if (decision === null || decision === 'same') return t
+  if (t && !t.isDone && !t.isRestored && t.kind === decision) return t
+
+  return { kind: decision, step: 0, isDone: false }
 }
 
-/** The end of a turn finishes a build that reached Launch; anything else stays. */
-export const finishTurn = (b: BuildState | null): BuildState | null =>
-  b !== null && !b.isDone && b.step === RUN ? { step: RUN, isDone: true } : b
+/**
+ * The task after a call that is evidence of `step`: forward only, and only
+ * when the step means real progress for that kind of task. With no task,
+ * evidence starts none: the prompt or a skill does.
+ */
+export function advanceTask(t: Task | null, step: number): Task | null {
+  if (t === null || t.isDone) return t
+  // A task restored from an earlier session may be stale or wrong: the
+  // first evidence in this session says where it really is.
+  if (t.isRestored) return { kind: t.kind, step, isDone: false }
+  // A build writes its spec's test module right after planning and starts
+  // the app mid-build to check its work: tests count once the backend
+  // exists, Launch once the screens do. A feature or fix tests once it has
+  // changed code, and starting the app counts only after its tests.
+  const hasCode = t.kind === 'build' ? t.step >= BACKEND : t.step >= 1
+  if (step === TESTS && !hasCode) return t
+  if (step === RUN && t.step < (t.kind === 'build' ? SCREENS : TESTS)) return t
 
-/** The `$.store` key holding a project's build across sessions. */
+  return { kind: t.kind, step: Math.max(t.step, step), isDone: false }
+}
+
+/**
+ * The end of a turn finishes a task that reached its last step: Launch for
+ * a build, its tests for a feature or fix.
+ */
+export function finishTurn(t: Task | null): Task | null {
+  if (t === null || t.isDone) return t
+  const last = t.kind === 'build' ? RUN : TESTS
+
+  return t.step >= last ? { kind: t.kind, step: t.step, isDone: true } : t
+}
+
+/** The `$.store` key holding a project's task across sessions. */
 export const storeKey = (root: string): string => `build:${root}`
 
-/** A stored value, if it is a build. */
-export function asBuild(value: unknown): BuildState | null {
+/** A stored value, if it is a task. Values stored before kinds count as builds. */
+export function asTask(value: unknown): Task | null {
   if (typeof value !== 'object' || value === null) return null
-  const { step, isDone } = value as Record<string, unknown>
+  const { kind, step, isDone } = value as Record<string, unknown>
+  const k: TaskKind = kind === 'feature' || kind === 'fix' ? kind : 'build'
 
   return typeof step === 'number' && step >= 0 && step <= RUN && typeof isDone === 'boolean'
-    ? { step, isDone }
+    ? { kind: k, step, isDone }
     : null
+}
+
+/** The current task in a few words, for the prompt summary to judge follow-ups by. */
+export function describeTask(t: Task | null): string {
+  if (t === null || t.isDone) return 'none'
+  const what = { build: 'building a new app', feature: 'adding a feature', fix: 'fixing a bug' }[t.kind]
+
+  return `${what}, at the ${STEPS[t.step]!.toLowerCase()} step`
 }
 
 // The bar's gradient: orange at its left end to green at its right, by hue

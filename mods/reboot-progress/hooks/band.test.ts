@@ -64,3 +64,45 @@ for (const surface of ['terminal', 'desktop'] as const) {
     }
   })
 }
+
+for (const surface of ['terminal', 'desktop'] as const) {
+  test(`a typed /reboot:app shows the bar at once on ${surface}`, async ($, on) => {
+    on('fs.exists', () => ({ value: false }) as never)
+    on('ui.render', { component: 'AbovePrompt' }, ($, e) => {
+      const { Box } = $.ui.resolve(e)
+
+      return h(Box, {}) as never
+    })
+    on('model.complete', () => ({ value: { isAnswered: true, text: 'NOW: Planning the dashboard\nDONE: NONE' } }) as never)
+    on('prompt.submit', ($, e) => ({ text: e.text }) as never)
+
+    await $.prompt.submit({ text: '/reboot:app build a user friendly interface to Google Analytics' } as never)
+
+    const band = await $.ui.mount({ plugin: PLUGIN, surface, component: 'AbovePrompt', props: BAND as never })
+    expect((await band.findAll({ type: 'Text', text: /Reboot/ })).length).toBe(1)
+    // Planning, the current step, already shows a little.
+    expect((await band.findAll({ type: 'Text', text: /^█+$/ })).length).toBeGreaterThan(0)
+  })
+}
+
+for (const surface of ['terminal', 'desktop'] as const) {
+  test(`a prompt the summary calls a fix starts a bar on ${surface}`, async ($, on) => {
+    on('fs.exists', () => ({ value: false }) as never)
+    on('ui.render', { component: 'AbovePrompt' }, ($, e) => {
+      const { Box } = $.ui.resolve(e)
+
+      return h(Box, {}) as never
+    })
+    on('model.complete', () =>
+      ({ value: { isAnswered: true, text: 'NOW: Fixing the sign-in button\nDONE: NONE\nTASK: NEW FIX' } }) as never,
+    )
+    on('prompt.submit', ($, e) => ({ text: e.text }) as never)
+
+    await $.prompt.submit({ text: 'The sign-in button does nothing when I click it.' } as never)
+    await wait(50) // the summary runs in the background
+
+    const band = await $.ui.mount({ plugin: PLUGIN, surface, component: 'AbovePrompt', props: BAND as never })
+    expect((await band.findAll({ type: 'Text', text: /Reboot Progress/ })).length).toBe(1)
+    expect((await band.findAll({ type: 'Text', text: 'Fixing the sign-in button' })).length).toBe(1)
+  })
+}

@@ -1,18 +1,31 @@
 import { describe, expect, test } from 'claude-code/testing'
 
 import {
-  asBuild,
+  advanceTask,
+  asTask,
   backendPort,
   barRuns,
   barWidth,
+  beginTask,
+  commandKind,
+  describeTask,
+  finishTurn,
   formatStatus,
   listeningPorts,
   metricsPort,
-  finishTurn,
-  nextBuild,
   progressBar,
+  skillKind,
   stepOf,
+  taskAfterPrompt,
 } from './progress'
+import type { Task, TaskKind } from './progress'
+
+const at = (kind: TaskKind, step: number, extra: Partial<Task> = {}): Task => ({
+  kind,
+  step,
+  isDone: false,
+  ...extra,
+})
 
 const P = '/work/todo-list'
 const write = (path: string, text = '') => stepOf({ tool: 'Write', file_path: `${P}/${path}`, text })
@@ -70,69 +83,113 @@ describe('status line', () => {
 })
 
 describe('progress bar', () => {
-  test('fills with the steps done', () => {
-    expect(progressBar(0, false, 12)).toEqual({ filled: 0, empty: 12 })
-    // Data model and Setup are one major step, as are Backend and Access rules.
-    expect(progressBar(1, false, 12)).toEqual({ filled: 2, empty: 10 })
-    expect(progressBar(2, false, 12)).toEqual({ filled: 2, empty: 10 })
-    expect(progressBar(4, false, 12)).toEqual({ filled: 4, empty: 8 })
-    expect(progressBar(5, false, 12)).toEqual({ filled: 6, empty: 6 })
-    expect(progressBar(7, false, 12)).toEqual({ filled: 10, empty: 2 })
-    expect(progressBar(7, true, 12)).toEqual({ filled: 12, empty: 0 })
+  test('a build fills over six phases, the current one half', () => {
+    expect(progressBar(at('build', 0), 12)).toEqual({ filled: 1, empty: 11 })
+    // Data model and setup are one phase, as are backend and access rules.
+    expect(progressBar(at('build', 2), 12)).toEqual({ filled: 3, empty: 9 })
+    expect(progressBar(at('build', 4), 12)).toEqual({ filled: 5, empty: 7 })
+    expect(progressBar(at('build', 7), 12)).toEqual({ filled: 11, empty: 1 })
+    expect(progressBar(at('build', 7, { isDone: true }), 12)).toEqual({ filled: 12, empty: 0 })
+  })
+
+  test('a feature fills over five phases, a fix over three', () => {
+    expect(progressBar(at('feature', 3), 10)).toEqual({ filled: 5, empty: 5 })
+    expect(progressBar(at('feature', 6), 10)).toEqual({ filled: 9, empty: 1 })
+    // A fix: finding the cause, fixing it (any code), testing it.
+    expect(progressBar(at('fix', 0), 12)).toEqual({ filled: 2, empty: 10 })
+    expect(progressBar(at('fix', 5), 12)).toEqual({ filled: 6, empty: 6 })
+    expect(progressBar(at('fix', 6), 12)).toEqual({ filled: 10, empty: 2 })
   })
 
   test('sizes to the band, 10 to 40 cells', () => {
-    expect(barWidth(15)).toBe(10)
-    expect(barWidth(40)).toBe(32)
+    expect(barWidth(20)).toBe(10)
+    expect(barWidth(40)).toBe(23)
     expect(barWidth(200)).toBe(40)
   })
 })
 
-describe('build state', () => {
-  test('a build skill opens a build unless one is under way', () => {
-    expect(nextBuild(null, 0, true)).toEqual({ step: 0, isDone: false })
-    expect(nextBuild({ step: 3, isDone: false }, 0, true)).toEqual({ step: 3, isDone: false })
-    expect(nextBuild({ step: 7, isDone: true }, 0, true)).toEqual({ step: 0, isDone: false })
+describe('what starts a task', () => {
+  test('skills and typed slash commands name a kind', () => {
+    expect(skillKind('reboot:app')).toBe('build')
+    expect(skillKind('reboot:web-app')).toBe('build')
+    expect(skillKind('reboot:feature')).toBe('feature')
+    expect(skillKind('reboot:run')).toBe(null)
+    expect(commandKind('/reboot:app build a user friendly interface to Google Analytics')).toBe('build')
+    expect(commandKind('  /reboot:feature add transfers')).toBe('feature')
+    expect(commandKind('/reboot:run')).toBe(null)
+    expect(commandKind('/app build it')).toBe(null)
+    expect(commandKind('please /reboot:app')).toBe(null)
   })
 
-  test('a build skill restarts a build restored from an earlier session', () => {
-    expect(nextBuild({ step: 6, isDone: false, isRestored: true }, 0, true)).toEqual({ step: 0, isDone: false })
-    // The first evidence in this session says where a restored build really is.
-    expect(nextBuild({ step: 6, isDone: false, isRestored: true }, 5, false)).toEqual({ step: 5, isDone: false })
+  test('a skill starts a task unless one is under way in this session', () => {
+    expect(beginTask(null, 'build')).toEqual(at('build', 0))
+    // The build flow calls the feature skill for its spec: still the build.
+    expect(beginTask(at('build', 1), 'feature')).toEqual(at('build', 1))
+    expect(beginTask(at('build', 7, { isDone: true }), 'feature')).toEqual(at('feature', 0))
+    expect(beginTask(at('build', 6, { isRestored: true }), 'build')).toEqual(at('build', 0))
   })
 
-  test('evidence starts a build a resumed session never saw open', () => {
-    expect(nextBuild(null, 3, false)).toEqual({ step: 3, isDone: false })
-    // Running a finished app is not a build.
-    expect(nextBuild(null, 7, false)).toBe(null)
+  test('a prompt for new work starts a task; a follow-up keeps it', () => {
+    const building = at('build', 3)
+    expect(taskAfterPrompt(building, 'same')).toBe(building)
+    expect(taskAfterPrompt(building, null)).toBe(building)
+    // "yes, build it" read as new work of the same kind: keep the build.
+    expect(taskAfterPrompt(building, 'build')).toBe(building)
+    // A different kind of work: a new task.
+    expect(taskAfterPrompt(building, 'fix')).toEqual(at('fix', 0))
+    // After a finished task, or with none, new work of any kind starts one.
+    expect(taskAfterPrompt(at('feature', 6, { isDone: true }), 'feature')).toEqual(at('feature', 0))
+    expect(taskAfterPrompt(null, 'feature')).toEqual(at('feature', 0))
   })
 
-  test('evidence moves forward only; starting the app is Launch, not done', () => {
-    expect(nextBuild({ step: 4, isDone: false }, 2, false)).toEqual({ step: 4, isDone: false })
-    expect(nextBuild({ step: 4, isDone: false }, 7, false)).toEqual({ step: 7, isDone: false })
-    expect(nextBuild({ step: 7, isDone: false }, 5, false)).toEqual({ step: 7, isDone: false })
-    expect(nextBuild({ step: 7, isDone: true }, 3, false)).toEqual({ step: 7, isDone: true })
+  test('the current task is described for the summary', () => {
+    expect(describeTask(null)).toBe('none')
+    expect(describeTask(at('fix', 3))).toBe('fixing a bug, at the backend step')
+    expect(describeTask(at('build', 7, { isDone: true }))).toBe('none')
+  })
+})
+
+describe('how a task moves', () => {
+  test('evidence moves a task forward only, and starts none', () => {
+    expect(advanceTask(at('build', 4), 2)).toEqual(at('build', 4))
+    expect(advanceTask(at('build', 1), 3)).toEqual(at('build', 3))
+    expect(advanceTask(null, 3)).toBe(null)
+    expect(advanceTask(at('build', 7, { isDone: true }), 3)).toEqual(at('build', 7, { isDone: true }))
   })
 
-  test('test evidence counts only once the backend exists', () => {
-    // Planning: the spec's test module, or a run of the @wip spec.
-    expect(nextBuild({ step: 0, isDone: false }, 6, false)).toEqual({ step: 0, isDone: false })
-    expect(nextBuild({ step: 1, isDone: false }, 6, false)).toEqual({ step: 1, isDone: false })
-    expect(nextBuild(null, 6, false)).toBe(null)
-    expect(nextBuild({ step: 3, isDone: false }, 6, false)).toEqual({ step: 6, isDone: false })
+  test("a build's tests count once the backend exists, Launch once the screens do", () => {
+    // The spec's test module, or the @wip spec run, right after planning.
+    expect(advanceTask(at('build', 1), 6)).toEqual(at('build', 1))
+    expect(advanceTask(at('build', 3), 6)).toEqual(at('build', 6))
+    // The servers started mid-build to check the backend.
+    expect(advanceTask(at('build', 3), 7)).toEqual(at('build', 3))
+    expect(advanceTask(at('build', 5), 7)).toEqual(at('build', 7))
   })
 
-  test('a turn that ends at Launch finishes the build; earlier steps stay', () => {
-    expect(finishTurn({ step: 7, isDone: false })).toEqual({ step: 7, isDone: true })
-    expect(finishTurn({ step: 4, isDone: false })).toEqual({ step: 4, isDone: false })
+  test("a feature or fix tests once it changed code, and Launch after its tests", () => {
+    expect(advanceTask(at('fix', 0), 6)).toEqual(at('fix', 0))
+    expect(advanceTask(at('fix', 3), 6)).toEqual(at('fix', 6))
+    expect(advanceTask(at('feature', 5), 7)).toEqual(at('feature', 5))
+    expect(advanceTask(at('feature', 6), 7)).toEqual(at('feature', 7))
+  })
+
+  test('a task restored from an earlier session takes the first evidence as true', () => {
+    expect(advanceTask(at('build', 6, { isRestored: true }), 5)).toEqual(at('build', 5))
+  })
+
+  test('a turn that ends at the last step finishes the task', () => {
+    expect(finishTurn(at('build', 7))).toEqual(at('build', 7, { isDone: true }))
+    expect(finishTurn(at('build', 6))).toEqual(at('build', 6))
+    expect(finishTurn(at('fix', 6))).toEqual(at('fix', 6, { isDone: true }))
+    expect(finishTurn(at('feature', 5))).toEqual(at('feature', 5))
     expect(finishTurn(null)).toBe(null)
   })
 
-  test('only a well-formed stored build is restored', () => {
-    expect(asBuild({ step: 2, isDone: false })).toEqual({ step: 2, isDone: false })
-    expect(asBuild({ step: 99, isDone: false })).toBe(null)
-    expect(asBuild('nonsense')).toBe(null)
-    expect(asBuild(undefined)).toBe(null)
+  test('a stored task is restored; one stored before kinds is a build', () => {
+    expect(asTask({ kind: 'fix', step: 3, isDone: false })).toEqual(at('fix', 3))
+    expect(asTask({ step: 2, isDone: false })).toEqual(at('build', 2))
+    expect(asTask({ step: 99, isDone: false })).toBe(null)
+    expect(asTask('nonsense')).toBe(null)
   })
 })
 

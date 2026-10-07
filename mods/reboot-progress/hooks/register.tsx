@@ -3,19 +3,23 @@ import type { EngineInterface, Register } from 'claude-code'
 
 import type { Build } from '../types'
 import { WAITING, endTurn, fallback, isWorthSummarizing, parseSummary, startTask, summaryPrompt, textOf } from './activity'
-import type { Task } from './activity'
+import type { Summary } from './activity'
 import {
   RUN,
-  asBuild,
+  advanceTask,
+  asTask,
   backendPort,
   barRuns,
   barWidth,
   formatStatus,
-  isBuildSkill,
+  beginTask,
+  commandKind,
+  describeTask,
   listeningPorts,
   finishTurn,
   metricsPort,
-  nextBuild,
+  skillKind,
+  taskAfterPrompt,
   progressBar,
   stepOf,
   storeKey,
@@ -123,29 +127,44 @@ let isTurnActive = false
 let latestSummary = 0 // the newest summary asked for; older replies are dropped
 
 /** A summary while the turn runs moves Now; a late one (the turn's report) only Just completed. */
-async function showTask($: EngineInterface, task: Task) {
+async function showTask($: EngineInterface, task: Summary) {
   await update($, activity, shown =>
     isTurnActive ? startTask(task, shown) : endTurn(startTask(task, shown)),
   )
 }
 
-/** Summarizes `text` with Sonnet in the background, newest wins. */
-async function summarize($: EngineInterface, text: string, kind: 'narration' | 'request') {
+/**
+ * Summarizes `text` with Sonnet in the background, newest wins. A request's
+ * summary also says whether it starts new work, which moves the bar to a new
+ * task; `decides` is false when a typed slash command already started one.
+ */
+async function summarize(
+  $: EngineInterface,
+  text: string,
+  kind: 'narration' | 'request',
+  decides = kind === 'request',
+) {
   const id = ++latestSummary
-  let task: Task | null = null
+  let task: Summary | null = null
   try {
     const reply = await $.model.complete({
       model: 'sonnet',
-      prompt: summaryPrompt(text, kind),
-      maxTokens: 60,
+      prompt: summaryPrompt(text, kind, describeTask(await read($, build))),
+      maxTokens: 80,
       timeoutMs: 15000,
     })
     if (reply.isAnswered) task = parseSummary(reply.text)
   } catch {
     task = null
   }
+  // The decision stands even when a newer summary replaces this one's text.
+  if (decides && task?.decision) {
+    const b = await read($, build)
+    const after = taskAfterPrompt(b, task.decision)
+    if (after !== b) await saveBuild($, after)
+  }
   if (id !== latestSummary) return
-  const seen = task ?? { now: fallback(text), done: null }
+  const seen = task ?? { now: fallback(text), done: null, decision: null }
   // A request says what to do, never what is done.
   await showTask($, kind === 'request' ? { ...seen, done: null } : seen)
 }
@@ -169,7 +188,7 @@ async function restoreBuild($: EngineInterface, dir: string) {
   if (restoredRoot === dir) return
   restoredRoot = dir
   if ((await read($, build)) !== null) return
-  const stored = asBuild(await $.store.get(storeKey(dir)))
+  const stored = asTask(await $.store.get(storeKey(dir)))
   if (stored && !stored.isDone) await update($, build, () => ({ ...stored, isRestored: true }))
 }
 
@@ -235,19 +254,27 @@ export const register: Register = on => {
     if (step === null) return ran
 
     const b = await read($, build)
-    const after = nextBuild(b, step, call.tool === 'Skill' && isBuildSkill(call.skill))
+    const kind = call.tool === 'Skill' ? skillKind(call.skill) : null
+    const after = kind !== null ? beginTask(b, kind) : advanceTask(b, step)
     if (JSON.stringify(after) !== JSON.stringify(b)) await saveBuild($, after)
     if (step === RUN) void poll($)
 
     return ran
   }).catch(($, e, next) => next(e)) // never block a call on the band's account
 
-  // A finished build shows its last row until the next prompt, then clears.
+  // A finished task shows its full bar until the next prompt, then clears;
+  // the prompt's summary then says whether it starts new work.
   on('prompt.submit', async ($, e, next) => {
     isTurnActive = true
-    if (e.text.trim()) void summarize($, e.text, 'request')
     const b = await read($, build)
-    if (b?.isDone) await saveBuild($, null)
+    // A typed /reboot:app (or build, mcp-ui, web-app, feature) starts its
+    // task now, before the skill's planning, not when the model calls it.
+    const kind = commandKind(e.text)
+    if (kind !== null) {
+      const after = beginTask(b?.isDone ? null : b, kind)
+      if (JSON.stringify(after) !== JSON.stringify(b)) await saveBuild($, after)
+    } else if (b?.isDone) await saveBuild($, null)
+    if (e.text.trim()) void summarize($, e.text, 'request', kind === null)
 
     return next(e)
   }).catch(($, e, next) => next(e))
@@ -279,16 +306,16 @@ export const register: Register = on => {
     if (e.props.hasSurvey || (b === null && act === null) || (await read($, isHidden))) return next(e)
 
     const { Box, Text } = $.ui.resolve(e)
-    const bar = b && progressBar(b.step, b.isDone, barWidth(e.props.bodyColumns))
+    const bar = b && progressBar(b, barWidth(e.props.bodyColumns))
 
-    // The Reboot bar on top; below it two columns, each a label over its status.
+    // Reboot Progress on top; below it two columns, each a label over its status.
     const column = Math.max(16, Math.floor(e.props.bodyColumns / 2))
 
     return (
       <Box flexDirection="column">
         {bar && (
           <Box flexDirection="row" flexWrap="wrap">
-            <Text bold>Reboot  </Text>
+            <Text bold>Reboot Progress  </Text>
             {barRuns(bar.filled, bar.filled + bar.empty).map(run => (
               <Text color={run.color}>{'█'.repeat(run.cells)}</Text>
             ))}

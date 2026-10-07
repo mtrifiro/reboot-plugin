@@ -24,16 +24,21 @@ describe('activity', () => {
     expect(parseSummary('NOW: Writing the React dashboard.\nDONE: Finished the backend.')).toEqual({
       now: 'Writing the React dashboard',
       done: 'Finished the backend',
+      decision: null,
     })
-    expect(parseSummary('now: "Choosing chart colors"\ndone: NONE')).toEqual({ now: 'Choosing chart colors', done: null })
+    // A request's third line says whether it starts new work.
+    expect(parseSummary('NOW: Fixing the login error\nDONE: NONE\nTASK: NEW FIX')!.decision).toBe('fix')
+    expect(parseSummary('NOW: Making the button blue\nDONE: NONE\nTASK: SAME')!.decision).toBe('same')
+    expect(parseSummary('NOW: Adding transfers\nDONE: NONE\nTASK: NEW FEATURE')!.decision).toBe('feature')
+    expect(parseSummary('now: "Choosing chart colors"\ndone: NONE')).toEqual({ now: 'Choosing chart colors', done: null, decision: null })
     // Unlabeled, as the model sometimes replies: the first line is Now, the second Done.
-    expect(parseSummary('Designing the chart series\nNONE')).toEqual({ now: 'Designing the chart series', done: null })
-    expect(parseSummary('Writing tests\nFinished the servicers')).toEqual({ now: 'Writing tests', done: 'Finished the servicers' })
-    expect(parseSummary('Writing tests')).toEqual({ now: 'Writing tests', done: null })
+    expect(parseSummary('Designing the chart series\nNONE')).toEqual({ now: 'Designing the chart series', done: null, decision: null })
+    expect(parseSummary('Writing tests\nFinished the servicers')).toEqual({ now: 'Writing tests', done: 'Finished the servicers', decision: null })
+    expect(parseSummary('Writing tests')).toEqual({ now: 'Writing tests', done: null, decision: null })
     expect(parseSummary('DONE: Finished the backend')).toBe(null)
     expect(parseSummary('  \n')).toBe(null)
     // NOW: NONE when the text only explains or plans: Now stays as it was.
-    expect(parseSummary('NOW: NONE\nDONE: NONE')).toEqual({ now: null, done: null })
+    expect(parseSummary('NOW: NONE\nDONE: NONE')).toEqual({ now: null, done: null, decision: null })
     expect(parseSummary(`NOW: ${'x'.repeat(100)}`)!.now!.length).toBe(60)
   })
 
@@ -43,10 +48,10 @@ describe('activity', () => {
 
   test('Just completed changes only when a text says something finished', () => {
     const start = { justCompleted: null, now: WAITING }
-    const writing = startTask({ now: 'Writing the React dashboard', done: 'Finished the backend' }, start)
+    const writing = startTask({ now: 'Writing the React dashboard', done: 'Finished the backend', decision: null }, start)
     expect(writing).toEqual({ justCompleted: 'Finished the backend', now: 'Writing the React dashboard' })
     // A sub-step is not a finish: Just completed stays.
-    expect(startTask({ now: 'Choosing chart colors', done: null }, writing)).toEqual({
+    expect(startTask({ now: 'Choosing chart colors', done: null, decision: null }, writing)).toEqual({
       justCompleted: 'Finished the backend',
       now: 'Choosing chart colors',
     })
@@ -54,7 +59,7 @@ describe('activity', () => {
 
   test('a text that only explains keeps Now', () => {
     const shown = { justCompleted: null, now: 'Writing the code that builds the report' }
-    expect(startTask({ now: null, done: null }, shown)).toEqual(shown)
+    expect(startTask({ now: null, done: null, decision: null }, shown)).toEqual(shown)
   })
 
   test('the end of a turn waits and keeps Just completed', () => {
