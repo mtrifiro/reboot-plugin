@@ -169,7 +169,8 @@ differ because of Codex limitations:
   is working on (summarized by Sonnet from its narration) and the build's
   progress, and the app's backend, frontend and tunnel health in the
   status line; `reboot-schema-guard` refuses API edits that an app with
-  persisted dev state couldn't boot over. Codex has no
+  persisted dev state couldn't boot over. See
+  [`mods/README.md`](mods/README.md). Codex has no
   equivalent, and its own catalog doesn't list them. The skills carry
   the same rules for both.
 
