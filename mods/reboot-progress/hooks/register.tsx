@@ -2,7 +2,8 @@ import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
 import type { Build } from '../types'
-import { cleanSummary, fallback, isWorthSummarizing, summaryPrompt, textOf, waiting } from './activity'
+import { WAITING, endTurn, fallback, isWorthSummarizing, parseSummary, startTask, summaryPrompt, textOf } from './activity'
+import type { Task } from './activity'
 import {
   RUN,
   asBuild,
@@ -116,32 +117,39 @@ function callOf(e: { tool: string } & Record<string, unknown>): Call | null {
 let wasBackendUp = false
 let isPolling = false
 let restoredRoot: string | null = null
-let lastActivity: string | null = null
+let current: Task | null = null // the task Now shows, while a turn runs
 let isTurnActive = false
 let latestSummary = 0 // the newest summary asked for; older replies are dropped
 
-/** Shows what is being worked on: `text`, or Waiting once the turn is over. */
-async function showActivity($: EngineInterface, text: string) {
-  lastActivity = text
-  await update($, activity, () => (isTurnActive ? text : waiting(text)))
+/** A new task: Now while the turn runs; a late one (the turn's report) is Just completed. */
+async function showTask($: EngineInterface, task: Task) {
+  if (isTurnActive) {
+    const before = current
+    current = task
+    await update($, activity, shown => startTask(before, task, shown))
+  } else {
+    await update($, activity, () => ({ justCompleted: task.done, now: WAITING }))
+  }
 }
 
 /** Summarizes `text` with a small model in the background, newest wins. */
 async function summarize($: EngineInterface, text: string, kind: 'narration' | 'request') {
   const id = ++latestSummary
-  let summary = ''
+  let task: Task | null = null
   try {
     const reply = await $.model.complete({
       model: 'haiku',
       prompt: summaryPrompt(text, kind),
-      maxTokens: 40,
+      maxTokens: 60,
       timeoutMs: 15000,
     })
-    if (reply.isAnswered) summary = cleanSummary(reply.text)
+    if (reply.isAnswered) task = parseSummary(reply.text)
   } catch {
-    summary = ''
+    task = null
   }
-  if (id === latestSummary) await showActivity($, summary || fallback(text))
+  if (id !== latestSummary) return
+  const first = fallback(text)
+  await showTask($, task ?? { now: first, done: first })
 }
 
 /** Sets the session's build and keeps it for the project across sessions. */
@@ -193,7 +201,7 @@ export const register: Register = on => {
       description: 'Show, hide or reset the band above the prompt (activity and build progress)',
       argumentHint: '[show|hide|reset]',
     })
-    await update($, activity, () => waiting(null))
+    await update($, activity, () => ({ justCompleted: null, now: WAITING }))
     void poll($)
     $.clock.every(POLL_MS, () => void poll($))
 
@@ -257,27 +265,35 @@ export const register: Register = on => {
 
   on('turn.complete', async ($, e, next) => {
     isTurnActive = false
-    await update($, activity, () => waiting(lastActivity))
+    const last = current
+    current = null
+    await update($, activity, shown => endTurn(last, shown))
 
     return next(e)
   })
 
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
     const b = await read($, build)
-    const now = await read($, activity)
-    if (e.props.hasSurvey || (b === null && now === null) || (await read($, isHidden))) return next(e)
+    const act = await read($, activity)
+    if (e.props.hasSurvey || (b === null && act === null) || (await read($, isHidden))) return next(e)
 
     const { Box, Button, Text } = $.ui.resolve(e)
     const bar = b && progressBar(b.step, b.isDone, barWidth(e.props.bodyColumns))
     const hide = <Button key="hide" label="Hide" onPress={() => update($, isHidden, () => true)} />
 
-    // "Now" above "Build"; Hide ends the first row.
+    // Just completed and Now above Progress; Hide ends the first row.
     return (
       <Box flexDirection="column">
-        {now !== null && (
+        {act !== null && (
           <Box flexDirection="row">
-            <Text bold>Now       </Text>
-            <Text wrap="truncate-end">{now}  </Text>
+            {act.justCompleted !== null && (
+              <>
+                <Text bold>Just completed  </Text>
+                <Text dimColor wrap="truncate-end">{act.justCompleted}   </Text>
+              </>
+            )}
+            <Text bold>Now  </Text>
+            <Text wrap="truncate-end">{act.now}  </Text>
             {hide}
           </Box>
         )}
@@ -287,7 +303,7 @@ export const register: Register = on => {
             <Text color="green">{'█'.repeat(bar.filled)}</Text>
             <Text dimColor>{'░'.repeat(bar.empty)}</Text>
             <Text>  {bar.label}  </Text>
-            {now === null && hide}
+            {act === null && hide}
           </Box>
         )}
       </Box>
