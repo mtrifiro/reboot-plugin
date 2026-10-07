@@ -20,47 +20,46 @@ describe('activity', () => {
     expect(isWorthSummarizing('Now writing the servicers: Google access and the demo data.')).toBe(true)
   })
 
-  test('reads both tenses from a reply', () => {
-    expect(parseSummary('"Writing the Google access servicers."\nWrote the Google access servicers.\n')).toEqual({
-      now: 'Writing the Google access servicers',
-      done: 'Wrote the Google access servicers',
+  test('reads Now and Done from a labeled reply', () => {
+    expect(parseSummary('NOW: Writing the React dashboard.\nDONE: Finished the backend.')).toEqual({
+      now: 'Writing the React dashboard',
+      done: 'Finished the backend',
     })
-    expect(parseSummary('1. Writing tests\n2. Wrote tests')).toEqual({ now: 'Writing tests', done: 'Wrote tests' })
-    expect(parseSummary('Writing tests')).toEqual({ now: 'Writing tests', done: 'Writing tests' })
+    expect(parseSummary('now: "Choosing chart colors"\ndone: NONE')).toEqual({ now: 'Choosing chart colors', done: null })
+    // Unlabeled, as Haiku sometimes replies: the first line is Now, the second Done.
+    expect(parseSummary('Designing the chart series\nNONE')).toEqual({ now: 'Designing the chart series', done: null })
+    expect(parseSummary('Writing tests\nFinished the servicers')).toEqual({ now: 'Writing tests', done: 'Finished the servicers' })
+    expect(parseSummary('Writing tests')).toEqual({ now: 'Writing tests', done: null })
+    expect(parseSummary('DONE: Finished the backend')).toBe(null)
     expect(parseSummary('  \n')).toBe(null)
-    expect(parseSummary('x'.repeat(100))!.now.length).toBe(60)
+    expect(parseSummary(`NOW: ${'x'.repeat(100)}`)!.now.length).toBe(60)
   })
 
   test('falls back to the first sentence', () => {
     expect(fallback('**Now** writing the servicers. Then the tests.')).toBe('Now writing the servicers')
   })
 
-  test('a new task moves the current one to Just completed', () => {
-    const api = { now: 'Writing the API', done: 'Wrote the API' }
-    const servicers = { now: 'Writing the servicers', done: 'Wrote the servicers' }
-    const first = startTask(null, api, { justCompleted: null, now: WAITING })
-    expect(first).toEqual({ justCompleted: null, now: 'Writing the API' })
-    const second = startTask(api, servicers, first)
-    expect(second).toEqual({ justCompleted: 'Wrote the API', now: 'Writing the servicers' })
-    // The same task again changes nothing.
-    expect(startTask(servicers, { ...servicers }, second)).toEqual(second)
-  })
-
-  test('a new turn keeps the last Just completed until a task replaces it', () => {
-    const shown = { justCompleted: 'Wrote the API', now: WAITING }
-    expect(startTask(null, { now: 'Planning tests', done: 'Planned tests' }, shown)).toEqual({
-      justCompleted: 'Wrote the API',
-      now: 'Planning tests',
+  test('Just completed changes only when a text says something finished', () => {
+    const start = { justCompleted: null, now: WAITING }
+    const writing = startTask({ now: 'Writing the React dashboard', done: 'Finished the backend' }, start)
+    expect(writing).toEqual({ justCompleted: 'Finished the backend', now: 'Writing the React dashboard' })
+    // A sub-step is not a finish: Just completed stays.
+    expect(startTask({ now: 'Choosing chart colors', done: null }, writing)).toEqual({
+      justCompleted: 'Finished the backend',
+      now: 'Choosing chart colors',
     })
   })
 
-  test('the end of a turn completes the last task and waits', () => {
-    expect(endTurn({ now: 'Writing tests', done: 'Wrote tests' }, null)).toEqual({ justCompleted: 'Wrote tests', now: WAITING })
-    expect(endTurn(null, { justCompleted: 'Wrote the API', now: 'x' })).toEqual({ justCompleted: 'Wrote the API', now: WAITING })
+  test('the end of a turn waits and keeps Just completed', () => {
+    expect(endTurn({ justCompleted: 'Finished the backend', now: 'x' })).toEqual({
+      justCompleted: 'Finished the backend',
+      now: WAITING,
+    })
+    expect(endTurn(null)).toEqual({ justCompleted: null, now: WAITING })
   })
 
   test('the prompt carries the text and asks for a short phrase', () => {
     expect(summaryPrompt('Build it.', 'request')).toContain('<text>\nBuild it.\n</text>')
-    expect(summaryPrompt('Build it.', 'narration')).toContain('past tense')
+    expect(summaryPrompt('Build it.', 'narration')).toContain('Plans, next steps')
   })
 })

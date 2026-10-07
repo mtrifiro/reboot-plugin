@@ -121,19 +121,14 @@ function callOf(e: { tool: string } & Record<string, unknown>): Call | null {
 let wasBackendUp = false
 let isPolling = false
 let restoredRoot: string | null = null
-let current: Task | null = null // the task Now shows, while a turn runs
 let isTurnActive = false
 let latestSummary = 0 // the newest summary asked for; older replies are dropped
 
-/** A new task: Now while the turn runs; a late one (the turn's report) is Just completed. */
+/** A summary while the turn runs moves Now; a late one (the turn's report) only Just completed. */
 async function showTask($: EngineInterface, task: Task) {
-  if (isTurnActive) {
-    const before = current
-    current = task
-    await update($, activity, shown => startTask(before, task, shown))
-  } else {
-    await update($, activity, () => ({ justCompleted: task.done, now: WAITING }))
-  }
+  await update($, activity, shown =>
+    isTurnActive ? startTask(task, shown) : endTurn(startTask(task, shown)),
+  )
 }
 
 /** Summarizes `text` with a small model in the background, newest wins. */
@@ -152,8 +147,9 @@ async function summarize($: EngineInterface, text: string, kind: 'narration' | '
     task = null
   }
   if (id !== latestSummary) return
-  const first = fallback(text)
-  await showTask($, task ?? { now: first, done: first })
+  const seen = task ?? { now: fallback(text), done: null }
+  // A request says what to do, never what is done.
+  await showTask($, kind === 'request' ? { ...seen, done: null } : seen)
 }
 
 /** Sets the session's build and keeps it for the project across sessions. */
@@ -188,8 +184,10 @@ async function poll($: EngineInterface) {
       $.ui.status(undefined)
       return
     }
-    await restoreBuild($, dir)
-    const h = await health($, dir)
+    // Each part on its own: a failed restore must not cost the status line.
+    await restoreBuild($, dir).catch(() => undefined)
+    const h = await health($, dir).catch(() => null)
+    if (h === null) return
     if (wasBackendUp && !h.backend) $.ui.toast('Reboot backend stopped')
     wasBackendUp = h.backend
     $.ui.status(formatStatus(h))
@@ -272,9 +270,7 @@ export const register: Register = on => {
     const b = await read($, build)
     const finished = finishTurn(b)
     if (finished !== b) await saveBuild($, finished)
-    const last = current
-    current = null
-    await update($, activity, shown => endTurn(last, shown))
+    await update($, activity, shown => endTurn(shown))
 
     return next(e)
   })
@@ -288,11 +284,20 @@ export const register: Register = on => {
     const bar = b && progressBar(b.step, b.isDone, barWidth(e.props.bodyColumns))
     const hide = <Button key="hide" label="Hide" onPress={() => update($, isHidden, () => true)} />
 
-    // Two columns, each a label over its status, then Progress; Hide at the top right.
+    // Reboot Progress on top with Hide; below it two columns, each a label over its status.
     const column = Math.max(16, Math.floor((e.props.bodyColumns - HIDE_COLUMNS) / 2))
 
     return (
       <Box flexDirection="column">
+        {bar && (
+          <Box flexDirection="row" flexWrap="wrap">
+            <Text bold>Reboot Progress  </Text>
+            <Text color="green">{'█'.repeat(bar.filled)}</Text>
+            <Text dimColor>{'░'.repeat(bar.empty)}</Text>
+            <Text>  {bar.label}  </Text>
+            {hide}
+          </Box>
+        )}
         {act !== null && (
           <Box flexDirection="row">
             <Box flexDirection="column" width={column}>
@@ -304,16 +309,7 @@ export const register: Register = on => {
               <Text bold>Now</Text>
               <Text wrap="truncate-end">{act.now}</Text>
             </Box>
-            {hide}
-          </Box>
-        )}
-        {bar && (
-          <Box flexDirection="row" flexWrap="wrap">
-            <Text bold>Progress  </Text>
-            <Text color="green">{'█'.repeat(bar.filled)}</Text>
-            <Text dimColor>{'░'.repeat(bar.empty)}</Text>
-            <Text>  {bar.label}  </Text>
-            {act === null && hide}
+            {bar === null && hide}
           </Box>
         )}
       </Box>

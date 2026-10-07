@@ -125,7 +125,7 @@ export function progressBar(step: number, isDone: boolean, width: number): Bar {
 
 /** Bar cells for a band `columns` wide: what the label and Hide leave, 10 to 30. */
 export const barWidth = (columns: number): number =>
-  Math.max(10, Math.min(30, columns - 'Progress  '.length - '  Access rules · 5 of 8'.length - ' [ Hide ]'.length))
+  Math.max(10, Math.min(30, columns - 'Reboot Progress  '.length - '  Access rules · 5 of 8'.length - ' [ Hide ]'.length))
 
 export type BuildState = { step: number; isDone: boolean; isRestored?: boolean }
 
@@ -149,6 +149,9 @@ export function nextBuild(
   if (step === TESTS && (b === null || b.step < BACKEND)) return b
   if (b === null) return step >= 1 && step < RUN ? { step, isDone: false } : null
   if (b.isDone) return b
+  // A build restored from an earlier session may be stale or wrong: the
+  // first evidence in this session says where it really is.
+  if (b.isRestored) return { step, isDone: false }
 
   // Starting the app is Launch, not done: the model runs it mid-build too.
   return { step: Math.max(b.step, step), isDone: false }

@@ -77,7 +77,7 @@ describe('progress bar', () => {
 
   test('sizes to the band, 10 to 30 cells', () => {
     expect(barWidth(40)).toBe(10)
-    expect(barWidth(60)).toBe(18)
+    expect(barWidth(60)).toBe(11)
     expect(barWidth(200)).toBe(30)
   })
 })
@@ -91,8 +91,8 @@ describe('build state', () => {
 
   test('a build skill restarts a build restored from an earlier session', () => {
     expect(nextBuild({ step: 6, isDone: false, isRestored: true }, 0, true)).toEqual({ step: 0, isDone: false })
-    // Evidence in this session makes it this session's.
-    expect(nextBuild({ step: 6, isDone: false, isRestored: true }, 5, false)).toEqual({ step: 6, isDone: false })
+    // The first evidence in this session says where a restored build really is.
+    expect(nextBuild({ step: 6, isDone: false, isRestored: true }, 5, false)).toEqual({ step: 5, isDone: false })
   })
 
   test('evidence starts a build a resumed session never saw open', () => {

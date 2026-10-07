@@ -4,8 +4,11 @@
 
 import type { Activity } from '../types'
 
-/** One task, as Haiku names it: present tense for Now, past for Just completed. */
-export type Task = { now: string; done: string }
+/**
+ * What one text says, as Haiku reads it: what is being done now, and what
+ * it says was just finished (null when it says nothing is).
+ */
+export type Task = { now: string; done: string | null }
 
 export const WAITING = 'Waiting for you'
 
@@ -29,13 +32,16 @@ export const isWorthSummarizing = (text: string): boolean => text.length >= 40
 
 export const summaryPrompt = (text: string, kind: 'narration' | 'request'): string =>
   (kind === 'narration'
-    ? 'Below is what a coding assistant just told the user it is doing.'
+    ? 'Below is what a coding assistant just told the user.'
     : 'Below is what a user just asked a coding assistant to do.') +
-  ' In 3 to 8 words, say what the assistant is working on now. Reply with exactly two ' +
-  'lines: first as a present-tense phrase starting with a verb ending in -ing ' +
-  '("Writing the Google access servicers"), then the same phrase in the past tense ' +
-  '("Wrote the Google access servicers"). No quotes, no trailing periods, nothing else.' +
-  '\n\n<text>\n' +
+  ' Reply with exactly two lines and nothing else:\n' +
+  'NOW: what the assistant is doing at this moment, in 3 to 8 words, as a present-tense ' +
+  'phrase starting with a verb ending in -ing ("Writing the Google access servicers"). ' +
+  'Plans, next steps and anything it says it will do later are not what it is doing now.\n' +
+  'DONE: what the text says the assistant has just finished, in 3 to 8 words in the past ' +
+  'tense ("Finished the backend"), or NONE. Only work the text clearly says is finished ' +
+  'counts; never planned, upcoming or ongoing work.\n' +
+  'No quotes, no trailing periods.\n\n<text>\n' +
   text.slice(0, 4000) +
   '\n</text>'
 
@@ -43,12 +49,21 @@ export const summaryPrompt = (text: string, kind: 'narration' | 'request'): stri
 const cleanLine = (line: string) =>
   clip(line.trim().replace(/^[-*\d.)\s]+/, '').replace(/^["'`]+|["'`.]+$/g, ''), 60)
 
-/** The task in a reply's two lines; one line serves as both. null when empty. */
+/**
+ * The task in a `NOW:` / `DONE:` reply. Haiku sometimes drops the labels:
+ * then the first line is Now and the second Done. null when there is no Now.
+ */
 export function parseSummary(reply: string): Task | null {
-  const lines = reply.split('\n').map(cleanLine).filter(l => l.length > 0)
-  if (lines.length === 0) return null
+  const lines = reply.split('\n').map(l => l.trim()).filter(l => l.length > 0)
+  const labeled = (label: string) =>
+    lines.find(l => l.toUpperCase().startsWith(`${label}:`))?.slice(label.length + 1)
+  const nowText = labeled('NOW') ?? (lines.some(l => /^DONE:/i.test(l)) ? undefined : lines[0])
+  const now = nowText === undefined ? '' : cleanLine(nowText)
+  if (now === '') return null
+  const doneText = labeled('DONE') ?? (labeled('NOW') === undefined ? lines[1] : undefined)
+  const done = doneText === undefined ? null : cleanLine(doneText)
 
-  return { now: lines[0]!, done: lines[1] ?? lines[0]! }
+  return { now, done: done === null || done === '' || /^none$/i.test(done) ? null : done }
 }
 
 /** The first sentence of `text`, clipped: what shows when no summary comes back. */
@@ -62,18 +77,16 @@ export function fallback(text: string): string {
 const clip = (s: string, max: number) => (s.length <= max ? s : `${s.slice(0, max - 1).trimEnd()}…`)
 
 /**
- * A new task while working: the one it replaces moves to Just completed.
- * The same task again changes nothing.
+ * A new text while working: Now follows it, and Just completed changes
+ * only when the text says something was finished.
  */
-export function startTask(current: Task | null, task: Task, shown: Activity | null): Activity {
-  if (current !== null && current.now === task.now) return shown ?? { justCompleted: null, now: task.now }
-  const justCompleted = current !== null ? current.done : (shown?.justCompleted ?? null)
+export const startTask = (task: Task, shown: Activity | null): Activity => ({
+  justCompleted: task.done ?? shown?.justCompleted ?? null,
+  now: task.now,
+})
 
-  return { justCompleted, now: task.now }
-}
-
-/** The turn is over: the last task is Just completed, and Now waits. */
-export const endTurn = (current: Task | null, shown: Activity | null): Activity => ({
-  justCompleted: current?.done ?? shown?.justCompleted ?? null,
+/** The turn is over: Just completed stays, and Now waits. */
+export const endTurn = (shown: Activity | null): Activity => ({
+  justCompleted: shown?.justCompleted ?? null,
   now: WAITING,
 })
