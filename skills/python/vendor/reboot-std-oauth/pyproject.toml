@@ -1,0 +1,19 @@
+# The `reboot.std.oauth` module the reboot 1.6.0 wheel leaves out
+# (findings/tool-checks/01). `oauth.py` is copied unchanged from
+# reboot-dev/reboot at tag 1.6.0 (Apache-2.0, see NOTICE). Installed
+# beside reboot, it lands in reboot's own `reboot/std/` namespace, so
+# `from reboot.std.oauth.v1.oauth import oauth_library` works. Pinned to
+# reboot 1.6.0: drop it when a reboot release ships the module.
+[project]
+name = "reboot-std-oauth"
+version = "1.6.0"
+description = "reboot.std.oauth for reboot 1.6.0, whose wheel omits it"
+requires-python = ">=3.10"
+dependencies = ["reboot==1.6.0"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["reboot"]

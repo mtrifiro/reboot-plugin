@@ -52,4 +52,15 @@ fail at startup with `ModuleNotFoundError` (read, not run). Of the three
 documented ways to call an external API as the user, the two built on
 `OAuthTokenManager` cannot work at 1.6.0; the `Ciphertext` path does.
 The references now say so in Limits / Errors. **Target: file upstream
-as a packaging bug** — the plugin can only document it.
+as a packaging bug**; the plugin works around it below.
+
+**Plugin workaround (2026-10-07).** The plugin now vendors the module as
+`skills/python/vendor/reboot-std-oauth`, a path package pinning
+`reboot==1.6.0` whose `reboot/std/oauth/v1/oauth.py` is byte-identical to
+upstream at tag 1.6.0 (same git blob). Installed beside the published
+wheel it lands in reboot's own `reboot/std/` namespace: upstream's
+`tests/reboot/std/oauth/v1/oauth_tests.py` (1.6.0 tag) passes 7/7, and
+`Application._require_oauth_libraries` passes. The references now say to
+install it instead of falling back to hand-rolled `Ciphertext`; the
+upgrade skill removes it once a wheel ships the module. Still open
+upstream: the wheel should ship it.

@@ -194,12 +194,12 @@ await KeyManager.ref(_key_manager_id(GOOGLE)).shred(context, scope=user_id)
 
 ## Limits
 
-- **At 1.6.0, Paths A and B cannot run from the published wheel**: it
-  lacks `reboot.std.oauth` (`oauth_library`, `GOOGLE`, `_key_manager_id`,
-  the `OAuthTokenManager` servicer), observed on macOS / Python 3.12.
-  `store_tokens=True` fails at startup with `ModuleNotFoundError`
-  (tool-checks-01, open; `stdlib-oauth-tokens.md` § Limits). Path C
-  needs only `ciphertext` and works.
+- **At 1.6.0, Paths A and B need the vendored `oauth` library**: the
+  published wheel lacks `reboot.std.oauth`, so `store_tokens=True` fails
+  at startup with `ModuleNotFoundError` until you install the plugin's
+  `reboot-std-oauth` package (`stdlib-oauth-tokens.md`, Do this). Don't
+  fall back to hand-rolling `Ciphertext` for OAuth tokens. Path C needs
+  only `ciphertext`.
 - Reboot stores what the token endpoint returns, carrying a prior
   `refresh_token` forward when a capture omits it. It does **not** refresh
   expired access tokens: check `expires_at`, call the token endpoint yourself.
@@ -220,7 +220,7 @@ await KeyManager.ref(_key_manager_id(GOOGLE)).shred(context, scope=user_id)
 
 | Error text (stable prefix) | Meaning | Fix |
 | --- | --- | --- |
-| `ModuleNotFoundError: No module named 'reboot.std.oauth'` | The 1.6.0 wheel lacks the `oauth` library (Paths A/B) | See Limits; Path C still works |
+| `ModuleNotFoundError: No module named 'reboot.std.oauth'` | The 1.6.0 wheel lacks the `oauth` library (Paths A/B) | Install the vendored `reboot-std-oauth` package (`stdlib-oauth-tokens.md`) |
 
 ## See also
 

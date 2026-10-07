@@ -56,7 +56,7 @@ here. -->
 | `Almost: each clause goes in backticks` | A `with` / `has` clause without backticks | `` `amount=50` `` | `python/references/testing-features.md`, `python/references/testing-web-app.md` |
 | `Almost: say a saved value as <name>, not $name` | `$name` / `${name}` spelling | `<name>` | `python/references/testing-features.md` |
 | `` An agent needs to have a unique `name` in order to be used with Reboot `` | Constructed without `name=` | Add a stable `name=` | `python/references/agent-pydantic-ai.md` |
-| ``An OAuth provider with `store_tokens=True` needs the `oauth` and `ciphertext` libraries`` | Libraries not mounted (once the module ships) | Add all three to `libraries=` | `mcp-ui/references/auth-store-tokens.md` |
+| ``An OAuth provider with `store_tokens=True` needs the `oauth` and `ciphertext` libraries`` | Libraries not mounted | Add all three to `libraries=` | `mcp-ui/references/auth-store-tokens.md` |
 | An `OrderedMap` shows only an id | The map actor holds a root id; its keys and values live in a `Node` actor (client-portal, 1.6.0) | Run `state get` again on the node id | `inspect/SKILL.md` |
 | `Application modified; restarting` | Dev watcher reloaded after a file change | Don't run the suite against a watched tree | `python/references/lifecycle-dev-loop.md` |
 | `` `Application(oauth=...)` is running without `OAuth(allowed_origins=[...])` `` | `allowed_origins` left out: works under `rbt dev run`, production refuses to start | Pass a list (the template passes `[]`); list the SPA origin before deploying | `web-app/references/react-client.md` |
@@ -143,7 +143,7 @@ here. -->
 | `Missing tag for property '` | `Field` without `tag=` | Add a unique tag | `python/references/api-pydantic.md` |
 | `MixedContextsError` / `has previously been used by a different \`Context\`` | One `WeakReference` reused across contexts | Fresh `Type.ref(id)` per context | `python/references/rpc-refs.md` |
 | `ModuleNotFoundError: No module named '<pkg>.v1.<name>'` | `api` missing from `pytest.ini`'s `pythonpath` | Copy the template's `pytest.ini` | `python/references/testing-project-setup.md` |
-| `ModuleNotFoundError: No module named 'reboot.std.oauth'` | The 1.6.0 wheel lacks the `oauth` library (Paths A/B) | See Limits; Path C still works | `python/references/auth-external-api-calls.md`, `python/references/stdlib-oauth-tokens.md` |
+| `ModuleNotFoundError: No module named 'reboot.std.oauth'` | The 1.6.0 wheel lacks the `oauth` library (Paths A/B) | Install the vendored `reboot-std-oauth` package (`stdlib-oauth-tokens.md`) | `python/references/auth-external-api-calls.md`, `python/references/stdlib-oauth-tokens.md` |
 | `ModuleNotFoundError: No module named 'reboot.std.presence.subscriber'` | Imported a proto package path | Import from `reboot.std.presence.v1.presence` | `python/references/stdlib-presence.md` |
 | `ModuleNotFoundError: No module named 'reboot.std.react'` | Treated the React hooks as Python | Use `@reboot-dev/reboot-std-react/presence` in TS | `python/references/stdlib-presence.md` |
 | `more than once using the same context an idempotency alias or key must be specified` | Same method on the same actor called twice without distinct aliases | Give each call an alias | `python/references/servicer-workflow-calls.md`, `python/references/servicer-workflow-wait.md` |

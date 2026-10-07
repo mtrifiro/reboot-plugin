@@ -3,7 +3,7 @@ title: Store Provider OAuth Tokens in `OAuthTokenManager`, Not Hand-Rolled `Ciph
 impact: HIGH
 impactDescription: OAuth access/refresh tokens are secrets at rest; the stdlib manager encrypts, indexes, and crypto-shreds them per user for you — a plain `str` field leaks them, and hand-rolling `Ciphertext` re-implements what already exists.
 tags: stdlib, oauth, tokens, access-token, refresh-token, store-tokens, ciphertext, encryption, crypto-shred, google, github, secret
-summary: "Never tokens in a `str` field or hand-rolled `Ciphertext`; `OAuthTokenManager`, three libraries (`oauth` missing at 1.6.0), app-internal only."
+summary: "Never tokens in a `str` field or hand-rolled `Ciphertext`; `OAuthTokenManager`, three libraries (`oauth` vendored at 1.6.0), app-internal only."
 step: auth
 applies: [mcp-ui, web-app, backend-only]
 always: false
@@ -30,6 +30,19 @@ ID names the service (`GOOGLE` / `GITHUB` constants, or any string, e.g.
 `"slack.com"`). Each manager encrypts under its own `KeyManager`, each
 user's tokens under a crypto-shred scope of their `user_id`, so one user
 can be erased alone.
+
+**At reboot 1.6.0, install the `oauth` library first**: the 1.6.0 wheel
+leaves it out (Limits), so the plugin ships it, copied unchanged from
+upstream's 1.6.0 tag. From the application directory, with `<python>`
+this skill's directory:
+
+```sh
+mkdir -p vendor && cp -R <python>/vendor/reboot-std-oauth vendor/
+uv add --no-workspace ./vendor/reboot-std-oauth
+```
+
+Commit `vendor/`. The package pins `reboot==1.6.0`, so an upgrade fails
+to resolve until it's removed (the upgrade skill says when).
 
 Mount all three libraries (manager → `Ciphertext` → `OrderedMap`) and
 import the manager:
@@ -102,14 +115,16 @@ only `fetch` (`auth-external-api-calls.md`, Path A).
 
 ## Limits
 
-- **The 1.6.0 wheel lacks `reboot.std.oauth`** (observed on macOS /
-  Python 3.12; the `manylinux_2_34_x86_64` wheel's file list has no
-  `reboot/std/oauth/` either). `oauth_library`, `GOOGLE`, `GITHUB` and
-  `_key_manager_id` cannot be imported, and no `OAuthTokenManager`
-  servicer implementation ships to mount — only the generated
-  `rbt.std.oauth.v1.oauth_rbt` client (tool-checks-01, open). The
-  built-in providers use the service IDs `"google.com"` (`Google`) and
-  `"github.com"` (`GitHub`); `Auth0` uses its tenant domain.
+- **The 1.6.0 wheel lacks `reboot.std.oauth`** (macOS and
+  `manylinux_2_34_x86_64` alike): only the generated
+  `rbt.std.oauth.v1.oauth_rbt` client ships, not the module defining
+  `oauth_library`, `GOOGLE`, `GITHUB`, `_key_manager_id` and the
+  `OAuthTokenManager` servicer (tool-checks-01, open upstream). The
+  vendored `reboot-std-oauth` package (Do this) installs that module into
+  reboot's own `reboot/std/` namespace; upstream's `oauth_tests.py` passes
+  against it on the published 1.6.0 wheel. Not yet tried on Reboot Cloud.
+  The built-in providers use the service IDs `"google.com"` (`Google`)
+  and `"github.com"` (`GitHub`); `Auth0` uses its tenant domain.
 - `store` replaces the user's tokens wholesale, but carries a prior
   `refresh_token` forward when the new `tokens` leaves it unset.
 - No read and write of the same manager in one transaction; to merge,
@@ -129,7 +144,7 @@ only `fetch` (`auth-external-api-calls.md`, Path A).
 
 | Error text (stable prefix) | Meaning | Fix |
 | --- | --- | --- |
-| `ModuleNotFoundError: No module named 'reboot.std.oauth'` | The 1.6.0 wheel does not ship the `oauth` library; also raised at startup by any provider with `store_tokens=True` (the library check imports it) | No fix in the plugin at 1.6.0; see Limits |
+| `ModuleNotFoundError: No module named 'reboot.std.oauth'` | The 1.6.0 wheel does not ship the `oauth` library; also raised at startup by any provider with `store_tokens=True` (the library check imports it) | Install the vendored `reboot-std-oauth` package (Do this) |
 | `FetchAborted` | Nothing has ever been stored for this service | Treat as "not connected" |
 
 ## See also

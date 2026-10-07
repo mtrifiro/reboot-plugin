@@ -96,11 +96,11 @@ Read back with `OAuthTokenManager.ref(<service id>).fetch(...)` inside a
 
 ## Limits
 
-- **At 1.6.0 the published wheel lacks `reboot.std.oauth`**, so
-  `from reboot.std.oauth.v1.oauth import oauth_library` fails, and any
+- **At 1.6.0 the published wheel lacks `reboot.std.oauth`**, so any
   provider with `store_tokens=True` fails at startup with
-  `ModuleNotFoundError` (the library check imports that module).
-  Observed on macOS / Python 3.12 (tool-checks-01, open).
+  `ModuleNotFoundError` until you install the plugin's vendored
+  `reboot-std-oauth` package (`python/references/stdlib-oauth-tokens.md`,
+  Do this; tool-checks-01, open upstream).
 - Any provider storing tokens requires the `oauth` + `ciphertext` (+
   `ordered_map`) libraries at startup.
 - `REBOOT_CRYPTO_ROOT_KEYS` backs the encryption; auto-provisioned under
@@ -120,7 +120,7 @@ Read back with `OAuthTokenManager.ref(<service id>).fetch(...)` inside a
 
 | Error text (stable prefix) | Meaning | Fix |
 | --- | --- | --- |
-| ``An OAuth provider with `store_tokens=True` needs the `oauth` and `ciphertext` libraries`` | Libraries not mounted (once the module ships) | Add all three to `libraries=` |
+| ``An OAuth provider with `store_tokens=True` needs the `oauth` and `ciphertext` libraries`` | Libraries not mounted | Add all three to `libraries=` |
 
 ## See also
 

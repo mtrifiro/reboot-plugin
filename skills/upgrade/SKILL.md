@@ -98,6 +98,11 @@ check fires next run, and this skill can be rerun.
   (leave `workspace:*` alone).
 - `Dockerfile` (if present): the `ghcr.io/reboot-dev/reboot-base` tag in
   `FROM`.
+- `vendor/reboot-std-oauth` (if present): it pins `reboot==1.6.0` and
+  blocks resolution. If the target wheel ships `reboot/std/oauth/`,
+  `uv remove reboot-std-oauth` and delete `vendor/reboot-std-oauth`;
+  otherwise replace it with this plugin's copy
+  (`python/references/stdlib-oauth-tokens.md`).
 
 ## Step 8 — Reinstall, regenerate, test
 
