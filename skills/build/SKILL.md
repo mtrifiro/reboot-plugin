@@ -231,6 +231,14 @@ factories).
 - web-app: `mcp=None` everywhere and no `UI()` until an MCP UI is
   added; descriptions are already written for the AI.
 
+Then tell the user the state types you wrote, one line each in the
+design's words: its name, what one holds, whose it is, and its methods
+by name with what each lets someone do ("**Site**: one per connected
+Analytics property, with its cached numbers. `overview` shows the
+numbers for a period; `refresh` fetches new ones from Google"). Do it
+again, marking what changed, whenever a later step adds, removes or
+reshapes a state type or method.
+
 ### Step 2 — Project shell
 
 Read "Before the project shell". Copy `templates/<front-door>/` (see
@@ -397,7 +405,8 @@ of the other (`app` skill, "At handoff").
 3. Agree on the feature in English and write its `@wip` feature file
    before the API changes ([`feature` skill](../feature/SKILL.md)).
 4. Update the API (every new property with `description=`) →
-   `uv run rbt generate`.
+   `uv run rbt generate`. Tell the user any state type or method added
+   or changed, one line each (Step 1).
 5. Update servicer methods, and the authorizer of any servicer whose
    methods changed.
 6. Update the frontend. mcp-ui: a new user-facing capability gets an
