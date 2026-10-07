@@ -12,6 +12,7 @@ import {
   formatStatus,
   isBuildSkill,
   listeningPorts,
+  finishTurn,
   metricsPort,
   nextBuild,
   progressBar,
@@ -265,6 +266,9 @@ export const register: Register = on => {
 
   on('turn.complete', async ($, e, next) => {
     isTurnActive = false
+    const b = await read($, build)
+    const finished = finishTurn(b)
+    if (finished !== b) await saveBuild($, finished)
     const last = current
     current = null
     await update($, activity, shown => endTurn(last, shown))

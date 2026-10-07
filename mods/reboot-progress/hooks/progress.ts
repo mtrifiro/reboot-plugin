@@ -142,8 +142,13 @@ export function nextBuild(
   if (b === null) return step >= 1 && step < RUN ? { step, isDone: false } : null
   if (b.isDone) return b
 
-  return { step: Math.max(b.step, step), isDone: step === RUN }
+  // Starting the app is Launch, not done: the model runs it mid-build too.
+  return { step: Math.max(b.step, step), isDone: false }
 }
+
+/** The end of a turn finishes a build that reached Launch; anything else stays. */
+export const finishTurn = (b: BuildState | null): BuildState | null =>
+  b !== null && !b.isDone && b.step === RUN ? { step: RUN, isDone: true } : b
 
 /** The `$.store` key holding a project's build across sessions. */
 export const storeKey = (root: string): string => `build:${root}`

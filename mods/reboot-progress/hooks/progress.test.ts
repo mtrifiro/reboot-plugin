@@ -7,6 +7,7 @@ import {
   formatStatus,
   listeningPorts,
   metricsPort,
+  finishTurn,
   nextBuild,
   progressBar,
   stepOf,
@@ -98,10 +99,17 @@ describe('build state', () => {
     expect(nextBuild(null, 7, false)).toBe(null)
   })
 
-  test('evidence moves forward only, and Run finishes', () => {
+  test('evidence moves forward only; starting the app is Launch, not done', () => {
     expect(nextBuild({ step: 4, isDone: false }, 2, false)).toEqual({ step: 4, isDone: false })
-    expect(nextBuild({ step: 4, isDone: false }, 7, false)).toEqual({ step: 7, isDone: true })
+    expect(nextBuild({ step: 4, isDone: false }, 7, false)).toEqual({ step: 7, isDone: false })
+    expect(nextBuild({ step: 7, isDone: false }, 5, false)).toEqual({ step: 7, isDone: false })
     expect(nextBuild({ step: 7, isDone: true }, 3, false)).toEqual({ step: 7, isDone: true })
+  })
+
+  test('a turn that ends at Launch finishes the build; earlier steps stay', () => {
+    expect(finishTurn({ step: 7, isDone: false })).toEqual({ step: 7, isDone: true })
+    expect(finishTurn({ step: 4, isDone: false })).toEqual({ step: 4, isDone: false })
+    expect(finishTurn(null)).toBe(null)
   })
 
   test('only a well-formed stored build is restored', () => {
