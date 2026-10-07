@@ -72,6 +72,11 @@ describe('activity', () => {
 
   test('the prompt carries the text and asks for a short phrase', () => {
     expect(summaryPrompt('Build it.', 'request')).toContain('<text>\nBuild it.\n</text>')
+    // A request carries the message it answers; a narration does not.
+    expect(summaryPrompt('2', 'request', 'none', '1. Weekly email\n2. What changed')).toContain(
+      '<assistant_last_message>\n1. Weekly email\n2. What changed\n</assistant_last_message>',
+    )
+    expect(summaryPrompt('Writing.', 'narration', 'none', 'x')).not.toContain('assistant_last_message')
     expect(summaryPrompt('Build it.', 'narration')).toContain('not a programmer')
   })
 })

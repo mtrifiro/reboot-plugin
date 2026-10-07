@@ -2,11 +2,12 @@ import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
 import type { Build } from '../types'
-import { WAITING, endTurn, fallback, isWorthSummarizing, parseSummary, startTask, summaryPrompt, textOf } from './activity'
+import { STARTING, WAITING, endTurn, fallback, isWorthSummarizing, parseSummary, startTask, summaryPrompt, textOf } from './activity'
 import type { Summary } from './activity'
 import {
   RUN,
   advanceTask,
+  appLinks,
   asTask,
   backendPort,
   barRuns,
@@ -20,16 +21,18 @@ import {
   metricsPort,
   skillKind,
   taskAfterPrompt,
+  taskLabel,
   progressBar,
   stepOf,
   storeKey,
 } from './progress'
-import type { Call, Health } from './progress'
+import type { Call, Health, Links } from './progress'
 
 const build = atom({ plugin: 'reboot-progress', key: 'build' } as const, null)
 const isHidden = atom({ plugin: 'reboot-progress', key: 'isHidden' } as const, false)
 const root = atom({ plugin: 'reboot-progress', key: 'root' } as const, null)
 const activity = atom({ plugin: 'reboot-progress', key: 'activity' } as const, null)
+const links = atom({ plugin: 'reboot-progress', key: 'links' } as const, { dashboard: null, app: null })
 
 const POLL_MS = 5000
 
@@ -67,7 +70,7 @@ async function readText($: EngineInterface, path: string): Promise<string> {
   }
 }
 
-async function health($: EngineInterface, dir: string): Promise<Health> {
+async function health($: EngineInterface, dir: string): Promise<Health & { links: Links }> {
   const [lsof, ps, rbtrc, webVite] = await Promise.all([
     $.process.run(['lsof', '-nP', '-iTCP', '-sTCP:LISTEN'], { timeoutMs: 5000 }).catch(() => null),
     $.process.run(['ps', '-axo', 'command='], { timeoutMs: 5000 }).catch(() => null),
@@ -98,11 +101,15 @@ async function health($: EngineInterface, dir: string): Promise<Health> {
     }
   }
 
+  const hasWebApp =
+    (await $.fs.exists(`${dir}/web/src`)) || (await $.fs.exists(`${dir}/frontend/web`))
+
   return {
     backend: ports.has(backendPort(rbtrc)),
     frontend: vitePort === null ? null : ports.has(vitePort),
     tunnel,
     url,
+    links: appLinks(ports, { backendPort: backendPort(rbtrc), vitePort, hasWebApp }),
   }
 }
 
@@ -125,6 +132,7 @@ let isPolling = false
 let restoredRoot: string | null = null
 let isTurnActive = false
 let latestSummary = 0 // the newest summary asked for; older replies are dropped
+let lastReply = '' // the model's latest main-thread text, which the next prompt answers
 
 /** A summary while the turn runs moves Now; a late one (the turn's report) only Just completed. */
 async function showTask($: EngineInterface, task: Summary) {
@@ -149,7 +157,7 @@ async function summarize(
   try {
     const reply = await $.model.complete({
       model: 'sonnet',
-      prompt: summaryPrompt(text, kind, describeTask(await read($, build))),
+      prompt: summaryPrompt(text, kind, describeTask(await read($, build)), lastReply),
       maxTokens: 80,
       timeoutMs: 15000,
     })
@@ -167,6 +175,18 @@ async function summarize(
   const seen = task ?? { now: fallback(text), done: null, decision: null }
   // A request says what to do, never what is done.
   await showTask($, kind === 'request' ? { ...seen, done: null } : seen)
+}
+
+/**
+ * Opens `url` in the person's browser. A Link to a local http: address draws
+ * as plain text on a remote surface (the desktop app), so the band's links
+ * are Buttons that open the address with the system's own command.
+ */
+async function openUrl($: EngineInterface, url: string) {
+  const opened = await $.process.run(['open', url], { timeoutMs: 5000 }).catch(() => null)
+  if (opened === null || opened.exitCode !== 0) {
+    await $.process.run(['xdg-open', url], { timeoutMs: 5000 }).catch(() => null)
+  }
 }
 
 /** Sets the session's build and keeps it for the project across sessions. */
@@ -189,7 +209,8 @@ async function restoreBuild($: EngineInterface, dir: string) {
   restoredRoot = dir
   if ((await read($, build)) !== null) return
   const stored = asTask(await $.store.get(storeKey(dir)))
-  if (stored && !stored.isDone) await update($, build, () => ({ ...stored, isRestored: true }))
+  // A finished task comes back as it was: Done until new work starts.
+  if (stored) await update($, build, () => (stored.isDone ? stored : { ...stored, isRestored: true }))
 }
 
 async function poll($: EngineInterface) {
@@ -205,6 +226,9 @@ async function poll($: EngineInterface) {
     await restoreBuild($, dir).catch(() => undefined)
     const h = await health($, dir).catch(() => null)
     if (h === null) return
+    // The band's links first: a failed status line must not cost them.
+    const was = await read($, links)
+    if (was.dashboard !== h.links.dashboard || was.app !== h.links.app) await update($, links, () => h.links)
     if (wasBackendUp && !h.backend) $.ui.toast('Reboot backend stopped')
     wasBackendUp = h.backend
     $.ui.status(formatStatus(h))
@@ -262,10 +286,13 @@ export const register: Register = on => {
     return ran
   }).catch(($, e, next) => next(e)) // never block a call on the band's account
 
-  // A finished task shows its full bar until the next prompt, then clears;
-  // the prompt's summary then says whether it starts new work.
+  // A finished task keeps its full Done bar until new work starts: a typed
+  // slash command now, or the prompt's summary saying it is new work.
   on('prompt.submit', async ($, e, next) => {
     isTurnActive = true
+    // Never "Waiting for you" while a turn runs: until the summary names the
+    // work, Now says the request is being worked on.
+    await update($, activity, shown => ({ justCompleted: shown?.justCompleted ?? null, now: STARTING }))
     const b = await read($, build)
     // A typed /reboot:app (or build, mcp-ui, web-app, feature) starts its
     // task now, before the skill's planning, not when the model calls it.
@@ -273,7 +300,7 @@ export const register: Register = on => {
     if (kind !== null) {
       const after = beginTask(b?.isDone ? null : b, kind)
       if (JSON.stringify(after) !== JSON.stringify(b)) await saveBuild($, after)
-    } else if (b?.isDone) await saveBuild($, null)
+    }
     if (e.text.trim()) void summarize($, e.text, 'request', kind === null)
 
     return next(e)
@@ -284,6 +311,7 @@ export const register: Register = on => {
     const appended = await next(e)
     if (e.agentId === undefined && e.message.type === 'assistant') {
       const text = textOf(e.message.content)
+      if (text) lastReply = text
       if (isWorthSummarizing(text)) void summarize($, text, 'narration')
     }
 
@@ -303,39 +331,48 @@ export const register: Register = on => {
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
     const b = await read($, build)
     const act = await read($, activity)
-    if (e.props.hasSurvey || (b === null && act === null) || (await read($, isHidden))) return next(e)
+    const to = await read($, links)
+    const hasLinks = to.dashboard !== null || to.app !== null
+    if (e.props.hasSurvey || (b === null && act === null && !hasLinks) || (await read($, isHidden))) {
+      return next(e)
+    }
 
-    const { Box, Text } = $.ui.resolve(e)
+    const { Box, Button, Text } = $.ui.resolve(e)
     const bar = b && progressBar(b, barWidth(e.props.bodyColumns))
 
-    // Reboot Progress on top; below it two columns, each a label over its status.
-    const column = Math.max(16, Math.floor(e.props.bodyColumns / 2))
+    // On top, the task in bold and its bar, with Reboot at the right
+    // margin; below it what is happening now on the left, the links on the right.
 
     return (
       <Box flexDirection="column">
-        {bar && (
-          <Box flexDirection="row" flexWrap="wrap">
-            <Text bold>Reboot Progress  </Text>
-            {barRuns(bar.filled, bar.filled + bar.empty).map(run => (
-              <Text color={run.color}>{'█'.repeat(run.cells)}</Text>
-            ))}
-            <Text dimColor>{'░'.repeat(bar.empty)}</Text>
+        {/* The task and bar take the free width and never shrink, so a
+            surface can't squeeze them into a column (the desktop app did). */}
+        <Box flexDirection="row" flexWrap="nowrap">
+          <Box flexDirection="row" flexWrap="nowrap" flexGrow={1} flexShrink={0}>
+            {b && bar && <Text bold>{taskLabel(b)}  </Text>}
+            {b &&
+              bar &&
+              barRuns(bar.filled, bar.filled + bar.empty).map(run => (
+                <Text color={run.color} wrap="truncate-end">
+                  {'█'.repeat(run.cells)}
+                </Text>
+              ))}
+            {b && bar && <Text dimColor>{'░'.repeat(bar.empty)}</Text>}
           </Box>
-        )}
-        {act !== null && (
-          <Box flexDirection="row">
-            <Box flexDirection="column" width={column}>
-              <Text bold>Just completed</Text>
-              {/* Until this session finishes a task. */}
-              {act.justCompleted === null ? (
-                <Text dimColor italic>nothing this session</Text>
-              ) : (
-                <Text dimColor wrap="truncate-end">{act.justCompleted}</Text>
-              )}
+          <Box flexShrink={0}>
+            <Text bold>Reboot</Text>
+          </Box>
+        </Box>
+        {(act !== null || hasLinks) && (
+          <Box flexDirection="row" justifyContent="space-between">
+            <Box flexDirection="column">
+              {act !== null && <Text wrap="truncate-end">{act.now}</Text>}
             </Box>
-            <Box flexDirection="column" width={column}>
-              <Text bold>Now</Text>
-              <Text wrap="truncate-end">{act.now}</Text>
+            <Box flexDirection="row" gap={1}>
+              {to.dashboard !== null && (
+                <Button key="dashboard" label="Dashboard ↗" onPress={() => openUrl($, to.dashboard!)} />
+              )}
+              {to.app !== null && <Button key="app" label="App ↗" onPress={() => openUrl($, to.app!)} />}
             </Box>
           </Box>
         )}

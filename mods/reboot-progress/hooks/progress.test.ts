@@ -2,6 +2,7 @@ import { describe, expect, test } from 'claude-code/testing'
 
 import {
   advanceTask,
+  appLinks,
   asTask,
   backendPort,
   barRuns,
@@ -17,6 +18,7 @@ import {
   skillKind,
   stepOf,
   taskAfterPrompt,
+  taskLabel,
 } from './progress'
 import type { Task, TaskKind } from './progress'
 
@@ -64,6 +66,27 @@ describe('stepOf', () => {
   })
 })
 
+describe('links', () => {
+  const ports = (...p: number[]) => new Set(p)
+
+  test('the dashboard, while it listens', () => {
+    expect(appLinks(ports(9871), { backendPort: 9991, vitePort: 5273, hasWebApp: true }).dashboard).toBe(
+      'http://127.0.0.1:9871/',
+    )
+    expect(appLinks(ports(), { backendPort: 9991, vitePort: 5273, hasWebApp: true }).dashboard).toBe(null)
+  })
+
+  test("a web app's page, or an MCP UI's setup wizard, while it serves", () => {
+    expect(appLinks(ports(5273), { backendPort: 9991, vitePort: 5273, hasWebApp: true }).app).toBe(
+      'http://localhost:5273/',
+    )
+    expect(appLinks(ports(9991), { backendPort: 9991, vitePort: 5273, hasWebApp: true }).app).toBe(null)
+    expect(appLinks(ports(9991), { backendPort: 9991, vitePort: 4444, hasWebApp: false }).app).toBe(
+      'http://localhost:9991/',
+    )
+  })
+})
+
 describe('status line', () => {
   test('formats each process the app has', () => {
     expect(formatStatus({ backend: true, frontend: false, tunnel: null, url: null })).toBe('rbt ●  web ○')
@@ -101,10 +124,10 @@ describe('progress bar', () => {
     expect(progressBar(at('fix', 6), 12)).toEqual({ filled: 10, empty: 2 })
   })
 
-  test('sizes to the band, 10 to 40 cells', () => {
-    expect(barWidth(20)).toBe(10)
-    expect(barWidth(40)).toBe(23)
-    expect(barWidth(200)).toBe(40)
+  test('sizes to two-thirds of the room beside its labels, 8 to 48 cells', () => {
+    expect(barWidth(20)).toBe(8)
+    expect(barWidth(80)).toBe(37)
+    expect(barWidth(200)).toBe(48)
   })
 })
 
@@ -137,9 +160,19 @@ describe('what starts a task', () => {
     expect(taskAfterPrompt(building, 'build')).toBe(building)
     // A different kind of work: a new task.
     expect(taskAfterPrompt(building, 'fix')).toEqual(at('fix', 0))
+    // A finished task stays, Done, through follow-ups ("continue").
+    const done = at('feature', 6, { isDone: true })
+    expect(taskAfterPrompt(done, 'same')).toBe(done)
     // After a finished task, or with none, new work of any kind starts one.
     expect(taskAfterPrompt(at('feature', 6, { isDone: true }), 'feature')).toEqual(at('feature', 0))
     expect(taskAfterPrompt(null, 'feature')).toEqual(at('feature', 0))
+  })
+
+  test('the bold label before the bar names the kind of work', () => {
+    expect(taskLabel(at('build', 3))).toBe('Building')
+    expect(taskLabel(at('feature', 3))).toBe('Adding Feature')
+    expect(taskLabel(at('fix', 3))).toBe('Fixing')
+    expect(taskLabel(at('fix', 6, { isDone: true }))).toBe('Done')
   })
 
   test('the current task is described for the summary', () => {

@@ -15,6 +15,9 @@ export type Summary = { now: string | null; done: string | null; decision: Decis
 
 export const WAITING = 'Waiting for you'
 
+/** Now, from the moment a prompt is sent until its summary names the work. */
+export const STARTING = 'Working on your request'
+
 /** The text blocks of a row's content, joined; '' when there are none. */
 export function textOf(content: unknown): string {
   if (typeof content === 'string') return content.trim()
@@ -35,12 +38,15 @@ export const isWorthSummarizing = (text: string): boolean => text.length >= 40
 
 /**
  * The prompt for one summary. A request also asks whether it starts new
- * work, judged against `current`, the work under way in a few words.
+ * work, judged against `current`, the work under way in a few words, and
+ * `lastReply`, the assistant's message it answers: a bare "2" or "do it"
+ * means nothing without the list or proposal before it.
  */
 export const summaryPrompt = (
   text: string,
   kind: 'narration' | 'request',
   current = 'none',
+  lastReply = '',
 ): string =>
   (kind === 'narration'
     ? 'Below is what a coding assistant just told the user while building their app.'
@@ -48,9 +54,13 @@ export const summaryPrompt = (
   ' The user is not a programmer. Reply with exactly ' +
   (kind === 'request' ? 'three' : 'two') +
   ' lines and nothing else:\n' +
-  'NOW: the work on the app happening at this moment, in 3 to 8 words, as a present-tense ' +
-  'phrase starting with a verb ending in -ing; or NONE if the text only explains, reports ' +
-  'or plans.\n' +
+  (kind === 'request'
+    ? 'NOW: the work the assistant now starts on for this request, in 3 to 8 words, as a ' +
+      'present-tense phrase starting with a verb ending in -ing ("Adding year-over-year ' +
+      'numbers"; for a question, "Looking into why the test failed"). Never NONE.\n'
+    : 'NOW: the work on the app happening at this moment, in 3 to 8 words, as a ' +
+      'present-tense phrase starting with a verb ending in -ing; or NONE if the text only ' +
+      'explains, reports or plans.\n') +
   'DONE: work on the app the text says was just finished, in 3 to 8 words in the past ' +
   'tense; or NONE. A proposal, design or result the text hands the user to review counts ' +
   'as finished ("Drafted the design for your review"). Never planned, upcoming or ' +
@@ -59,7 +69,9 @@ export const summaryPrompt = (
     ? 'TASK: whether this request starts new work: NEW BUILD (a whole new app), NEW ' +
       'FEATURE (a new capability, or a change to one, in an existing app), NEW FIX (fixing ' +
       'something that is broken), or SAME (a follow-up, an answer, an approval or a small ' +
-      `tweak within the current work). The current work: ${current}.\n`
+      `tweak within the current work). The current work: ${current}. A request that ` +
+      'picks or approves new work the assistant proposed ("2", "do it", "yes, build ' +
+      'that") starts that work; asking for ideas, suggestions or options does not.\n'
     : '') +
   '\n' +
   'Both in everyday words the user would understand: say what the work does for the app ' +
@@ -70,7 +82,11 @@ export const summaryPrompt = (
   'report".\n' +
   'Good: "Building the dashboard page", "Fixing a failing test", "Adding sign-in with ' +
   'Google", "Finished the data model".\n' +
-  'No quotes, no trailing periods.\n\n<text>\n' +
+  'No quotes, no trailing periods.\n\n' +
+  (kind === 'request' && lastReply
+    ? `<assistant_last_message>\n${lastReply.slice(0, 2000)}\n</assistant_last_message>\n\n`
+    : '') +
+  '<text>\n' +
   text.slice(0, 4000) +
   '\n</text>'
 

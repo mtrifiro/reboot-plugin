@@ -34,7 +34,8 @@ for (const surface of ['terminal', 'desktop'] as const) {
     })
 
     const band = await $.ui.mount({ plugin: PLUGIN, surface, component: 'AbovePrompt', props: BAND as never })
-    // The bar alone: no stage label beside it.
+    // The kind of work beside the bar, not the stage.
+    expect((await band.findAll({ type: 'Text', text: /^Building\s*$/ })).length).toBe(1)
     expect(await band.findAll({ type: 'Text', text: /access rules|backend|screens|·/ })).toEqual([])
     expect((await band.findAll({ type: 'Text', text: /^█+$/ })).length).toBeGreaterThan(0)
 
@@ -59,9 +60,10 @@ for (const surface of ['terminal', 'desktop'] as const) {
     await wait(50) // the summary runs in the background
 
     const band = await $.ui.mount({ plugin: PLUGIN, surface, component: 'AbovePrompt', props: BAND as never })
-    for (const text of ['Just completed', 'nothing this session', 'Now', 'Writing the servicers']) {
-      expect((await band.findAll({ type: 'Text', text })).length).toBeGreaterThan(0)
-    }
+    expect((await band.findAll({ type: 'Text', text: 'Writing the servicers' })).length).toBe(1)
+    // The status alone, with no Now heading over it.
+    expect(await band.findAll({ type: 'Text', text: /^Now$/ })).toEqual([])
+    expect(await band.findAll({ type: 'Text', text: /Just completed/ })).toEqual([])
   })
 }
 
@@ -102,7 +104,57 @@ for (const surface of ['terminal', 'desktop'] as const) {
     await wait(50) // the summary runs in the background
 
     const band = await $.ui.mount({ plugin: PLUGIN, surface, component: 'AbovePrompt', props: BAND as never })
-    expect((await band.findAll({ type: 'Text', text: /Reboot Progress/ })).length).toBe(1)
+    expect((await band.findAll({ type: 'Text', text: /^Reboot$/ })).length).toBe(1)
     expect((await band.findAll({ type: 'Text', text: 'Fixing the sign-in button' })).length).toBe(1)
+    expect((await band.findAll({ type: 'Text', text: /^Fixing\s*$/ })).length).toBe(1)
+  })
+}
+
+for (const surface of ['terminal', 'desktop'] as const) {
+  test(`the Dashboard button opens the dashboard in the browser on ${surface}`, async ($, on) => {
+    const opened: string[][] = []
+    on('ui.render', { component: 'AbovePrompt' }, ($, e) => {
+      const { Box } = $.ui.resolve(e)
+
+      return h(Box, {}) as never
+    })
+    on('tool.call', () => ({ result: {}, text: 'ok' }) as never)
+    on('session.cwd', () => ({ value: '/w/app' }) as never)
+    on('fs.exists', ($, e) => ({ value: (e as { path: string }).path === '/w/app/.rbtrc' }) as never)
+    on('fs.read', () => ({ value: '' }) as never)
+    on('ui.status', () => ({ value: undefined }) as never)
+    on('process.run', ($, e) => {
+      const argv = (e as { argv: string[] }).argv
+      if (argv[0] === 'open') opened.push(argv)
+      const stdout = argv[0] === 'lsof' ? 'rbt 1 me 3u IPv4 0t0 TCP 127.0.0.1:9871 (LISTEN)' : ''
+      return { value: { exitCode: 0, stdout, stderr: '' } } as never
+    })
+
+    // Starting the app checks what is serving, which finds the dashboard.
+    await $.tool.call({ tool: 'Bash', command: 'uv run rbt dev run' })
+    await wait(50)
+
+    const band = await $.ui.mount({ plugin: PLUGIN, surface, component: 'AbovePrompt', props: BAND as never })
+    await band.press({ key: 'dashboard' })
+    expect(opened).toEqual([['open', 'http://127.0.0.1:9871/']])
+  })
+}
+
+for (const surface of ['terminal', 'desktop'] as const) {
+  test(`Now leaves "Waiting for you" the moment a prompt is sent on ${surface}`, async ($, on) => {
+    on('fs.exists', () => ({ value: false }) as never)
+    on('ui.render', { component: 'AbovePrompt' }, ($, e) => {
+      const { Box } = $.ui.resolve(e)
+
+      return h(Box, {}) as never
+    })
+    // The summary never comes back: Now must still not wait.
+    on('model.complete', () => ({ value: { isAnswered: false, reason: 'empty-reply' } }) as never)
+    on('prompt.submit', ($, e) => ({ text: e.text }) as never)
+
+    await $.prompt.submit({ text: "let's add the YOY feature" } as never)
+
+    const band = await $.ui.mount({ plugin: PLUGIN, surface, component: 'AbovePrompt', props: BAND as never })
+    expect(await band.findAll({ type: 'Text', text: /Waiting for you/ })).toEqual([])
   })
 }

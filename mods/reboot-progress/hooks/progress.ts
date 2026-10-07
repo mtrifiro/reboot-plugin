@@ -109,6 +109,29 @@ export function formatStatus(h: Health): string {
   return h.url ? `${line}  ${h.url}` : line
 }
 
+/** The band's links: the developer dashboard and the app's front end, while each serves. */
+export type Links = { dashboard: string | null; app: string | null }
+
+/** The dashboard's port (`rbt dashboard`, default) and the app link a person opens. */
+export const DASHBOARD_PORT = 9871
+
+/**
+ * The links for an app: the dashboard while it listens; the front end a
+ * person opens: the browser SPA's page where the app has one, else (an
+ * MCP UI alone) the setup wizard at the backend's root.
+ */
+export function appLinks(
+  ports: Set<number>,
+  app: { backendPort: number; vitePort: number | null; hasWebApp: boolean },
+): Links {
+  const dashboard = ports.has(DASHBOARD_PORT) ? `http://127.0.0.1:${DASHBOARD_PORT}/` : null
+  if (app.hasWebApp && app.vitePort !== null) {
+    return { dashboard, app: ports.has(app.vitePort) ? `http://localhost:${app.vitePort}/` : null }
+  }
+
+  return { dashboard, app: ports.has(app.backendPort) ? `http://localhost:${app.backendPort}/` : null }
+}
+
 /** Ports in LISTEN state from `lsof -nP -iTCP -sTCP:LISTEN` output. */
 export function listeningPorts(lsof: string): Set<number> {
   const ports = new Set<number>()
@@ -152,9 +175,17 @@ export function progressBar(task: Task, width: number): Bar {
   return { filled, empty: width - filled }
 }
 
-/** Bar cells for a band `columns` wide: what its label leaves, 10 to 40. */
+/** What the task is, before the bar: `Building`, `Adding Feature`, `Fixing`, or `Done`. */
+export const taskLabel = (t: Task): string =>
+  t.isDone ? 'Done' : { build: 'Building', feature: 'Adding Feature', fix: 'Fixing' }[t.kind]
+
+/**
+ * Bar cells for a band `columns` wide: at most 48, and two-thirds of what
+ * its labels leave; the last third is slack for a surface whose text runs
+ * wider than its measured columns (the desktop app's proportional font).
+ */
 export const barWidth = (columns: number): number =>
-  Math.max(10, Math.min(40, columns - 'Reboot Progress  '.length))
+  Math.max(8, Math.min(48, Math.floor(((columns - 'Adding Feature  '.length - '  Reboot'.length) * 2) / 3)))
 
 export type Task = { kind: TaskKind; step: number; isDone: boolean; isRestored?: boolean }
 

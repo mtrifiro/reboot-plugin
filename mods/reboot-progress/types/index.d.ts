@@ -18,6 +18,8 @@ declare module 'claude-code' {
       build: Build | null
       isHidden: boolean
       root: string | null
+      /** The dashboard and front-end links, while each serves. */
+      links: { dashboard: string | null; app: string | null }
       /** What just finished and what is being worked on now. */
       activity: Activity | null
     }
