@@ -54,7 +54,7 @@ async def send(
 
 ### Retrying a mutation yourself: give it a key
 
-Any hand-written retry, and any mutation after a cancelled or
+Any hand-written retry, and any mutation after a canceled or
 transport-failed one, carries `.idempotently("alias")` or `key=`:
 
 ```python
@@ -108,7 +108,7 @@ next mutation _without_ an idempotency key fails:
   1.4.1: a startup log claimed 540 new flights every boot when 180
   were new). Ask a reader what is new.
 - An alias built from a timestamp or fresh uuid — a new key each time,
-  never recognised as a repeat.
+  never recognized as a repeat.
 - One alias for two different mutations — the second returns the
   first's result, or raises `is being reused _unsafely_` if it targets
   a different actor or method (`lifecycle-initialize-hook.md`).

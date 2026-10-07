@@ -1,6 +1,6 @@
 ---
 name: report
-description: File a Reboot project's FINDINGS.md upstream — turn each item the agent logged while building (a skill that was wrong or silent, unexpected framework or Reboot Cloud behaviour, reboot.bdd trouble, things that worked) into a GitHub issue for the Reboot team, after the user approves the batch. Use when the user asks to "report findings", "file the findings", "send feedback to Reboot", or at the end of a build or deploy when FINDINGS.md has unreported items. Never files anything without explicit approval.
+description: File a Reboot project's FINDINGS.md upstream — turn each item the agent logged while building (a skill that was wrong or silent, unexpected framework or Reboot Cloud behavior, reboot.bdd trouble, things that worked) into a GitHub issue for the Reboot team, after the user approves the batch. Use when the user asks to "report findings", "file the findings", "send feedback to Reboot", or at the end of a build or deploy when FINDINGS.md has unreported items. Never files anything without explicit approval.
 argument-hint: "[path to FINDINGS.md]"
 allowed-tools: Bash, Read, Edit
 ---

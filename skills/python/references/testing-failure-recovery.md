@@ -126,7 +126,7 @@ otherwise the callable runs twice and the **second** result is memoized.
 
 ### What's worth a recovery test
 
-- **A spawned task** — cancelled at `down()`, picked up on `up()`;
+- **A spawned task** — canceled at `down()`, picked up on `up()`;
   assert it completes and its effect happened once.
 - **A `Workflow`** — its body replays from the top; assert finished
   steps did not repeat: writer/transaction calls under

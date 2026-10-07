@@ -56,7 +56,7 @@ await Queue.forall(queue_ids).enqueue(context, items=items)
 - Readers, writers and transactions only; not constructors or workflow
   methods (1.6.0 template).
 - One failing call raises out of the `await`; the other calls are not
-  cancelled and their responses are lost (plain `asyncio.gather`
+  canceled and their responses are lost (plain `asyncio.gather`
   without `return_exceptions`, 1.6.0 template).
 - A generator of ids is consumed once, at call time.
 - A fan-out of about 150 actors does not finish inside the request

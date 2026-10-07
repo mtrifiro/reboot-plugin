@@ -214,7 +214,7 @@ their browsers arrive signed in.
   placeholder or nearby heading.
 - **A button, link, tab or menu item says what it does** in its text,
   or `aria-label` if icon-only.
-- **A table, list or region a step names has a caption or a labelled
+- **A table, list or region a step names has a caption or a labeled
   heading**: `<table aria-labelledby="your-accounts">` with
   `<h2 id="your-accounts">Your Accounts</h2>`, or a `<caption>`.
 - **A select is a `<select>` with a paired label**, its `<option>`s

@@ -86,7 +86,7 @@ async def charge(
   `await at_least_once("Fetch embeddings", context, fetch, type=list[Vector])`.
 - Failures retry forever by **replaying the workflow from the top**, by
   design; closure state does not survive. Let the raise propagate. Only
-  when giving up is product behaviour, loop **inside** the callable and
+  when giving up is product behavior, loop **inside** the callable and
   return exhaustion as data:
 
 ```python

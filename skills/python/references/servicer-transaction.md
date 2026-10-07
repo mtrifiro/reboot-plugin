@@ -128,7 +128,7 @@ on an in-system actor that schedules the HTTP send in a workflow, then
   sign-in (writes `User` via `set_claims`)
   (reboot-air-141-21, -load-02; observed 1.4.1, not re-tested at
   1.6.0). `rbt inspect` cannot show lock holders.
-- A transaction cancelled during lock contention left one child actor
+- A transaction canceled during lock contention left one child actor
   constructed while its parent's side never committed (next run:
   `StateAlreadyConstructed`; student-sor-07, 1.5.0, cause undiagnosed).
 - Subscribers see nothing until commit: a 200-writer reset read as

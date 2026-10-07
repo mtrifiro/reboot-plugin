@@ -126,7 +126,7 @@ no reader, or make one the owner and have the other read it.
   cross-concern contention with no other change.
 - Every write persists the whole actor (`state-collections.md` §
   Scales as): a frequently written cache or engine field makes every
-  neighbouring write more expensive.
+  neighboring write more expensive.
 
 ## Errors you will see
 

@@ -180,7 +180,7 @@ constructor marks the moment of ownership.
 ## Scales as
 
 - Every write persists the whole actor: a parent with 8,878 inline
-  records re-serialised all to bump one integer (measured at 1.6.0;
+  records re-serialized all to bump one integer (measured at 1.6.0;
   state-store load, not wall-clock). Keep large collections off
   frequently written actors.
 - Shape B is fine to low thousands of IDs; past that the per-add

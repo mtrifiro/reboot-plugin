@@ -49,7 +49,7 @@ there is no `presence_library()` at 1.6.0.
 | Type | Method | Kind | Request fields |
 | --- | --- | --- | --- |
 | `Subscriber` | `create` | writer | — |
-| `Subscriber` | `connect` | reader | `nonce` — long-lived; returns only when cancelled |
+| `Subscriber` | `connect` | reader | `nonce` — long-lived; returns only when canceled |
 | `Subscriber` | `toggle` | writer | `nonce` — bumps `toggles`, schedules `wait_for_disconnect` |
 | `Subscriber` | `status` | reader | — → `present` (`toggles > 0`) |
 | `Subscriber` | `wait_for_disconnect` | workflow | `nonce` — waits for `connect` to end, then decrements `toggles` |
@@ -72,7 +72,7 @@ Any client must follow the 1.6.0 React component's order:
    it aborts `NotFound` until `connect` registers, so retry.
 4. `Presence.ref(scope_id).subscribe(context, subscriber_id=subscriber_id)`.
 
-On disconnect `connect` is cancelled, `wait_for_disconnect` decrements
+On disconnect `connect` is canceled, `wait_for_disconnect` decrements
 `toggles`, and `Presence.watch` removes the subscriber. Reconnect from
 step 2 with a new nonce.
 

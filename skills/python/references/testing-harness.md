@@ -18,7 +18,7 @@ docs: ""
 
 Writing a test that boots the app in-process with the harness,
 `reboot.aio.tests.Reboot`. Feature-file scenarios run on it through
-`reboot.bdd`, and that is where behaviour is tested
+`reboot.bdd`, and that is where behavior is tested
 ([`testing-features.md`](testing-features.md)); the test module's
 `application` fixture is the `Application(...)` passed to `rbt.up(...)`.
 Use the harness directly from a `unittest.IsolatedAsyncioTestCase`
@@ -82,7 +82,7 @@ await self.rbt.up(
 
 **Construct what `initialize` constructs.** Every singleton it creates
 (chain, ledger, settings actor) must exist in the test: pass the
-production `initialize=`, or call the same parameterised seed with less
+production `initialize=`, or call the same parameterized seed with less
 data ([`lifecycle-seeding.md`](lifecycle-seeding.md)).
 
 **Seed and call internal methods with an app-internal context**:
@@ -189,9 +189,9 @@ or one transaction covering every actor involved.
 - **Calling servicer instances directly** (`ChatRoomServicer().send(...)`):
   no identity, context, persistence or authorization; it tests nothing.
 - **Overriding `authorizer()` to `allow()` for the suite.** It tests
-  a different app. Only for pure behaviour of a type whose rules other
+  a different app. Only for pure behavior of a type whose rules other
   tests cover; say why in a comment and keep one test on the real
-  authorizers. Mocking *non-auth* behaviour by subclass is fine (an
+  authorizers. Mocking *non-auth* behavior by subclass is fine (an
   external call, the clock: route every wall-clock read through one
   module-level `_now()` and patch that).
 - **Reusing a context after asserting a denial** — its next mutation
@@ -242,6 +242,6 @@ or one transaction covering every actor involved.
 
 ## See also
 
-- [`testing-features.md`](testing-features.md): where behaviour is specified
-- [`lifecycle-seeding.md`](lifecycle-seeding.md): test-sized parameterised seeds
+- [`testing-features.md`](testing-features.md): where behavior is specified
+- [`lifecycle-seeding.md`](lifecycle-seeding.md): test-sized parameterized seeds
 - [`lifecycle-dev-loop.md`](lifecycle-dev-loop.md): debugging hangs and silent runs

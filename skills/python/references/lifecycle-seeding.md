@@ -129,7 +129,7 @@ Assert against seed constants (`LAB_SHOWINGS`), not literals (`48`).
 - **Hundreds of creates and one shared `OrderedMap` in one
   transaction** (Limits).
 - **A big `list[Entity]` inline on an actor the seed keeps writing** —
-  every write re-serialises it (8,878 records rewritten per progress
+  every write re-serializes it (8,878 records rewritten per progress
   update, client-portal). Unbounded collections go in an `OrderedMap`;
   a domain-bounded list (200 seats on one showing) can stay inline
   ([`state-collections.md`](state-collections.md)).
@@ -175,7 +175,7 @@ Assert against seed constants (`LAB_SHOWINGS`), not literals (`48`).
   M-series laptop; a mid-seed restart resumed via the aliases
   (student-sor, 1.5.0).
 - Harness tests have a ~2 s floor; a full production seed added ~30 s
-  each. A parameterised seed cut one suite from 7m50s to 3m52s. Compare
+  each. A parameterized seed cut one suite from 7m50s to 3m52s. Compare
   fixtures with `pytest --durations` on one trivial test each
   (cineloop, 1.4.1).
 

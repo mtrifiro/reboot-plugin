@@ -3,7 +3,7 @@ title: Design the UI
 impact: HIGH
 impactDescription: Without it the SPA ships unstyled controls, no visual hierarchy, or a view that doesn't fit its task
 tags: web-app, ui, design, css, dark-mode, skeleton, layout, review
-summary: "Brief, Reboot's brand by default (a user's brand replaces it), primary view by task, page anatomy, labelled controls, light/dark toggle, restyle by token values, screenshot review."
+summary: "Brief, Reboot's brand by default (a user's brand replaces it), primary view by task, page anatomy, labeled controls, light/dark toggle, restyle by token values, screenshot review."
 step: frontend
 applies: [web-app]
 always: false
@@ -119,14 +119,14 @@ panels set apart from a tinted page. Saturated color (`--good`, `--warn`,
 `dot` or `pill`; every other status is a neutral `pill` with text. Don't
 use green, amber or red as the accent.
 
-**06 Controls on one surface, labelled.** A `filter-panel`: search full
+**06 Controls on one surface, labeled.** A `filter-panel`: search full
 width; filters in a grid with a small label above each; view, group
 and sort together; keyboard hints behind a "?", not in the toolbar.
 
 **07 Readable by default.** Rows of about 44–56 px; the main text wraps
 and is never cut off while secondary columns have room (mark them
 `secondary`, hidden first as the width shrinks); `density-compact` as
-an option; numbers labelled ("also seen ×2"); identifiers ("A.14b")
+an option; numbers labeled ("also seen ×2"); identifiers ("A.14b")
 shown as written, never uppercased.
 
 **08 Detail doesn't reflow the list.** A `drawer` over the list or its

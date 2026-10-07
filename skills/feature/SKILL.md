@@ -102,7 +102,7 @@ Two rules matter most:
   beside the property, or a request to add it.
 - **Build web app pages with accessible markup** from the start
   (`testing-web-app.md`): labels paired with inputs, buttons that say
-  what they do, tables with a labelled heading — that is what lets a
+  what they do, tables with a labeled heading — that is what lets a
   scenario drive the page.
 
 ## Step 4 — Iterate on the scenarios with the user
