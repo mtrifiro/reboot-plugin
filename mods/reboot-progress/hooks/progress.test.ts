@@ -1,0 +1,56 @@
+import { describe, expect, test } from 'claude-code/testing'
+
+import { backendPort, formatStatus, listeningPorts, metricsPort, stepOf } from './progress'
+
+const P = '/work/todo-list'
+const write = (path: string, text = '') => stepOf({ tool: 'Write', file_path: `${P}/${path}`, text })
+const bash = (command: string) => stepOf({ tool: 'Bash', command })
+
+describe('stepOf', () => {
+  test('build skills open the Design step', () => {
+    expect(stepOf({ tool: 'Skill', skill: 'reboot:build' })).toBe(0)
+    expect(stepOf({ tool: 'Skill', skill: 'reboot:web-app' })).toBe(0)
+    expect(stepOf({ tool: 'Skill', skill: 'reboot:run' })).toBe(null)
+  })
+
+  test('paths map to the build steps', () => {
+    expect(write('api/todo_list/v1/todo_list.py')).toBe(1)
+    expect(write('backend/src/main.py')).toBe(2)
+    expect(write('backend/src/servicers/todo_list.py', 'async def add(self): ...')).toBe(3)
+    expect(write('backend/src/servicers/todo_list.py', 'def authorizer(self):')).toBe(4)
+    expect(write('frontend/mcp/board/App.tsx')).toBe(5)
+    expect(write('web/src/pages/Home.tsx')).toBe(5)
+    expect(write('tests/add.feature')).toBe(6)
+  })
+
+  test('generated code is not evidence', () => {
+    expect(write('backend/api/todo_list/v1/todo_list_rbt.py')).toBe(null)
+    expect(write('frontend/api/todo_list/v1/todo_list_rbt_react.ts')).toBe(null)
+    expect(write('web/src/api/todo_list/v1/todo_list_rbt_web.ts')).toBe(null)
+  })
+
+  test('commands map to the build steps', () => {
+    expect(bash('uv run rbt generate')).toBe(2)
+    expect(bash('uv run pytest tests')).toBe(6)
+    expect(bash('uv run rbt dev run --no-chaos')).toBe(7)
+    expect(bash('ls')).toBe(null)
+  })
+})
+
+describe('status line', () => {
+  test('formats each process the app has', () => {
+    expect(formatStatus({ backend: true, frontend: false, tunnel: null, url: null })).toBe('rbt ●  web ○')
+    expect(
+      formatStatus({ backend: true, frontend: true, tunnel: true, url: 'https://a.trycloudflare.com' }),
+    ).toBe('rbt ●  web ●  tunnel ●  https://a.trycloudflare.com')
+  })
+
+  test('reads ports from lsof, .rbtrc and ps', () => {
+    const lsof = 'Python 1 me 3u IPv4 0t0 TCP 127.0.0.1:9991 (LISTEN)\nnode 2 me 4u IPv6 0t0 TCP [::1]:4444 (LISTEN)'
+    expect([...listeningPorts(lsof)]).toEqual([9991, 4444])
+    expect(backendPort('dev run --python\n')).toBe(9991)
+    expect(backendPort('dev run --port=9100\n')).toBe(9100)
+    expect(metricsPort('cloudflared tunnel --metrics localhost:4041 --url http://localhost:9991')).toBe(4041)
+    expect(metricsPort('/usr/bin/zsh')).toBe(null)
+  })
+})

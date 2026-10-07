@@ -2,3 +2,7 @@
 # claude plugin eval output
 evals/results/
 .gstack/
+
+# Written by Claude Code when it loads a mod
+mods/*/.claude-plugin/types/
+mods/*/tsconfig.json

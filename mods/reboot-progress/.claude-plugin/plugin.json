@@ -1,0 +1,6 @@
+{
+  "name": "reboot-progress",
+  "version": "0.1.0",
+  "description": "Reboot build progress above the prompt and app health (backend, frontend, tunnel) in the status line",
+  "types": "./types/index.d.ts"
+}
