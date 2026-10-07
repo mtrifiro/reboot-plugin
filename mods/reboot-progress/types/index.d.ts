@@ -12,6 +12,34 @@ export type Build = {
   isRestored?: boolean
 }
 
+/** Where a deploy is: `rbt cloud up`'s stages, the revision starting, the frontend's publish, and how each ended. */
+export type DeployStage =
+  | 'checking'
+  | 'build'
+  | 'push'
+  | 'rollout'
+  | 'starting'
+  | 'publish'
+  | 'live'
+  | 'deployed'
+  | 'published'
+  | 'failed'
+
+/** The latest deploy, and the deployed URLs the band's buttons open. */
+export type Deploy = {
+  stage: DeployStage
+  /** When the deploy started, for the time the band shows. */
+  startedAt: number
+  /** When it reached its stage, for how long a revision may take to start. */
+  stageAt: number
+  revision: number | null
+  /** The Reboot Cloud app's URL (`https://<id>.<cell>.rbt.cloud:9991`). */
+  apiUrl: string | null
+  /** The published frontend's URL. */
+  siteUrl: string | null
+  failure: string | null
+}
+
 declare module 'claude-code' {
   interface PluginState {
     'reboot-progress': {
@@ -22,6 +50,10 @@ declare module 'claude-code' {
       links: { dashboard: string | null; app: string | null }
       /** What just finished and what is being worked on now. */
       activity: Activity | null
+      /** The latest deploy. */
+      deploy: Deploy | null
+      /** The clock at the latest poll, so a running deploy's time redraws. */
+      clock: number
     }
   }
 }

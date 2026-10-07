@@ -1,7 +1,8 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
-import type { Build } from '../types'
+import type { Build, Deploy } from '../types'
+import { advanceDeploy, afterOutput, beginDeploy, deployKey, deployLine, isRunning, outcomeOf, seenIn } from './deploy'
 import { REBOOT_LOGO } from './logo'
 import { STARTING, WAITING, endTurn, fallback, isWorthSummarizing, parseSummary, startTask, summaryPrompt, textOf } from './activity'
 import type { Summary } from './activity'
@@ -30,6 +31,8 @@ import type { Call, Health, Links, Watch } from './progress'
 const build = atom({ plugin: 'reboot-progress', key: 'build' } as const, null)
 const isHidden = atom({ plugin: 'reboot-progress', key: 'isHidden' } as const, false)
 const root = atom({ plugin: 'reboot-progress', key: 'root' } as const, null)
+const deploy = atom({ plugin: 'reboot-progress', key: 'deploy' } as const, null)
+const clock = atom({ plugin: 'reboot-progress', key: 'clock' } as const, 0)
 const activity = atom({ plugin: 'reboot-progress', key: 'activity' } as const, null)
 const links = atom({ plugin: 'reboot-progress', key: 'links' } as const, { dashboard: null, app: null })
 
@@ -69,7 +72,7 @@ async function readText($: EngineInterface, path: string): Promise<string> {
   }
 }
 
-async function health($: EngineInterface, dir: string): Promise<Health & { links: Links }> {
+async function health($: EngineInterface, dir: string): Promise<Health & { links: Links; ps: string }> {
   const [lsof, ps, rbtrc, webVite] = await Promise.all([
     $.process.run(['lsof', '-nP', '-iTCP', '-sTCP:LISTEN'], { timeoutMs: 5000 }).catch(() => null),
     $.process.run(['ps', '-axo', 'command='], { timeoutMs: 5000 }).catch(() => null),
@@ -109,6 +112,7 @@ async function health($: EngineInterface, dir: string): Promise<Health & { links
     tunnel,
     url,
     links: appLinks(ports, { backendPort: backendPort(rbtrc), vitePort, hasWebApp }),
+    ps: ps?.stdout ?? '',
   }
 }
 
@@ -207,10 +211,44 @@ async function saveBuild($: EngineInterface, b: Build | null) {
 async function restoreBuild($: EngineInterface, dir: string) {
   if (restoredRoot === dir) return
   restoredRoot = dir
+  const urls = (await $.store.get(deployKey(dir)).catch(() => null)) as Partial<Deploy> | null
+  if ((await read($, deploy)) === null && urls && (urls.apiUrl || urls.siteUrl)) {
+    const was = { ...beginDeploy('deployed', 0, null), apiUrl: urls.apiUrl ?? null, siteUrl: urls.siteUrl ?? null }
+    await update($, deploy, () => was)
+  }
   if ((await read($, build)) !== null) return
   const stored = asTask(await $.store.get(storeKey(dir)))
   // A finished task comes back as it was: Done until new work starts.
   if (stored) await update($, build, () => (stored.isDone ? stored : { ...stored, isRestored: true }))
+}
+
+/** Sets the deploy and keeps its URLs for the project across sessions. */
+async function saveDeploy($: EngineInterface, d: Deploy | null) {
+  const was = await read($, deploy)
+  await update($, deploy, () => d)
+  if (d === null || (was?.apiUrl === d.apiUrl && was?.siteUrl === d.siteUrl)) return
+  // Keeping them for later sessions is a nicety; never let it cost the band.
+  try {
+    const dir = (await read($, root)) ?? (await findProject($))
+    if (dir) await $.store.set(deployKey(dir), { apiUrl: d.apiUrl, siteUrl: d.siteUrl })
+  } catch {
+    return
+  }
+}
+
+/** Moves the deploy on by what the process list shows, and the deployed app's answer. */
+async function followDeploy($: EngineInterface, ps: string) {
+  const d = await read($, deploy)
+  const now = await $.clock.now()
+  let isServing = false
+  if (d?.stage === 'starting' && d.apiUrl) {
+    const res = await $.http.fetch(`${d.apiUrl}/__/inspect`).catch(() => null)
+    isServing = res?.ok === true
+  }
+  const after = advanceDeploy(d, seenIn(ps), now, isServing)
+  if (after !== d) await saveDeploy($, after)
+  if (after?.stage === 'live' && d?.stage === 'starting') $.ui.toast('Reboot Cloud app is live')
+  if (isRunning(after)) await update($, clock, () => now)
 }
 
 /** Toasts when the app (its backend) or the dashboard starts or stops. */
@@ -237,6 +275,7 @@ async function poll($: EngineInterface) {
     // The band's links first: a failed status line must not cost them.
     const was = await read($, links)
     if (was.dashboard !== h.links.dashboard || was.app !== h.links.app) await update($, links, () => h.links)
+    await followDeploy($, h.ps).catch(() => undefined)
     announce($, 'app', h.backend)
     announce($, 'dashboard', h.links.dashboard !== null)
     $.ui.status(formatStatus(h))
@@ -272,7 +311,23 @@ export const register: Register = on => {
   })
 
   on('tool.call', async ($, e, next) => {
+    // A deploy shows the moment it starts, and its output, once a tool's
+    // result carries it (a failed one's too), says how it ended and where
+    // it lives.
+    if (e.tool === 'Bash' && /\brbt\s+cloud\s+up\b/.test(String(e.command)) && !isRunning(await read($, deploy))) {
+      await saveDeploy($, beginDeploy('checking', await $.clock.now(), await read($, deploy)))
+    }
     const ran = await next(e)
+    // Command output only: a Bash call's, or a background one's read back.
+    const isOutput =
+      e.tool === 'Bash' || e.tool === 'GetTask' || (e.tool === 'Read' && /\.output$/.test(String(e.file_path)))
+    const text = isOutput ? (ran.text ?? '') : ''
+    if (/Your API is available at|Could not deploy revision|🛑|\.pages\.dev/.test(text)) {
+      const { deploy: after, toast } = afterOutput(await read($, deploy), outcomeOf(text), await $.clock.now())
+      await saveDeploy($, after)
+      if (toast) $.ui.toast(toast)
+    }
+
     const call = callOf(e)
     if (call === null || ran.isError === true || ran.deny !== undefined) return ran
 
@@ -340,8 +395,14 @@ export const register: Register = on => {
     const b = await read($, build)
     const act = await read($, activity)
     const to = await read($, links)
-    const hasLinks = to.dashboard !== null || to.app !== null
-    if (e.props.hasSurvey || (b === null && act === null && !hasLinks) || (await read($, isHidden))) {
+    const d = await read($, deploy)
+    const now = await read($, clock)
+    const cloud = d?.apiUrl ?? null
+    const site = d?.siteUrl ?? null
+    const hasLinks = to.dashboard !== null || to.app !== null || cloud !== null || site !== null
+    // A running deploy takes Now's place, with the time it has taken.
+    const line = isRunning(d) ? deployLine(d!, Math.max(now, d!.stageAt)) : (act?.now ?? null)
+    if (e.props.hasSurvey || (b === null && line === null && !hasLinks) || (await read($, isHidden))) {
       return next(e)
     }
 
@@ -370,16 +431,26 @@ export const register: Register = on => {
                 <Text dimColor>Opens the app: {to.app}</Text>
               </Box>
             )}
+            {cloud !== null && (
+              <Box display="none" hover={{ scope: 'link-cloud', display: 'flex' }}>
+                <Text dimColor>Opens the app on Reboot Cloud: {cloud}</Text>
+              </Box>
+            )}
+            {site !== null && (
+              <Box display="none" hover={{ scope: 'link-site', display: 'flex' }}>
+                <Text dimColor>Opens the published site: {site}</Text>
+              </Box>
+            )}
             {/* The favicon where the surface draws Svg. */}
             {Svg && <Svg source={REBOOT_LOGO} alt="Reboot logo" width={14} height={14} />}
             <Text bold>Reboot</Text>
           </Box>
         </Box>
-        {(act !== null || hasLinks) && (
+        {(line !== null || hasLinks) && (
           <Box flexDirection="row" justifyContent="space-between">
             {/* Now is a sentence: it takes the free width and wraps; the buttons keep theirs. */}
             <Box flexDirection="column" flexGrow={1} flexShrink={1}>
-              {act !== null && <Text wrap="wrap">{act.now}</Text>}
+              {line !== null && <Text wrap="wrap">{line}</Text>}
             </Box>
             <Box flexDirection="row" gap={1} flexShrink={0}>
               {to.dashboard !== null && (
@@ -390,6 +461,16 @@ export const register: Register = on => {
               {to.app !== null && (
                 <Box hover={{ scope: 'link-app' }}>
                   <Button key="app" label="App ↗" onPress={() => openUrl($, to.app!)} />
+                </Box>
+              )}
+              {cloud !== null && (
+                <Box hover={{ scope: 'link-cloud' }}>
+                  <Button key="cloud" label="Cloud ↗" onPress={() => openUrl($, cloud)} />
+                </Box>
+              )}
+              {site !== null && (
+                <Box hover={{ scope: 'link-site' }}>
+                  <Button key="site" label="Site ↗" onPress={() => openUrl($, site)} />
                 </Box>
               )}
             </Box>

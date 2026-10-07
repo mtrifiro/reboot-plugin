@@ -178,3 +178,38 @@ test('the Reboot logo draws beside Reboot where the surface has Svg', async ($, 
   expect(await terminal.findAll({ type: 'Svg' })).toEqual([])
   expect((await terminal.findAll({ type: 'Text', text: /^Reboot$/ })).length).toBe(1)
 })
+
+for (const surface of ['terminal', 'desktop'] as const) {
+  test(`a deploy's output toasts and adds a Cloud button on ${surface}`, async ($, on) => {
+    const toasts: string[] = []
+    const opened: string[][] = []
+    on('ui.render', { component: 'AbovePrompt' }, ($, e) => {
+      const { Box } = $.ui.resolve(e)
+
+      return h(Box, {}) as never
+    })
+    on('clock.now', () => ({ value: 1000 }) as never)
+    on('ui.toast', ($, e) => {
+      toasts.push((e as { text: string }).text)
+      return { value: undefined } as never
+    })
+    on('process.run', ($, e) => {
+      opened.push((e as { argv: string[] }).argv)
+      return { value: { exitCode: 0, stdout: '', stderr: '' } } as never
+    })
+    on('tool.call', () =>
+      ({
+        result: {},
+        text: "'app' revision 7 is available:\n\n  Your API is available at:      https://a1b2c3.c1.rbt.cloud:9991\n",
+      }) as never,
+    )
+
+    await $.tool.call({ tool: 'Bash', command: 'uv run rbt cloud up --organization=acme' })
+
+    expect(toasts).toEqual(['Deployed revision 7 to Reboot Cloud'])
+    const band = await $.ui.mount({ plugin: PLUGIN, surface, component: 'AbovePrompt', props: BAND as never })
+    expect((await band.findAll({ type: 'Text', text: /Deploying to Reboot Cloud: revision 7 is starting up/ })).length).toBe(1)
+    await band.press({ key: 'cloud' })
+    expect(opened).toContainEqual(['open', 'https://a1b2c3.c1.rbt.cloud:9991'])
+  })
+}
