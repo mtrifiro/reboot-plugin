@@ -12,10 +12,14 @@ import {
   formatStatus,
   listeningPorts,
   metricsPort,
+  observe,
   skillKind,
   stepOf,
   taskAfterPrompt,
+  STOP_POLLS,
+  UNWATCHED,
 } from './progress'
+import type { Watch } from './progress'
 import type { Task, TaskKind } from './progress'
 
 const at = (kind: TaskKind, step: number, extra: Partial<Task> = {}): Task => ({
@@ -186,5 +190,37 @@ describe('how a task moves', () => {
     expect(asTask({ step: 2, isDone: false })).toEqual(at('build', 2))
     expect(asTask({ step: 99, isDone: false })).toBe(null)
     expect(asTask('nonsense')).toBe(null)
+  })
+})
+
+describe('start and stop toasts', () => {
+  /** The changes a series of polls announces. */
+  const changes = (polls: boolean[]) => {
+    let w: Watch = UNWATCHED
+    return polls.map(isUp => {
+      const r = observe(w, isUp)
+      w = r.watch
+      return r.change
+    })
+  }
+
+  test('the first poll only learns the state', () => {
+    expect(changes([true])).toEqual([null])
+    expect(changes([false])).toEqual([null])
+  })
+
+  test('a start is announced at once', () => {
+    expect(changes([false, true])).toEqual([null, 'started'])
+  })
+
+  test('a stop is announced once it lasts', () => {
+    const down = Array(STOP_POLLS).fill(false)
+    expect(changes([true, ...down]).at(-1)).toBe('stopped')
+    // Then a start again.
+    expect(changes([true, ...down, true]).at(-1)).toBe('started')
+  })
+
+  test('a restart on save is not announced', () => {
+    expect(changes([true, false, false, true, false, true])).toEqual([null, null, null, null, null, null])
   })
 })

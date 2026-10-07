@@ -136,6 +136,8 @@ for (const surface of ['terminal', 'desktop'] as const) {
     await wait(50)
 
     const band = await $.ui.mount({ plugin: PLUGIN, surface, component: 'AbovePrompt', props: BAND as never })
+    // Its address waits, hidden, for the pointer on the button.
+    expect((await band.findAll({ type: 'Text', text: 'Opens the dashboard: http://127.0.0.1:9871/' })).length).toBe(1)
     await band.press({ key: 'dashboard' })
     expect(opened).toEqual([['open', 'http://127.0.0.1:9871/']])
   })

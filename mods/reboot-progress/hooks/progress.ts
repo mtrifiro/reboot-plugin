@@ -221,3 +221,33 @@ export function describeTask(t: Task | null): string {
 
   return `${what}, at the ${STEPS[t.step]!.toLowerCase()} step`
 }
+
+/**
+ * What a poll has seen of one server: whether it was last announced up
+ * (null before the first poll), and how many polls in a row have disagreed.
+ */
+export type Watch = { isUp: boolean | null; misses: number }
+
+export const UNWATCHED: Watch = { isUp: null, misses: 0 }
+
+/**
+ * Polls in a row a server must be down before its stop is announced.
+ * `rbt dev run` restarts the backend on each save, which reads as down for
+ * a poll or two; a stop that lasts three (15 seconds) is real.
+ */
+export const STOP_POLLS = 3
+
+/**
+ * The watch after a poll, and the change to announce, if any. The first poll
+ * only learns the state: a server already running when the session starts
+ * isn't news. A start counts at once; a stop once it lasts STOP_POLLS.
+ */
+export function observe(w: Watch, isUp: boolean): { watch: Watch; change: 'started' | 'stopped' | null } {
+  if (w.isUp === null || w.isUp === isUp) return { watch: { isUp, misses: 0 }, change: null }
+  if (isUp) return { watch: { isUp, misses: 0 }, change: 'started' }
+  const misses = w.misses + 1
+
+  return misses >= STOP_POLLS
+    ? { watch: { isUp: false, misses: 0 }, change: 'stopped' }
+    : { watch: { isUp: true, misses }, change: null }
+}

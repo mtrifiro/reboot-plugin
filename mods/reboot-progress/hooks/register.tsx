@@ -18,12 +18,14 @@ import {
   listeningPorts,
   finishTurn,
   metricsPort,
+  observe,
   skillKind,
   taskAfterPrompt,
   stepOf,
   storeKey,
+  UNWATCHED,
 } from './progress'
-import type { Call, Health, Links } from './progress'
+import type { Call, Health, Links, Watch } from './progress'
 
 const build = atom({ plugin: 'reboot-progress', key: 'build' } as const, null)
 const isHidden = atom({ plugin: 'reboot-progress', key: 'isHidden' } as const, false)
@@ -124,7 +126,8 @@ function callOf(e: { tool: string } & Record<string, unknown>): Call | null {
 }
 
 // The module's own; a reload starts them over.
-let wasBackendUp = false
+let appWatch: Watch = UNWATCHED
+let dashboardWatch: Watch = UNWATCHED
 let isPolling = false
 let restoredRoot: string | null = null
 let isTurnActive = false
@@ -210,6 +213,14 @@ async function restoreBuild($: EngineInterface, dir: string) {
   if (stored) await update($, build, () => (stored.isDone ? stored : { ...stored, isRestored: true }))
 }
 
+/** Toasts when the app (its backend) or the dashboard starts or stops. */
+function announce($: EngineInterface, server: 'app' | 'dashboard', isUp: boolean) {
+  const { watch, change } = observe(server === 'app' ? appWatch : dashboardWatch, isUp)
+  if (server === 'app') appWatch = watch
+  else dashboardWatch = watch
+  if (change) $.ui.toast(`Reboot ${server} ${change}`)
+}
+
 async function poll($: EngineInterface) {
   if (isPolling) return
   isPolling = true
@@ -226,8 +237,8 @@ async function poll($: EngineInterface) {
     // The band's links first: a failed status line must not cost them.
     const was = await read($, links)
     if (was.dashboard !== h.links.dashboard || was.app !== h.links.app) await update($, links, () => h.links)
-    if (wasBackendUp && !h.backend) $.ui.toast('Reboot backend stopped')
-    wasBackendUp = h.backend
+    announce($, 'app', h.backend)
+    announce($, 'dashboard', h.links.dashboard !== null)
     $.ui.status(formatStatus(h))
   } finally {
     isPolling = false
@@ -348,6 +359,17 @@ export const register: Register = on => {
             <Text bold>Status</Text>
           </Box>
           <Box flexShrink={0} flexDirection="row" gap={1} alignItems="center">
+            {/* A link's address, shown while the pointer is on its button below. */}
+            {to.dashboard !== null && (
+              <Box display="none" hover={{ scope: 'link-dashboard', display: 'flex' }}>
+                <Text dimColor>Opens the dashboard: {to.dashboard}</Text>
+              </Box>
+            )}
+            {to.app !== null && (
+              <Box display="none" hover={{ scope: 'link-app', display: 'flex' }}>
+                <Text dimColor>Opens the app: {to.app}</Text>
+              </Box>
+            )}
             {/* The favicon where the surface draws Svg. */}
             {Svg && <Svg source={REBOOT_LOGO} alt="Reboot logo" width={14} height={14} />}
             <Text bold>Reboot</Text>
@@ -361,9 +383,15 @@ export const register: Register = on => {
             </Box>
             <Box flexDirection="row" gap={1} flexShrink={0}>
               {to.dashboard !== null && (
-                <Button key="dashboard" label="Dashboard ↗" onPress={() => openUrl($, to.dashboard!)} />
+                <Box hover={{ scope: 'link-dashboard' }}>
+                  <Button key="dashboard" label="Dashboard ↗" onPress={() => openUrl($, to.dashboard!)} />
+                </Box>
               )}
-              {to.app !== null && <Button key="app" label="App ↗" onPress={() => openUrl($, to.app!)} />}
+              {to.app !== null && (
+                <Box hover={{ scope: 'link-app' }}>
+                  <Button key="app" label="App ↗" onPress={() => openUrl($, to.app!)} />
+                </Box>
+              )}
             </Box>
           </Box>
         )}
