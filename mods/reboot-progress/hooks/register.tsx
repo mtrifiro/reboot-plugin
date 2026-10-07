@@ -28,6 +28,9 @@ const activity = atom({ plugin: 'reboot-progress', key: 'activity' } as const, n
 
 const POLL_MS = 5000
 
+// The Hide button and the space before it.
+const HIDE_COLUMNS = ' [ Hide ]'.length
+
 const parent = (path: string) => path.replace(/\/[^/]*$/, '') || '/'
 
 /** The nearest ancestor of `path` holding a `.rbtrc`, up to six levels. */
@@ -285,19 +288,22 @@ export const register: Register = on => {
     const bar = b && progressBar(b.step, b.isDone, barWidth(e.props.bodyColumns))
     const hide = <Button key="hide" label="Hide" onPress={() => update($, isHidden, () => true)} />
 
-    // Just completed and Now above Progress; Hide ends the first row.
+    // Two columns, each a label over its status, then Progress; Hide at the top right.
+    const column = Math.max(16, Math.floor((e.props.bodyColumns - HIDE_COLUMNS) / 2))
+
     return (
       <Box flexDirection="column">
         {act !== null && (
           <Box flexDirection="row">
-            {act.justCompleted !== null && (
-              <>
-                <Text bold>Just completed  </Text>
-                <Text dimColor wrap="truncate-end">{act.justCompleted}   </Text>
-              </>
-            )}
-            <Text bold>Now  </Text>
-            <Text wrap="truncate-end">{act.now}  </Text>
+            <Box flexDirection="column" width={column}>
+              <Text bold>Just completed</Text>
+              {/* Blank until this session finishes a task; the label stays put. */}
+              <Text dimColor wrap="truncate-end">{act.justCompleted ?? ''}</Text>
+            </Box>
+            <Box flexDirection="column" width={column}>
+              <Text bold>Now</Text>
+              <Text wrap="truncate-end">{act.now}</Text>
+            </Box>
             {hide}
           </Box>
         )}

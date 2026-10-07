@@ -13,6 +13,8 @@ export const STEPS = [
 ] as const
 
 export const RUN = STEPS.length - 1
+const BACKEND = 3
+const TESTS = 6
 
 // The skills that start (or re-enter) the build flow.
 const BUILD_SKILL = /^(reboot:)?(app|build|mcp-ui|web-app)$/
@@ -35,14 +37,17 @@ export function stepOf(call: Call): number | null {
   if (call.tool === 'Bash') {
     const c = call.command
     if (/\brbt\s+dev\s+run\b/.test(c)) return 7
-    if (/\bpytest\b|\.feature\b/.test(c)) return 6
+    if (/\bpytest\b/.test(c)) return 6
     if (/\bcopy\.sh\b|\brbt\s+generate\b|\buv\s+sync\b/.test(c)) return 2
     return null
   }
   const p = call.file_path
   // Generated code is never evidence of a step.
   if (/_rbt\.py$|\/node_modules\/|\/dist\//.test(p)) return null
-  if (/\/tests\/[^/]*(\.feature|_test\.py)$/.test(p)) return 6
+  // Feature files are the agreed spec, written right after Planning
+  // (the feature skill), so they say nothing about Tests; test code does.
+  if (/\.feature$/.test(p)) return null
+  if (/\/tests\/[^/]*_test\.py$/.test(p)) return 6
   if (/\/backend\/src\/servicers\/[^/]+\.py$/.test(p)) {
     return /\bdef authorizer\s*\(/.test(call.text) ? 4 : 3
   }
@@ -139,6 +144,9 @@ export function nextBuild(
   isBuildSkillCall: boolean,
 ): BuildState | null {
   if (isBuildSkillCall) return b && !b.isDone && !b.isRestored ? b : { step: 0, isDone: false }
+  // The spec's test module is written right after Planning (the feature
+  // skill), so test evidence counts only once the backend exists.
+  if (step === TESTS && (b === null || b.step < BACKEND)) return b
   if (b === null) return step >= 1 && step < RUN ? { step, isDone: false } : null
   if (b.isDone) return b
 

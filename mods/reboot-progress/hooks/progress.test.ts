@@ -31,7 +31,9 @@ describe('stepOf', () => {
     expect(write('backend/src/servicers/todo_list.py', 'def authorizer(self):')).toBe(4)
     expect(write('frontend/mcp/board/App.tsx')).toBe(5)
     expect(write('web/src/pages/Home.tsx')).toBe(5)
-    expect(write('tests/add.feature')).toBe(6)
+    expect(write('tests/todo_list_test.py')).toBe(6)
+    // The spec, written right after Planning, is not Tests.
+    expect(write('tests/add.feature')).toBe(null)
   })
 
   test('generated code is not evidence', () => {
@@ -104,6 +106,14 @@ describe('build state', () => {
     expect(nextBuild({ step: 4, isDone: false }, 7, false)).toEqual({ step: 7, isDone: false })
     expect(nextBuild({ step: 7, isDone: false }, 5, false)).toEqual({ step: 7, isDone: false })
     expect(nextBuild({ step: 7, isDone: true }, 3, false)).toEqual({ step: 7, isDone: true })
+  })
+
+  test('test evidence counts only once the backend exists', () => {
+    // Planning: the spec's test module, or a run of the @wip spec.
+    expect(nextBuild({ step: 0, isDone: false }, 6, false)).toEqual({ step: 0, isDone: false })
+    expect(nextBuild({ step: 1, isDone: false }, 6, false)).toEqual({ step: 1, isDone: false })
+    expect(nextBuild(null, 6, false)).toBe(null)
+    expect(nextBuild({ step: 3, isDone: false }, 6, false)).toEqual({ step: 6, isDone: false })
   })
 
   test('a turn that ends at Launch finishes the build; earlier steps stay', () => {
