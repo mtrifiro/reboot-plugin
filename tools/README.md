@@ -49,7 +49,7 @@ Everything else uses this schema:
 ---
 title: "<the file's heading, plain>"
 summary: "<one line, ≤ 18 words: what a reader gets from it>"
-kind: migration          # migration | index | report
+kind: migration          # migration | index | report | backlog
 audience: agent          # agent | maintainer
 applies: [mcp-ui, web-app, backend-only]  # migration only: front doors it touches
 when: "<condition>"      # migration only, optional: omit when every app on them is affected

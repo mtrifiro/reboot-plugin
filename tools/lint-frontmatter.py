@@ -42,7 +42,7 @@ CATEGORIES = (
 )
 
 DOC_KEYS = ("title", "summary", "kind", "audience")
-KINDS = ("migration", "index", "report")
+KINDS = ("migration", "index", "report", "backlog")
 AUDIENCES = ("agent", "maintainer")
 
 
