@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'claude-code/testing'
 
-import { backendPort, formatStatus, listeningPorts, metricsPort, stepOf } from './progress'
+import { backendPort, barWidth, formatStatus, listeningPorts, metricsPort, progressBar, stepOf } from './progress'
 
 const P = '/work/todo-list'
 const write = (path: string, text = '') => stepOf({ tool: 'Write', file_path: `${P}/${path}`, text })
@@ -52,5 +52,19 @@ describe('status line', () => {
     expect(backendPort('dev run --port=9100\n')).toBe(9100)
     expect(metricsPort('cloudflared tunnel --metrics localhost:4041 --url http://localhost:9991')).toBe(4041)
     expect(metricsPort('/usr/bin/zsh')).toBe(null)
+  })
+})
+
+describe('progress bar', () => {
+  test('fills with the steps done', () => {
+    expect(progressBar(0, false, 16)).toEqual({ filled: 0, empty: 16, label: 'Design · 1 of 8' })
+    expect(progressBar(3, false, 16)).toEqual({ filled: 6, empty: 10, label: 'Servicer · 4 of 8' })
+    expect(progressBar(7, true, 16)).toEqual({ filled: 16, empty: 0, label: 'Done · 8 of 8' })
+  })
+
+  test('sizes to the band, 10 to 30 cells', () => {
+    expect(barWidth(40)).toBe(10)
+    expect(barWidth(60)).toBe(22)
+    expect(barWidth(200)).toBe(30)
   })
 })

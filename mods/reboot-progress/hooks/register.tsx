@@ -4,12 +4,13 @@ import type { EngineInterface, Register } from 'claude-code'
 import type { Build } from '../types'
 import {
   RUN,
-  STEPS,
   backendPort,
+  barWidth,
   formatStatus,
   isBuildSkill,
   listeningPorts,
   metricsPort,
+  progressBar,
   stepOf,
 } from './progress'
 import type { Call, Health } from './progress'
@@ -195,26 +196,14 @@ export const register: Register = on => {
     if (e.props.hasSurvey || b === null || (await read($, isHidden))) return next(e)
 
     const { Box, Button, Text } = $.ui.resolve(e)
-    // Short labels when the row would not fit.
-    const isNarrow = e.props.bodyColumns < 100
-    const label = (s: string) => (isNarrow ? s.slice(0, 4) : s)
+    const bar = progressBar(b.step, b.isDone, barWidth(e.props.bodyColumns))
 
     return (
       <Box flexDirection="row" flexWrap="wrap">
-        <Text bold>Build </Text>
-        {STEPS.map((s, i) => {
-          const isPast = i < b.step || b.isDone
-          const isNow = i === b.step && !b.isDone
-          const arrow = i < STEPS.length - 1 ? ' → ' : ' '
-
-          return (
-            <Text color={isPast ? 'green' : undefined} bold={isNow} dimColor={!isPast && !isNow}>
-              {isPast ? '✓ ' : isNow ? '◐ ' : ''}
-              {label(s)}
-              {arrow}
-            </Text>
-          )
-        })}
+        <Text bold>Build  </Text>
+        <Text color="green">{'█'.repeat(bar.filled)}</Text>
+        <Text dimColor>{'░'.repeat(bar.empty)}</Text>
+        <Text>  {bar.label}  </Text>
         <Button key="hide" label="Hide" onPress={() => update($, isHidden, () => true)} />
       </Box>
     )

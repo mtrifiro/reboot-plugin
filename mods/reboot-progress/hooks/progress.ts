@@ -95,3 +95,29 @@ export function metricsPort(ps: string): number | null {
 
   return m ? Number(m[1]) : 4040
 }
+
+export type Bar = {
+  /** Filled cells, then empty ones; together `width`. */
+  filled: number
+  empty: number
+  /** `Servicer · 4 of 8`, or `Done · 8 of 8`. */
+  label: string
+}
+
+/**
+ * The progress bar for a build at `step`: the steps before it count as
+ * done, so Design shows an empty bar and a finished build a full one.
+ */
+export function progressBar(step: number, isDone: boolean, width: number): Bar {
+  const done = isDone ? STEPS.length : step
+  const filled = Math.round((done / STEPS.length) * width)
+  const label = isDone
+    ? `Done · ${STEPS.length} of ${STEPS.length}`
+    : `${STEPS[step]} · ${step + 1} of ${STEPS.length}`
+
+  return { filled, empty: width - filled, label }
+}
+
+/** Bar cells for a band `columns` wide: what the label and Hide leave, 10 to 30. */
+export const barWidth = (columns: number): number =>
+  Math.max(10, Math.min(30, columns - 'Build  '.length - '  Authorizers · 5 of 8'.length - ' [ Hide ]'.length))
