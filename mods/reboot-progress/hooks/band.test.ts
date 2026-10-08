@@ -227,3 +227,45 @@ for (const surface of ['terminal', 'desktop'] as const) {
     expect(opened).toContainEqual(['open', 'https://a1b2c3.c1.rbt.cloud:9991'])
   })
 }
+
+for (const kind of ['an MCP UI', 'a web app serving MCP'] as const) {
+  test(`${kind} deployed to Reboot Cloud gets an MCP button that opens its own connect page`, async ($, on) => {
+    const opened: string[][] = []
+    on('ui.render', { component: 'AbovePrompt' }, ($, e) => {
+      const { Box } = $.ui.resolve(e)
+
+      return h(Box, {}) as never
+    })
+    on('clock.now', () => ({ value: 1000 }) as never)
+    on('session.cwd', () => ({ value: '/w/app' }) as never)
+    const files = kind === 'an MCP UI' ? ['/w/app/.rbtrc', '/w/app/frontend/mcp'] : ['/w/app/.rbtrc']
+    on('fs.exists', ($, e) => ({ value: files.includes((e as { path: string }).path) }) as never)
+    on('fs.read', ($, e) => {
+      const isMain = kind !== 'an MCP UI' && (e as { path: string }).path === '/w/app/backend/src/main.py'
+      return { value: isMain ? 'Application(servicers=[], example_prompts=example_prompts)' : '' } as never
+    })
+    on('ui.status', () => ({ value: undefined }) as never)
+    on('ui.toast', () => ({ value: undefined }) as never)
+    on('process.run', ($, e) => {
+      const argv = (e as { argv: string[] }).argv
+      if (argv[0] === 'open') opened.push(argv)
+      return { value: { exitCode: 0, stdout: '', stderr: '' } } as never
+    })
+    on('tool.call', () =>
+      ({
+        result: {},
+        text: "'app' revision 7 is available:\n\n  Your API is available at:      https://a1b2c3.prod1.rbt.cloud:9991\n",
+      }) as never,
+    )
+
+    await $.tool.call({ tool: 'Bash', command: 'uv run rbt cloud up --organization=acme' })
+    // Starting the app polls, which finds that it serves MCP.
+    await $.tool.call({ tool: 'Bash', command: 'uv run rbt dev run' })
+    await wait(50)
+
+    const band = await $.ui.mount({ plugin: PLUGIN, surface: 'terminal', component: 'AbovePrompt', props: BAND as never })
+    expect(await band.findAll({ type: 'Button', text: /Cloud/ })).toEqual([])
+    await band.press({ key: 'mcp' })
+    expect(opened).toEqual([['open', 'https://a1b2c3.prod1.rbt.cloud/']])
+  })
+}

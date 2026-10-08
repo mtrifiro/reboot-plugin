@@ -4,7 +4,7 @@ import type { EngineInterface, Register } from 'claude-code'
 import type { Build, Deploy } from '../types'
 import { advanceDeploy, afterOutput, beginDeploy, deployKey, deployLine, isRunning, isShown, outcomeOf, seenIn } from './deploy'
 import { REBOOT_LOGO } from './logo'
-import { STARTING, TESTING, WAITING, endTurn, fallback, isWorthSummarizing, parseSummary, startTask, summaryPrompt, isTesting, textOf } from './activity'
+import { STARTING, WAITING, endTurn, fallback, isWorthSummarizing, parseSummary, startTask, summaryPrompt, isTesting, testCommand, testLine, testTimeKey, testProgress, testStatus, textOf } from './activity'
 import type { Summary } from './activity'
 import {
   RUN,
@@ -12,11 +12,13 @@ import {
   appLinks,
   asTask,
   backendPort,
+  dashboardPort,
   formatStatus,
   beginTask,
   commandKind,
   describeTask,
   listeningPorts,
+  vitePortOf,
   finishTurn,
   metricsPort,
   observe,
@@ -33,10 +35,11 @@ const isHidden = atom({ plugin: 'reboot-progress', key: 'isHidden' } as const, f
 const root = atom({ plugin: 'reboot-progress', key: 'root' } as const, null)
 const deploy = atom({ plugin: 'reboot-progress', key: 'deploy' } as const, null)
 const clock = atom({ plugin: 'reboot-progress', key: 'clock' } as const, 0)
-const testing = atom({ plugin: 'reboot-progress', key: 'isTesting' } as const, false)
+const testRun = atom({ plugin: 'reboot-progress', key: 'testRun' } as const, null)
 // The session's, not the module's: a reload mid-turn must not end the turn.
 const turnActive = atom({ plugin: 'reboot-progress', key: 'isTurnActive' } as const, false)
 const activity = atom({ plugin: 'reboot-progress', key: 'activity' } as const, null)
+const mcp = atom({ plugin: 'reboot-progress', key: 'isMcp' } as const, false)
 const links = atom({ plugin: 'reboot-progress', key: 'links' } as const, { dashboard: null, app: null })
 
 const POLL_MS = 5000
@@ -75,20 +78,25 @@ async function readText($: EngineInterface, path: string): Promise<string> {
   }
 }
 
-async function health($: EngineInterface, dir: string): Promise<Health & { links: Links; ps: string }> {
-  const [lsof, ps, rbtrc, webVite] = await Promise.all([
+async function health($: EngineInterface, dir: string): Promise<Health & { links: Links; ps: string; isMcp: boolean }> {
+  const [lsof, ps, rbtrc] = await Promise.all([
     $.process.run(['lsof', '-nP', '-iTCP', '-sTCP:LISTEN'], { timeoutMs: 5000 }).catch(() => null),
-    $.process.run(['ps', '-axo', 'command='], { timeoutMs: 5000 }).catch(() => null),
+    $.process.run(['ps', '-axo', 'pid=,command='], { timeoutMs: 5000 }).catch(() => null),
     readText($, `${dir}/.rbtrc`),
-    readText($, `${dir}/web/vite.config.ts`),
   ])
   const ports = listeningPorts(lsof?.stdout ?? '')
-  const isMcp = await $.fs.exists(`${dir}/frontend/mcp`)
+  // An MCP UI has frontend/mcp; a web app serving MCP too passes the setup
+  // page's example prompts to its Application.
+  const isMcp =
+    (await $.fs.exists(`${dir}/frontend/mcp`)) ||
+    /\bexample_prompts\s*=/.test((await readText($, `${dir}/backend/src/main.py`)) ?? '')
 
-  // MCP and dual apps run Vite from frontend/ on 4444; a web app from web/.
-  let vitePort: number | null = null
-  if (await $.fs.exists(`${dir}/frontend/vite.config.ts`)) vitePort = 4444
-  else if (webVite) vitePort = Number(webVite.match(/\bport:\s*(\d+)/)?.[1] ?? 5273)
+  // Every port is this project's own: the backend's and the dashboard's
+  // from its .rbtrc, Vite's from its running process (frontend/ for MCP
+  // and dual apps, web/ for a web app).
+  const hasFrontend =
+    (await $.fs.exists(`${dir}/frontend/vite.config.ts`)) || (await $.fs.exists(`${dir}/web/vite.config.ts`))
+  const vitePort = vitePortOf(lsof?.stdout ?? '', ps?.stdout ?? '', dir)
 
   let tunnel: boolean | null = null
   let url: string | null = null
@@ -111,11 +119,12 @@ async function health($: EngineInterface, dir: string): Promise<Health & { links
 
   return {
     backend: ports.has(backendPort(rbtrc)),
-    frontend: vitePort === null ? null : ports.has(vitePort),
+    frontend: hasFrontend ? vitePort !== null : null,
     tunnel,
     url,
-    links: appLinks(ports, { backendPort: backendPort(rbtrc), vitePort, hasWebApp }),
+    links: appLinks(ports, { backendPort: backendPort(rbtrc), dashboardPort: dashboardPort(rbtrc), vitePort, hasWebApp }),
     ps: ps?.stdout ?? '',
+    isMcp,
   }
 }
 
@@ -255,6 +264,40 @@ async function followDeploy($: EngineInterface, ps: string) {
   if (isShown(after, now) || isShown(d, await read($, clock))) await update($, clock, () => now)
 }
 
+/**
+ * Follows a test run while `ps` shows it: how far its output says it is
+ * (a background run's, whose file its Bash result named), how long the
+ * same command took last time, and the clock, so its time redraws. Once
+ * it ends, its time is kept for the next run of the command. A run just
+ * started may not show in `ps` yet, so one is dropped only once unseen
+ * for two polls.
+ */
+async function followTests($: EngineInterface, dir: string, ps: string) {
+  const run = await read($, testRun)
+  const now = await $.clock.now()
+  const command = testCommand(ps)
+  if (command === null) {
+    if (run === null || now - run.seenAt <= 2 * POLL_MS) return
+    if (run.command && run.seenAt > run.startedAt) {
+      await $.store.set(testTimeKey(dir, run.command), run.seenAt - run.startedAt).catch(() => undefined)
+    }
+    await update($, testRun, () => null)
+    return
+  }
+  const isSame = run !== null && (run.command === command || run.command === '')
+  const expected = isSame && run.expectedMs !== null ? run.expectedMs : await $.store.get(testTimeKey(dir, command)).catch(() => null)
+  const output = isSame && run.outputPath ? await readText($, run.outputPath) : ''
+  await update($, testRun, () => ({
+    command,
+    startedAt: isSame ? run.startedAt : now,
+    seenAt: now,
+    expectedMs: typeof expected === 'number' ? expected : null,
+    outputPath: isSame ? run.outputPath : null,
+    ...testProgress(output),
+  }))
+  await update($, clock, () => now)
+}
+
 /** Toasts when the app (its backend) or the dashboard starts or stops. */
 function announce($: EngineInterface, server: 'app' | 'dashboard', isUp: boolean) {
   const { watch, change } = observe(server === 'app' ? appWatch : dashboardWatch, isUp)
@@ -279,9 +322,9 @@ async function poll($: EngineInterface) {
     // The band's links first: a failed status line must not cost them.
     const was = await read($, links)
     if (was.dashboard !== h.links.dashboard || was.app !== h.links.app) await update($, links, () => h.links)
+    if (h.isMcp !== (await read($, mcp))) await update($, mcp, () => h.isMcp)
     await followDeploy($, h.ps).catch(() => undefined)
-    const isTestRun = isTesting(h.ps)
-    if (isTestRun !== (await read($, testing))) await update($, testing, () => isTestRun)
+    await followTests($, dir, h.ps).catch(() => undefined)
     announce($, 'app', h.backend)
     announce($, 'dashboard', h.links.dashboard !== null)
     $.ui.status(formatStatus(h))
@@ -335,6 +378,15 @@ export const register: Register = on => {
       await saveDeploy($, after)
       await update($, clock, () => now)
       if (toast) $.ui.toast(toast)
+    }
+
+    // A test run sent to the background names the file its output goes to.
+    const testOutput = e.tool === 'Bash' && isTesting(String(e.command)) ? text.match(/Output is being written to: (\S+?\.output)\b/) : null
+    if (testOutput) {
+      const now = await $.clock.now()
+      const run = await read($, testRun)
+      const base = { command: '', startedAt: now, seenAt: now, expectedMs: null, percent: null, failed: 0 }
+      await update($, testRun, () => ({ ...base, ...run, outputPath: testOutput[1]! }))
     }
 
     const call = callOf(e)
@@ -411,10 +463,21 @@ export const register: Register = on => {
     const now = await read($, clock)
     const cloud = d?.apiUrl ?? null
     const site = d?.siteUrl ?? null
+    // An MCP app's root on Reboot Cloud is the page that connects an MCP
+    // client to it: this deploy's own app, at its address without the port.
+    const mcpUrl = cloud !== null && (await read($, mcp)) ? `${cloud.replace(/:9991$/, '')}/` : null
     const hasLinks = to.dashboard !== null || to.app !== null || cloud !== null || site !== null
     // A running deploy takes Now's place, with the time it has taken.
     // Between turns, a test run still going is what the work waits on.
-    const nowText = act?.now === WAITING && (await read($, testing)) ? TESTING : (act?.now ?? null)
+    // Mid-turn, how far it is follows what the turn is doing.
+    const run = await read($, testRun)
+    const status = run === null ? '' : testStatus(run)
+    const nowText =
+      run !== null && act?.now === WAITING
+        ? testLine(run, Math.max(now, run.startedAt))
+        : act?.now && status
+          ? `${act.now} (tests ${status})`
+          : (act?.now ?? null)
     const line = isShown(d, now) ? deployLine(d!, Math.max(now, d!.stageAt)) : nowText
     if (e.props.hasSurvey || (b === null && line === null && !hasLinks) || (await read($, isHidden))) {
       return next(e)
@@ -468,7 +531,12 @@ export const register: Register = on => {
                 <Text dimColor>Opens the app: {to.app}</Text>
               </Box>
             )}
-            {cloud !== null && (
+            {mcpUrl !== null && (
+              <Box display="none" hover={{ scope: 'link-mcp', display: 'flex' }}>
+                <Text dimColor>Opens the page that connects an MCP client to the app: {mcpUrl}</Text>
+              </Box>
+            )}
+            {cloud !== null && mcpUrl === null && (
               <Box display="none" hover={{ scope: 'link-cloud', display: 'flex' }}>
                 <Text dimColor>Opens the app on Reboot Cloud: {cloud}</Text>
               </Box>
@@ -506,7 +574,12 @@ export const register: Register = on => {
                 <Button key="app" variant={linkVariant} label="App ↗" onPress={() => openUrl($, to.app!)} />
               </Box>
             )}
-            {cloud !== null && (
+            {mcpUrl !== null && (
+              <Box hover={{ scope: 'link-mcp' }}>
+                <Button key="mcp" variant={linkVariant} label="MCP ↗" onPress={() => openUrl($, mcpUrl)} />
+              </Box>
+            )}
+            {cloud !== null && mcpUrl === null && (
               <Box hover={{ scope: 'link-cloud' }}>
                 <Button key="cloud" variant={linkVariant} label="Cloud ↗" onPress={() => openUrl($, cloud)} />
               </Box>

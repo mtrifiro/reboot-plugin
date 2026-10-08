@@ -2,7 +2,8 @@
 // it, the fallback when no summary comes back, and how the band's
 // "Just completed" and "Now" move as tasks change.
 
-import type { Activity } from '../types'
+import type { Activity, TestRun } from '../types'
+import { elapsed } from './deploy'
 import type { Decision } from './progress'
 
 /**
@@ -18,11 +19,85 @@ export const WAITING = 'Idle'
 /** Now between turns while a test run the turn started is still going. */
 export const TESTING = 'Waiting for the tests to finish'
 
-/** Whether `ps -axo command=` output shows a test run: pytest, vitest, Playwright, npm test. */
-export const isTesting = (ps: string): boolean =>
-  ps
-    .split('\n')
-    .some(l => !/\bgrep\b/.test(l) && /\bpytest\b|\bvitest\b|\bplaywright\s+test\b|\bnpm\s+(run\s+)?test\b/.test(l))
+/**
+ * How far a test run's output says it is: pytest's `[ 42%]` (or
+ * Playwright's `[12/40]`), the latest one, and the failures so far, from
+ * pytest's `F`/`E` in a line of dots, `FAILED`/`ERROR` in a verbose line,
+ * or Playwright's `✘`.
+ */
+export function testProgress(output: string): { percent: number | null; failed: number } {
+  let percent: number | null = null
+  for (const m of output.matchAll(/\[\s*(\d{1,3})%\]/g)) percent = Number(m[1])
+  if (percent === null) {
+    for (const m of output.matchAll(/^\s*\[(\d+)\/(\d+)\]/gm)) percent = Math.floor((100 * Number(m[1])) / Number(m[2]))
+  }
+  let failed = 0
+  for (const m of output.matchAll(/^\S+\s+([.FEsxX]+)\s*\[\s*\d+%\]\s*$/gm)) failed += (m[1]!.match(/[FE]/g) ?? []).length
+  failed += (output.match(/\s(FAILED|ERROR)\s+\[\s*\d+%\]/g) ?? []).length
+  failed += (output.match(/^\s*✘/gm) ?? []).length
+
+  return { percent, failed }
+}
+
+/** How far a test run is, for the band: `42% done, 2 failed`; '' while its output doesn't say. */
+export function testStatus(run: TestRun): string {
+  const parts: string[] = []
+  if (run.percent !== null) parts.push(`${run.percent}% done`)
+  if (run.failed > 0) parts.push(`${run.failed} failed`)
+
+  return parts.join(', ')
+}
+
+/** `40s`, `6m`: a time to the nearest ten seconds, or minute past one. */
+function roughly(ms: number): string {
+  const s = ms / 1000
+
+  return s < 60 ? `${Math.max(10, Math.round(s / 10) * 10)}s` : `${Math.round(s / 60)}m`
+}
+
+/**
+ * Now between turns while tests run: what its output says of how far it
+ * is, and its time so far beside the last run's of the same command.
+ */
+export function testLine(run: TestRun, now: number): string {
+  const status = testStatus(run)
+  const took = now - run.startedAt
+  const time =
+    run.expectedMs === null
+      ? elapsed(took)
+      : took <= run.expectedMs
+        ? `${elapsed(took)} of about ${roughly(run.expectedMs)}`
+        : `${elapsed(took)}, longer than the last run's ${roughly(run.expectedMs)}`
+
+  return `${TESTING}${status ? `: ${status}` : ''} · ${time}`
+}
+
+/** The test runner in a command line: pytest, vitest, Playwright, npm test. */
+const RUNNER = /\b(pytest|vitest|playwright\s+test|npm\s+(?:run\s+)?test)\b/
+
+/**
+ * A test run in `ps -axo pid=,command=` output (or a Bash command): its
+ * command from the runner on (`pytest tests -q -k transfer`); null when
+ * none runs.
+ */
+export function testCommand(ps: string): string | null {
+  for (const line of ps.split('\n')) {
+    const m = line.match(RUNNER)
+    if (m && !/\bgrep\b/.test(line.slice(0, m.index))) {
+      // Quotes dropped and cut at a pipe, `;`, `&&` or a redirect, so the
+      // shell that started it and the runner itself give the same command.
+      return line.slice(m.index).replace(/["']/g, '').split(/\s*(?:\||;|&&|\d?>|<)/)[0]!.trim()
+    }
+  }
+
+  return null
+}
+
+/** Whether `ps` output (or a Bash command) shows a test run. */
+export const isTesting = (ps: string): boolean => testCommand(ps) !== null
+
+/** The `$.store` key holding how long a test command took last time in a project. */
+export const testTimeKey = (root: string, command: string): string => `tests:${root}:${command}`
 
 /** Now, from the moment a prompt is sent until its summary names the work. */
 export const STARTING = 'Working on your request'

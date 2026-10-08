@@ -40,6 +40,23 @@ export type Deploy = {
   failure: string | null
 }
 
+/** A test run while it goes: when it was first seen, where its output is written, and how far it is. */
+export type TestRun = {
+  /** The run's command from the test runner on (`pytest tests -q -k transfer`), which keys its last time. */
+  command: string
+  startedAt: number
+  /** When a poll last saw it, so its time is known once it ends. */
+  seenAt: number
+  /** How long the same command took last time in this project; null on a first run. */
+  expectedMs: number | null
+  /** A background run's output file (from its Bash result); null for a run in the foreground. */
+  outputPath: string | null
+  /** How far it is, from its output's `[ 42%]` or `[12/40]`; null when the output doesn't say. */
+  percent: number | null
+  /** How many tests failed so far. */
+  failed: number
+}
+
 declare module 'claude-code' {
   interface PluginState {
     'reboot-progress': {
@@ -52,8 +69,10 @@ declare module 'claude-code' {
       activity: Activity | null
       /** Whether a turn is running: session state, so a reload mid-turn keeps it. */
       isTurnActive: boolean
-      /** Whether a test run is going, so the band waits on it rather than saying Idle. */
-      isTesting: boolean
+      /** Whether the project serves MCP (`frontend/mcp`), so its Reboot Cloud URL is an MCP server. */
+      isMcp: boolean
+      /** The test run going, so the band shows how far it is rather than Idle; null when none. */
+      testRun: TestRun | null
       /** The latest deploy. */
       deploy: Deploy | null
       /** The clock at the latest poll, so a running deploy's time redraws. */

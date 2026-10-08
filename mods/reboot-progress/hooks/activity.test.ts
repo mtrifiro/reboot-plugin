@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'claude-code/testing'
 
-import { WAITING, endTurn, isTesting, fallback, isWorthSummarizing, parseSummary, startTask, summaryPrompt, textOf } from './activity'
+import { WAITING, endTurn, isTesting, testCommand, testLine, testProgress, fallback, isWorthSummarizing, parseSummary, startTask, summaryPrompt, textOf } from './activity'
 
 describe('activity', () => {
   test('reads the text blocks of a row', () => {
@@ -90,5 +90,45 @@ describe('a test run between turns', () => {
     expect(isTesting('npm run test')).toBe(true)
     expect(isTesting('rbt dev run\nnpm run dev\nrbt dashboard')).toBe(false)
     expect(isTesting('grep -r pytest .')).toBe(false)
+  })
+})
+
+describe('test progress', () => {
+  test("reads pytest's percentages and failures, dots or verbose", () => {
+    const dots = 'collected 40 items\n\ntests/test_a.py ..F.....  [ 20%]\ntests/test_b.py ....E...  [ 40%]\n'
+    expect(testProgress(dots)).toEqual({ percent: 40, failed: 2 })
+    const verbose =
+      'tests/test_a.py::test_one PASSED                     [ 50%]\ntests/test_a.py::test_two FAILED                     [100%]\n'
+    expect(testProgress(verbose)).toEqual({ percent: 100, failed: 1 })
+  })
+
+  test("reads Playwright's counts, and says nothing of output that doesn't say", () => {
+    expect(testProgress('  [3/12] [chromium] › a.spec.ts:4:1 › signs in\n  ✘  1 [chromium] › b.spec.ts\n')).toEqual({
+      percent: 25,
+      failed: 1,
+    })
+    expect(testProgress('')).toEqual({ percent: null, failed: 0 })
+  })
+
+  test('the line names how far the run is and its time so far', () => {
+    const run = { command: 'pytest tests', startedAt: 0, seenAt: 0, expectedMs: null, outputPath: null, percent: 42, failed: 2 }
+    expect(testLine(run, 72_000)).toBe('Waiting for the tests to finish: 42% done, 2 failed · 1m 12s')
+    expect(testLine({ ...run, percent: null, failed: 0 }, 9_000)).toBe('Waiting for the tests to finish · 9s')
+  })
+
+  test("beside the last run's time when the output says nothing", () => {
+    const run = { command: 'pytest tests', startedAt: 0, seenAt: 0, expectedMs: 357_100, outputPath: null, percent: null, failed: 0 }
+    expect(testLine(run, 72_000)).toBe('Waiting for the tests to finish · 1m 12s of about 6m')
+    expect(testLine(run, 400_000)).toBe("Waiting for the tests to finish · 6m 40s, longer than the last run's 6m")
+  })
+
+  test('the command, from the runner to a pipe', () => {
+    const ps = '  9 /w/.venv/bin/python /w/.venv/bin/pytest tests/web_test.py -q -k signs\n 10 grep pytest'
+    expect(testCommand(ps)).toBe('pytest tests/web_test.py -q -k signs')
+    expect(testCommand('timeout 900 uv run pytest tests -q 2>&1 | tail -3')).toBe('pytest tests -q')
+    expect(testCommand('rbt dev run')).toBe(null)
+    // The shell Claude Code starts, and the runner it runs: one command.
+    const shell = "  8 /bin/zsh -c eval 'uv run pytest tests -k \"signs in\"' < /dev/null && pwd -P"
+    expect(testCommand(shell)).toBe(testCommand('  9 /w/.venv/bin/python /w/.venv/bin/pytest tests -k signs in'))
   })
 })

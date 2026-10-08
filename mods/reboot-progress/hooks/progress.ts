@@ -97,7 +97,7 @@ export function formatStatus(h: Health): string {
 /** The band's links: the developer dashboard and the app's front end, while each serves. */
 export type Links = { dashboard: string | null; app: string | null }
 
-/** The dashboard's port (`rbt dashboard`, default) and the app link a person opens. */
+/** `rbt dashboard`'s own default port, for a project whose `.rbtrc` names none. */
 export const DASHBOARD_PORT = 9871
 
 /**
@@ -107,11 +107,11 @@ export const DASHBOARD_PORT = 9871
  */
 export function appLinks(
   ports: Set<number>,
-  app: { backendPort: number; vitePort: number | null; hasWebApp: boolean },
+  app: { backendPort: number; dashboardPort: number; vitePort: number | null; hasWebApp: boolean },
 ): Links {
-  const dashboard = ports.has(DASHBOARD_PORT) ? `http://127.0.0.1:${DASHBOARD_PORT}/` : null
-  if (app.hasWebApp && app.vitePort !== null) {
-    return { dashboard, app: ports.has(app.vitePort) ? `http://localhost:${app.vitePort}/` : null }
+  const dashboard = ports.has(app.dashboardPort) ? `http://127.0.0.1:${app.dashboardPort}/` : null
+  if (app.hasWebApp) {
+    return { dashboard, app: app.vitePort !== null ? `http://localhost:${app.vitePort}/` : null }
   }
 
   return { dashboard, app: ports.has(app.backendPort) ? `http://localhost:${app.backendPort}/` : null }
@@ -130,6 +130,40 @@ export function backendPort(rbtrc: string): number {
   const m = rbtrc.match(/^\s*dev run\s+--port[= ](\d+)/m)
 
   return m ? Number(m[1]) : 9991
+}
+
+/**
+ * The dashboard's port: `dashboard --port=N` in `.rbtrc` (where this
+ * project's dashboard starts), else `dev run --dashboard-port=N` (where
+ * its dev loop looks for it), else `rbt dashboard`'s default.
+ */
+export function dashboardPort(rbtrc: string): number {
+  const m = rbtrc.match(/^\s*dashboard\s+--port[= ](\d+)/m) ?? rbtrc.match(/^\s*dev run\s+--dashboard-port[= ](\d+)/m)
+
+  return m ? Number(m[1]) : DASHBOARD_PORT
+}
+
+/**
+ * The port this project's Vite serves on, read from the running process,
+ * not a config: a `vite` in `ps -axo pid=,command=` output whose command
+ * names a path in `dir`, and the lowest port it listens on in `lsof -nP
+ * -iTCP -sTCP:LISTEN` output; null while none runs. A test suite's Vite
+ * (`--strictPort` on a port of its own) and `vite preview` are not the
+ * one a person opens.
+ */
+export function vitePortOf(lsof: string, ps: string, dir: string): number | null {
+  const pids = new Set<number>()
+  for (const line of ps.split('\n')) {
+    const m = line.match(/^\s*(\d+)\s+(.*)$/)
+    const isDev = m && /\bvite\b/.test(m[2]!) && !/--strictPort|\bvite\s+preview\b/.test(m[2]!)
+    if (m && isDev && m[2]!.includes(`${dir}/`)) pids.add(Number(m[1]))
+  }
+  const ports: number[] = []
+  for (const m of lsof.matchAll(/^.+?\s+(\d+)\s+\S+\s+\S+\s+IPv[46]\b.*:(\d+) \(LISTEN\)$/gm)) {
+    if (pids.has(Number(m[1]))) ports.push(Number(m[2]))
+  }
+
+  return ports.length > 0 ? Math.min(...ports) : null
 }
 
 /** The cloudflared metrics port from a `ps` command line, else null. */

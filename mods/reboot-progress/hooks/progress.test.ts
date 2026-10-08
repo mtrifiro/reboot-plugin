@@ -5,12 +5,14 @@ import {
   appLinks,
   asTask,
   backendPort,
+  dashboardPort,
   beginTask,
   commandKind,
   describeTask,
   finishTurn,
   formatStatus,
   listeningPorts,
+  vitePortOf,
   metricsPort,
   observe,
   skillKind,
@@ -70,18 +72,47 @@ describe('links', () => {
   const ports = (...p: number[]) => new Set(p)
 
   test('the dashboard, while it listens', () => {
-    expect(appLinks(ports(9871), { backendPort: 9991, vitePort: 5273, hasWebApp: true }).dashboard).toBe(
+    expect(appLinks(ports(9871), { backendPort: 9991, dashboardPort: 9871, vitePort: 5273, hasWebApp: true }).dashboard).toBe(
       'http://127.0.0.1:9871/',
     )
-    expect(appLinks(ports(), { backendPort: 9991, vitePort: 5273, hasWebApp: true }).dashboard).toBe(null)
+    expect(appLinks(ports(), { backendPort: 9991, dashboardPort: 9871, vitePort: 5273, hasWebApp: true }).dashboard).toBe(null)
+    // Another project's dashboard on the default port is not this one's.
+    expect(appLinks(ports(9871), { backendPort: 9991, dashboardPort: 9872, vitePort: 5273, hasWebApp: true }).dashboard).toBe(null)
+  })
+
+  test("the dashboard's port is the project's .rbtrc's", () => {
+    expect(dashboardPort('dev run --python\n')).toBe(9871)
+    expect(dashboardPort('dev run --dashboard-port=9881\n')).toBe(9881)
+    expect(dashboardPort('dev run --dashboard-port=9872\ndashboard --port=9873\n')).toBe(9873)
+  })
+
+  test("Vite's port is the one this project's Vite listens on", () => {
+    const ps = [
+      '  101 node /w/other/web/node_modules/.bin/vite',
+      '  102 node /w/app/web/node_modules/.bin/vite',
+      '  103 /w/app/.venv/bin/python -m reboot.dashboard.backend.main',
+      '  104 node /w/app/web/node_modules/.bin/vite --port 59198 --strictPort',
+      '  105 node /w/app/web/node_modules/.bin/vite preview --port 4273',
+    ].join('\n')
+    const lsof = [
+      'node 101 me 23u IPv6 0xa 0t0 TCP [::1]:5273 (LISTEN)',
+      'node 102 me 23u IPv6 0xb 0t0 TCP [::1]:5275 (LISTEN)',
+      'node 102 me 24u IPv6 0xc 0t0 TCP [::1]:24678 (LISTEN)',
+      'node 104 me 23u IPv6 0xd 0t0 TCP *:59198 (LISTEN)',
+      'node 105 me 23u IPv6 0xe 0t0 TCP *:4273 (LISTEN)',
+    ].join('\n')
+    expect(vitePortOf(lsof, ps, '/w/app')).toBe(5275)
+    expect(vitePortOf(lsof, ps, '/w/none')).toBe(null)
+    // Only a test suite's Vite and a preview: no dev server to open.
+    expect(vitePortOf(lsof, ps.replace(/^ {2}102 .*$/m, ''), '/w/app')).toBe(null)
   })
 
   test("a web app's page, or an MCP UI's setup wizard, while it serves", () => {
-    expect(appLinks(ports(5273), { backendPort: 9991, vitePort: 5273, hasWebApp: true }).app).toBe(
+    expect(appLinks(ports(5273), { backendPort: 9991, dashboardPort: 9871, vitePort: 5273, hasWebApp: true }).app).toBe(
       'http://localhost:5273/',
     )
-    expect(appLinks(ports(9991), { backendPort: 9991, vitePort: 5273, hasWebApp: true }).app).toBe(null)
-    expect(appLinks(ports(9991), { backendPort: 9991, vitePort: 4444, hasWebApp: false }).app).toBe(
+    expect(appLinks(ports(9991), { backendPort: 9991, dashboardPort: 9871, vitePort: null, hasWebApp: true }).app).toBe(null)
+    expect(appLinks(ports(9991), { backendPort: 9991, dashboardPort: 9871, vitePort: 4444, hasWebApp: false }).app).toBe(
       'http://localhost:9991/',
     )
   })
