@@ -446,36 +446,36 @@ export const register: Register = on => {
             <Text bold>Reboot</Text>
           </Box>
         </Box>
-        {(line !== null || hasLinks) && (
-          <Box flexDirection="row" justifyContent="space-between">
-            {/* Now is a sentence: it takes the free width and wraps; the buttons keep theirs. */}
-            <Box flexDirection="column" flexGrow={1} flexShrink={1}>
-              {line !== null && <Text wrap="wrap">{line}</Text>}
-            </Box>
-            <Box flexDirection="row" gap={1} flexShrink={0}>
-              {to.dashboard !== null && (
-                <Box hover={{ scope: 'link-dashboard' }}>
-                  <Button key="dashboard" label="Dashboard ↗" onPress={() => openUrl($, to.dashboard!)} />
-                </Box>
-              )}
-              {to.app !== null && (
-                <Box hover={{ scope: 'link-app' }}>
-                  <Button key="app" label="App ↗" onPress={() => openUrl($, to.app!)} />
-                </Box>
-              )}
-              {cloud !== null && (
-                <Box hover={{ scope: 'link-cloud' }}>
-                  <Button key="cloud" label="Cloud ↗" onPress={() => openUrl($, cloud)} />
-                </Box>
-              )}
-              {site !== null && (
-                <Box hover={{ scope: 'link-site' }}>
-                  <Button key="site" label="Site ↗" onPress={() => openUrl($, site)} />
-                </Box>
-              )}
-            </Box>
+        <Box flexDirection="row" justifyContent="space-between">
+          {/* Now is a sentence: it takes the free width and always two rows,
+              wrapping into the second and clipped past it, so the band keeps
+              its height as the sentence changes; the buttons keep their width. */}
+          <Box flexDirection="column" flexGrow={1} flexShrink={1} height={2} overflow="hidden">
+            {line !== null && <Text wrap="wrap">{line}</Text>}
           </Box>
-        )}
+          <Box flexDirection="row" gap={1} flexShrink={0}>
+            {to.dashboard !== null && (
+              <Box hover={{ scope: 'link-dashboard' }}>
+                <Button key="dashboard" label="Dashboard ↗" onPress={() => openUrl($, to.dashboard!)} />
+              </Box>
+            )}
+            {to.app !== null && (
+              <Box hover={{ scope: 'link-app' }}>
+                <Button key="app" label="App ↗" onPress={() => openUrl($, to.app!)} />
+              </Box>
+            )}
+            {cloud !== null && (
+              <Box hover={{ scope: 'link-cloud' }}>
+                <Button key="cloud" label="Cloud ↗" onPress={() => openUrl($, cloud)} />
+              </Box>
+            )}
+            {site !== null && (
+              <Box hover={{ scope: 'link-site' }}>
+                <Button key="site" label="Site ↗" onPress={() => openUrl($, site)} />
+              </Box>
+            )}
+          </Box>
+        </Box>
       </Box>
     )
   })
