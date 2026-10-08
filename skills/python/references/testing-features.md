@@ -2,7 +2,7 @@
 title: Specify Behavior in Feature Files
 impact: MEDIUM
 impactDescription: Feature files are the application's specification and its test suite at once; a suite written any other way is neither reviewable by the developer nor shown by the dashboard
-tags: testing, bdd, gherkin, feature, scenario, rule, pytest-bdd, reboot.bdd, wip, blocked, custom-steps, world
+tags: testing, bdd, gherkin, feature, scenario, rule, pytest-bdd, reboot.bdd, wip, blocked, custom-steps, world, race, red-first
 summary: "Built-in steps match their exact spelling; who calls, `creates` / `does`, saved values, `eventually`, aborts, `@wip`, custom steps."
 step: tests
 applies: [mcp-ui, web-app, backend-only]
@@ -253,6 +253,21 @@ def _the_welcome_email_was_sent(send_email: mock.AsyncMock) -> None:
 
 Stand-ins are autouse fixtures shared module-wide, so each gets its own
 test module.
+
+### Races and outside services: a deterministic window
+
+A scenario about a race or an outside service must fail red before the
+fix and pass after it every run, so the window it names has to be made,
+not waited for:
+
+- **Script the service.** A stand-in that holds its answer until a step
+  releases it, or hangs on demand, reaches "disconnect while a connect
+  is under way" and "one mailbox never answers" on every run.
+- **Answer from the arguments.** A patched seam that counts calls or
+  pops a list breaks under effect validation, which replays it (see
+  Never).
+- **Can't be made to fail?** Say so to the developer rather than
+  writing a scenario that passes either way.
 
 ## Never
 

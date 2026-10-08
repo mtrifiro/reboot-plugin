@@ -1,6 +1,6 @@
 ---
 name: feature
-description: Specify a Reboot application's feature before and while building it, as a Gherkin `.feature` file the tests run and the dashboard shows. Use whenever the user asks for a new capability or a change to one ("add transfers", "users should be able to..."), before touching the API or code; and when converting an existing test suite to feature files. Agrees on the feature in plain English first, writes it down tagged `@wip`, builds it with the `python` / `web-app` / `mcp-ui` skills, then iterates on scenarios with the user until they agree to take the tag off.
+description: Specify a Reboot application's feature before and while building it, as a Gherkin `.feature` file the tests run and the dashboard shows. Use whenever the user asks for a new capability or a change to one ("add transfers", "users should be able to..."), and whenever they ask for a fix ("fix this", "fix all 4", a bug report, a review finding), before touching the API or code; and when converting an existing test suite to feature files. Agrees on the feature in plain English first, writes it down tagged `@wip`, runs each scenario and sees it fail, builds it with the `python` / `web-app` / `mcp-ui` skills, then iterates on scenarios with the user until they agree to take the tag off.
 argument-hint: [<feature-description>]
 allowed-tools: Bash, Read, Write, Glob, Grep, Edit, AskUserQuestion
 ---
@@ -12,8 +12,14 @@ allowed-tools: Bash, Read, Write, Glob, Grep, Edit, AskUserQuestion
 
 A feature is one `.feature` file in `tests/`: the spec the developer
 reviews, the tests `pytest` runs, and the card on the dashboard's
-Features page. Order of work: agree in English, write it down before
-code, tag the unfinished `@wip`, untag only when the developer says so.
+Features page. Order of work: agree in English, write the scenario
+down, see it fail, then write the code; tag the unfinished `@wip`,
+untag only when the developer says so. A fix is a change: it follows
+the same order.
+
+**A fix, a bug report or a review finding** starts at
+[A fix, a bug report, a review finding](#a-fix-a-bug-report-a-review-finding),
+not Step 1.
 
 References (in the `python` skill), each at the step that needs it:
 
@@ -54,8 +60,12 @@ agree — the file follows the words.
 
 Create `tests/<capability>.feature`, named for the activity
 (`transfers.feature`, not `bank.feature`), with the agreed name,
-description and rules (with descriptions). Write it even with no
-scenarios yet, `@wip` on the whole feature:
+description and rules (with descriptions), `@wip` on the whole
+feature. Then write one scenario for each example situation from
+Step 1, under the rule it illustrates (else at the feature's top
+level), in the built-in steps (Step 4's bullets say how; the
+transfer scenario in `testing-features.md` is a whole one). The
+feature, before its scenarios:
 
 ```gherkin
 @wip
@@ -90,6 +100,52 @@ Feature: Customers can transfer money between accounts
   appears on its Features page at once as work in progress; tell the
   user.
 
+## Step 2a — See each scenario fail before writing the code
+
+Run the new scenarios against the code as it is
+(`uv run pytest -m wip`, or `-k "<scenario name>"` for one), before
+changing behavior, and check that each fails for the reason the scenario names:
+the wrong value, the missing touch, the number that moved too far.
+A failure for any other reason (a step not found, a field the response
+lacks, a fixture that never started) proves nothing; fix the scenario
+until the failure is the behavior's.
+
+- **A new field the scenario reads may come first.** Add only the
+  field (additive, with a zero default) and regenerate, so the run
+  fails on its value rather than on its absence; no behavior yet.
+- **A new method may come first, too.** For a capability that does not
+  exist yet, declare the method in the API and regenerate, and leave
+  its servicer body raising `NotImplementedError`: the run reaches the
+  method and fails there, the failure the feature's absence should
+  give. Write no behavior yet.
+- **A scenario that passes before the fix is the wrong scenario.** It
+  does not test the change; rewrite it before going on.
+- **Races and outside services:** make the window deterministic, by
+  `testing-features.md` (*Races and outside services*). If a case
+  cannot be made to fail, say so to the user rather than writing a
+  scenario that passes either way.
+- **Red is expected here.** A failing `@wip` scenario shows red on the
+  dashboard's Features page; tell the user that is the point of this
+  step, not a broken suite.
+- **Report it:** tell the user which scenarios failed, and why, before
+  building.
+
+### A fix, a bug report, a review finding
+
+"Fix this", "fix all 4" or a list of review findings is a request to
+change behavior, not permission to skip the feature. For each:
+
+1. Say in one line what the app does now and what it should do.
+2. Write that as a scenario under the rule it breaks (or a new rule),
+   tagged `@wip`, in the feature that owns the behavior.
+3. Show the user the scenarios, and run them red (Step 2a), before
+   any code. Approval of the fix ("go", "fix all 4") is not agreement
+   on the scenarios: show them first.
+4. Fix, run them green, and ask before taking `@wip` off (Step 5).
+
+Only a change with no behavior a scenario could see (a typo in a
+comment, a rename inside one function) skips this, and you say so.
+
 ## Step 3 — Build the feature
 
 Change the API, servicers and frontend by the
@@ -107,9 +163,10 @@ Two rules matter most:
 
 ## Step 4 — Iterate on the scenarios with the user
 
-After the API and code change, turn the example situations into
-scenarios and run them; then loop with the user: show each scenario,
-ask what else the feature must do, write it, run it.
+Scenarios are written before the code (Steps 2 and 2a); this step is
+the loop that follows. After each change, run them; then loop with the
+user: show each scenario, ask what else the feature must do, write it,
+see it fail, then make it pass.
 
 - **Write scenarios in the built-in steps** (`testing-features.md`),
   named for the situation, under the rule it illustrates, else at the
