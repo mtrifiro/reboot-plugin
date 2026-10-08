@@ -50,6 +50,8 @@ declare module 'claude-code' {
       links: { dashboard: string | null; app: string | null }
       /** What just finished and what is being worked on now. */
       activity: Activity | null
+      /** Whether a turn is running: session state, so a reload mid-turn keeps it. */
+      isTurnActive: boolean
       /** Whether a test run is going, so the band waits on it rather than saying Idle. */
       isTesting: boolean
       /** The latest deploy. */

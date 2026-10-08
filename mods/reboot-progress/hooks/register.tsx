@@ -34,6 +34,8 @@ const root = atom({ plugin: 'reboot-progress', key: 'root' } as const, null)
 const deploy = atom({ plugin: 'reboot-progress', key: 'deploy' } as const, null)
 const clock = atom({ plugin: 'reboot-progress', key: 'clock' } as const, 0)
 const testing = atom({ plugin: 'reboot-progress', key: 'isTesting' } as const, false)
+// The session's, not the module's: a reload mid-turn must not end the turn.
+const turnActive = atom({ plugin: 'reboot-progress', key: 'isTurnActive' } as const, false)
 const activity = atom({ plugin: 'reboot-progress', key: 'activity' } as const, null)
 const links = atom({ plugin: 'reboot-progress', key: 'links' } as const, { dashboard: null, app: null })
 
@@ -135,12 +137,12 @@ let appWatch: Watch = UNWATCHED
 let dashboardWatch: Watch = UNWATCHED
 let isPolling = false
 let restoredRoot: string | null = null
-let isTurnActive = false
 let latestSummary = 0 // the newest summary asked for; older replies are dropped
 let lastReply = '' // the model's latest main-thread text, which the next prompt answers
 
 /** A summary while the turn runs moves Now; a late one (the turn's report) only Just completed. */
 async function showTask($: EngineInterface, task: Summary) {
+  const isTurnActive = await read($, turnActive)
   await update($, activity, shown =>
     isTurnActive ? startTask(task, shown) : endTurn(startTask(task, shown)),
   )
@@ -295,7 +297,8 @@ export const register: Register = on => {
       description: 'Show, hide or reset the band above the prompt (activity and build progress)',
       argumentHint: '[show|hide|reset]',
     })
-    await update($, activity, () => ({ justCompleted: null, now: WAITING }))
+    // A new session starts Idle; a reload (session.start again) keeps what shows.
+    if ((await read($, activity)) === null) await update($, activity, () => ({ justCompleted: null, now: WAITING }))
     void poll($)
     $.clock.every(POLL_MS, () => void poll($))
 
@@ -358,7 +361,7 @@ export const register: Register = on => {
   // A finished task keeps its full Done bar until new work starts: a typed
   // slash command now, or the prompt's summary saying it is new work.
   on('prompt.submit', async ($, e, next) => {
-    isTurnActive = true
+    await update($, turnActive, () => true)
     // Never "Idle" while a turn runs: until the summary names the
     // work, Now says the request is being worked on.
     await update($, activity, shown => ({ justCompleted: shown?.justCompleted ?? null, now: STARTING }))
@@ -388,7 +391,7 @@ export const register: Register = on => {
   }).catch(($, e, next) => next(e))
 
   on('turn.complete', async ($, e, next) => {
-    isTurnActive = false
+    await update($, turnActive, () => false)
     const b = await read($, build)
     const finished = finishTurn(b)
     if (finished !== b) await saveBuild($, finished)
@@ -425,6 +428,9 @@ export const register: Register = on => {
     // theme's own to read on a light or dark background; other surfaces
     // keep their look.
     const isTerminal = e.surface === 'terminal'
+    // The terminal draws a primary Button in the theme's accent color, which
+    // sets the links apart from the text; other surfaces keep plain buttons.
+    const linkVariant = isTerminal ? 'primary' : undefined
     const deployColor = !isShown(d, now) ? undefined : d!.stage === 'failed' ? 'error' : 'warning'
     // On top, a bold Status heading with Reboot at the right margin; below
     // it what is happening now on the left, the links on the right.
@@ -436,9 +442,16 @@ export const register: Register = on => {
             {/* The terminal, with no logo, names it in the heading, in green;
                 other surfaces keep Status here and the logo on the right. */}
             {isTerminal ? (
-              <Text bold color="success">
-                Reboot Status
-              </Text>
+              <Box flexDirection="row" flexGrow={1}>
+                <Text bold color="success">
+                  Reboot Status
+                </Text>
+                {/* A rule to the right edge; clipped to one row where a
+                    link's address, on hover, takes some of it. */}
+                <Box flexGrow={1} flexShrink={1} height={1} overflow="hidden" marginLeft={1}>
+                  <Text color="success">{'─'.repeat(Math.max(0, e.props.bodyColumns - 'Reboot Status '.length))}</Text>
+                </Box>
+              </Box>
             ) : (
               <Text bold>Status</Text>
             )}
@@ -485,22 +498,22 @@ export const register: Register = on => {
           <Box flexDirection="row" gap={1} flexShrink={0} marginLeft={isTerminal ? 2 : 0}>
             {to.dashboard !== null && (
               <Box hover={{ scope: 'link-dashboard' }}>
-                <Button key="dashboard" label="Dashboard ↗" onPress={() => openUrl($, to.dashboard!)} />
+                <Button key="dashboard" variant={linkVariant} label="Dashboard ↗" onPress={() => openUrl($, to.dashboard!)} />
               </Box>
             )}
             {to.app !== null && (
               <Box hover={{ scope: 'link-app' }}>
-                <Button key="app" label="App ↗" onPress={() => openUrl($, to.app!)} />
+                <Button key="app" variant={linkVariant} label="App ↗" onPress={() => openUrl($, to.app!)} />
               </Box>
             )}
             {cloud !== null && (
               <Box hover={{ scope: 'link-cloud' }}>
-                <Button key="cloud" label="Cloud ↗" onPress={() => openUrl($, cloud)} />
+                <Button key="cloud" variant={linkVariant} label="Cloud ↗" onPress={() => openUrl($, cloud)} />
               </Box>
             )}
             {site !== null && (
               <Box hover={{ scope: 'link-site' }}>
-                <Button key="site" label="Site ↗" onPress={() => openUrl($, site)} />
+                <Button key="site" variant={linkVariant} label="Site ↗" onPress={() => openUrl($, site)} />
               </Box>
             )}
           </Box>

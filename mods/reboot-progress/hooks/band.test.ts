@@ -184,6 +184,9 @@ test('the Reboot logo draws beside Reboot where the surface has Svg; the termina
   const [heading] = await terminal.findAll({ type: 'Text', text: /^Reboot Status$/ })
   expect((heading as { props: { color?: string } }).props.color).toBe('success')
   expect(await terminal.findAll({ type: 'Text', text: /^(Reboot|Status)$/ })).toEqual([])
+  // A rule after it to the right edge, on the terminal alone.
+  expect((await terminal.findAll({ type: 'Text', text: /^─+$/ })).length).toBe(1)
+  expect(await desktop.findAll({ type: 'Text', text: /^─+$/ })).toEqual([])
   // The app keeps Status on the left and the logo and Reboot on the right.
   expect((await desktop.findAll({ type: 'Text', text: /^Status$/ })).length).toBe(1)
   const [plain] = await desktop.findAll({ type: 'Text', text: /^Reboot$/ })
