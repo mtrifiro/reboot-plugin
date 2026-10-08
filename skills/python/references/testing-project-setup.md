@@ -29,7 +29,7 @@ Grow the template's passing suite (`build/templates/<front-door>/`) in this shap
 <app>/
 ├── api/                      # pydantic API definitions
 ├── backend/api/              # generated `_rbt` modules
-├── backend/src/servicers/    # servicers
+├── backend/src/servicers/    # servicers, and registry.py: the one list
 ├── tests/
 │   ├── posting.feature           # one feature per capability
 │   ├── chat_room_test.py         # `application` fixture + `scenarios(...)`
@@ -48,7 +48,10 @@ Grow the template's passing suite (`build/templates/<front-door>/`) in this shap
   fixture (the `Application(...)` its scenarios run against), calls
   `scenarios('a.feature', 'b.feature')`. One module per application
   configuration (authorizers, a job off, a scripted LLM, web app
-  served). Copy `tests/<app>_test.py`; with `oauth=`, its fixture passes
+  served). Its `Application` takes `servicers=SERVICERS,
+  libraries=libraries()` from `servicers/registry.py`, never a list of
+  its own ([lifecycle-application-entry.md](lifecycle-application-entry.md)).
+  Copy `tests/<app>_test.py`; with `oauth=`, its fixture passes
   `OAuth(provider=OAuthProviderByEnvironment(dev=development,
   prod=development), allowed_origins=[])`, because the harness is
   neither `rbt dev run` nor `rbt serve`.

@@ -11,7 +11,7 @@ tags: [testing, scaffold, pattern]
 cluster: "B"
 still_applies: unknown
 status: Resolved
-resolved_by: "python/references/testing-harness.md § Do this"
+resolved_by: "python/references/lifecycle-application-entry.md § One list for the application and every test; python/references/testing-harness.md § Limits"
 ---
 
 # Every test harness lists its own servicers

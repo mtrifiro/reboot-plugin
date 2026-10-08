@@ -34,6 +34,7 @@ section. Add or change a trap in its owning reference, not here. -->
 <!-- generated:start never-digest -->
 **`lifecycle-application-entry.md`**
 - `Application(servicers=[ChatRoomServicer()])`
+- A servicer list written out again in a test module
 - `ChatRoomServicer().serve()` or a sync `main` with no `Application`
 - Registering a stdlib type's `servicers()` without its `<name>_library()` (or the reverse)
 

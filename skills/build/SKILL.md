@@ -259,7 +259,9 @@ counter) are replaced in steps 3, 5 and 6; a dual-frontend app copies
    Each Declaration Obliges").
 3. Adapt `backend/src/main.py`
    (`python/references/lifecycle-application-entry.md`): servicer
-   classes (not instances), stdlib libraries, `initialize`, `oauth=`
+   classes (not instances) and stdlib libraries go in
+   `backend/src/servicers/registry.py`, which `main.py` and the test
+   module both take; then `initialize`, `oauth=`
    (Step 4). mcp-ui: also `backend/src/example_prompts.py` →
    `Application(example_prompts=...)` (`mcp-ui/references/project-shell.md`).
 
@@ -268,7 +270,8 @@ counter) are replaced in steps 3, 5 and 6; a dual-frontend app copies
 Read "Before the servicer". Write `backend/src/servicers/<app>.py`: an
 `async def` per method, context type matching the factory. Writers
 mutate one actor; cross-actor and external calls go in a `Transaction`
-or `Workflow`. Seed in `initialize` per
+or `Workflow`. Add each new servicer class to `servicers/registry.py`,
+the one list `main.py` and every test module take. Seed in `initialize` per
 `python/references/lifecycle-seeding.md` (aliased, batched, sequential).
 mcp-ui: `UserServicer` and `<X>.create(context)` in
 `mcp-ui/references/servicer-patterns.md`.

@@ -210,7 +210,10 @@ or one transaction covering every actor involved.
   captures the warnings). Rerun with `pytest -s`
   ([`lifecycle-dev-loop.md`](lifecycle-dev-loop.md)).
 - A servicer missing from `servicers=` isn't caught at `up()`; the
-  first call to that type fails `Method not found!`.
+  first call to that type fails `Method not found!`. Take the list
+  from `servicers/registry.py`
+  ([`lifecycle-application-entry.md`](lifecycle-application-entry.md))
+  so no harness can miss one.
 - Effect validation is **on** by default: writer and transaction
   bodies re-run, so mutation-heavy tests cost roughly double and call
   counters inflate. Disable only for counting or benchmarking:

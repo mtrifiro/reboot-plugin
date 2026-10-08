@@ -45,17 +45,17 @@ one application configuration: an `application` fixture plus
 
 ```python
 import pytest
-from account_servicer import AccountServicer
-from bank_servicer import BankServicer
 from reboot.aio.applications import Application
 from reboot.aio.auth.oauth import OAuth
 from reboot.bdd import scenarios
+from servicers.registry import SERVICERS, libraries
 
 
 @pytest.fixture
 def application() -> Application:
     return Application(
-        servicers=[AccountServicer, BankServicer],
+        servicers=SERVICERS,
+        libraries=libraries(),
         # Only if the app has `oauth=`; the harness needs the explicit
         # empty list (browser variant: testing-web-app.md).
         oauth=OAuth(provider=..., allowed_origins=[]),

@@ -7,7 +7,7 @@ from reboot.aio.auth.oauth_providers import (
     Development,
     OAuthProviderByEnvironment,
 )
-from servicers.__app__ import UserServicer
+from servicers.registry import SERVICERS, libraries
 
 logging.basicConfig(
     level=logging.INFO,
@@ -19,7 +19,8 @@ async def main() -> None:
     application = Application(
         title="__Title__",
         description="Replace with one sentence on what the app does.",
-        servicers=[UserServicer],
+        servicers=SERVICERS,
+        libraries=libraries(),
         oauth=OAuth(
             # `prod=None` refuses to start under `rbt serve` until a
             # real provider is chosen.

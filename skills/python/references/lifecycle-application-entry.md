@@ -84,10 +84,40 @@ What each stdlib type registers:
 - [`stdlib-pubsub.md`](stdlib-pubsub.md) — `pubsub.servicers()` (pulls in `queue.servicers()`) + the stdlib map library
 - [`stdlib-presence.md`](stdlib-presence.md) — `presence.servicers()` (three Servicers; no library factory)
 
+### One list for the application and every test
+
+Keep the list in `backend/src/servicers/registry.py` (the templates
+ship it): `SERVICERS`, stdlib types' `servicers()` included, and a
+`libraries()` function. `main.py` and every test module's `application`
+fixture pass `servicers=SERVICERS, libraries=libraries()`, so a new
+servicer is added once. A harness serving a type it never calls costs
+nothing.
+
+```python
+# backend/src/servicers/registry.py
+from reboot.std.collections.ordered_map.v1.ordered_map import (
+    ordered_map_library,
+)
+from reboot.aio.servicers import Servicer
+from servicers.bank import AccountServicer, BankServicer
+
+# Typed: a one-servicer list would otherwise fail mypy against Application.
+SERVICERS: list[type[Servicer]] = [AccountServicer, BankServicer]
+
+
+def libraries() -> list:
+    # A function, so each Application gets its own.
+    return [ordered_map_library()]
+```
+
 ## Never
 
 - `Application(servicers=[ChatRoomServicer()])` — an instance. Pass the
   **class**; Reboot constructs instances per actor.
+- A servicer list written out again in a test module — a type added
+  to `main.py` and missed there fails only when a scenario calls it,
+  with `Method not found!` (a new type missed in six harnesses broke
+  every lead import; reboot-crm, 1.6.0).
 - `ChatRoomServicer().serve()` or a sync `main` with no `Application` —
   Servicers run only inside the `Application`'s event loop.
 - Registering a stdlib type's `servicers()` without its

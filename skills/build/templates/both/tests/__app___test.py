@@ -9,14 +9,15 @@ from reboot.aio.auth.oauth_providers import (
     OAuthProviderByEnvironment,
 )
 from reboot.bdd import scenarios
-from servicers.__app__ import CounterServicer, UserServicer
+from servicers.registry import SERVICERS, libraries
 
 
 @pytest.fixture
 def application() -> Application:
     development = Development()
     return Application(
-        servicers=[UserServicer, CounterServicer],
+        servicers=SERVICERS,
+        libraries=libraries(),
         # The harness is neither `rbt dev run` nor `rbt serve`, so
         # name the Development picker for both, and list the allowed
         # origins explicitly (none: these scenarios open no browser).
