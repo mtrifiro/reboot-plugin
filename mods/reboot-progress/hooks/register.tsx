@@ -1,12 +1,14 @@
 import { atom, read, update } from 'claude-code'
-import type { EngineInterface, Register } from 'claude-code'
+import type { EngineInterface, Register, RenderSurface } from 'claude-code'
 
 import type { Build, Deploy } from '../types'
-import { advanceDeploy, afterOutput, beginDeploy, deployKey, deployLine, isRunning, isShown, outcomeOf, seenIn } from './deploy'
+import { advanceDeploy, afterOutput, beginDeploy, deployKey, deployLine, deployWhat, elapsed, isRunning, isShown, outcomeOf, seenIn } from './deploy'
+import type { BandText, MenuPick } from './band-text'
 import { REBOOT_LOGO } from './logo'
 import { SUITE_FILE, type History, expectedFinish, isSuiteShown, parseSuite, remember, suiteLine, suiteStatus } from './suite'
 import { STARTING, WAITING, endTurn, fallback, isWorthSummarizing, parseSummary, startTask, summaryPrompt, isTesting, testCommand, testLine, testTimeKey, testProgress, testStatus, textOf } from './activity'
 import type { Summary } from './activity'
+import { voiced } from './voice'
 import {
   RUN,
   advanceTask,
@@ -44,7 +46,8 @@ const testRun = atom({ plugin: 'reboot-progress', key: 'testRun' } as const, nul
 const turnActive = atom({ plugin: 'reboot-progress', key: 'isTurnActive' } as const, false)
 const activity = atom({ plugin: 'reboot-progress', key: 'activity' } as const, null)
 const mcp = atom({ plugin: 'reboot-progress', key: 'isMcp' } as const, false)
-const links = atom({ plugin: 'reboot-progress', key: 'links' } as const, { dashboard: null, app: null })
+const links = atom({ plugin: 'reboot-progress', key: 'links' } as const, { dashboard: null, app: null, mcp: null })
+const sassy = atom({ plugin: 'reboot-progress', key: 'isSassy' } as const, false)
 
 const POLL_MS = 5000
 
@@ -126,7 +129,7 @@ async function health($: EngineInterface, dir: string): Promise<Health & { links
     frontend: hasFrontend ? vitePort !== null : null,
     tunnel,
     url,
-    links: appLinks(ports, { backendPort: backendPort(rbtrc), dashboardPort: dashboardPort(rbtrc), vitePort, hasWebApp }),
+    links: appLinks(ports, { backendPort: backendPort(rbtrc), dashboardPort: dashboardPort(rbtrc), vitePort, hasWebApp, isMcp }),
     ps: ps?.stdout ?? '',
     isMcp,
   }
@@ -152,6 +155,9 @@ let isPolling = false
 let restoredRoot: string | null = null
 let latestSummary = 0 // the newest summary asked for; older replies are dropped
 let lastReply = '' // the model's latest main-thread text, which the next prompt answers
+// Now as last drawn, and when it first showed, so its timer counts from there.
+let shownNow: string | null = null
+let shownSince = 0
 
 /** A summary while the turn runs moves Now; a late one (the turn's report) only Just completed. */
 async function showTask($: EngineInterface, task: Summary) {
@@ -177,7 +183,7 @@ async function summarize(
   try {
     const reply = await $.model.complete({
       model: 'sonnet',
-      prompt: summaryPrompt(text, kind, describeTask(await read($, build)), lastReply),
+      prompt: summaryPrompt(text, kind, describeTask(await read($, build)), lastReply, await read($, sassy)),
       maxTokens: 80,
       timeoutMs: 15000,
     })
@@ -263,7 +269,7 @@ async function followDeploy($: EngineInterface, ps: string) {
   }
   const after = advanceDeploy(d, seenIn(ps), now, isServing)
   if (after !== d) await saveDeploy($, after)
-  if (after?.stage === 'live' && d?.stage === 'starting') $.ui.toast('Reboot Cloud app is live')
+  if (after?.stage === 'live' && d?.stage === 'starting') await toast($, 'Reboot Cloud app is live')
   // Ticks while the band shows the deploy, and once more to take it away.
   if (isShown(after, now) || isShown(d, await read($, clock))) await update($, clock, () => now)
 }
@@ -337,12 +343,37 @@ async function followSuite($: EngineInterface, dir: string, ps: string) {
   if (isRunning) await update($, clock, () => now)
 }
 
+/** Shows a toast in the band's voice: Sassy mode's when it is on. */
+async function toast($: EngineInterface, text: string) {
+  $.ui.toast(voiced(text, await read($, sassy)))
+}
+
+/** Acts on a pick from the band's right-click menu. */
+async function pickFromMenu($: EngineInterface, pick: MenuPick['pick'], surface: RenderSurface) {
+  const to = await read($, links)
+  if (pick === 'dashboard' && to.dashboard !== null) await openUrl($, to.dashboard)
+  if (pick === 'copy') {
+    // An MCP app's address is the one a client connects to; else the app's page.
+    const [what, url] = to.mcp !== null ? ['MCP address', to.mcp] : ['app address', to.app]
+    if (url === null) return
+    const copied = await $.ui.copy({ text: url, surface }).catch(() => ({ isCopied: false }))
+    await toast($, copied.isCopied ? `Copied the ${what}: ${url}` : `The ${what}: ${url}`)
+  }
+  if (pick === 'sassy') {
+    const isSassy = !(await read($, sassy))
+    await update($, sassy, () => isSassy)
+    // A preference: kept across sessions, for every project.
+    await $.store.set('isSassy', isSassy).catch(() => undefined)
+    $.ui.toast(isSassy ? 'Sassy mode on. Brace yourself.' : 'Sassy mode off')
+  }
+}
+
 /** Toasts when the app (its backend) or the dashboard starts or stops. */
-function announce($: EngineInterface, server: 'app' | 'dashboard', isUp: boolean) {
+async function announce($: EngineInterface, server: 'app' | 'dashboard', isUp: boolean) {
   const { watch, change } = observe(server === 'app' ? appWatch : dashboardWatch, isUp)
   if (server === 'app') appWatch = watch
   else dashboardWatch = watch
-  if (change) $.ui.toast(`Reboot ${server} ${change}`)
+  if (change) await toast($, `Reboot ${server} ${change}`)
 }
 
 async function poll($: EngineInterface) {
@@ -360,13 +391,15 @@ async function poll($: EngineInterface) {
     if (h === null) return
     // The band's links first: a failed status line must not cost them.
     const was = await read($, links)
-    if (was.dashboard !== h.links.dashboard || was.app !== h.links.app) await update($, links, () => h.links)
+    if (was.dashboard !== h.links.dashboard || was.app !== h.links.app || was.mcp !== h.links.mcp) {
+      await update($, links, () => h.links)
+    }
     if (h.isMcp !== (await read($, mcp))) await update($, mcp, () => h.isMcp)
     await followDeploy($, h.ps).catch(() => undefined)
     await followTests($, dir, h.ps).catch(() => undefined)
     await followSuite($, dir, h.ps).catch(() => undefined)
-    announce($, 'app', h.backend)
-    announce($, 'dashboard', h.links.dashboard !== null)
+    await announce($, 'app', h.backend)
+    await announce($, 'dashboard', h.links.dashboard !== null)
     $.ui.status(formatStatus(h))
   } finally {
     isPolling = false
@@ -380,6 +413,7 @@ export const register: Register = on => {
       description: 'Show, hide or reset the band above the prompt (activity and build progress)',
       argumentHint: '[show|hide|reset]',
     })
+    if ((await $.store.get('isSassy').catch(() => null)) === true) await update($, sassy, () => true)
     // A new session starts Idle; a reload (session.start again) keeps what shows.
     if ((await read($, activity)) === null) await update($, activity, () => ({ justCompleted: null, now: WAITING }))
     void poll($)
@@ -417,10 +451,10 @@ export const register: Register = on => {
     const text = isOutput ? (ran.text ?? '') : ''
     if (/Your API is available at|Could not deploy revision|🛑|\.pages\.dev/.test(text)) {
       const now = await $.clock.now()
-      const { deploy: after, toast } = afterOutput(await read($, deploy), outcomeOf(text), now)
+      const { deploy: after, toast: message } = afterOutput(await read($, deploy), outcomeOf(text), now)
       await saveDeploy($, after)
       await update($, clock, () => now)
-      if (toast) $.ui.toast(toast)
+      if (message) await toast($, message)
     }
 
     // A test run sent to the background names the file its output goes to.
@@ -501,6 +535,15 @@ export const register: Register = on => {
     return next(e)
   })
 
+  // A pick from the band's right-click menu, which its text region posts.
+  on('ui.message', async ($, e, next) => {
+    const pick = (e.data as Partial<MenuPick> | null)?.pick
+    if (e.element !== 'band-text' || (pick !== 'dashboard' && pick !== 'copy' && pick !== 'sassy')) return next(e)
+    await pickFromMenu($, pick, e.surface)
+
+    return {}
+  })
+
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
     const b = await read($, build)
     const act = await read($, activity)
@@ -513,7 +556,7 @@ export const register: Register = on => {
     // client to it: this deploy's own app, at its address without the port.
     const mcpUrl = cloud !== null && (await read($, mcp)) ? `${cloud.replace(/:9991$/, '')}/` : null
     const hasLinks = to.dashboard !== null || to.app !== null || cloud !== null || site !== null
-    // A running deploy takes Now's place, with the time it has taken.
+    // A running deploy takes Now's place, its timer counting from its start.
     // Between turns, a test run still going is what the work waits on.
     // So is a turn's Bash call running tests in the foreground. Mid-turn,
     // a background run's progress follows what the turn is doing.
@@ -524,21 +567,30 @@ export const register: Register = on => {
     const isRunningSuite = view !== null && view.run.finishedAt === null
     const isAwaiting = (act?.now ?? WAITING) === WAITING || (await read($, awaitingTests))
     const status = isRunningSuite ? suiteStatus(view) : run === null ? '' : testStatus(run)
-    const nowText =
-      view !== null && isAwaiting
-        ? suiteLine(view)
-        : run !== null && isAwaiting
-          ? testLine(run, Math.max(now, run.startedAt))
-          : act?.now && status
-            ? `${act.now} (tests ${status})`
-            : (act?.now ?? null)
-    const line = isShown(d, now) ? deployLine(d!, Math.max(now, d!.stageAt)) : nowText
+    // Every message has a timer, counting from when its work started or,
+    // for Now, from when it first showed; one already over (a failed
+    // deploy, a finished run) has its time in its words instead.
+    // The clock, else its value at the last poll: a timer is a nicety.
+    const clockNow = await $.clock.now().catch(() => now)
+    if ((act?.now ?? null) !== shownNow) {
+      shownNow = act?.now ?? null
+      shownSince = clockNow
+    }
+    let line: string | null
+    let since: number | null
+    if (isShown(d, now) && d!.stage === 'failed') [line, since] = [deployLine(d!, d!.stageAt), null]
+    else if (isShown(d, now)) [line, since] = [deployWhat(d!), d!.startedAt]
+    else if (view !== null && isAwaiting) [line, since] = [suiteLine(view, now), isRunningSuite ? view.run.startedAt : null]
+    else if (run !== null && isAwaiting) [line, since] = [testLine(run), run.startedAt]
+    else [line, since] = [act?.now && status ? `${act.now} (tests ${status})` : (act?.now ?? null), shownSince]
     if (e.props.hasSurvey || (b === null && line === null && !hasLinks) || (await read($, isHidden))) {
       return next(e)
     }
 
     const elements = $.ui.resolve(e)
     const { Box, Button, Text } = elements
+    // Client is on the terminal and the desktop; elsewhere, no menu.
+    const Client = 'Client' in elements ? elements.Client : null
     // Svg is on every surface but the terminal's.
     const Svg = 'Svg' in elements ? elements.Svg : null
     // The terminal has no logo, so its heading names Reboot in green, the
@@ -548,32 +600,45 @@ export const register: Register = on => {
     // The terminal draws a primary Button in the theme's accent color, which
     // sets the links apart from the text; other surfaces keep plain buttons.
     const linkVariant = isTerminal ? 'primary' : undefined
-    const deployColor = !isShown(d, now) ? undefined : d!.stage === 'failed' ? 'error' : 'warning'
-    // On top, a bold Status heading with Reboot at the right margin; below
-    // it what is happening now on the left, the links on the right.
+    const deployColor = !isShown(d, now) ? null : d!.stage === 'failed' ? 'error' : 'warning'
+    const isSassy = await read($, sassy)
+    // The heading and the sentence on the left are a Client region, which
+    // hears a right-click and draws the menu in the sentence's place. The
+    // terminal, with no logo, names Reboot in the heading, in green, with a
+    // rule to the right edge; other surfaces keep Status and the logo.
+    const heading = isTerminal ? 'Reboot Status' : 'Status'
+    const text: BandText = {
+      heading,
+      headingColor: isTerminal ? 'success' : null,
+      ruleColumns: isTerminal ? Math.max(0, e.props.bodyColumns - heading.length - 1) : 0,
+      line: line === null ? null : voiced(line, isSassy),
+      lineColor: isTerminal ? deployColor : null,
+      since,
+      now: clockNow,
+      menu: {
+        canOpenDashboard: to.dashboard !== null,
+        copyLabel: to.mcp !== null ? 'Copy MCP address' : to.app !== null ? 'Copy app address' : null,
+        isSassy,
+      },
+    }
+    // On the right: a link's address on hover and the logo, then the links.
 
     return (
-      <Box flexDirection="column">
-        <Box flexDirection="row" justifyContent="space-between">
-          <Box flexGrow={1}>
-            {/* The terminal, with no logo, names it in the heading, in green;
-                other surfaces keep Status here and the logo on the right. */}
-            {isTerminal ? (
-              <Box flexDirection="row" flexGrow={1}>
-                <Text bold color="success">
-                  Reboot Status
-                </Text>
-                {/* A rule to the right edge; clipped to one row where a
-                    link's address, on hover, takes some of it. */}
-                <Box flexGrow={1} flexShrink={1} height={1} overflow="hidden" marginLeft={1}>
-                  <Text color="success">{'─'.repeat(Math.max(0, e.props.bodyColumns - 'Reboot Status '.length))}</Text>
-                </Box>
-              </Box>
-            ) : (
-              <Text bold>Status</Text>
-            )}
+      <Box flexDirection="row">
+        {Client ? (
+          <Client key="band-text" module="./band-text.tsx" props={text} flexGrow={1} height={3} />
+        ) : (
+          <Box flexDirection="column" flexGrow={1} flexShrink={1}>
+            <Text bold>{text.heading}</Text>
+            <Box flexDirection="column" height={2} overflow="hidden">
+              {text.line !== null && (
+                <Text wrap="wrap">{since === null ? text.line : `${text.line} · ${elapsed(clockNow - since)}`}</Text>
+              )}
+            </Box>
           </Box>
-          <Box flexShrink={0} flexDirection="row" gap={1} alignItems="center">
+        )}
+        <Box flexDirection="column" flexShrink={0} alignItems="flex-end">
+          <Box flexDirection="row" gap={1} alignItems="center" height={1}>
             {/* A link's address, shown while the pointer is on its button below. */}
             {to.dashboard !== null && (
               <Box display="none" hover={{ scope: 'link-dashboard', display: 'flex' }}>
@@ -603,18 +668,6 @@ export const register: Register = on => {
             {/* The favicon where the surface draws Svg. */}
             {Svg && <Svg source={REBOOT_LOGO} alt="Reboot logo" width={14} height={14} />}
             {!isTerminal && <Text bold>Reboot</Text>}
-          </Box>
-        </Box>
-        <Box flexDirection="row" justifyContent="space-between">
-          {/* Now is a sentence: it takes the free width and always two rows,
-              wrapping into the second and clipped past it, so the band keeps
-              its height as the sentence changes; the buttons keep their width. */}
-          <Box flexDirection="column" flexGrow={1} flexShrink={1} height={2} overflow="hidden">
-            {line !== null && (
-              <Text wrap="wrap" color={isTerminal ? deployColor : undefined}>
-                {line}
-              </Text>
-            )}
           </Box>
           {/* On the terminal, two columns between the sentence and the buttons. */}
           <Box flexDirection="row" gap={1} flexShrink={0} marginLeft={isTerminal ? 2 : 0}>

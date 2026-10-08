@@ -94,8 +94,8 @@ export function formatStatus(h: Health): string {
   return h.url ? `${line}  ${h.url}` : line
 }
 
-/** The band's links: the developer dashboard and the app's front end, while each serves. */
-export type Links = { dashboard: string | null; app: string | null }
+/** The band's links: the developer dashboard, the app's front end, and an MCP app's MCP address, while each serves. */
+export type Links = { dashboard: string | null; app: string | null; mcp: string | null }
 
 /** `rbt dashboard`'s own default port, for a project whose `.rbtrc` names none. */
 export const DASHBOARD_PORT = 9871
@@ -107,14 +107,16 @@ export const DASHBOARD_PORT = 9871
  */
 export function appLinks(
   ports: Set<number>,
-  app: { backendPort: number; dashboardPort: number; vitePort: number | null; hasWebApp: boolean },
+  app: { backendPort: number; dashboardPort: number; vitePort: number | null; hasWebApp: boolean; isMcp?: boolean },
 ): Links {
   const dashboard = ports.has(app.dashboardPort) ? `http://127.0.0.1:${app.dashboardPort}/` : null
+  const isServing = ports.has(app.backendPort)
+  const mcp = app.isMcp && isServing ? `http://localhost:${app.backendPort}/mcp` : null
   if (app.hasWebApp) {
-    return { dashboard, app: app.vitePort !== null ? `http://localhost:${app.vitePort}/` : null }
+    return { dashboard, app: app.vitePort !== null ? `http://localhost:${app.vitePort}/` : null, mcp }
   }
 
-  return { dashboard, app: ports.has(app.backendPort) ? `http://localhost:${app.backendPort}/` : null }
+  return { dashboard, app: isServing ? `http://localhost:${app.backendPort}/` : null, mcp }
 }
 
 /** Ports in LISTEN state from `lsof -nP -iTCP -sTCP:LISTEN` output. */

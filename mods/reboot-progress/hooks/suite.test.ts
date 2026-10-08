@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'claude-code/testing'
 
-import { expectedFinish, isSuiteShown, parseSuite, remember, suiteLine, typical } from './suite'
+import { about, expectedFinish, isSuiteShown, parseSuite, remember, suiteLine, typical } from './suite'
 
 const T0 = Date.parse('2026-10-08T11:24:00-05:00')
 const at = (s: number) => new Date(T0 + s * 1000).toISOString()
@@ -33,7 +33,7 @@ describe('the expected finish', () => {
   test('is the median of the last runs, each module at most five', () => {
     let h = {}
     for (const s of [100, 300, 200, 900, 250, 260]) {
-      h = remember(h, { startedAt: 0, finishedAt: 1, modules: [{ name: 'a', status: 'passed', passed: 1, failed: 0, seconds: s, startedAt: null }] })
+      h = remember(h, { startedAt: 0, finishedAt: 1, modules: [{ name: 'a', status: 'passed', passed: 1, failed: 0, skipped: null, seconds: s, startedAt: null }] })
     }
     expect((h as Record<string, number[]>).a).toEqual([300, 200, 900, 250, 260])
     expect(typical(h, 'a')).toBe(260)
@@ -56,26 +56,49 @@ describe('the expected finish', () => {
 })
 
 describe('the line', () => {
-  test('while it goes: modules done, failures, and the finish with history', () => {
+  test('while it goes: what is done, then what is left and when it should finish', () => {
     const run = parseSuite(FILE)!
-    expect(suiteLine({ run, expectedAt: T0 + 650_000 }, clock)).toBe('Tests · 1 of 3 modules · 0 failed · done ≈ +650s')
-    expect(suiteLine({ run, expectedAt: null }, clock)).toBe('Tests · 1 of 3 modules · 0 failed')
+    run.modules[0]!.skipped = 1
+    const now = T0 + 160_000
+    expect(suiteLine({ run, expectedAt: now + 150_000 }, now, clock)).toBe(
+      'So far: 1 of 3 modules, 114 passed, 1 skipped, 0 failed\n' +
+        'Left: 2 modules, about 2½ minutes, so it should finish around +310s',
+    )
+    // No history: what is left, and no time.
+    expect(suiteLine({ run, expectedAt: null }, now, clock)).toBe(
+      'So far: 1 of 3 modules, 114 passed, 1 skipped, 0 failed\nLeft: 2 modules',
+    )
   })
 
-  test('names a failure at once, and a rerun apart from failures', () => {
+  test('names failed modules at once, and a rerun apart from failures', () => {
     const run = parseSuite(FILE)!
     run.modules[0]!.status = 'failed'
+    run.modules[0]!.failed = 2
     run.modules[1]!.status = 'rerun'
-    expect(suiteLine({ run, expectedAt: null }, clock)).toBe('Tests · 2 of 3 modules · 1 failed: accounts_test · 1 rerun')
+    expect(suiteLine({ run, expectedAt: null }, T0, clock)).toBe(
+      'So far: 2 of 3 modules, 114 passed, 2 failed (accounts_test), 1 rerun\nLeft: 1 module',
+    )
   })
 
-  test('once it ends: the result and the time it took', () => {
+  test('once it ends: the result, its time, and when it finished', () => {
     const run = parseSuite(FILE)!
     run.finishedAt = T0 + 1432_000
-    run.modules.forEach(m => (m.status = 'passed'))
-    expect(suiteLine({ run, expectedAt: null }, clock)).toBe('Tests passed · 3 modules · 23m 52s')
-    run.modules[2]!.status = 'failed'
-    expect(suiteLine({ run, expectedAt: null }, clock)).toBe('Tests failed · 1 failed: web_test · 3 modules · 23m 52s')
+    run.modules.forEach(m => {
+      m.status = 'passed'
+      m.passed = m.passed ?? 459
+    })
+    expect(suiteLine({ run, expectedAt: null }, T0, clock)).toBe(
+      'Done: 3 modules, 1,032 passed, 0 failed\nTook 23m 52s, finished at +1432s',
+    )
+  })
+
+  test('says how long is left the way a person would', () => {
+    expect(about(20_000)).toBe('under a minute')
+    expect(about(70_000)).toBe('about 1 minute')
+    expect(about(150_000)).toBe('about 2½ minutes')
+    expect(about(14 * 60_000)).toBe('about 14 minutes')
+    expect(about(70 * 60_000)).toBe('about 1 hour 10 minutes')
+    expect(about(120 * 60_000)).toBe('about 2 hours')
   })
 })
 

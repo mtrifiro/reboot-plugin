@@ -3,7 +3,6 @@
 // "Just completed" and "Now" move as tasks change.
 
 import type { Activity, TestRun } from '../types'
-import { elapsed } from './deploy'
 import type { Decision } from './progress'
 
 /**
@@ -56,20 +55,14 @@ function roughly(ms: number): string {
 }
 
 /**
- * Now between turns while tests run: what its output says of how far it
- * is, and its time so far beside the last run's of the same command.
+ * Now while tests run: what its output says of how far it is, and how
+ * long the same command took last time; the band counts its time so far.
  */
-export function testLine(run: TestRun, now: number): string {
+export function testLine(run: TestRun): string {
   const status = testStatus(run)
-  const took = now - run.startedAt
-  const time =
-    run.expectedMs === null
-      ? elapsed(took)
-      : took <= run.expectedMs
-        ? `${elapsed(took)} of about ${roughly(run.expectedMs)}`
-        : `${elapsed(took)}, longer than the last run's ${roughly(run.expectedMs)}`
+  const last = run.expectedMs === null ? '' : `, about ${roughly(run.expectedMs)} last time`
 
-  return `${TESTING}${status ? `: ${status}` : ''} · ${time}`
+  return `${TESTING}${status ? `: ${status}` : ''}${last}`
 }
 
 /** The test runner in a command line: pytest, vitest, Playwright, npm test. */
@@ -131,6 +124,7 @@ export const summaryPrompt = (
   kind: 'narration' | 'request',
   current = 'none',
   lastReply = '',
+  isSassy = false,
 ): string =>
   (kind === 'narration'
     ? 'Below is what a coding assistant just told the user while building their app.'
@@ -168,6 +162,11 @@ export const summaryPrompt = (
   'Good NOW: "Running the what_changed scenarios after fixing the off-by-one in ' +
   'sample.py that seeded 89 days instead of 90".\n' +
   'DONE stays short and plain ("Finished the data model").\n' +
+  (isSassy
+    ? 'Voice: sassy. Give NOW and DONE a wry, playful edge (an aside, a raised eyebrow) ' +
+      'while still naming the real things and keeping to the word counts. Never mean to ' +
+      'the user, no emoji.\n'
+    : '') +
   'No quotes, no trailing periods.\n\n' +
   (kind === 'request' && lastReply
     ? `<assistant_last_message>\n${lastReply.slice(0, 2000)}\n</assistant_last_message>\n\n`

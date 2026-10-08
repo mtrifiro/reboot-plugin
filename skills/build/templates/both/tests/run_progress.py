@@ -24,6 +24,7 @@ _path: Path | None = None
 _index: dict[str, int] = {}
 _current: tuple[int, float] | None = None
 _failed_ids: set[str] = set()
+_skipped_ids: set[str] = set()
 
 
 def _now() -> str:
@@ -83,13 +84,13 @@ def pytest_runtest_logstart(nodeid: str, location) -> None:
     if index is None or (_current is not None and _current[0] == index):
         return
     _end_current()
-    _run["modules"][index].update(status="running", passed=0, failed=0, started_at=_now())
+    _run["modules"][index].update(status="running", passed=0, failed=0, skipped=0, started_at=_now())
     _current = (index, time.monotonic())
     _write()
 
 
 def pytest_runtest_logreport(report) -> None:
-    """Counts each test once; a failure is written at once."""
+    """Counts each test once: passed, failed or skipped; a failure is written at once."""
     if _run is None or _current is None:
         return
     entry = _run["modules"][_current[0]]
@@ -97,6 +98,9 @@ def pytest_runtest_logreport(report) -> None:
         _failed_ids.add(report.nodeid)
         entry["failed"] += 1
         _write()
+    elif report.skipped and report.nodeid not in _skipped_ids:
+        _skipped_ids.add(report.nodeid)
+        entry["skipped"] += 1
     elif report.when == "call" and report.passed:
         entry["passed"] += 1
 

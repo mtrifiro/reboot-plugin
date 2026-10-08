@@ -44,6 +44,7 @@ export function parseSuite(text: string): SuiteRun | null {
       status: m.status as SuiteModule['status'],
       passed: num(m.passed),
       failed: num(m.failed),
+      skipped: num(m.skipped),
       seconds: num(m.seconds),
       startedAt: time(m.started_at),
     })
@@ -125,11 +126,44 @@ export function clockTime(ms: number): string {
   return `${d.getHours() % 12 || 12}:${String(d.getMinutes()).padStart(2, '0')}`
 }
 
-/** `1 failed: web_test`, `2 failed: leads_test, web_test`; '' when none. */
-function failures(run: SuiteRun): string {
-  const failed = run.modules.filter(m => m.status === 'failed').map(m => m.name)
+/** `1,032`: a count with its thousands marked. */
+const count = (n: number): string => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
 
-  return failed.length === 0 ? '' : `${failed.length} failed: ${failed.join(', ')}`
+/**
+ * The tests so far, across the modules that ran or run now: `958 passed,
+ * 1 skipped, 0 failed`, the modules that failed named after
+ * (`1 failed (web_test)`), and reruns apart (`1 rerun`). A failed module
+ * that gave no count counts one.
+ */
+function tally(run: SuiteRun): string {
+  const sum = (f: (m: SuiteModule) => number) => run.modules.reduce((n, m) => n + f(m), 0)
+  const failedModules = run.modules.filter(m => m.status === 'failed').map(m => m.name)
+  const failed = sum(m => m.failed ?? (m.status === 'failed' ? 1 : 0))
+  const reruns = run.modules.filter(m => m.status === 'rerun').length
+  const parts = [`${count(sum(m => m.passed ?? 0))} passed`]
+  const skipped = sum(m => m.skipped ?? 0)
+  if (skipped > 0) parts.push(`${count(skipped)} skipped`)
+  parts.push(failedModules.length > 0 ? `${count(failed)} failed (${failedModules.join(', ')})` : `${count(failed)} failed`)
+  if (reruns > 0) parts.push(`${reruns} rerun`)
+
+  return parts.join(', ')
+}
+
+/** `under a minute`, `about 2½ minutes`, `about 14 minutes`, `about 1 hour 10 minutes`. */
+export function about(ms: number): string {
+  const minutes = ms / 60_000
+  if (minutes < 1) return 'under a minute'
+  if (minutes < 10) {
+    const halves = Math.round(minutes * 2)
+    const whole = Math.floor(halves / 2)
+    const n = `${whole}${halves % 2 ? '½' : ''}`
+    return `about ${n} ${n === '1' ? 'minute' : 'minutes'}`
+  }
+  const m = Math.round(minutes)
+  if (m < 60) return `about ${m} minutes`
+  const rest = m % 60
+
+  return `about ${Math.floor(m / 60)} hour${m >= 120 ? 's' : ''}${rest ? ` ${rest} minute${rest === 1 ? '' : 's'}` : ''}`
 }
 
 /** How far the run is for a line that already says what the turn does: `7 of 20 modules`. */
@@ -141,28 +175,28 @@ export function suiteStatus(view: SuiteView): string {
 }
 
 /**
- * The band's line for a run. While it goes: `Tests · 7 of 20 modules ·
- * 0 failed · done ≈ 11:49`, the finish only with history. Once it ends:
- * `Tests passed · 20 modules · 23m 52s`, or `Tests failed · 1 failed:
- * web_test · …`. A rerun (a harness failure) is named apart from failures.
+ * The band's two rows for a run. While it goes, what is done and what is
+ * left, with the finish only from history:
+ *
+ *     So far: 11 of 20 modules, 958 passed, 1 skipped, 0 failed
+ *     Left: 9 modules, about 2½ minutes, so it should finish around 11:49
+ *
+ * Once it ends, the result and its time:
+ *
+ *     Done: 20 modules, 1,032 passed, 1 skipped, 1 failed (web_test)
+ *     Took 23m 52s, finished at 11:49
  */
-export function suiteLine(view: SuiteView, clock: (ms: number) => string = clockTime): string {
+export function suiteLine(view: SuiteView, now: number, clock: (ms: number) => string = clockTime): string {
   const { run, expectedAt } = view
-  const reruns = run.modules.filter(m => m.status === 'rerun').length
-  const rerun = reruns > 0 ? `${reruns} rerun` : ''
   if (run.finishedAt === null) {
-    const finish = expectedAt === null ? '' : `done ≈ ${clock(expectedAt)}`
-    return ['Tests', suiteStatus(view), failures(run) || '0 failed', rerun, finish].filter(Boolean).join(' · ')
+    const left = run.modules.filter(m => m.status === 'pending' || m.status === 'running').length
+    const finish =
+      expectedAt === null ? '' : `, ${about(expectedAt - now)}, so it should finish around ${clock(expectedAt)}`
+    return `So far: ${suiteStatus(view)}, ${tally(run)}\nLeft: ${left} ${left === 1 ? 'module' : 'modules'}${finish}`
   }
-  const failed = failures(run)
 
-  return [
-    failed ? 'Tests failed' : 'Tests passed',
-    failed,
-    `${run.modules.length} modules`,
-    rerun,
-    elapsed(run.finishedAt - run.startedAt),
-  ]
-    .filter(Boolean)
-    .join(' · ')
+  return (
+    `Done: ${run.modules.length} modules, ${tally(run)}\n` +
+    `Took ${elapsed(run.finishedAt - run.startedAt)}, finished at ${clock(run.finishedAt)}`
+  )
 }

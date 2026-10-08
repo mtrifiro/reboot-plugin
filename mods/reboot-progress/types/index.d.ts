@@ -64,6 +64,7 @@ export type SuiteModule = {
   status: 'pending' | 'running' | 'passed' | 'failed' | 'rerun'
   passed: number | null
   failed: number | null
+  skipped: number | null
   seconds: number | null
   /** When it started running, if the runner says. */
   startedAt: number | null
@@ -82,7 +83,9 @@ declare module 'claude-code' {
       isHidden: boolean
       root: string | null
       /** The dashboard and front-end links, while each serves. */
-      links: { dashboard: string | null; app: string | null }
+      links: { dashboard: string | null; app: string | null; mcp: string | null }
+      /** Sassy mode, from the band's menu: the band's words, and the summaries, take a sassier voice. */
+      isSassy: boolean
       /** What just finished and what is being worked on now. */
       activity: Activity | null
       /** Whether a turn is running: session state, so a reload mid-turn keeps it. */
