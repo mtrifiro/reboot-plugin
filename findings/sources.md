@@ -40,3 +40,7 @@ full original note; the originals are not part of this repo.
 | crm-kit | 1.6.0 | `crm-maker/crm-kit/references/lessons.md` |
 | new-crm | 1.6.0 | `new-crm/docs/PATCHES.md` |
 | reboot-crm | 1.6.0 | `reboot-crm/docs/REBOOT_FINDINGS.md` |
+| new-theater | 1.6.0 | `new-theater/FINDINGS.md` |
+| findings-board | 1.6.0 | `findings-board/FINDINGS.md` |
+| restaurant-app-2 | 1.6.0 | `restaurant-app-2/FINDINGS.md` |
+| gardening | 1.6.0 | `gardening/FINDINGS.md` |
