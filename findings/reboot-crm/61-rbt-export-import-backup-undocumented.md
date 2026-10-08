@@ -12,8 +12,8 @@ names:
 tags: [negative-space, operations, index-gap, seeding]
 cluster: "4.1"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/lifecycle-backup-restore.md § Do this; python/references/lifecycle-backup-restore.md § Limits"
 ---
 
 # rbt export and rbt import exist and are the only sound backup; no skill says so, and --config does not expand for them

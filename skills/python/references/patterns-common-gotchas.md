@@ -38,6 +38,13 @@ section. Add or change a trap in its owning reference, not here. -->
 - `ChatRoomServicer().serve()` or a sync `main` with no `Application`
 - Registering a stdlib type's `servicers()` without its `<name>_library()` (or the reverse)
 
+**`lifecycle-backup-restore.md`**
+- Never expunge without a backup taken after the last write, checked by its counts
+- Never `rbt import` into an application holding data: it overwrites what the backup has and deletes nothing, so the result is a merge of two states
+- Never put a dev backup into production: its users are the Development picker's identities
+- Never edit a backup in place
+- Never commit `exports/`
+
 **`lifecycle-dev-loop.md`**
 - Calling a run with no summary line a pass
 - Running the suite while `rbt dev run` watches the same tree

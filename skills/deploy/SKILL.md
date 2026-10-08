@@ -25,10 +25,12 @@ a working tree, and stops at the first thing wrong:
 1. The tree is clean, on the production branch, and pushed.
 2. The API change since the commit production runs is additive
    (`scripts/api_removals.py`); a removal needs an expunge and a
-   restore, which it never does.
+   restore, which it never does
+   (`python/references/lifecycle-backup-restore.md`).
 3. Backend, when `backend/`, `api/`, `.rbtrc` or the `Dockerfile`
-   changed: the project's `deploy/before-backend` if it has one (a
-   backup), `rbt cloud up` with the app's name and size, and a wait
+   changed: `deploy/before-backend` (the templates' backs production
+   up with `scripts/backup.sh prod`, and a failed backup stops the
+   deploy), `rbt cloud up` with the app's name and size, and a wait
    until the new revision serves.
 4. Frontend: built from the commit in a scratch copy, published with
    wrangler, and the live site checked to serve the new bundle.
@@ -76,9 +78,14 @@ CLOUDFLARE_ACCOUNT_ID=...
 ## Step 2 — Install and configure the deploy script
 
 A project from the build templates has `scripts/deploy.sh`,
-`scripts/api_removals.py` and `deploy/`. An older one copies them from
+`scripts/api_removals.py`, the backup scripts (`scripts/backup.sh`,
+`restore.py`, `compare_exports.py`, `migrations/`) and `deploy/`. An
+older one copies them, and `tests/backup_restore_test.py`, from
 `<plugin>/skills/build/templates/<front-door>/` (`mcp-ui`, `web-app` or
-`both`), and adds `.deploy.env` to `.gitignore`. A project with a deploy
+`both`); adds `.deploy.env` and `exports/` to `.gitignore`; adds
+`scripts` to `.mypy.ini`'s `mypy_path` and `pytest.ini`'s `pythonpath`;
+and, before its first restore, sets `restore.py`'s rules
+(`python/references/lifecycle-backup-restore.md`). A project with a deploy
 script of its own keeps it: say what this one checks, and let the user
 choose.
 
@@ -97,12 +104,16 @@ Fill in `deploy/config` (shell, sourced):
 redeploy can't resize the app by a forgotten flag; `.rbtrc` holds one
 application only. Commit `deploy/` and the scripts.
 
-- **Extras the project needs** go in `deploy/before-backend` (run before
-  `rbt cloud up`, e.g. a backup; a non-zero exit stops the deploy) and
-  `deploy/after`, both executable. The script runs them if present.
+- **`deploy/before-backend`** (run before `rbt cloud up`; a non-zero
+  exit stops the deploy) ships backing production up with
+  `scripts/backup.sh prod`; add the project's own steps below it.
+  `deploy/after` runs last. Both executable; the script runs them if
+  present. Backups land in git-ignored `exports/backups/`
+  (`python/references/lifecycle-backup-restore.md`).
 - **An app already in production**: seed the ledger with the commit it
-  runs, so the API check has a base:
-  `echo '{"backend_commit": "<sha>"}' >> deploy/ledger.jsonl`.
+  runs, so the API check has a base, and its API address, which the
+  backup exports from:
+  `echo '{"backend_commit": "<sha>", "api_url": "https://<id>.<cell>.rbt.cloud"}' >> deploy/ledger.jsonl`.
 
 ## Step 3 — Deploy the backend
 
@@ -292,7 +303,9 @@ scripts/deploy.sh --first          # the first deploy: no ledger yet
   `description=`; `python/references/api-schema-evolution.md`) ships
   only when `deploy/api-exceptions.md` names it, file and exact line;
   delete the entry once shipped. Any other removal needs an expunge and
-  a restore: stop and tell the user.
+  a restore: stop and tell the user, then follow
+  `python/references/lifecycle-backup-restore.md` (back up, expunge,
+  boot, restore, boot, compare) with them.
 - The script refuses a dirty tree, another branch, or an unpushed
   commit: commit and push first, never work around it.
 

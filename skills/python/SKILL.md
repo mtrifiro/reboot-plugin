@@ -338,6 +338,7 @@ Load only what the task needs (the lists above say when). Full catalog:
 <!-- generated:start catalog skill=python -->
 **Lifecycle**
 - `references/lifecycle-application-entry.md` — Define the Application Entry Point
+- `references/lifecycle-backup-restore.md` — Back Up and Restore — `rbt export`, Expunge, `rbt import`
 - `references/lifecycle-dev-loop.md` — Debug the Dev and Test Loop
 - `references/lifecycle-dockerfile.md` — Write a Reboot Cloud Dockerfile
 - `references/lifecycle-initialize-hook.md` — Use `initialize` for First-Run Setup

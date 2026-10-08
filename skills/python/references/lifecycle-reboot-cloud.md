@@ -110,7 +110,7 @@ only on first deploy. See
   without `--expunge`); secrets survive
   ([`lifecycle-secrets.md`](lifecycle-secrets.md)). Only `rbt export` /
   `rbt import` keep data across it or a breaking-change expunge
-  (`rbt export --help`; [inspect skill](../../inspect/SKILL.md)).
+  ([`lifecycle-backup-restore.md`](lifecycle-backup-restore.md)).
 - **Changing `--size` keeps state**: `rbt cloud up` at a new size rolls
   forward like any redeploy (confirmed by Reboot, reboot-crm).
 - **`rbt cloud up` returns before the app serves**: `/__/inspect`

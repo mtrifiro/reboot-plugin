@@ -13,8 +13,8 @@ tags: [operations, negative-space]
 cluster: "4.1"
 duplicate_of: reboot-crm-61
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/lifecycle-backup-restore.md § Do this; python/references/lifecycle-backup-restore.md § Limits"
 ---
 
 # rbt export / rbt import is the only sound backup before an expunge, and no skill documents it

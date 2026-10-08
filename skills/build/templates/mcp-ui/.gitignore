@@ -27,3 +27,6 @@ frontend/dist/
 
 # Deploy credentials, read by scripts/deploy.sh.
 .deploy.env
+
+# Backups: every user's data (scripts/backup.sh).
+exports/

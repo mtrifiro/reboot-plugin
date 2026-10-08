@@ -50,9 +50,9 @@ Both front doors share the Python shell:
 | `.python-version` | `3.12`, the highest Python `rbt` supports (`bin/rbt`) | Never |
 | `pyproject.toml` | `reboot==1.6.0`; dev group `reboot[dev]==1.6.0`, `mypy`, `pytest`, `types-protobuf`. No `[build-system]` (a virtual `uv` project) | Adding a runtime dependency; browser scenarios add `playwright` and `pytest-playwright` (`python/references/testing-web-app.md`); an LLM agent turns `reboot` into `reboot[anthropic]` (`python/references/agent-pydantic-ai.md`) |
 | `.rbtrc` | Line-based `rbt` config: codegen paths, watch globs, `--application-name`, `--env-file`, `serve run` | Port or config changes (`python/references/lifecycle-rbtrc.md`) |
-| `.mypy.ini` | Source roots on `mypy_path`, `explicit_package_bases`, an ignore stanza naming only the generated `_rbt` module | A new API module (one stanza each) |
-| `pytest.ini` | `testpaths = tests`; `pythonpath` of `backend/src`, `backend/api`, `api` | Never |
-| `.gitignore` | Dev state, generated code, `.env`, `.deploy.env`, recordings, venv, `node_modules/`, frontend build, `.reboot/` | Never; the generated-code paths match `.rbtrc` |
+| `.mypy.ini` | Source roots (and `scripts`) on `mypy_path`, `explicit_package_bases`, an ignore stanza naming only the generated `_rbt` module | A new API module (one stanza each) |
+| `pytest.ini` | `testpaths = tests`; `pythonpath` of `backend/src`, `backend/api`, `api`, `scripts` (so the backup test imports `restore`) | Never |
+| `.gitignore` | Dev state, generated code, `.env`, `.deploy.env`, recordings, venv, `node_modules/`, frontend build, `.reboot/`, `exports/` (backups: every user's data) | Never; the generated-code paths match `.rbtrc` |
 | `AGENTS.md` | The map for a coding agent: where each concept lives, how to run, test and deploy, and the rules that cost the most when broken | When a file moves, a command changes or a rule is learned; a new state type, front door or script adds its row |
 | `CLAUDE.md` | One line, `@AGENTS.md`, so Claude Code reads the same file every other agent does | Never; put everything in `AGENTS.md` |
 | `FINDINGS.md` | The agent's log of surprises (wrong or silent skill, framework behavior); the `report` skill files them upstream | Append items; never delete them |
@@ -64,6 +64,9 @@ Both front doors share the Python shell:
 | `tests/run_progress.py`, `tests/conftest.py` | Records how far a test run is in `.reboot/test-run.json` (gitignored), which the Reboot band reads; `conftest.py` imports its hooks (`python/references/testing-project-setup.md`, "Test-run progress") | Never |
 | `scripts/deploy.sh`, `scripts/api_removals.py` | Every production deploy: a pushed commit, an additive API, `rbt cloud up` and the revision serving, the frontend built from the commit and published, a ledger line (`deploy` skill) | Never; settings go in `deploy/config` |
 | `deploy/config` | The deploy's settings: Cloud app name and size, branch, frontend directories, Pages project, site address | On the first deploy (`deploy` skill, Step 2) |
+| `scripts/backup.sh`, `scripts/restore.py`, `scripts/compare_exports.py`, `scripts/migrations/rules.py` | Back up (`rbt export`, a manifest, an empty export refused), restore into an expunged app (dry run first, checked against this checkout's API), prove nothing was lost; a migration composes `rules.py` (`python/references/lifecycle-backup-restore.md`) | `restore.py`'s three settings (`MUST_BE_EMPTY`, `BOOT_TASKS`, `RETIRED_PACKAGES`) once the app has a boot task; a migration per breaking release |
+| `deploy/before-backend` | Run by `deploy.sh` before `rbt cloud up`: `scripts/backup.sh prod`, skipped only on the first deploy | Add the project's own pre-deploy steps below the backup |
+| `tests/backup_restore_test.py` | The round trip (export, fresh app, `restore.py`'s passes, import, compare) against the harness, and a removed field caught before sending | Its `seed` when the sample type goes |
 | `deploy/api-exceptions.md` | API removals Reboot allows, approved one line each for `api_removals.py` | Only to approve a removal; delete it once shipped |
 
 ### `mcp-ui/` adds

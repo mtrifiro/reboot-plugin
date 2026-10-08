@@ -145,7 +145,9 @@ right before state first persists.
   method or a response-model field is rejected though it strands no data.
 - Recovery is revert or expunge. Expunge irreversibly deletes all state;
   `rbt export` before and `rbt import` after can carry data across
-  (import matches fields by name and refuses unknown ones).
+  (import matches fields by name and refuses unknown ones): the
+  procedure and scripts are
+  [`lifecycle-backup-restore.md`](lifecycle-backup-restore.md).
 - On Reboot Cloud a rejected `rbt cloud up` does not take the running
   version down.
 - `Writer(factory=True)` → `Transaction(factory=True)`: the 1.6.0

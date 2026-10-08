@@ -67,6 +67,7 @@ here. -->
 | `AttributeError: type object '<Type>' has no attribute '<WrongName>'` | Request/response referenced by source class name | `<Type>.<MethodPascalCase>Request` — see `api-pydantic.md` | `mcp-ui/references/api-method-types.md` |
 | `AttributeError: 'WeakReference' object has no attribute` | A constructor called through `Service.ref(id)` | `Service.<ctor>(context, id, ...)` | `python/references/rpc-constructor-calls.md` |
 | `AttributeError: 'XServicer' object has no attribute 'state_id'` | `self.state_id` on a servicer | `self.ref().state_id` / `context.state_id` | `python/references/rpc-refs.md` |
+| `backup: ... the export holds nothing; this is not a backup` | Export succeeded with no lines: wrong address, or an app that was expunged | Check `api_url` in `deploy/ledger.jsonl`; do not deploy | `python/references/lifecycle-backup-restore.md` |
 | Call Graph shows `0 calls` and "Your application imports generated code that does not exist yet ... Run `rbt generate`" although the generated code exists; one orphaned `node .../langserver.index.js` per analysis | Orphaned pyright child, hung shutdown (1.5.0); the 1.6.0 source kills pyright's process group on shutdown, so it should not recur | `pkill -f langserver.index.js`; the graph then publishes | `dashboard/SKILL.md` |
 | `cannot bind '0.0.0.0:9991': Address already in use` (followed by "This is a bug in the Envoy configuration Reboot generated") | Another process, usually another Reboot app, holds the port; not a Reboot bug | `dev run --port=<other>` in `.rbtrc` | `python/references/lifecycle-rbtrc.md` |
 | `cannot bind '0.0.0.0:9991': Address already in use`, then "This is a bug in the Envoy configuration Reboot generated ... report this bug" | Port already held, usually by an orphaned Envoy; not a Reboot bug | Stop completely, or set `dev run --port=<port>` in `.rbtrc` | `run/references/stop-restart-reset.md` |
@@ -87,6 +88,7 @@ here. -->
 | `DecryptAborted` with `DecryptionFailed` | `associated_data` differs, or corrupt envelope | Rebuild it with the same `make_associated_data` fields | `python/references/stdlib-ciphertext.md` |
 | `DecryptAborted` with `ScopeShredded` | The scope was shredded | Treat as permanently erased | `python/references/stdlib-ciphertext.md` |
 | `` `degree` must be >= 2 `` | Bad construction option (`InvalidArgument`) | `degree >= 2` | `python/references/stdlib-ordered-map.md` |
+| `deploy/ledger.jsonl records no api_url` | An app already in production, ledger seeded without its address | Append the `api_url` line above | `python/references/lifecycle-backup-restore.md` |
 | `does not deliver identity claims; remove \`claims=\`` | `claims=` on a provider with none (`Anonymous`) | Remove it | `python/references/auth-claims.md` |
 | `Duplicate agent run:` | Two indistinguishable runs in one method / iteration | Pass a distinct `variant=` | `python/references/agent-pydantic-ai.md` |
 | `'--env-file' '.env' does not exist.` | Warning only; app starts without those variables | Create the file, or ignore until secrets are needed | `python/references/lifecycle-rbtrc.md` |
@@ -99,6 +101,7 @@ here. -->
 | `expected --type=VALUE, missing '=VALUE'` | `--type` (and the other flags) take only the `=` form | Write `--type=<full.Type.Name>` | `inspect/SKILL.md` |
 | `Expecting either a response or a status` | The one case a mutation promise rejects | Transport failure; handle in `try/finally` | `python/references/react-generated-client.md` |
 | `Failed to construct 'WebSocket'` | `#` in a subscribed actor id | Change the id scheme | `python/references/react-generated-client.md` |
+| `Failed to find column family for state type 'rbt.std.collections.v1.SortedMapEntry'` | An emptied `SortedMap` imported without `restore.py` | Restore through `restore.py` | `python/references/lifecycle-backup-restore.md` |
 | `Failed to find 'protoc-gen-reboot_python'. Please report this bug to the maintainers.` | `rbt` run outside `uv run`; venv `bin/` not on `PATH` | `uv run rbt ...` (or `uv run --project <repo> rbt ...`) | `python/references/lifecycle-rbtrc.md` |
 | `Failed to flush monotonic clock high water mark: IO error: No such file or directory` | State expunged under a running app | Stop, then restart, per `../../run/SKILL.md` | `python/references/lifecycle-dev-loop.md` |
 | `Failed to flush monotonic clock high water mark: IO error: No such file or directory` every second | State expunged under a running backend | Stop completely, start | `run/references/stop-restart-reset.md` |
@@ -157,6 +160,7 @@ here. -->
 | `No OAuth provider is configured for this environment.` | The selected arm is `None` | Put a provider in that arm | `mcp-ui/references/auth-oauth-providers.md` |
 | `No overload variant matches argument types "ReaderContext"` | mypy: a reader called a writer, transaction or constructor | Move the work to a `Transaction` | `python/references/servicer-reader.md` |
 | `No overload variant matches argument types "WriterContext"` | mypy's form of the `WriterContext` `TypeError` above, also for `schedule()` on another actor | Make the method a `Transaction`, or schedule the work | `python/references/servicer-writer.md` |
+| `no such state type in this checkout` / `... a type this checkout moved` | The backup predates a type removal or package move | A migration (`drop_type`, `move_types`); add the prefix to `RETIRED_PACKAGES` | `python/references/lifecycle-backup-restore.md` |
 | `Not expecting 'servers'` / `Not expecting 'effect_validation'` | Passed alongside `revision=` | Pass `revision=` alone | `python/references/testing-failure-recovery.md` |
 | `Not expecting stream to ever be done` | Browser tab outlived a backend restart | Reload the tab | `python/references/patterns-load-and-benchmarking.md` |
 | `Not expecting stream to ever be done` (browser console) | Tab outlived its backend | Reload the tab | `python/references/lifecycle-dev-loop.md` |
@@ -191,6 +195,8 @@ here. -->
 | `Reboot options for method` `...` `updated from` | A persisted constructor's kind changed between `Writer` and `Transaction` | Revert the kind; construct the other actor elsewhere | `python/references/servicer-constructor.md` |
 | `[Reboot] '<Type>.<Method>' aborted with` | Console warning on every aborted call | Expected; handle `aborted` | `python/references/react-generated-client.md` |
 | `` `ref()` called without a `state_id` can only be used within a Workflow. `` | `Type.ref()` with no id outside a workflow | `self.ref()` or `Type.ref(id)` | `python/references/servicer-workflow-declare.md` |
+| `refused: the application did not answer rbt inspect state list` | Cloud replicas still starting | Wait a minute and run again | `python/references/lifecycle-backup-restore.md` |
+| `refused: the application is not empty` | `rbt import` would merge | Expunge first, or narrow `MUST_BE_EMPTY` if the boot creates those actors | `python/references/lifecycle-backup-restore.md` |
 | ``requires a non-empty `client_id`.`` | The selected provider's credential env var is unset | Set it (`rbt cloud secret set ...` in production) | `mcp-ui/references/auth-oauth-providers.md` |
 | `'Resource()' is not yet supported; use 'Tool()' instead` | `mcp=Resource()` | `mcp=Tool()` | `mcp-ui/references/api-method-types.md` |
 | `Revealed type is "Any"` | `reveal_type(self.state)`: the generated alias is opaque to mypy | Annotate a typed local with the hand-written model | `python/references/lifecycle-project-setup.md` |
@@ -200,6 +206,7 @@ here. -->
 | `'set_claims' is a reserved method name for User types` | `set_claims` declared on `User` | Override it in the servicer instead | `python/references/api-methods.md` |
 | `Signature of "set_claims" incompatible with supertype` | Override has a `state` parameter | `(self, context, request)` | `python/references/auth-claims.md` |
 | `state ID must have a length of at least 1` | An explicit-id hook got `id: ''` | Mount only once the id is real | `python/references/react-generated-client.md` |
+| `(state): Message type "..." has no field named "..."` | A removed or renamed field | `drop_field` / `rename_field` migration | `python/references/lifecycle-backup-restore.md` |
 | `StateAlreadyConstructed` | Explicit constructor on an existing actor; observed after an ordinary dev restart at 1.4.1, the hook then retrying forever | Leave the bare `create` to its persisted key; if it persists, probe with a reader before creating | `python/references/lifecycle-initialize-hook.md`, `python/references/stdlib-ordered-map.md` |
 | `stateIdToRef` (in the stack) | An explicit-id hook got `id: undefined` | Same | `python/references/react-generated-client.md` |
 | `StateNotConstructed` | `empty` on a queue nobody has enqueued to | `try_dequeue`, or enqueue first | `python/references/stdlib-queue.md` |

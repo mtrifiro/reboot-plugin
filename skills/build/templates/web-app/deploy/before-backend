@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+#
+# Run by scripts/deploy.sh before every `rbt cloud up`: back production
+# up, and stop the deploy if that fails. Add the project's own steps
+# below the backup, each stopping the deploy on failure.
+#
+# The first deploy has no application to back up yet: deploy/ledger.jsonl
+# names no backend commit. An app that is already in production always
+# has one (the deploy skill seeds it), and then a backup that fails, or
+# finds no address to export from, stops the deploy.
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+if ! grep -qs '"backend_commit"' deploy/ledger.jsonl; then
+  echo "backup: first deploy, nothing in production to back up"
+  exit 0
+fi
+
+scripts/backup.sh prod
