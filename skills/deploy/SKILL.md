@@ -1,6 +1,6 @@
 ---
 name: deploy
-description: Deploy a finished Reboot app to production — the backend on Reboot Cloud, and the web frontend (if the app has one) published to a static host (Cloudflare Pages) under the user's own custom domain, talking to the backend cross-origin. Covers the production frontend build (backend URL, SPA fallback, asset paths), publishing with wrangler, attaching the domain, and the Application(allowed_origins=...) configuration that lets the browser reach the backend.
+description: Deploy a finished Reboot app to production — the backend on Reboot Cloud, and the web frontend (if the app has one) published to a static host (Cloudflare Pages) under the user's own custom domain, talking to the backend cross-origin. Every deploy runs the project's `scripts/deploy.sh`, which checks each rule (a pushed commit, an additive API, the revision serving, the live bundle) and records it; this skill installs and configures it on the first deploy, and covers the one-time parts: the production frontend build settings, the Pages project and domain, and the Application(allowed_origins=...) configuration that lets the browser reach the backend.
 argument-hint: [<project-directory>]
 allowed-tools: Bash, Read, Write, Glob, Grep, Edit, AskUserQuestion
 ---
@@ -19,12 +19,33 @@ configuration; to build see the [`mcp-ui` skill](../mcp-ui/SKILL.md) and
 the [web-app skill](../web-app/SKILL.md); to run locally, the
 [run skill](../run/SKILL.md).
 
+**Every deploy is `scripts/deploy.sh`.** It ships a pushed commit, never
+a working tree, and stops at the first thing wrong:
+
+1. The tree is clean, on the production branch, and pushed.
+2. The API change since the commit production runs is additive
+   (`scripts/api_removals.py`); a removal needs an expunge and a
+   restore, which it never does.
+3. Backend, when `backend/`, `api/`, `.rbtrc` or the `Dockerfile`
+   changed: the project's `deploy/before-backend` if it has one (a
+   backup), `rbt cloud up` with the app's name and size, and a wait
+   until the new revision serves.
+4. Frontend: built from the commit in a scratch copy, published with
+   wrangler, and the live site checked to serve the new bundle.
+5. A line in `deploy/ledger.jsonl` (commit, revision, bundle), committed
+   and pushed: what step 2 checks against next time.
+
+Steps 1–7 below are the first deploy. After it, a deploy is
+`scripts/deploy.sh --dry-run` (show the user what would ship), then
+`scripts/deploy.sh`.
+
 ## When to Use
 
 - A finished Web App (or a dual-frontend app's web frontend) should go
   live on the user's domain.
-- An MCP UI with **no** web frontend: do Step 2 only — MCP UIs ship in
+- An MCP UI with **no** web frontend: Steps 1–3 only — MCP UIs ship in
   the backend image and are served by the backend.
+- Any later deploy: run the script (Options below).
 
 ## Step 1 — Gather inputs (ask early, in one pass)
 
@@ -38,35 +59,80 @@ Ask for all of this up front (one `AskUserQuestion` round or message):
    Pages: Edit, Zone: Read, and DNS: Edit (DNS only if the zone is on
    Cloudflare).
 3. **Reboot Cloud access**: `REBOOT_CLOUD_API_KEY`, the organization, an
-   application name — see `python/references/lifecycle-reboot-cloud.md`.
+   application name and size — see
+   `python/references/lifecycle-reboot-cloud.md`.
 
-Export secrets as environment variables, never command-line flags
-(visible in the process listing).
+The credentials go in `.deploy.env` at the project root, which the
+script reads and git ignores; never on a command line (visible in the
+process listing):
 
-## Step 2 — Deploy the backend to Reboot Cloud
+```sh
+REBOOT_CLOUD_API_KEY=...
+REBOOT_CLOUD_ORGANIZATION=...
+CLOUDFLARE_API_TOKEN=...
+CLOUDFLARE_ACCOUNT_ID=...
+```
 
-Follow `python/references/lifecycle-reboot-cloud.md` (image:
-`python/references/lifecycle-dockerfile.md`; secrets:
-`python/references/lifecycle-secrets.md`). What commonly bites here:
+## Step 2 — Install and configure the deploy script
+
+A project from the build templates has `scripts/deploy.sh`,
+`scripts/api_removals.py` and `deploy/`. An older one copies them from
+`<plugin>/skills/build/templates/<front-door>/` (`mcp-ui`, `web-app` or
+`both`), and adds `.deploy.env` to `.gitignore`. A project with a deploy
+script of its own keeps it: say what this one checks, and let the user
+choose.
+
+Fill in `deploy/config` (shell, sourced):
+
+| Setting | Meaning | web-app | both | mcp-ui |
+|---|---|---|---|---|
+| `APP`, `SIZE` | the Cloud application and its size | name, `xsmall` | | |
+| `BRANCH` | the branch production runs | `main` | | |
+| `FRONTEND_DIR` | where `npm run build` runs | `web` | `frontend` | empty |
+| `ENV_DIR` | where `.env.production` goes | `web` | `frontend/web` | |
+| `PUBLISH_DIR` | the built site | `web/dist` | `frontend/dist/web` | |
+| `PAGES_PROJECT`, `SITE_URL` | the Pages project; the domain once attached | | | |
+
+`APP` and `SIZE` are passed to `rbt cloud up` on every deploy, so a
+redeploy can't resize the app by a forgotten flag; `.rbtrc` holds one
+application only. Commit `deploy/` and the scripts.
+
+- **Extras the project needs** go in `deploy/before-backend` (run before
+  `rbt cloud up`, e.g. a backup; a non-zero exit stops the deploy) and
+  `deploy/after`, both executable. The script runs them if present.
+- **An app already in production**: seed the ledger with the commit it
+  runs, so the API check has a base:
+  `echo '{"backend_commit": "<sha>"}' >> deploy/ledger.jsonl`.
+
+## Step 3 — Deploy the backend
+
+The first time, with no ledger: `scripts/deploy.sh --first --backend-only`.
+It prints the API address (`https://<application-id>.<cell>.rbt.cloud:9991`)
+and records it in the ledger; Step 5 bakes it in. Image:
+`python/references/lifecycle-dockerfile.md` (the script stops without a
+`Dockerfile`); secrets: `python/references/lifecycle-secrets.md`. What
+commonly bites here:
 
 - **Docker Desktop on macOS.** `rbt cloud up` pushes with
   `docker --config <temporary dir> push`, which drops the
   `desktop-linux` context and falls back to `/var/run/docker.sock`
   (1.6.0 source), which stock Docker Desktop doesn't create:
   `failed to connect to the docker API at unix:///var/run/docker.sock`.
-  Export `DOCKER_HOST="unix://$HOME/.docker/run/docker.sock"` first
-  (reboot-crm, 1.6.0).
+  The script exports `DOCKER_HOST="unix://$HOME/.docker/run/docker.sock"`
+  when that socket is missing (reboot-crm, 1.6.0).
 - **Secrets come after the first `up`.** `rbt cloud secret set` before
   the app exists fails with "Organization '...' does not have an
   application named '...'". The first `rbt cloud up` creates the app
   (unhealthy if it needs its secrets, e.g. `prod=Google(...)` with no
-  client id); then `rbt cloud secret set` every secret at once, which
-  rolls it out again (see `python/references/lifecycle-secrets.md`).
-  Secrets survive `rbt cloud down --expunge`, so this bites only on
-  creation (reboot-crm, 1.6.0).
-- **Pass `--organization` on every `rbt cloud` command**; without it
-  `rbt cloud down` answers "User '...' does not have an application
-  named '...'" for an existing app (reboot-crm, 1.6.0).
+  client id, so the script's wait times out); then `rbt cloud secret
+  set` every secret at once, which rolls it out again (see
+  `python/references/lifecycle-secrets.md`). Secrets survive
+  `rbt cloud down --expunge`, so this bites only on creation
+  (reboot-crm, 1.6.0).
+- **Pass `--organization` on every `rbt cloud` command** you run by
+  hand; without it `rbt cloud down` answers "User '...' does not have an
+  application named '...'" for an existing app (reboot-crm, 1.6.0). The
+  script always passes it.
 - **A real OAuth provider.** `Development()` is dev-only; set `prod=`
   (`mcp-ui/references/auth-oauth-providers.md`: per-provider details,
   incl. registering `/__/oauth/callback` as the IdP redirect URI).
@@ -76,10 +142,7 @@ Follow `python/references/lifecycle-reboot-cloud.md` (image:
   `dist/mcp/<name>/` is in it; the **web** SPA need _not_ be (it goes to
   the static host).
 
-Record the API URL `rbt cloud up` prints
-(`https://<application-id>.<cell>.rbt.cloud:9991`); Step 4 bakes it in.
-
-## Step 3 — Allow the frontend's origin on the backend
+## Step 4 — Allow the frontend's origin on the backend
 
 ```python
 application = Application(
@@ -101,9 +164,9 @@ application = Application(
 - In production an app with `oauth=` **must** set `allowed_origins`
   (empty list is fine with no browser frontend), or startup fails.
 
-Then redeploy: `rbt cloud up`.
+Commit, push, and `scripts/deploy.sh --backend-only`.
 
-## Step 4 — Build the frontend for production
+## Step 5 — Set up the production frontend build
 
 Detect the layout (as the [run skill](../run/SKILL.md) does):
 
@@ -113,9 +176,10 @@ Detect the layout (as the [run skill](../run/SKILL.md) does):
   `RBT_BUILD_TARGET=mcp:<name>` targets and an `RBT_BUILD_TARGET=web`
   target into `dist/`; the web build uses `base: "/__/frontend/web/"`.
 
-1. **Bake in the backend URL**: next to the SPA's dev `.env` (which sets
-   `VITE_REBOOT_URL`), write `.env.production` — Vite's production build
-   reads it; leave `.env` alone:
+1. **Bake in the backend URL**: in `ENV_DIR`, next to the SPA's dev
+   `.env` (which sets `VITE_REBOOT_URL`), write `.env.production` and
+   **commit it** (the script builds from the commit and stops without
+   it) — Vite's production build reads it; leave `.env` alone:
 
    ```sh
    VITE_REBOOT_URL=https://<application-id>.<cell>.rbt.cloud:9991
@@ -149,25 +213,21 @@ Detect the layout (as the [run skill](../run/SKILL.md) does):
    bakes `/__/frontend/web/` into in-browser route matching, which no
    host rewrite fixes, and every route silently renders nothing on the
    custom domain.
-4. **Build**: `npm run build` in the frontend directory. The publish
-   directory holds the built `index.html` — `web/dist/` (standalone) or
-   `frontend/dist/web/` (dual-frontend).
 
-## Step 5 — Publish to Cloudflare Pages and attach the domain
+## Step 6 — Create the Pages project, publish, attach the domain
 
-With `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` exported,
-`wrangler` runs headless (no `wrangler login`):
+With the Cloudflare credentials exported (`set -a; . ./.deploy.env; set +a`),
+`wrangler` runs headless (no `wrangler login`). Create the project once:
 
 ```sh
-npx --yes wrangler@4 pages project create <project-name> \
+npx --yes wrangler@4 pages project create <PAGES_PROJECT> \
     --production-branch=main
-npx --yes wrangler@4 pages deploy <publish-directory> \
-    --project-name=<project-name> --branch=main
 ```
 
-The site is live at the printed `https://<project-name>.pages.dev`.
-Attach the custom domain via the Cloudflare API (no wrangler
-subcommand):
+Then publish with `scripts/deploy.sh --frontend-only`: it builds, runs
+`wrangler pages deploy`, and waits for `https://<PAGES_PROJECT>.pages.dev`
+to serve the new bundle. Attach the custom domain via the Cloudflare API
+(no wrangler subcommand):
 
 ```sh
 curl -sS -X POST \
@@ -191,18 +251,15 @@ curl -sS -X POST \
 Zone **not** on Cloudflare: have the user add
 `CNAME app.example.com → <project-name>.pages.dev` at their DNS
 provider; the attachment validates once it resolves. Cloudflare
-provisions TLS automatically after validation. Redeploy with
-`wrangler pages deploy` again; project and domain stay.
+provisions TLS automatically after validation. Then set `SITE_URL` in
+`deploy/config` to the domain and commit, so later deploys check the
+site people use.
 
-## Step 6 — Verify
+## Step 7 — Verify
 
-`rbt cloud up` exits 0 before the new revision serves: `/__/inspect`
-returned 503 for about thirty seconds after (reboot-crm, 1.6.0), while
-CORS headers were already correct (the proxy answers first). Poll first:
-
-```sh
-until curl -sf -o /dev/null "https://<application-id>.<cell>.rbt.cloud:9991/__/inspect"; do sleep 5; done
-```
+The script already waited for the revision to serve (`/__/inspect`
+returns 503 for about thirty seconds after `rbt cloud up`; reboot-crm,
+1.6.0) and for the site to serve the new bundle. Then:
 
 1. **Static serving:** `curl -sSI https://app.example.com/` and a deep
    route (`curl -sSI https://app.example.com/some/route`) both return
@@ -222,19 +279,39 @@ until curl -sf -o /dev/null "https://<application-id>.<cell>.rbt.cloud:9991/__/i
    and back), confirm signed-in live data renders — proving the
    cross-origin WebSocket path.
 
+## Options
+
+```sh
+scripts/deploy.sh --dry-run        # every check, and what would ship; nothing deployed
+scripts/deploy.sh                  # backend if what it serves changed, then frontend
+scripts/deploy.sh --backend-only   # or --frontend-only
+scripts/deploy.sh --first          # the first deploy: no ledger yet
+```
+
+- **An API removal Reboot allows** (an `mcp=` option, a field's
+  `description=`; `python/references/api-schema-evolution.md`) ships
+  only when `deploy/api-exceptions.md` names it, file and exact line;
+  delete the entry once shipped. Any other removal needs an expunge and
+  a restore: stop and tell the user.
+- The script refuses a dirty tree, another branch, or an unpushed
+  commit: commit and push first, never work around it.
+
 ## Troubleshooting
 
 - **Blank page, MIME-type or 404 asset errors:** asset prefix doesn't
   match the host — on dual-frontend, the `/__/frontend/web/*` line is
   missing from `_redirects` or isn't first.
 - **Routes render nothing on the custom domain but `/` loads:** basename
-  from `import.meta.env.BASE_URL` (Step 4.3).
+  from `import.meta.env.BASE_URL` (Step 5.3).
 - **CORS errors in the console:** exact origin (scheme, `www.`) missing
   from `allowed_origins`, or the backend not redeployed after.
 - **Sign-in fails with an invalid-redirect error:** same cause —
   `/__/oauth/start` refuses the `return_to`.
-- **503 right after `rbt cloud up`, CORS correct:** still rolling out;
-  wait (Step 6).
+- **"did not serve within five minutes":** the revision is unhealthy;
+  `rbt cloud logs --revisions=<n>` (the script prints the command). On
+  creation, usually missing secrets (Step 3).
+- **"still serves ... after a minute":** the publish went to another
+  branch or project, or `SITE_URL` names a domain not attached yet.
 - **Local Safari sign-in fails with `Missing pending-flow cookie`:**
   dev-only; see
   [`run/references/stop-restart-reset.md`](../run/references/stop-restart-reset.md)

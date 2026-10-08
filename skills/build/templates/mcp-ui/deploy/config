@@ -1,0 +1,15 @@
+# Settings for scripts/deploy.sh, sourced as shell. Credentials are not
+# here: they go in .deploy.env (git-ignored). See the deploy skill.
+
+# The Reboot Cloud application, and its size (xsmall, small, medium,
+# large, xlarge). Passed to `rbt cloud up` on every deploy, so a redeploy
+# cannot resize the app by forgetting a flag.
+APP=__project__
+SIZE=xsmall
+
+# The branch production runs.
+BRANCH=main
+
+# No web frontend: an MCP UI ships in the backend image and is served by
+# the backend, so the deploy is the backend alone.
+FRONTEND_DIR=

@@ -27,3 +27,6 @@ screenshots/
 
 # How far a test run is, for the Reboot band (tests/run_progress.py).
 .reboot/
+
+# Deploy credentials, read by scripts/deploy.sh.
+.deploy.env

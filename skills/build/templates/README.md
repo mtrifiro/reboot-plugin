@@ -52,13 +52,17 @@ Both front doors share the Python shell:
 | `.rbtrc` | Line-based `rbt` config: codegen paths, watch globs, `--application-name`, `--env-file`, `serve run` | Port or config changes (`python/references/lifecycle-rbtrc.md`) |
 | `.mypy.ini` | Source roots on `mypy_path`, `explicit_package_bases`, an ignore stanza naming only the generated `_rbt` module | A new API module (one stanza each) |
 | `pytest.ini` | `testpaths = tests`; `pythonpath` of `backend/src`, `backend/api`, `api` | Never |
-| `.gitignore` | Dev state, generated code, `.env`, recordings, venv, `node_modules/`, frontend build | Never; the generated-code paths match `.rbtrc` |
+| `.gitignore` | Dev state, generated code, `.env`, `.deploy.env`, recordings, venv, `node_modules/`, frontend build, `.reboot/` | Never; the generated-code paths match `.rbtrc` |
 | `FINDINGS.md` | The agent's log of surprises (wrong or silent skill, framework behavior); the `report` skill files them upstream | Append items; never delete them |
 | `api/__app__/v1/__app__.py` | Sample pydantic API | Always: the app's own types |
 | `backend/src/servicers/__app__.py` | Sample servicers | Always |
 | `backend/src/main.py` | `Application(...)` with `oauth=OAuth(provider=OAuthProviderByEnvironment(dev=Development(), prod=None), allowed_origins=[])` | Production provider and origins before deploy |
 | `tests/counting.feature` | One `@wip` sample feature | Replace with the app's features (`feature` skill) |
 | `tests/__app___test.py` | `application` fixture and `scenarios(...)` | Servicer list; one module per application configuration |
+| `tests/run_progress.py`, `tests/conftest.py` | Records how far a test run is in `.reboot/test-run.json` (gitignored), which the Reboot band reads; `conftest.py` imports its hooks (`python/references/testing-project-setup.md`, "Test-run progress") | Never |
+| `scripts/deploy.sh`, `scripts/api_removals.py` | Every production deploy: a pushed commit, an additive API, `rbt cloud up` and the revision serving, the frontend built from the commit and published, a ledger line (`deploy` skill) | Never; settings go in `deploy/config` |
+| `deploy/config` | The deploy's settings: Cloud app name and size, branch, frontend directories, Pages project, site address | On the first deploy (`deploy` skill, Step 2) |
+| `deploy/api-exceptions.md` | API removals Reboot allows, approved one line each for `api_removals.py` | Only to approve a removal; delete it once shipped |
 
 ### `mcp-ui/` adds
 
