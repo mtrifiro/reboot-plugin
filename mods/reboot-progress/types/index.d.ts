@@ -83,9 +83,7 @@ declare module 'claude-code' {
       isHidden: boolean
       root: string | null
       /** The dashboard and front-end links, while each serves. */
-      links: { dashboard: string | null; app: string | null; mcp: string | null }
-      /** Sassy mode, from the band's menu: the band's words, and the summaries, take a sassier voice. */
-      isSassy: boolean
+      links: { dashboard: string | null; app: string | null }
       /** What just finished and what is being worked on now. */
       activity: Activity | null
       /** Whether a turn is running: session state, so a reload mid-turn keeps it. */

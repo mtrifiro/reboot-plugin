@@ -110,15 +110,16 @@ describe('test progress', () => {
     expect(testProgress('')).toEqual({ percent: null, failed: 0 })
   })
 
-  test('the line names how far the run is', () => {
+  test('the line names how far the run is and its time so far', () => {
     const run = { command: 'pytest tests', startedAt: 0, seenAt: 0, expectedMs: null, outputPath: null, percent: 42, failed: 2 }
-    expect(testLine(run)).toBe('Waiting for the tests to finish: 42% done, 2 failed')
-    expect(testLine({ ...run, percent: null, failed: 0 })).toBe('Waiting for the tests to finish')
+    expect(testLine(run, 72_000)).toBe('Waiting for the tests to finish: 42% done, 2 failed · 1m 12s')
+    expect(testLine({ ...run, percent: null, failed: 0 }, 9_000)).toBe('Waiting for the tests to finish · 9s')
   })
 
-  test("and how long the same command took last time", () => {
+  test("beside the last run's time when the output says nothing", () => {
     const run = { command: 'pytest tests', startedAt: 0, seenAt: 0, expectedMs: 357_100, outputPath: null, percent: null, failed: 0 }
-    expect(testLine(run)).toBe('Waiting for the tests to finish, about 6m last time')
+    expect(testLine(run, 72_000)).toBe('Waiting for the tests to finish · 1m 12s of about 6m')
+    expect(testLine(run, 400_000)).toBe("Waiting for the tests to finish · 6m 40s, longer than the last run's 6m")
   })
 
   test('the command, from the runner to a pipe', () => {

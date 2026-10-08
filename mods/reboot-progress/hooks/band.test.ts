@@ -9,17 +9,6 @@ const wait = (ms: number) =>
   )
 const BAND = { hasSurvey: false, isWorking: false, maxRows: 10, bodyColumns: 120 }
 
-/** A mounted band, as far as finding its text goes. */
-type Found = { findAll: (query: never) => Promise<unknown[]> }
-
-/** Texts matching `query` in the band and in its text region, a Client where the surface has one. */
-async function findText(band: Found, query: { text?: string | RegExp }): Promise<unknown[]> {
-  const inBand = await band.findAll({ type: 'Text', ...query } as never)
-  const inRegion = await band.findAll({ type: 'Text', ...query, in: 'band-text' } as never).catch(() => [])
-
-  return [...inBand, ...inRegion]
-}
-
 /** The band's heading: Reboot Status on the terminal, which has no logo; Status elsewhere. */
 const HEADING = (surface: string) => (surface === 'terminal' ? /^Reboot Status$/ : /^Status$/)
 
@@ -49,11 +38,11 @@ for (const surface of ['terminal', 'desktop'] as const) {
 
     const band = await $.ui.mount({ plugin: PLUGIN, surface, component: 'AbovePrompt', props: BAND as never })
     // A static Status heading: neither the kind of work nor the stage.
-    expect((await findText(band, { text: HEADING(surface) })).length).toBe(1)
-    expect(await findText(band, { text: /^(Building|Adding Feature|Fixing|Done)$/ })).toEqual([])
-    expect(await findText(band, { text: /access rules|backend|screens|·/ })).toEqual([])
+    expect((await band.findAll({ type: 'Text', text: HEADING(surface) })).length).toBe(1)
+    expect(await band.findAll({ type: 'Text', text: /^(Building|Adding Feature|Fixing|Done)$/ })).toEqual([])
+    expect(await band.findAll({ type: 'Text', text: /access rules|backend|screens|·/ })).toEqual([])
     // No progress bar: the task's name alone.
-    expect(await findText(band, { text: /█|░/ })).toEqual([])
+    expect(await band.findAll({ type: 'Text', text: /█|░/ })).toEqual([])
 
     await $.command.run({ command: 'reboot-progress', args: 'hide' } as never)
     expect(await band.findAll({ text: /Reboot/ })).toEqual([])
@@ -76,10 +65,10 @@ for (const surface of ['terminal', 'desktop'] as const) {
     await wait(50) // the summary runs in the background
 
     const band = await $.ui.mount({ plugin: PLUGIN, surface, component: 'AbovePrompt', props: BAND as never })
-    expect((await findText(band, { text: 'Writing the servicers' })).length).toBe(1)
+    expect((await band.findAll({ type: 'Text', text: 'Writing the servicers' })).length).toBe(1)
     // The status alone, with no Now heading over it.
-    expect(await findText(band, { text: /^Now$/ })).toEqual([])
-    expect(await findText(band, { text: /Just completed/ })).toEqual([])
+    expect(await band.findAll({ type: 'Text', text: /^Now$/ })).toEqual([])
+    expect(await band.findAll({ type: 'Text', text: /Just completed/ })).toEqual([])
   })
 }
 
@@ -97,8 +86,8 @@ for (const surface of ['terminal', 'desktop'] as const) {
     await $.prompt.submit({ text: '/reboot:app build a user friendly interface to Google Analytics' } as never)
 
     const band = await $.ui.mount({ plugin: PLUGIN, surface, component: 'AbovePrompt', props: BAND as never })
-    expect((await findText(band, { text: /Reboot/ })).length).toBe(1)
-    expect((await findText(band, { text: HEADING(surface) })).length).toBe(1)
+    expect((await band.findAll({ type: 'Text', text: /Reboot/ })).length).toBe(1)
+    expect((await band.findAll({ type: 'Text', text: HEADING(surface) })).length).toBe(1)
   })
 }
 
@@ -119,9 +108,9 @@ for (const surface of ['terminal', 'desktop'] as const) {
     await wait(50) // the summary runs in the background
 
     const band = await $.ui.mount({ plugin: PLUGIN, surface, component: 'AbovePrompt', props: BAND as never })
-    expect((await findText(band, { text: /Reboot/ })).length).toBe(1)
-    expect((await findText(band, { text: 'Fixing the sign-in button' })).length).toBe(1)
-    expect((await findText(band, { text: HEADING(surface) })).length).toBe(1)
+    expect((await band.findAll({ type: 'Text', text: /Reboot/ })).length).toBe(1)
+    expect((await band.findAll({ type: 'Text', text: 'Fixing the sign-in button' })).length).toBe(1)
+    expect((await band.findAll({ type: 'Text', text: HEADING(surface) })).length).toBe(1)
   })
 }
 
@@ -151,7 +140,7 @@ for (const surface of ['terminal', 'desktop'] as const) {
 
     const band = await $.ui.mount({ plugin: PLUGIN, surface, component: 'AbovePrompt', props: BAND as never })
     // Its address waits, hidden, for the pointer on the button.
-    expect((await findText(band, { text: 'Opens the dashboard: http://127.0.0.1:9871/' })).length).toBe(1)
+    expect((await band.findAll({ type: 'Text', text: 'Opens the dashboard: http://127.0.0.1:9871/' })).length).toBe(1)
     await band.press({ key: 'dashboard' })
     expect(opened).toEqual([['open', 'http://127.0.0.1:9871/']])
   })
@@ -172,7 +161,7 @@ for (const surface of ['terminal', 'desktop'] as const) {
     await $.prompt.submit({ text: "let's add the YOY feature" } as never)
 
     const band = await $.ui.mount({ plugin: PLUGIN, surface, component: 'AbovePrompt', props: BAND as never })
-    expect(await findText(band, { text: /^Idle$/ })).toEqual([])
+    expect(await band.findAll({ type: 'Text', text: /^Idle$/ })).toEqual([])
   })
 }
 
@@ -192,15 +181,15 @@ test('the Reboot logo draws beside Reboot where the surface has Svg; the termina
   expect(await terminal.findAll({ type: 'Svg' })).toEqual([])
   // Where the logo can't draw, the heading names Reboot, in green, and
   // nothing sits at the right.
-  const [heading] = await findText(terminal, { text: /^Reboot Status$/ })
+  const [heading] = await terminal.findAll({ type: 'Text', text: /^Reboot Status$/ })
   expect((heading as { props: { color?: string } }).props.color).toBe('success')
-  expect(await findText(terminal, { text: /^(Reboot|Status)$/ })).toEqual([])
+  expect(await terminal.findAll({ type: 'Text', text: /^(Reboot|Status)$/ })).toEqual([])
   // A rule after it to the right edge, on the terminal alone.
-  expect((await findText(terminal, { text: /^─+$/ })).length).toBe(1)
-  expect(await findText(desktop, { text: /^─+$/ })).toEqual([])
+  expect((await terminal.findAll({ type: 'Text', text: /^─+$/ })).length).toBe(1)
+  expect(await desktop.findAll({ type: 'Text', text: /^─+$/ })).toEqual([])
   // The app keeps Status on the left and the logo and Reboot on the right.
-  expect((await findText(desktop, { text: /^Status$/ })).length).toBe(1)
-  const [plain] = await findText(desktop, { text: /^Reboot$/ })
+  expect((await desktop.findAll({ type: 'Text', text: /^Status$/ })).length).toBe(1)
+  const [plain] = await desktop.findAll({ type: 'Text', text: /^Reboot$/ })
   expect((plain as { props: { color?: string } }).props.color).toBe(undefined)
 })
 
@@ -233,7 +222,7 @@ for (const surface of ['terminal', 'desktop'] as const) {
 
     expect(toasts).toEqual(['Deployed revision 7 to Reboot Cloud'])
     const band = await $.ui.mount({ plugin: PLUGIN, surface, component: 'AbovePrompt', props: BAND as never })
-    expect((await findText(band, { text: /Deploying to Reboot Cloud: revision 7 is starting up/ })).length).toBe(1)
+    expect((await band.findAll({ type: 'Text', text: /Deploying to Reboot Cloud: revision 7 is starting up/ })).length).toBe(1)
     await band.press({ key: 'cloud' })
     expect(opened).toContainEqual(['open', 'https://a1b2c3.c1.rbt.cloud:9991'])
   })
@@ -314,13 +303,11 @@ test('a turn waiting on tests in the foreground shows how long they have run', a
   await wait(50)
 
   const band = await $.ui.mount({ plugin: PLUGIN, surface: 'terminal', component: 'AbovePrompt', props: BAND as never })
-  expect((await findText(band, { text: 'Waiting for the tests to finish, about 6m last time' })).length).toBe(1)
-  // Its timer counts from the run's start.
-  expect((await findText(band, { text: '· 0s' })).length).toBe(1)
+  expect((await band.findAll({ type: 'Text', text: 'Waiting for the tests to finish · 0s of about 6m' })).length).toBe(1)
   release()
   await tests
   const after = await $.ui.mount({ plugin: PLUGIN, surface: 'terminal', component: 'AbovePrompt', props: BAND as never })
-  expect(await findText(after, { text: /Waiting for the tests/ })).toEqual([])
+  expect(await after.findAll({ type: 'Text', text: /Waiting for the tests/ })).toEqual([])
 })
 
 test("between turns the band shows the run the project's runner records, and its result after", async ($, on) => {
@@ -350,100 +337,11 @@ test("between turns the band shows the run the project's runner records, and its
   await wait(50)
   const band = await $.ui.mount({ plugin: PLUGIN, surface: 'terminal', component: 'AbovePrompt', props: BAND as never })
   // No history yet: how far, and no time.
-  expect((await findText(band, { text: 'So far: 1 of 2 modules, 114 passed, 0 failed\nLeft: 1 module' })).length).toBe(1)
+  expect((await band.findAll({ type: 'Text', text: 'So far: 1 of 2 modules, 114 passed, 0 failed\nLeft: 1 module' })).length).toBe(1)
 
   file = file.replace('"finished_at":null', '"finished_at":"2026-10-08T11:31:00-05:00"').replace('"status":"running"', '"status":"failed","seconds":300')
   await $.tool.call({ tool: 'Bash', command: 'uv run rbt dev run' })
   await wait(50)
   const after = await $.ui.mount({ plugin: PLUGIN, surface: 'terminal', component: 'AbovePrompt', props: BAND as never })
-  expect((await findText(after, { text: /^Done: 2 modules, 114 passed, 1 failed \(web_test\)\nTook 7m 00s, finished at \d+:31$/ })).length).toBe(1)
+  expect((await after.findAll({ type: 'Text', text: /^Done: 2 modules, 114 passed, 1 failed \(web_test\)\nTook 7m 00s, finished at \d+:31$/ })).length).toBe(1)
 })
-
-for (const surface of ['terminal', 'desktop'] as const) {
-  test(`a right-click on the band opens its menu, whose picks act, on ${surface}`, async ($, on) => {
-    const opened: string[][] = []
-    const copied: string[] = []
-    const toasts: string[] = []
-    on('ui.render', { component: 'AbovePrompt' }, ($, e) => {
-      const { Box } = $.ui.resolve(e)
-
-      return h(Box, {}) as never
-    })
-    on('session.cwd', () => ({ value: '/w/app' }) as never)
-    on('fs.exists', ($, e) => ({ value: ['/w/app/.rbtrc', '/w/app/frontend/mcp'].includes((e as { path: string }).path) }) as never)
-    on('fs.read', () => ({ value: '' }) as never)
-    on('ui.status', () => ({ value: undefined }) as never)
-    on('tool.call', () => ({ result: {}, text: 'ok' }) as never)
-    on('ui.toast', ($, e) => {
-      toasts.push((e as { text: string }).text)
-      return { value: undefined } as never
-    })
-    on('ui.copy', ($, e) => {
-      copied.push((e as { text: string }).text)
-      return { value: { isCopied: true } } as never
-    })
-    on('process.run', ($, e) => {
-      const argv = (e as { argv: string[] }).argv
-      if (argv[0] === 'open') opened.push(argv)
-      const stdout =
-        argv[0] === 'lsof'
-          ? 'rbt 1 me 3u IPv4 0t0 TCP 127.0.0.1:9871 (LISTEN)\nrbt 2 me 3u IPv4 0t0 TCP 127.0.0.1:9991 (LISTEN)'
-          : ''
-      return { value: { exitCode: 0, stdout, stderr: '' } } as never
-    })
-
-    // The app and the dashboard serving: an MCP app's links.
-    await $.tool.call({ tool: 'Bash', command: 'uv run rbt dev run' })
-    await wait(50)
-    const band = await $.ui.mount({ plugin: PLUGIN, surface, component: 'AbovePrompt', props: BAND as never })
-    const menu = async () =>
-      (await band.findAll({ type: 'Button', in: 'band-text' })).map(b => (b as { text?: string }).text)
-    expect(await menu()).toEqual([])
-
-    await band.pointer({ type: 'down', x: 2, y: 1, button: 'right', in: 'band-text' })
-    expect(await menu()).toEqual(['Open dashboard ↗', 'Copy MCP address', '☐ Sassy mode'])
-    // A right-click again closes it.
-    await band.pointer({ type: 'down', x: 2, y: 1, button: 'right', in: 'band-text' })
-    expect(await menu()).toEqual([])
-
-    await band.post({ pick: 'dashboard' }, { in: 'band-text' })
-    expect(opened).toEqual([['open', 'http://127.0.0.1:9871/']])
-    await band.post({ pick: 'copy' }, { in: 'band-text' })
-    expect(copied).toEqual(['http://localhost:9991/mcp'])
-    expect(toasts).toContain('Copied the MCP address: http://localhost:9991/mcp')
-
-    // Sassy mode: its box ticked, and the band's words in its voice.
-    await band.post({ pick: 'sassy' }, { in: 'band-text' })
-    expect(toasts).toContain('Sassy mode on. Brace yourself.')
-    await band.pointer({ type: 'down', x: 2, y: 1, button: 'right', in: 'band-text' })
-    expect(await menu()).toContain('☑ Sassy mode')
-    await band.post({ pick: 'copy' }, { in: 'band-text' })
-    expect(toasts).toContain('Copied the MCP address: http://localhost:9991/mcp. Paste responsibly.')
-  })
-}
-
-for (const surface of ['terminal', 'desktop'] as const) {
-  test(`every message counts how long it has been showing on ${surface}`, async ($, on) => {
-    let clock = 1_000_000
-    on('fs.exists', () => ({ value: false }) as never)
-    on('ui.render', { component: 'AbovePrompt' }, ($, e) => {
-      const { Box } = $.ui.resolve(e)
-
-      return h(Box, {}) as never
-    })
-    on('clock.now', () => ({ value: clock }) as never)
-    on('model.complete', () => ({ value: { isAnswered: false, reason: 'empty-reply' } }) as never)
-    on('prompt.submit', ($, e) => ({ text: e.text }) as never)
-
-    await $.prompt.submit({ text: "let's add the YOY feature" } as never)
-    // The summary, given up on, settles Now.
-    await wait(50)
-    const band = await $.ui.mount({ plugin: PLUGIN, surface, component: 'AbovePrompt', props: BAND as never })
-    expect((await findText(band, { text: '· 0s' })).length).toBe(1)
-
-    // The band draws again 75 seconds on: the same Now, counted on.
-    clock += 75_000
-    const later = await $.ui.mount({ plugin: PLUGIN, surface, component: 'AbovePrompt', props: BAND as never })
-    expect((await findText(later, { text: '· 1m 15s' })).length).toBe(1)
-  })
-}

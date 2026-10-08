@@ -147,8 +147,8 @@ export function elapsed(ms: number): string {
   return s < 60 ? `${s}s` : `${Math.floor(s / 60)}m ${String(s % 60).padStart(2, '0')}s`
 }
 
-/** What a deploy is doing, for the band, without its time (the band counts that). */
-export function deployWhat(d: Deploy): string {
+/** The band's line for a running deploy. */
+export function deployLine(d: Deploy, now: number): string {
   const what: Record<DeployStage, string> = {
     checking: 'Deploying to Reboot Cloud: checking permissions',
     build: 'Deploying to Reboot Cloud: building the image',
@@ -162,14 +162,10 @@ export function deployWhat(d: Deploy): string {
     failed: `Deploy failed: ${d.failure ?? ''}`,
   }
 
-  return what[d.stage]
-}
-
-/** The band's line for a deploy with its time so far; a failed deploy's stops where it failed. */
-export function deployLine(d: Deploy, now: number): string {
+  // A failed deploy's time stops where it failed.
   const end = d.stage === 'failed' ? d.stageAt : now
 
-  return `${deployWhat(d)} · ${elapsed(end - d.startedAt)}`
+  return `${what[d.stage]} · ${elapsed(end - d.startedAt)}`
 }
 
 /** The `$.store` key holding a project's deployed URLs across sessions. */
