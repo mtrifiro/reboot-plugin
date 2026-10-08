@@ -1,7 +1,7 @@
 ---
 id: reboot-crm-60
 project: reboot-crm
-source: "reboot-crm/docs/REBOOT_FINDINGS.md P3.24"
+source: "reboot-crm/docs/REBOOT_FINDINGS.md P3.183"
 reboot_version: 1.6.0
 severity: yellow
 target: bdd
