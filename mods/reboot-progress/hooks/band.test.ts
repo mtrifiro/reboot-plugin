@@ -309,3 +309,39 @@ test('a turn waiting on tests in the foreground shows how long they have run', a
   const after = await $.ui.mount({ plugin: PLUGIN, surface: 'terminal', component: 'AbovePrompt', props: BAND as never })
   expect(await after.findAll({ type: 'Text', text: /Waiting for the tests/ })).toEqual([])
 })
+
+test("between turns the band shows the run the project's runner records, and its result after", async ($, on) => {
+  let file = JSON.stringify({
+    started_at: '2026-10-08T11:24:00-05:00',
+    finished_at: null,
+    modules: [
+      { name: 'accounts_test', status: 'passed', passed: 114, failed: 0, seconds: 130.1 },
+      { name: 'web_test', status: 'running' },
+    ],
+  })
+  on('ui.render', { component: 'AbovePrompt' }, ($, e) => {
+    const { Box } = $.ui.resolve(e)
+
+    return h(Box, {}) as never
+  })
+  on('clock.now', () => ({ value: Date.parse('2026-10-08T11:30:00-05:00') }) as never)
+  on('session.cwd', () => ({ value: '/w/app' }) as never)
+  on('fs.exists', ($, e) => ({ value: (e as { path: string }).path === '/w/app/.rbtrc' }) as never)
+  on('fs.read', ($, e) => ({ value: (e as { path: string }).path === '/w/app/.reboot/test-run.json' ? file : '' }) as never)
+  on('fs.stat', () => ({ value: { kind: 'file', size: 1, mtimeMs: Date.parse('2026-10-08T11:29:00-05:00') } }) as never)
+  on('ui.status', () => ({ value: undefined }) as never)
+  on('tool.call', () => ({ result: {}, text: 'ok' }) as never)
+  on('process.run', () => ({ value: { exitCode: 0, stdout: '  9 /w/app/.venv/bin/pytest tests/web_test.py', stderr: '' } }) as never)
+
+  await $.tool.call({ tool: 'Bash', command: 'uv run rbt dev run' })
+  await wait(50)
+  const band = await $.ui.mount({ plugin: PLUGIN, surface: 'terminal', component: 'AbovePrompt', props: BAND as never })
+  // No history yet: how far, and no time.
+  expect((await band.findAll({ type: 'Text', text: 'Tests · 1 of 2 modules · 0 failed' })).length).toBe(1)
+
+  file = file.replace('"finished_at":null', '"finished_at":"2026-10-08T11:31:00-05:00"').replace('"status":"running"', '"status":"failed","seconds":300')
+  await $.tool.call({ tool: 'Bash', command: 'uv run rbt dev run' })
+  await wait(50)
+  const after = await $.ui.mount({ plugin: PLUGIN, surface: 'terminal', component: 'AbovePrompt', props: BAND as never })
+  expect((await after.findAll({ type: 'Text', text: 'Tests failed · 1 failed: web_test · 2 modules · 7m 00s' })).length).toBe(1)
+})

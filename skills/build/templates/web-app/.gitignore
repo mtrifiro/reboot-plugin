@@ -27,3 +27,6 @@ screenshots/
 
 # The page-timing build (build skill, Step 5).
 web/dist-timing/
+
+# How far a test run is, for the Reboot band (tests/run_progress.py).
+.reboot/

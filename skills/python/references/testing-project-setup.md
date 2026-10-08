@@ -2,7 +2,7 @@
 title: Lay Out a Reboot Backend Test Suite
 impact: MEDIUM
 impactDescription: Without `reboot[dev]`, the pytest paths, and the git-ignore, the built-in steps are missing, generated `_rbt` modules can't be imported, and recordings get committed
-tags: testing, pytest, layout, pyproject, conftest, uv, reboot-dev, gitignore, recordings, template
+tags: testing, pytest, layout, pyproject, conftest, uv, reboot-dev, gitignore, recordings, template, progress, test-run
 summary: "Missing `pytest.ini` paths break `_rbt` imports; no `pytest-asyncio`; `tests/` layout, fixture with `allowed_origins=[]`, `reboot[dev]`."
 step: tests
 applies: [mcp-ui, web-app, backend-only]
@@ -35,8 +35,10 @@ Grow the template's passing suite (`build/templates/<front-door>/`) in this shap
 │   ├── chat_room_test.py         # `application` fixture + `scenarios(...)`
 │   ├── web_test.py               # the scenarios that open the web app
 │   ├── posting.recordings/       # made by running; git-ignored
-│   └── conftest.py               # only when needed, see below
-├── .gitignore                # includes `*.recordings/`
+│   ├── run_progress.py           # records how far a run is (below)
+│   └── conftest.py               # imports run_progress's hooks
+├── .reboot/test-run.json     # made by running; git-ignored
+├── .gitignore                # includes `*.recordings/`, `.reboot/`
 ├── pytest.ini
 └── pyproject.toml
 ```
@@ -64,9 +66,10 @@ Grow the template's passing suite (`build/templates/<front-door>/`) in this shap
   `playwright>=1.55.0`, `pytest-playwright>=0.7.1`, then
   `uv run playwright install chromium` once. `uv sync` installs the
   `dev` group; `[tool.uv.dev-dependencies]` is an accepted alias.
-- **`conftest.py`** only when a module tests import eagerly needs an
-  env var (an LLM client built at import); tests must still mock the
-  real call. A stand-in for one module is an autouse fixture there.
+- **`conftest.py`** imports `run_progress`'s hooks (below); add to it
+  only when a module tests import eagerly needs an env var (an LLM
+  client built at import); tests must still mock the real call. A
+  stand-in for one module is an autouse fixture there.
 
 ```python
 # tests/conftest.py
@@ -87,6 +90,43 @@ uv run pytest -v -s                     # with print() output
 
 `@blocked` scenarios skip with their description as reason. Quiet
 runs, or pass-alone/fail-in-suite: `lifecycle-dev-loop.md`.
+
+### Test-run progress: `.reboot/test-run.json`
+
+The Reboot band above Claude Code's prompt shows how far a run is and
+when it should end (`Tests · 7 of 20 modules · 0 failed · done ≈
+11:49`), then its result until code changes. It reads one file at the
+project root, which the runner rewrites as modules start and end:
+
+```json
+{
+  "started_at": "2026-10-08T11:24:00-05:00",
+  "finished_at": null,
+  "modules": [
+    {"name": "accounts_test", "status": "passed", "passed": 114, "failed": 0, "seconds": 130.1},
+    {"name": "leads_test", "status": "running", "started_at": "2026-10-08T11:26:11-05:00"},
+    {"name": "web_test", "status": "pending"}
+  ]
+}
+```
+
+- **`status`**: `pending`, `running`, `passed`, `failed`, or `rerun`
+  for a harness failure (a hang, a server not ready) the runner
+  retried, which the band names apart from the app failing.
+- **`finished_at`**: set when the run ends. `started_at` on a module is
+  optional; without it the band takes the modules to run one after
+  another.
+- **The finish time** is each module's median `seconds` over the
+  project's last 5 finished runs, which the band keeps; with no history
+  for a module still to run, it shows no time.
+- **pytest writes it**: the template's `tests/run_progress.py`, whose
+  hooks `conftest.py` imports, one module per test file. An existing
+  project copies both from `build/templates/<front-door>/tests/` and
+  adds `.reboot/` to `.gitignore`.
+- **A suite script of the project's own** (one pytest per module, with
+  retries) writes the file itself and sets `REBOOT_TEST_RUN=external`
+  for each pytest, so `run_progress.py` leaves the file alone. Write it
+  whole each time (to a temporary file, then rename), never in place.
 
 ## Never
 

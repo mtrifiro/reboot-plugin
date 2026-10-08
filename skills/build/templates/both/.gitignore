@@ -24,3 +24,6 @@ frontend/dist/
 
 # Design-review screenshots, made by scripts/screenshots.py.
 screenshots/
+
+# How far a test run is, for the Reboot band (tests/run_progress.py).
+.reboot/

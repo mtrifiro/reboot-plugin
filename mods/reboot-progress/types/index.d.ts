@@ -57,6 +57,24 @@ export type TestRun = {
   failed: number
 }
 
+/** One test module in a run's `.reboot/test-run.json`. */
+export type SuiteModule = {
+  name: string
+  /** `rerun` is a harness failure (a hang, a server not ready), not the app failing. */
+  status: 'pending' | 'running' | 'passed' | 'failed' | 'rerun'
+  passed: number | null
+  failed: number | null
+  seconds: number | null
+  /** When it started running, if the runner says. */
+  startedAt: number | null
+}
+
+/** A test run as its runner records it in `.reboot/test-run.json`. */
+export type SuiteRun = { startedAt: number; finishedAt: number | null; modules: SuiteModule[] }
+
+/** The run the band shows, and when it should end (null without the history to say). */
+export type SuiteView = { run: SuiteRun; expectedAt: number | null }
+
 declare module 'claude-code' {
   interface PluginState {
     'reboot-progress': {
@@ -73,6 +91,10 @@ declare module 'claude-code' {
       isMcp: boolean
       /** The test run going, so the band shows how far it is rather than Idle; null when none. */
       testRun: TestRun | null
+      /** The run `.reboot/test-run.json` records, while it goes and after, until code changes; null when none. */
+      suite: SuiteView | null
+      /** When a Write or Edit last changed code, so a finished run's result goes once it is out of date. */
+      lastEditAt: number
       /** Whether the turn waits on a test run in the foreground (a Bash call running it). */
       isAwaitingTests: boolean
       /** The latest deploy. */

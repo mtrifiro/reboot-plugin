@@ -15,6 +15,14 @@ module defines nothing and the backend scenarios run as before."""
 
 import re
 
+# How far a run is, for the Reboot band (run_progress.py).
+from run_progress import (  # noqa: F401
+    pytest_collection_finish,
+    pytest_runtest_logreport,
+    pytest_runtest_logstart,
+    pytest_sessionfinish,
+)
+
 try:
     from reboot.bdd import parsers, then
     from reboot.bdd.web import WebApp

@@ -4,6 +4,7 @@ import type { EngineInterface, Register } from 'claude-code'
 import type { Build, Deploy } from '../types'
 import { advanceDeploy, afterOutput, beginDeploy, deployKey, deployLine, isRunning, isShown, outcomeOf, seenIn } from './deploy'
 import { REBOOT_LOGO } from './logo'
+import { SUITE_FILE, type History, expectedFinish, isSuiteShown, parseSuite, remember, suiteLine, suiteStatus } from './suite'
 import { STARTING, WAITING, endTurn, fallback, isWorthSummarizing, parseSummary, startTask, summaryPrompt, isTesting, testCommand, testLine, testTimeKey, testProgress, testStatus, textOf } from './activity'
 import type { Summary } from './activity'
 import {
@@ -35,6 +36,8 @@ const isHidden = atom({ plugin: 'reboot-progress', key: 'isHidden' } as const, f
 const root = atom({ plugin: 'reboot-progress', key: 'root' } as const, null)
 const deploy = atom({ plugin: 'reboot-progress', key: 'deploy' } as const, null)
 const clock = atom({ plugin: 'reboot-progress', key: 'clock' } as const, 0)
+const suite = atom({ plugin: 'reboot-progress', key: 'suite' } as const, null)
+const lastEdit = atom({ plugin: 'reboot-progress', key: 'lastEditAt' } as const, 0)
 const awaitingTests = atom({ plugin: 'reboot-progress', key: 'isAwaitingTests' } as const, false)
 const testRun = atom({ plugin: 'reboot-progress', key: 'testRun' } as const, null)
 // The session's, not the module's: a reload mid-turn must not end the turn.
@@ -299,6 +302,41 @@ async function followTests($: EngineInterface, dir: string, ps: string) {
   await update($, clock, () => now)
 }
 
+/**
+ * Follows the run the project's runner records in `.reboot/test-run.json`:
+ * once it finishes, adds its modules' times to the project's history (each
+ * run once); shows it while it goes and after, with when it should end,
+ * and ticks the clock while it runs.
+ */
+async function followSuite($: EngineInterface, dir: string, ps: string) {
+  const path = `${dir}/${SUITE_FILE}`
+  const run = parseSuite(await readText($, path))
+  const was = await read($, suite)
+  if (run === null) {
+    if (was !== null) await update($, suite, () => null)
+    return
+  }
+  const now = await $.clock.now()
+  const historyKey = `suite-times:${dir}`
+  const history = ((await $.store.get(historyKey).catch(() => null)) as History | null) ?? {}
+  if (run.finishedAt !== null && (await $.store.get(`suite-recorded:${dir}`).catch(() => null)) !== run.startedAt) {
+    // Remembering is a nicety; never let it cost the band.
+    await $.store.set(historyKey, remember(history, run)).catch(() => undefined)
+    await $.store.set(`suite-recorded:${dir}`, run.startedAt).catch(() => undefined)
+  }
+  const stat = await $.fs.stat(path).catch(() => null)
+  const isShown = isSuiteShown(run, {
+    now,
+    writtenAt: stat?.mtimeMs ?? now,
+    lastEditAt: await read($, lastEdit),
+    isTesting: isTesting(ps),
+    history,
+  })
+  const isRunning = isShown && run.finishedAt === null
+  await update($, suite, () => (isShown ? { run, expectedAt: isRunning ? expectedFinish(run, history, now) : null } : null))
+  if (isRunning) await update($, clock, () => now)
+}
+
 /** Toasts when the app (its backend) or the dashboard starts or stops. */
 function announce($: EngineInterface, server: 'app' | 'dashboard', isUp: boolean) {
   const { watch, change } = observe(server === 'app' ? appWatch : dashboardWatch, isUp)
@@ -326,6 +364,7 @@ async function poll($: EngineInterface) {
     if (h.isMcp !== (await read($, mcp))) await update($, mcp, () => h.isMcp)
     await followDeploy($, h.ps).catch(() => undefined)
     await followTests($, dir, h.ps).catch(() => undefined)
+    await followSuite($, dir, h.ps).catch(() => undefined)
     announce($, 'app', h.backend)
     announce($, 'dashboard', h.links.dashboard !== null)
     $.ui.status(formatStatus(h))
@@ -397,6 +436,9 @@ export const register: Register = on => {
     if (call === null || ran.isError === true || ran.deny !== undefined) return ran
 
     if (call.tool === 'Write' || call.tool === 'Edit') {
+      // A finished run's result stays until code changes after it.
+      const editedAt = await $.clock.now()
+      await update($, lastEdit, () => editedAt)
       // Remembering the project is a nicety; never let it cost the band.
       const dir = await projectOf($, call.file_path).catch(() => null)
       if (dir) await update($, root, () => dir)
@@ -475,14 +517,21 @@ export const register: Register = on => {
     // Between turns, a test run still going is what the work waits on.
     // So is a turn's Bash call running tests in the foreground. Mid-turn,
     // a background run's progress follows what the turn is doing.
+    // A run the project's runner records says more than ps and output can;
+    // its result stays between turns until code changes.
     const run = await read($, testRun)
-    const status = run === null ? '' : testStatus(run)
+    const view = await read($, suite)
+    const isRunningSuite = view !== null && view.run.finishedAt === null
+    const isAwaiting = (act?.now ?? WAITING) === WAITING || (await read($, awaitingTests))
+    const status = isRunningSuite ? suiteStatus(view) : run === null ? '' : testStatus(run)
     const nowText =
-      run !== null && (act?.now === WAITING || (await read($, awaitingTests)))
-        ? testLine(run, Math.max(now, run.startedAt))
-        : act?.now && status
-          ? `${act.now} (tests ${status})`
-          : (act?.now ?? null)
+      view !== null && isAwaiting
+        ? suiteLine(view)
+        : run !== null && isAwaiting
+          ? testLine(run, Math.max(now, run.startedAt))
+          : act?.now && status
+            ? `${act.now} (tests ${status})`
+            : (act?.now ?? null)
     const line = isShown(d, now) ? deployLine(d!, Math.max(now, d!.stageAt)) : nowText
     if (e.props.hasSurvey || (b === null && line === null && !hasLinks) || (await read($, isHidden))) {
       return next(e)
