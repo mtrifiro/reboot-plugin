@@ -13,7 +13,7 @@ cluster: "4.4"
 duplicate_of: reboot-crm-09
 still_applies: no
 status: Resolved
-resolved_by: "python/references/lifecycle-reboot-cloud.md § Limits; deploy/SKILL.md § Step 2 — Deploy the backend to Reboot Cloud"
+resolved_by: "python/references/lifecycle-reboot-cloud.md § Limits; deploy/SKILL.md § Step 3 — Deploy the backend"
 ---
 
 # On macOS, export DOCKER_HOST before rbt cloud up

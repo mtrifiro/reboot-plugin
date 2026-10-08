@@ -12,7 +12,7 @@ tags: [operations, error-text, contradiction]
 cluster: "4.4"
 still_applies: yes
 status: Resolved
-resolved_by: "python/references/lifecycle-reboot-cloud.md § Never; deploy/SKILL.md § Step 2 — Deploy the backend to Reboot Cloud"
+resolved_by: "python/references/lifecycle-reboot-cloud.md § Never; deploy/SKILL.md § Step 3 — Deploy the backend"
 ---
 
 # rbt cloud down needs --organization, and says the application does not exist when it is missing

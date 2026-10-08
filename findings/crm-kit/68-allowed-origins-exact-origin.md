@@ -13,7 +13,7 @@ cluster: "4.2"
 duplicate_of: cineloop-30
 still_applies: no
 status: Resolved
-resolved_by: "deploy/SKILL.md § Step 3 — Allow the frontend's origin on the backend"
+resolved_by: "deploy/SKILL.md § Step 4 — Allow the frontend's origin on the backend"
 ---
 
 # List the frontend's exact origin in OAuth(allowed_origins=[...]): scheme://host[:port], no path, slash or wildcard

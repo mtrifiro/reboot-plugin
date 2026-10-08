@@ -10,8 +10,8 @@ names:
 tags: [operations]
 cluster: "F"
 still_applies: unknown
-status: Resolved
-resolved_by: "run/SKILL.md § Before starting: is the port free?"
+status: Open
+resolved_by: ""
 ---
 
 # Starting the local loop is five manual steps
@@ -23,3 +23,5 @@ resolved_by: "run/SKILL.md § Before starting: is the port free?"
 **Repro.** Not recorded.
 
 **Where in the skills.** `run/SKILL.md` (no stop/restart or orphan-clearing step).
+
+**Reopened 2026-10-08.** Partly covered: `run/SKILL.md` § Before starting: is the port free? checks for an orphan on the port and starts the backend and frontend. Still missing: the two-hour limit on background commands, waiting for "Pipeline ready", touching the generated TypeScript in case Vite cached a half-written file, and a start script that is safe to run again.

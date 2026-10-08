@@ -10,8 +10,8 @@ names:
 tags: [scaffold, version-drift, frontend]
 cluster: "B"
 still_applies: yes
-status: Resolved
-resolved_by: "web-app/references/react-client.md § Never"
+status: Open
+resolved_by: ""
 ---
 
 # Frontend scaffolding notes: React 19 tsconfigs, bufbuild, exclude
@@ -25,3 +25,5 @@ resolved_by: "web-app/references/react-client.md § Never"
 **Where in the skills.** `web-app/references/react-client.md`.
 
 **Checked at 1.6.0.** Still absent. Grep of `web-app/`, `mcp-ui/`, and `python/` for erasableSyntaxOnly / `exclude` of `src/api` / bufbuild found nothing, and `web-app/references/react-client.md` has no `package.json` or tsconfig content at all.
+
+**Reopened 2026-10-08.** Partly covered: the web-app template fixes the React 19 / TS 6 tsconfig problem and its README notes the `@bufbuild/protobuf` peer. Still missing: the template's `tsconfig.app.json` does not exclude `src/api`.

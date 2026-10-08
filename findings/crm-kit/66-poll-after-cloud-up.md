@@ -13,7 +13,7 @@ cluster: "4.1"
 duplicate_of: reboot-crm-43
 still_applies: no
 status: Resolved
-resolved_by: "python/references/lifecycle-reboot-cloud.md § Limits; deploy/SKILL.md § Step 6 — Verify"
+resolved_by: "python/references/lifecycle-reboot-cloud.md § Limits; deploy/SKILL.md § Step 7 — Verify"
 ---
 
 # After cloud up, poll before trusting the app or importing into it

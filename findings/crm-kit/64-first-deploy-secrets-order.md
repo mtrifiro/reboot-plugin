@@ -14,7 +14,7 @@ cluster: "4.1"
 duplicate_of: reboot-crm-40
 still_applies: no
 status: Resolved
-resolved_by: "python/references/lifecycle-secrets.md § Limits; deploy/SKILL.md § Step 2 — Deploy the backend to Reboot Cloud"
+resolved_by: "python/references/lifecycle-secrets.md § Limits; deploy/SKILL.md § Step 3 — Deploy the backend"
 ---
 
 # First deploy order: cloud up, then one secret set with every secret, then cloud up again

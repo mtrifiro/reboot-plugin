@@ -11,7 +11,7 @@ tags: [operations]
 cluster: "4.1"
 still_applies: unknown
 status: Resolved
-resolved_by: "python/references/lifecycle-reboot-cloud.md § Limits; deploy/SKILL.md § Step 6 — Verify"
+resolved_by: "python/references/lifecycle-reboot-cloud.md § Limits; deploy/SKILL.md § Step 7 — Verify"
 ---
 
 # rbt cloud up exits 0 about thirty seconds before the app serves
