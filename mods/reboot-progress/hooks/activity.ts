@@ -15,6 +15,15 @@ export type Summary = { now: string | null; done: string | null; decision: Decis
 
 export const WAITING = 'Idle'
 
+/** Now between turns while a test run the turn started is still going. */
+export const TESTING = 'Waiting for the tests to finish'
+
+/** Whether `ps -axo command=` output shows a test run: pytest, vitest, Playwright, npm test. */
+export const isTesting = (ps: string): boolean =>
+  ps
+    .split('\n')
+    .some(l => !/\bgrep\b/.test(l) && /\bpytest\b|\bvitest\b|\bplaywright\s+test\b|\bnpm\s+(run\s+)?test\b/.test(l))
+
 /** Now, from the moment a prompt is sent until its summary names the work. */
 export const STARTING = 'Working on your request'
 

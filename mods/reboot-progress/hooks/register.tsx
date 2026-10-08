@@ -4,7 +4,7 @@ import type { EngineInterface, Register } from 'claude-code'
 import type { Build, Deploy } from '../types'
 import { advanceDeploy, afterOutput, beginDeploy, deployKey, deployLine, isRunning, isShown, outcomeOf, seenIn } from './deploy'
 import { REBOOT_LOGO } from './logo'
-import { STARTING, WAITING, endTurn, fallback, isWorthSummarizing, parseSummary, startTask, summaryPrompt, textOf } from './activity'
+import { STARTING, TESTING, WAITING, endTurn, fallback, isWorthSummarizing, parseSummary, startTask, summaryPrompt, isTesting, textOf } from './activity'
 import type { Summary } from './activity'
 import {
   RUN,
@@ -33,6 +33,7 @@ const isHidden = atom({ plugin: 'reboot-progress', key: 'isHidden' } as const, f
 const root = atom({ plugin: 'reboot-progress', key: 'root' } as const, null)
 const deploy = atom({ plugin: 'reboot-progress', key: 'deploy' } as const, null)
 const clock = atom({ plugin: 'reboot-progress', key: 'clock' } as const, 0)
+const testing = atom({ plugin: 'reboot-progress', key: 'isTesting' } as const, false)
 const activity = atom({ plugin: 'reboot-progress', key: 'activity' } as const, null)
 const links = atom({ plugin: 'reboot-progress', key: 'links' } as const, { dashboard: null, app: null })
 
@@ -277,6 +278,8 @@ async function poll($: EngineInterface) {
     const was = await read($, links)
     if (was.dashboard !== h.links.dashboard || was.app !== h.links.app) await update($, links, () => h.links)
     await followDeploy($, h.ps).catch(() => undefined)
+    const isTestRun = isTesting(h.ps)
+    if (isTestRun !== (await read($, testing))) await update($, testing, () => isTestRun)
     announce($, 'app', h.backend)
     announce($, 'dashboard', h.links.dashboard !== null)
     $.ui.status(formatStatus(h))
@@ -390,6 +393,9 @@ export const register: Register = on => {
     const finished = finishTurn(b)
     if (finished !== b) await saveBuild($, finished)
     await update($, activity, shown => endTurn(shown))
+    // A turn that ends on a test run in the background is waiting on it,
+    // not idle: look now rather than at the next poll.
+    void poll($)
 
     return next(e)
   })
@@ -404,7 +410,9 @@ export const register: Register = on => {
     const site = d?.siteUrl ?? null
     const hasLinks = to.dashboard !== null || to.app !== null || cloud !== null || site !== null
     // A running deploy takes Now's place, with the time it has taken.
-    const line = isShown(d, now) ? deployLine(d!, Math.max(now, d!.stageAt)) : (act?.now ?? null)
+    // Between turns, a test run still going is what the work waits on.
+    const nowText = act?.now === WAITING && (await read($, testing)) ? TESTING : (act?.now ?? null)
+    const line = isShown(d, now) ? deployLine(d!, Math.max(now, d!.stageAt)) : nowText
     if (e.props.hasSurvey || (b === null && line === null && !hasLinks) || (await read($, isHidden))) {
       return next(e)
     }
@@ -413,8 +421,8 @@ export const register: Register = on => {
     const { Box, Button, Text } = elements
     // Svg is on every surface but the terminal's.
     const Svg = 'Svg' in elements ? elements.Svg : null
-    // The terminal has no logo, so color carries it there, in the theme's
-    // own colors to read on a light or dark background; other surfaces
+    // The terminal has no logo, so its heading names Reboot in green, the
+    // theme's own to read on a light or dark background; other surfaces
     // keep their look.
     const isTerminal = e.surface === 'terminal'
     const deployColor = !isShown(d, now) ? undefined : d!.stage === 'failed' ? 'error' : 'warning'
@@ -425,9 +433,15 @@ export const register: Register = on => {
       <Box flexDirection="column">
         <Box flexDirection="row" justifyContent="space-between">
           <Box flexGrow={1}>
-            <Text bold color={isTerminal ? 'success' : undefined}>
-              Status
-            </Text>
+            {/* The terminal, with no logo, names it in the heading, in green;
+                other surfaces keep Status here and the logo on the right. */}
+            {isTerminal ? (
+              <Text bold color="success">
+                Reboot Status
+              </Text>
+            ) : (
+              <Text bold>Status</Text>
+            )}
           </Box>
           <Box flexShrink={0} flexDirection="row" gap={1} alignItems="center">
             {/* A link's address, shown while the pointer is on its button below. */}
@@ -453,9 +467,7 @@ export const register: Register = on => {
             )}
             {/* The favicon where the surface draws Svg. */}
             {Svg && <Svg source={REBOOT_LOGO} alt="Reboot logo" width={14} height={14} />}
-            <Text bold color={isTerminal ? 'success' : undefined}>
-              Reboot
-            </Text>
+            {!isTerminal && <Text bold>Reboot</Text>}
           </Box>
         </Box>
         <Box flexDirection="row" justifyContent="space-between">

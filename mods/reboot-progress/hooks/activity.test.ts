@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'claude-code/testing'
 
-import { WAITING, endTurn, fallback, isWorthSummarizing, parseSummary, startTask, summaryPrompt, textOf } from './activity'
+import { WAITING, endTurn, isTesting, fallback, isWorthSummarizing, parseSummary, startTask, summaryPrompt, textOf } from './activity'
 
 describe('activity', () => {
   test('reads the text blocks of a row', () => {
@@ -79,5 +79,16 @@ describe('activity', () => {
     )
     expect(summaryPrompt('Writing.', 'narration', 'none', 'x')).not.toContain('assistant_last_message')
     expect(summaryPrompt('Build it.', 'narration')).toContain('by their real names')
+  })
+})
+
+describe('a test run between turns', () => {
+  test('pytest, vitest, Playwright and npm test count; servers and searches do not', () => {
+    expect(isTesting('/w/app/.venv/bin/python /w/app/.venv/bin/pytest tests -m critical')).toBe(true)
+    expect(isTesting('node /w/app/web/node_modules/.bin/vitest run')).toBe(true)
+    expect(isTesting('node /n/.bin/playwright test --project=chromium')).toBe(true)
+    expect(isTesting('npm run test')).toBe(true)
+    expect(isTesting('rbt dev run\nnpm run dev\nrbt dashboard')).toBe(false)
+    expect(isTesting('grep -r pytest .')).toBe(false)
   })
 })

@@ -9,6 +9,9 @@ const wait = (ms: number) =>
   )
 const BAND = { hasSurvey: false, isWorking: false, maxRows: 10, bodyColumns: 120 }
 
+/** The band's heading: Reboot Status on the terminal, which has no logo; Status elsewhere. */
+const HEADING = (surface: string) => (surface === 'terminal' ? /^Reboot Status$/ : /^Status$/)
+
 for (const surface of ['terminal', 'desktop'] as const) {
   test(`the band follows the build on ${surface}`, async ($, on) => {
     // Stand in for the engine beneath: every tool call succeeds.
@@ -35,7 +38,7 @@ for (const surface of ['terminal', 'desktop'] as const) {
 
     const band = await $.ui.mount({ plugin: PLUGIN, surface, component: 'AbovePrompt', props: BAND as never })
     // A static Status heading: neither the kind of work nor the stage.
-    expect((await band.findAll({ type: 'Text', text: /^Status$/ })).length).toBe(1)
+    expect((await band.findAll({ type: 'Text', text: HEADING(surface) })).length).toBe(1)
     expect(await band.findAll({ type: 'Text', text: /^(Building|Adding Feature|Fixing|Done)$/ })).toEqual([])
     expect(await band.findAll({ type: 'Text', text: /access rules|backend|screens|·/ })).toEqual([])
     // No progress bar: the task's name alone.
@@ -84,7 +87,7 @@ for (const surface of ['terminal', 'desktop'] as const) {
 
     const band = await $.ui.mount({ plugin: PLUGIN, surface, component: 'AbovePrompt', props: BAND as never })
     expect((await band.findAll({ type: 'Text', text: /Reboot/ })).length).toBe(1)
-    expect((await band.findAll({ type: 'Text', text: /^Status$/ })).length).toBe(1)
+    expect((await band.findAll({ type: 'Text', text: HEADING(surface) })).length).toBe(1)
   })
 }
 
@@ -105,9 +108,9 @@ for (const surface of ['terminal', 'desktop'] as const) {
     await wait(50) // the summary runs in the background
 
     const band = await $.ui.mount({ plugin: PLUGIN, surface, component: 'AbovePrompt', props: BAND as never })
-    expect((await band.findAll({ type: 'Text', text: /^Reboot$/ })).length).toBe(1)
+    expect((await band.findAll({ type: 'Text', text: /Reboot/ })).length).toBe(1)
     expect((await band.findAll({ type: 'Text', text: 'Fixing the sign-in button' })).length).toBe(1)
-    expect((await band.findAll({ type: 'Text', text: /^Status$/ })).length).toBe(1)
+    expect((await band.findAll({ type: 'Text', text: HEADING(surface) })).length).toBe(1)
   })
 }
 
@@ -162,7 +165,7 @@ for (const surface of ['terminal', 'desktop'] as const) {
   })
 }
 
-test('the Reboot logo draws beside Reboot where the surface has Svg', async ($, on) => {
+test('the Reboot logo draws beside Reboot where the surface has Svg; the terminal says Reboot Status', async ($, on) => {
   on('fs.exists', () => ({ value: false }) as never)
   on('ui.render', { component: 'AbovePrompt' }, ($, e) => {
     const { Box } = $.ui.resolve(e)
@@ -176,11 +179,13 @@ test('the Reboot logo draws beside Reboot where the surface has Svg', async ($, 
   expect((await desktop.findAll({ type: 'Svg' })).length).toBe(1)
   const terminal = await $.ui.mount({ plugin: PLUGIN, surface: 'terminal', component: 'AbovePrompt', props: BAND as never })
   expect(await terminal.findAll({ type: 'Svg' })).toEqual([])
-  // Where the logo can't draw, the word carries its color.
-  const [word] = await terminal.findAll({ type: 'Text', text: /^Reboot$/ })
-  expect((word as { props: { color?: string } }).props.color).toBe('success')
-  const [heading] = await terminal.findAll({ type: 'Text', text: /^Status$/ })
+  // Where the logo can't draw, the heading names Reboot, in green, and
+  // nothing sits at the right.
+  const [heading] = await terminal.findAll({ type: 'Text', text: /^Reboot Status$/ })
   expect((heading as { props: { color?: string } }).props.color).toBe('success')
+  expect(await terminal.findAll({ type: 'Text', text: /^(Reboot|Status)$/ })).toEqual([])
+  // The app keeps Status on the left and the logo and Reboot on the right.
+  expect((await desktop.findAll({ type: 'Text', text: /^Status$/ })).length).toBe(1)
   const [plain] = await desktop.findAll({ type: 'Text', text: /^Reboot$/ })
   expect((plain as { props: { color?: string } }).props.color).toBe(undefined)
 })
