@@ -28,6 +28,8 @@ EXEMPT = (
     "*/README.md",
     # Copied verbatim into every new project (copy.sh): the user's file.
     "skills/build/templates/*/FINDINGS.md",
+    "skills/build/templates/*/AGENTS.md",
+    "skills/build/templates/*/CLAUDE.md",
 )
 
 # (glob, required keys, checked in full by)

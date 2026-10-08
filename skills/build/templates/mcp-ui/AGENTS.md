@@ -1,0 +1,49 @@
+# __Title__ — map for a coding agent
+
+A Reboot app (Python backend, MCP UIs rendered in an AI host).
+Read this first; the Reboot plugin's skills have the rest. Keep this file current: when
+a file moves, a command changes or a rule is learned the hard way,
+change it here in the same commit.
+
+## Where things live
+
+| What | Where |
+|---|---|
+| API (the schema): state types, methods, errors | `api/__app__/v1/__app__.py` |
+| Servicers (the behavior) | `backend/src/servicers/__app__.py` |
+| **The one servicer list** | `backend/src/servicers/registry.py`: `main.py` and every test module take `SERVICERS` and `libraries()` from it. A new state type is added there, once |
+| The application, OAuth, boot | `backend/src/main.py` |
+| Generated code (not tracked, never edited) | `backend/api/`, `frontend/api/`; rebuilt by `uv run rbt generate` |
+| MCP UIs | `frontend/mcp/<ui>/` (one directory per `UI(path=...)`), shared `frontend/mcp/styles.css`; example prompts in `backend/src/example_prompts.py` |
+| Scenarios (the spec) | `tests/*.feature` |
+| Test modules | `tests/*_test.py`; each `scenarios(...)` names the features it runs |
+| Deploy, backup, restore | `scripts/deploy.sh`, `deploy/config`, `deploy/before-backend`, `scripts/backup.sh`, `scripts/restore.py` |
+| `rbt` config | `.rbtrc` (line-based, not YAML) |
+| Surprises about Reboot or its skills | `FINDINGS.md` |
+
+## Run, test, deploy
+
+- **Generate:** `uv run rbt generate` after every change under `api/`.
+- **Run:** with the plugin's `run` skill, never bare `rbt dev run` or
+  `npm run dev`; hand off the setup wizard at the backend root.
+- **Test:** `uv run pytest`, then `uv run mypy backend/ tests/`. The
+  suite takes minutes: run it in the foreground and wait for it.
+- **Deploy:** `scripts/deploy.sh`, with the plugin's `deploy` skill.
+
+## Rules that cost the most when broken
+
+1. **Behavior first.** A feature starts as a `@wip` `.feature` file,
+   agreed before the API or code changes.
+2. **The API only grows.** Add fields, methods, errors and types; never
+   remove or rename one, and never reword a method's `description=`
+   (it is schema). A removal Reboot allows ships only when
+   `deploy/api-exceptions.md` names it.
+3. **Back up production on its own** before a deploy: `scripts/backup.sh
+   prod` as a command by itself, not chained with `;` or piped through
+   `tail` or `grep`, which hide a failure. `deploy.sh` does this for you.
+4. **Nothing regenerates or rewrites code while the suite runs:** no
+   `rbt generate`, `rbt dev run`, dev server or file edit. Tests then
+   fail with `Method not found!` on unrelated methods.
+5. **Servicers are listed only in `registry.py`.** One missing from a
+   test's list fails only when called.
+6. **Log surprises the moment they happen** in `FINDINGS.md`.

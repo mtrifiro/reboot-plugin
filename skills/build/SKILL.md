@@ -264,6 +264,11 @@ counter) are replaced in steps 3, 5 and 6; a dual-frontend app copies
    module both take; then `initialize`, `oauth=`
    (Step 4). mcp-ui: also `backend/src/example_prompts.py` →
    `Application(example_prompts=...)` (`mcp-ui/references/project-shell.md`).
+4. `AGENTS.md` is the project's map for a coding agent, and `CLAUDE.md`
+   is one line, `@AGENTS.md`. `cp -Rn` keeps a `CLAUDE.md` the project
+   already had: move its content into `AGENTS.md` and leave
+   `@AGENTS.md` as its only line. Keep `AGENTS.md` current as you go:
+   each new state type, UI, route or script adds its row.
 
 ### Step 3 — Servicer
 
@@ -454,7 +459,8 @@ of the other (`app` skill, "At handoff").
 7. Update the scenarios (web-app: plus a web app scenario per
    click-through flow). Run `uv run mypy backend/ tests/` and
    `uv run pytest`; fix everything; ask before removing `@wip`.
-8. Not running: start it with the [`run` skill](../run/SKILL.md).
+8. If a file, command or rule changed, update `AGENTS.md` to match.
+9. Not running: start it with the [`run` skill](../run/SKILL.md).
 
 **Adding the other front door** is an update like any other: load its
 skill and make the project look like `templates/both/`.
@@ -466,6 +472,7 @@ skill and make the project look like `templates/both/`.
   would load React twice). Delete `web/`.
 - To an MCP UI: copy `both/frontend/web/`.
 Then switch the AI's methods to `mcp=Tool()`, add any `UI()` methods,
-and write the new front door's scenarios.
+write the new front door's scenarios, and take `AGENTS.md`'s
+frontend rows from `templates/both/AGENTS.md`.
    Under `rbt dev run`, `--watch` globs reload code and editing `.env`
    restarts it, so `--env-file` re-reads secrets.

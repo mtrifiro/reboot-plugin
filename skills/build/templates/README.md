@@ -53,6 +53,8 @@ Both front doors share the Python shell:
 | `.mypy.ini` | Source roots on `mypy_path`, `explicit_package_bases`, an ignore stanza naming only the generated `_rbt` module | A new API module (one stanza each) |
 | `pytest.ini` | `testpaths = tests`; `pythonpath` of `backend/src`, `backend/api`, `api` | Never |
 | `.gitignore` | Dev state, generated code, `.env`, `.deploy.env`, recordings, venv, `node_modules/`, frontend build, `.reboot/` | Never; the generated-code paths match `.rbtrc` |
+| `AGENTS.md` | The map for a coding agent: where each concept lives, how to run, test and deploy, and the rules that cost the most when broken | When a file moves, a command changes or a rule is learned; a new state type, front door or script adds its row |
+| `CLAUDE.md` | One line, `@AGENTS.md`, so Claude Code reads the same file every other agent does | Never; put everything in `AGENTS.md` |
 | `FINDINGS.md` | The agent's log of surprises (wrong or silent skill, framework behavior); the `report` skill files them upstream | Append items; never delete them |
 | `api/__app__/v1/__app__.py` | Sample pydantic API | Always: the app's own types |
 | `backend/src/servicers/__app__.py` | Sample servicers | Always |
