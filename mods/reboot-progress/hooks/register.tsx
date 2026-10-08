@@ -481,7 +481,8 @@ export const register: Register = on => {
               </Text>
             )}
           </Box>
-          <Box flexDirection="row" gap={1} flexShrink={0}>
+          {/* On the terminal, two columns between the sentence and the buttons. */}
+          <Box flexDirection="row" gap={1} flexShrink={0} marginLeft={isTerminal ? 2 : 0}>
             {to.dashboard !== null && (
               <Box hover={{ scope: 'link-dashboard' }}>
                 <Button key="dashboard" label="Dashboard ↗" onPress={() => openUrl($, to.dashboard!)} />
