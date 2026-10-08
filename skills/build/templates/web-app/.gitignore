@@ -24,3 +24,6 @@ web/dist/
 
 # Design-review screenshots, made by scripts/screenshots.py.
 screenshots/
+
+# The page-timing build (build skill, Step 5).
+web/dist-timing/

@@ -344,6 +344,40 @@ Read "Before the frontend".
    against `ui-design.md` principles 03–09 and its Never list, fix
    what fails in one pass, then pin it with a look scenario per page.
    Name any deviation from the plan's own specs in the handoff.
+6. **Responsive to the person, by Google's "good" thresholds**
+   (Core Web Vitals, and RAIL for input):
+   - **Loads:** a page's content, the data and not its skeleton, on
+     screen within 2.5 s (LCP's threshold), and the layout steady as it
+     arrives (CLS ≤ 0.1: skeletons shaped like the content).
+   - **Input:** every click and keypress answered within 100 ms, the
+     next frame ideally (RAIL; INP's threshold is 200 ms): the button
+     shows its pending state at once, the result follows. Never block
+     a handler on work the person didn't ask to wait for.
+
+   Time the loads on every route, cold and warm, against the local
+   backend with the demo data. web-app: with the app running, on the
+   production build, not Vite's dev server:
+
+   ```sh
+   (cd web && npx vite build --mode development --outDir dist-timing \
+     && npx vite preview --outDir dist-timing --port 4273 --strictPort) &
+   uv run --with playwright python scripts/page_timing.py <routes>
+   ```
+
+   (`--mode development` keeps the minified production bundle and reads
+   `.env.development`, so it calls the local backend.) Dual-frontend:
+   `npm run build` in `frontend/`, then the script alone; the backend
+   serves the build. It prints each route's worst content time, LCP
+   and CLS and exits 1 over a threshold. Locally the network is free,
+   so a slow load is the bundle (a route's code split out with
+   `lazy()`, no heavy library on the first screen) or, far more often,
+   a reader the page waits on that does too much
+   (`python/references/patterns-cross-actor-reads.md`: one fan-out
+   deep, materialize on write). Fix what you can in one pass; name each
+   route still over, with its numbers and cause, in the handoff; stop
+   the preview. MCP UIs render inside the host, which no script times:
+   hold them to the same thresholds by keeping each to one reader and a
+   small bundle.
 
 ### Step 6 — Tests
 
@@ -391,7 +425,8 @@ never bare `rbt dev run` / `npm run dev`.
   (`localhost`).
 
 **Hand off** only after the final test run has finished: the app's
-URL, the result (scenarios passed, mypy clean, anything `@blocked`),
+URL, the result (scenarios passed, mypy clean, anything `@blocked`,
+page loads against the thresholds),
 and, unless the user asked for only one front door, the one-line offer
 of the other (`app` skill, "At handoff").
 
@@ -411,7 +446,8 @@ of the other (`app` skill, "At handoff").
    methods changed.
 6. Update the frontend. mcp-ui: a new user-facing capability gets an
    example prompt in `backend/src/example_prompts.py`.
-   web-app: components and routes, markup kept accessible.
+   web-app: components and routes, markup kept accessible; time each
+   changed or new route against the thresholds (Step 5).
 7. Update the scenarios (web-app: plus a web app scenario per
    click-through flow). Run `uv run mypy backend/ tests/` and
    `uv run pytest`; fix everything; ask before removing `@wip`.
