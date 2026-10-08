@@ -176,7 +176,13 @@ test('the Reboot logo draws beside Reboot where the surface has Svg', async ($, 
   expect((await desktop.findAll({ type: 'Svg' })).length).toBe(1)
   const terminal = await $.ui.mount({ plugin: PLUGIN, surface: 'terminal', component: 'AbovePrompt', props: BAND as never })
   expect(await terminal.findAll({ type: 'Svg' })).toEqual([])
-  expect((await terminal.findAll({ type: 'Text', text: /^Reboot$/ })).length).toBe(1)
+  // Where the logo can't draw, the word carries its color.
+  const [word] = await terminal.findAll({ type: 'Text', text: /^Reboot$/ })
+  expect((word as { props: { color?: string } }).props.color).toBe('success')
+  const [heading] = await terminal.findAll({ type: 'Text', text: /^Status$/ })
+  expect((heading as { props: { color?: string } }).props.color).toBe('success')
+  const [plain] = await desktop.findAll({ type: 'Text', text: /^Reboot$/ })
+  expect((plain as { props: { color?: string } }).props.color).toBe(undefined)
 })
 
 for (const surface of ['terminal', 'desktop'] as const) {

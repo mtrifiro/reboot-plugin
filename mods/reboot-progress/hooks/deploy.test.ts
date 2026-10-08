@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'claude-code/testing'
 
-import { advanceDeploy, afterOutput, beginDeploy, deployLine, elapsed, isRunning, outcomeOf, seenIn, STARTING_MS } from './deploy'
+import { advanceDeploy, afterOutput, beginDeploy, deployLine, elapsed, FAILED_MS, isRunning, isShown, outcomeOf, seenIn, STARTING_MS } from './deploy'
 
 const PS_UP = '/usr/bin/python3 /w/app/.venv/bin/rbt cloud up --organization=acme --name=app'
 const PS_BUILD = `${PS_UP}\ndocker build --file=Dockerfile --tag=reg/app:1 .`
@@ -66,6 +66,10 @@ describe('how a deploy moves', () => {
     expect(toast).toBe('Deploy failed: Application failed health checks')
     expect(deploy?.stage).toBe('failed')
     expect(isRunning(deploy)).toBe(false)
+    // Shown a while, its time stopped where it failed, then gone.
+    expect(isShown(deploy, 1000 + FAILED_MS - 1)).toBe(true)
+    expect(deployLine(deploy!, 60000)).toBe('Deploy failed: Application failed health checks · 1s')
+    expect(isShown(deploy, 1000 + FAILED_MS)).toBe(false)
   })
 
   test('up exiting before its output is read: starting with a known URL, else deployed', () => {

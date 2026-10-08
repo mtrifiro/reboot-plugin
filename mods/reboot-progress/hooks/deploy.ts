@@ -15,6 +15,13 @@ const UP = new Set<DeployStage>(['checking', 'build', 'push', 'rollout'])
 
 export const isRunning = (d: Deploy | null): boolean => d !== null && RUNNING.has(d.stage)
 
+/** How long a failed deploy stays in the band after it fails. */
+export const FAILED_MS = 2 * 60 * 1000
+
+/** Whether the band shows the deploy: while it runs, and for a while after it fails. */
+export const isShown = (d: Deploy | null, now: number): boolean =>
+  isRunning(d) || (d?.stage === 'failed' && now - d.stageAt < FAILED_MS)
+
 /** How long a revision may answer 503 before the band stops waiting on it. */
 export const STARTING_MS = 5 * 60 * 1000
 
@@ -155,7 +162,10 @@ export function deployLine(d: Deploy, now: number): string {
     failed: `Deploy failed: ${d.failure ?? ''}`,
   }
 
-  return `${what[d.stage]} · ${elapsed(now - d.startedAt)}`
+  // A failed deploy's time stops where it failed.
+  const end = d.stage === 'failed' ? d.stageAt : now
+
+  return `${what[d.stage]} · ${elapsed(end - d.startedAt)}`
 }
 
 /** The `$.store` key holding a project's deployed URLs across sessions. */

@@ -2,7 +2,7 @@ import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
 import type { Build, Deploy } from '../types'
-import { advanceDeploy, afterOutput, beginDeploy, deployKey, deployLine, isRunning, outcomeOf, seenIn } from './deploy'
+import { advanceDeploy, afterOutput, beginDeploy, deployKey, deployLine, isRunning, isShown, outcomeOf, seenIn } from './deploy'
 import { REBOOT_LOGO } from './logo'
 import { STARTING, WAITING, endTurn, fallback, isWorthSummarizing, parseSummary, startTask, summaryPrompt, textOf } from './activity'
 import type { Summary } from './activity'
@@ -248,7 +248,8 @@ async function followDeploy($: EngineInterface, ps: string) {
   const after = advanceDeploy(d, seenIn(ps), now, isServing)
   if (after !== d) await saveDeploy($, after)
   if (after?.stage === 'live' && d?.stage === 'starting') $.ui.toast('Reboot Cloud app is live')
-  if (isRunning(after)) await update($, clock, () => now)
+  // Ticks while the band shows the deploy, and once more to take it away.
+  if (isShown(after, now) || isShown(d, await read($, clock))) await update($, clock, () => now)
 }
 
 /** Toasts when the app (its backend) or the dashboard starts or stops. */
@@ -323,8 +324,10 @@ export const register: Register = on => {
       e.tool === 'Bash' || e.tool === 'GetTask' || (e.tool === 'Read' && /\.output$/.test(String(e.file_path)))
     const text = isOutput ? (ran.text ?? '') : ''
     if (/Your API is available at|Could not deploy revision|🛑|\.pages\.dev/.test(text)) {
-      const { deploy: after, toast } = afterOutput(await read($, deploy), outcomeOf(text), await $.clock.now())
+      const now = await $.clock.now()
+      const { deploy: after, toast } = afterOutput(await read($, deploy), outcomeOf(text), now)
       await saveDeploy($, after)
+      await update($, clock, () => now)
       if (toast) $.ui.toast(toast)
     }
 
@@ -401,7 +404,7 @@ export const register: Register = on => {
     const site = d?.siteUrl ?? null
     const hasLinks = to.dashboard !== null || to.app !== null || cloud !== null || site !== null
     // A running deploy takes Now's place, with the time it has taken.
-    const line = isRunning(d) ? deployLine(d!, Math.max(now, d!.stageAt)) : (act?.now ?? null)
+    const line = isShown(d, now) ? deployLine(d!, Math.max(now, d!.stageAt)) : (act?.now ?? null)
     if (e.props.hasSurvey || (b === null && line === null && !hasLinks) || (await read($, isHidden))) {
       return next(e)
     }
@@ -410,6 +413,11 @@ export const register: Register = on => {
     const { Box, Button, Text } = elements
     // Svg is on every surface but the terminal's.
     const Svg = 'Svg' in elements ? elements.Svg : null
+    // The terminal has no logo, so color carries it there, in the theme's
+    // own colors to read on a light or dark background; other surfaces
+    // keep their look.
+    const isTerminal = e.surface === 'terminal'
+    const deployColor = !isShown(d, now) ? undefined : d!.stage === 'failed' ? 'error' : 'warning'
     // On top, a bold Status heading with Reboot at the right margin; below
     // it what is happening now on the left, the links on the right.
 
@@ -417,7 +425,9 @@ export const register: Register = on => {
       <Box flexDirection="column">
         <Box flexDirection="row" justifyContent="space-between">
           <Box flexGrow={1}>
-            <Text bold>Status</Text>
+            <Text bold color={isTerminal ? 'success' : undefined}>
+              Status
+            </Text>
           </Box>
           <Box flexShrink={0} flexDirection="row" gap={1} alignItems="center">
             {/* A link's address, shown while the pointer is on its button below. */}
@@ -443,7 +453,9 @@ export const register: Register = on => {
             )}
             {/* The favicon where the surface draws Svg. */}
             {Svg && <Svg source={REBOOT_LOGO} alt="Reboot logo" width={14} height={14} />}
-            <Text bold>Reboot</Text>
+            <Text bold color={isTerminal ? 'success' : undefined}>
+              Reboot
+            </Text>
           </Box>
         </Box>
         <Box flexDirection="row" justifyContent="space-between">
@@ -451,7 +463,11 @@ export const register: Register = on => {
               wrapping into the second and clipped past it, so the band keeps
               its height as the sentence changes; the buttons keep their width. */}
           <Box flexDirection="column" flexGrow={1} flexShrink={1} height={2} overflow="hidden">
-            {line !== null && <Text wrap="wrap">{line}</Text>}
+            {line !== null && (
+              <Text wrap="wrap" color={isTerminal ? deployColor : undefined}>
+                {line}
+              </Text>
+            )}
           </Box>
           <Box flexDirection="row" gap={1} flexShrink={0}>
             {to.dashboard !== null && (
