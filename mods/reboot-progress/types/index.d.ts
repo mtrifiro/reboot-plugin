@@ -73,6 +73,8 @@ declare module 'claude-code' {
       isMcp: boolean
       /** The test run going, so the band shows how far it is rather than Idle; null when none. */
       testRun: TestRun | null
+      /** Whether the turn waits on a test run in the foreground (a Bash call running it). */
+      isAwaitingTests: boolean
       /** The latest deploy. */
       deploy: Deploy | null
       /** The clock at the latest poll, so a running deploy's time redraws. */

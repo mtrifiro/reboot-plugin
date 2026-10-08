@@ -35,6 +35,7 @@ const isHidden = atom({ plugin: 'reboot-progress', key: 'isHidden' } as const, f
 const root = atom({ plugin: 'reboot-progress', key: 'root' } as const, null)
 const deploy = atom({ plugin: 'reboot-progress', key: 'deploy' } as const, null)
 const clock = atom({ plugin: 'reboot-progress', key: 'clock' } as const, 0)
+const awaitingTests = atom({ plugin: 'reboot-progress', key: 'isAwaitingTests' } as const, false)
 const testRun = atom({ plugin: 'reboot-progress', key: 'testRun' } as const, null)
 // The session's, not the module's: a reload mid-turn must not end the turn.
 const turnActive = atom({ plugin: 'reboot-progress', key: 'isTurnActive' } as const, false)
@@ -367,7 +368,10 @@ export const register: Register = on => {
     if (e.tool === 'Bash' && /\brbt\s+cloud\s+up\b/.test(String(e.command)) && !isRunning(await read($, deploy))) {
       await saveDeploy($, beginDeploy('checking', await $.clock.now(), await read($, deploy)))
     }
-    const ran = await next(e)
+    // A test run in the foreground is what the turn waits on until it returns.
+    const isForegroundTest = e.tool === 'Bash' && e.run_in_background !== true && isTesting(String(e.command))
+    if (isForegroundTest) await update($, awaitingTests, () => true)
+    const ran = await next(e).finally(() => (isForegroundTest ? update($, awaitingTests, () => false) : undefined))
     // Command output only: a Bash call's, or a background one's read back.
     const isOutput =
       e.tool === 'Bash' || e.tool === 'GetTask' || (e.tool === 'Read' && /\.output$/.test(String(e.file_path)))
@@ -469,11 +473,12 @@ export const register: Register = on => {
     const hasLinks = to.dashboard !== null || to.app !== null || cloud !== null || site !== null
     // A running deploy takes Now's place, with the time it has taken.
     // Between turns, a test run still going is what the work waits on.
-    // Mid-turn, how far it is follows what the turn is doing.
+    // So is a turn's Bash call running tests in the foreground. Mid-turn,
+    // a background run's progress follows what the turn is doing.
     const run = await read($, testRun)
     const status = run === null ? '' : testStatus(run)
     const nowText =
-      run !== null && act?.now === WAITING
+      run !== null && (act?.now === WAITING || (await read($, awaitingTests)))
         ? testLine(run, Math.max(now, run.startedAt))
         : act?.now && status
           ? `${act.now} (tests ${status})`

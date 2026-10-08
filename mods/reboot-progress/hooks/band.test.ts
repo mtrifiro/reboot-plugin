@@ -269,3 +269,43 @@ for (const kind of ['an MCP UI', 'a web app serving MCP'] as const) {
     expect(opened).toEqual([['open', 'https://a1b2c3.prod1.rbt.cloud/']])
   })
 }
+
+test('a turn waiting on tests in the foreground shows how long they have run', async ($, on) => {
+  let release = () => {}
+  const blocked = new Promise<void>(resolve => (release = resolve))
+  on('ui.render', { component: 'AbovePrompt' }, ($, e) => {
+    const { Box } = $.ui.resolve(e)
+
+    return h(Box, {}) as never
+  })
+  on('clock.now', () => ({ value: 1000 }) as never)
+  on('session.cwd', () => ({ value: '/w/app' }) as never)
+  on('fs.exists', ($, e) => ({ value: (e as { path: string }).path === '/w/app/.rbtrc' }) as never)
+  on('fs.read', () => ({ value: '' }) as never)
+  on('ui.status', () => ({ value: undefined }) as never)
+  on('store.get', () => ({ value: 357_100 }) as never)
+  on('model.complete', () => ({ value: { isAnswered: false, reason: 'empty-reply' } }) as never)
+  on('prompt.submit', ($, e) => ({ text: e.text }) as never)
+  // The test run shows in ps, piped, so its output says nothing.
+  on('process.run', () =>
+    ({ value: { exitCode: 0, stdout: '  9 /w/app/.venv/bin/python /w/app/.venv/bin/pytest -m critical -q', stderr: '' } }) as never,
+  )
+  on('tool.call', async ($, e) => {
+    if (/pytest/.test(String((e as { command?: string }).command))) await blocked
+    return { result: {}, text: 'ok' } as never
+  })
+
+  await $.prompt.submit({ text: 'run the critical tests' } as never)
+  // Starting the app polls, which finds the test run in ps.
+  await $.tool.call({ tool: 'Bash', command: 'uv run rbt dev run' })
+  await wait(50)
+  const tests = $.tool.call({ tool: 'Bash', command: 'timeout 900 uv run pytest -m critical -q 2>&1 | grep -E "passed|failed"' })
+  await wait(50)
+
+  const band = await $.ui.mount({ plugin: PLUGIN, surface: 'terminal', component: 'AbovePrompt', props: BAND as never })
+  expect((await band.findAll({ type: 'Text', text: 'Waiting for the tests to finish · 0s of about 6m' })).length).toBe(1)
+  release()
+  await tests
+  const after = await $.ui.mount({ plugin: PLUGIN, surface: 'terminal', component: 'AbovePrompt', props: BAND as never })
+  expect(await after.findAll({ type: 'Text', text: /Waiting for the tests/ })).toEqual([])
+})
