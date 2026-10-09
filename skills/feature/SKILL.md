@@ -1,6 +1,6 @@
 ---
 name: feature
-description: Specify a Reboot application's feature before and while building it, as a Gherkin `.feature` file the tests run and the dashboard shows. Use whenever the user asks for a new capability or a change to one ("add transfers", "users should be able to..."), and whenever they ask for a fix ("fix this", "fix all 4", a bug report, a review finding), before touching the API or code; and when converting an existing test suite to feature files. Agrees on the feature in plain English first, writes it down tagged `@wip`, runs each scenario and sees it fail, builds it with the `python` / `web-app` / `mcp-ui` skills, then iterates on scenarios with the user until they agree to take the tag off.
+description: Specify a Reboot application's capability as a Gherkin `.feature` file the tests run and the dashboard shows, before and while building it. Use whenever the user asks for a new capability or a change ("add transfers", "users should be able to..."), for a fix ("fix this", "fix all 4", a bug report, a review finding) before touching the API or code, and to convert an existing test suite. Agrees on the feature in plain English, writes it tagged `@wip`, runs each scenario red, builds it, then iterates on scenarios with the user until they agree to take the tag off.
 argument-hint: [<feature-description>]
 allowed-tools: Bash, Read, Write, Glob, Grep, Edit, AskUserQuestion
 ---
@@ -171,13 +171,10 @@ see it fail, then make it pass.
 - **Write scenarios in the built-in steps** (`testing-features.md`),
   named for the situation, under the rule it illustrates, else at the
   feature's top level.
-- **Let a factory make the id up**: `` "alice" creates an `Account` via
-  `open` ``, then `the resulting state id is saved as "account id"`, then
-  `<account id>`. Give an id only when it means something to the
-  application (a user id, a singleton the code refers to).
-- **Recall a saved value bare**: `scope_id=<account id>` passes the
-  saved value; `scope_id="<account id>"` passes the literal text
-  `<account id>` and fails elsewhere, usually as `StateNotConstructed`.
+- **Ids and saved values** as `testing-features.md` says: let a factory
+  make the id up (`the resulting state id is saved as "account id"`),
+  give one only when it means something to the application, and recall
+  a saved value bare (`<account id>`, never quoted).
 - **Give every rule at least one scenario**: a `Rule:` with no
   `Scenario:` is checked by nothing, so it stays green while false.
 - **Move `@wip` down as scenarios land**: put `@wip` on each written
@@ -210,23 +207,13 @@ the blocking is resolved.
 
 ## Converting an existing test suite
 
-When `unittest` / `IsolatedAsyncioTestCase` tests (the pre-feature-file
-layout) should become feature files — the user asks, or the `upgrade`
-skill's migration notes say so:
-
-1. Read every test; list what each shows, one English line per test.
-2. **Group into features by capability**, not servicer or test file: a
-   `test_bank.py` with deposits, withdrawals and transfers becomes
-   `deposits.feature`, `withdrawals.feature`, `transfers.feature`. When
-   the grouping is unclear, propose one and ask; never guess a business
-   rule they did not state.
-3. Do steps 1 and 2 per feature, then write scenarios from the tests'
-   calls and assertions in the built-in steps. A helper the steps can't
-   express becomes a custom step in plain Reboot code
-   (`testing-features.md`); a mock becomes an autouse fixture asserted
-   through a one-line custom step.
-4. Keep tests not about application behavior: the crash-and-recover
-   tests of `testing-failure-recovery.md` stay on the harness.
-5. Run both until the scenarios cover the tests, then delete the
-   converted tests. Leave every feature `@wip` until the user has
-   reviewed the files, then ask to remove the tags.
+When `unittest` / `IsolatedAsyncioTestCase` tests should become feature
+files (the user asks, or the `upgrade` skill's migration note says so),
+follow the steps in
+[`upgrade/migrations/1.6.0/feature-files.md`](../upgrade/migrations/1.6.0/feature-files.md):
+one English line per test, features grouped by capability (never a
+business rule the user did not state; ask), scenarios in the built-in
+steps with helpers as custom steps, the crash-and-recover tests kept on
+the harness, both suites run until the scenarios cover the tests, then
+the converted tests deleted and every feature left `@wip` until the user
+has reviewed the files.

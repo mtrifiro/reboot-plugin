@@ -1,6 +1,6 @@
 ---
 name: python
-description: 'Reboot Python framework for building transactional microservices with durable actor state; APIs are defined in pydantic Python (`reboot.api`). Use when writing Python for a Reboot application: defining APIs with reader/writer/transaction/workflow methods; changing an API of an application already deployed or holding persisted state (schema evolution rules; see `references/api-schema-evolution.md`); implementing Servicers; calling actor refs across services; scheduling work (including recurring / "cron" jobs); building durable workflows with the right call primitive (`.per_workflow(alias)` / `.per_iteration(alias)` / `.always()` for Reboot calls; `at_least_once` / `at_most_once` for external calls; `until` / `until_changes` for reactive waiting on Reboot state); calling an LLM / building an AI agent in the backend via the durable `reboot.agents.pydantic_ai.Agent`; or testing with Gherkin feature files run by `reboot.bdd` (and, for crash recovery, the `Reboot()` test harness).'
+description: Reboot Python reference catalog and the entry point for backend-only work on a Reboot app (a front-door build reads these references through the build skill instead). Use for any Python in a Reboot application; pydantic APIs (`reboot.api`) with Reader/Writer/Transaction/Workflow methods, Servicers and contexts, actor refs and cross-actor calls, scheduling and recurring jobs, durable workflows and their call primitives, the stdlib (OrderedMap, Queue, Topic, Presence, Ciphertext), LLM agents via `reboot.agents.pydantic_ai.Agent`, schema evolution for an app with persisted state, and Gherkin tests run by `reboot.bdd`.
 license: Apache-2.0
 ---
 
@@ -46,142 +46,62 @@ router `servicer-workflow.md` sends you to six parts.
 
 ## Critical Rules
 
-### Servicer Pattern
+The references hold the shapes; these are the rules most often broken,
+each with the file that explains it:
 
-Subclass the generated `<Type>.Servicer`; one `async def` per RPC, whose
-second argument's context type is set by the API factory
-(`Reader`/`Writer`/`Transaction`/`Workflow`):
-
-```python
-from chat_room.v1.chat_room_rbt import ChatRoom
-from reboot.aio.contexts import ReaderContext, WriterContext
-
-
-class ChatRoomServicer(ChatRoom.Servicer):
-    # No `authorizer()` yet: `rbt dev` warns and allows, but the
-    # `Reboot()` test harness, `rbt serve` and Reboot Cloud deny
-    # every external call. Write a real rule before the first test
-    # (references/servicer-authorizer.md).
-
-    async def messages(
-        self,
-        context: ReaderContext,
-    ) -> ChatRoom.MessagesResponse:
-        return ChatRoom.MessagesResponse(messages=self.state.messages)
-
-    async def send(
-        self,
-        context: WriterContext,
-        request: ChatRoom.SendRequest,
-    ) -> None:
-        self.state.messages.append(request.message)
-```
-
-### Application Entry
-
-`main` awaits
-`Application(servicers=[ChatRoomServicer], initialize=initialize).run()`
-under `asyncio` (`asyncio.run`); `initialize` may
-construct a singleton implicitly by its first write. Full file:
-`references/lifecycle-application-entry.md`.
-
-### The API File Drives Code Generation
-
-Never hand-edit generated `*_rbt.py`; the pydantic API file is the
-source of truth (see `references/api-pydantic.md`):
-
-```python
-from reboot.api import API, Field, Methods, Model, Reader, Type, Writer
-
-
-# Every Field needs an explicit default and a description (see Key
-# Constraints below).
-class ChatRoomState(Model):
-    messages: list[str] = Field(
-        tag=1,
-        default_factory=list,
-        description="Every message posted to the room, oldest first.",
-    )
-
-class SendRequest(Model):
-    message: str = Field(
-        tag=1,
-        default="",
-        description="The text to post, as the sender typed it.",
-    )
-
-class MessagesResponse(Model):
-    messages: list[str] = Field(
-        tag=1,
-        default_factory=list,
-        description="Every message posted so far, oldest first.",
-    )
-
-api = API(
-    ChatRoom=Type(
-        state=ChatRoomState,
-        methods=Methods(
-            messages=Reader(
-                request=None,
-                response=MessagesResponse,
-                description="Every message posted so far, oldest first.",
-                mcp=None,
-            ),
-            send=Writer(
-                request=SendRequest,
-                response=None,
-                description="Post one message to the room.",
-                mcp=None,
-            ),
-        ),
-        description="One chat room, and everyone posting into it.",
-    ),
-)
-```
-
-`rbt generate` (run by `rbt dev run`) emits `<pkg>/<v>/<name>_rbt.py`:
-the `<Type>` class with nested request/response messages, the `Servicer`
-base, and the `.ref(id)` factory.
-
-### Key Constraints
-
-- Each method's context type **must match** its factory: `Reader(...)` →
-  `ReaderContext`, `Writer(...)` → `WriterContext`, `Transaction(...)` →
-  `TransactionContext`, `Workflow(...)` → `WorkflowContext`.
-- `self.state` is read-only in `ReaderContext`; mutate it only in
-  `WriterContext` or `TransactionContext`. Workflows mutate via
-  `Service.ref().write(context, callback)`, not `self.state`, because
-  they re-execute on replay.
-- `.rbtrc` is **line-based**, not YAML: `<subcommand> <flag>` per line.
-  Use `--application-name=<app>` (canonical since Reboot 1.0.4; `--name`
-  is a deprecated alias that warns).
-- The actor's ID is `self.ref().state_id` in writer/reader/transaction
-  methods and `context.state_id` in workflows; `self.state_id` raises
-  `AttributeError`.
-- **Every `Field(tag=N)` needs an explicit zero-value default**
+- **Servicer.** Subclass the generated `<Type>.Servicer`, one `async def`
+  per method, its context type fixed by the API factory (`Reader(...)`
+  → `ReaderContext`, `Writer` → `WriterContext`, `Transaction` →
+  `TransactionContext`, `Workflow` → `WorkflowContext`). `self.state` is
+  read-only in a reader; a workflow mutates through
+  `Service.ref().write(context, callback)`, never `self.state`, because
+  it re-executes on replay (`references/api-methods.md`, the
+  `servicer-*` references).
+- **Authorizer** on every servicer before the first test: `rbt dev`
+  warns and allows, but the `Reboot()` harness, `rbt serve` and Reboot
+  Cloud deny every external call (`references/servicer-authorizer.md`).
+- **Application entry.** `main` awaits
+  `Application(servicers=SERVICERS, libraries=libraries(),
+  initialize=initialize).run()` under `asyncio.run`, the lists from
+  `servicers/registry.py`; `initialize` may construct a singleton
+  implicitly by its first write
+  (`references/lifecycle-application-entry.md`).
+- **The API file drives codegen.** Never hand-edit `*_rbt.py`: `rbt
+  generate` (run by `rbt dev run`) emits `<pkg>/<v>/<name>_rbt.py` with
+  the `<Type>` class, its nested request/response messages, the
+  `Servicer` base and the `.ref(id)` factory
+  (`references/api-pydantic.md`).
+- **Every `Field(tag=N)`** has an explicit zero-value default
   (`default=""`, `default=0`, `default=0.0`, `default=False`,
-  `default_factory=list`, etc.) in state, request/response and error
-  Models: (1) `model_construct()` drops fields without declared
-  defaults, so reads raise `AttributeError`; (2) non-zero defaults raise
-  `UserPydanticError` at import time. Set domain defaults (`turn="r"`,
-  `delay=1.0`) in the constructor method.
-- **Every `Field(tag=N)` gets a `description=`** of what the value means,
-  in every Model; the dashboard shows it beside the property and flags
-  one without. Describe the value, not the type: "What the account
-  holds, in dollars, never below zero", not "The balance (float)".
-- Cross-actor and external-service calls belong in `TransactionContext`
-  (one-shot) or `WorkflowContext` (durable, long-running).
-- **Changing an API after the app has persisted state or been
-  deployed?** Read `references/api-schema-evolution.md` first.
-- Pass actor-method arguments as **kwargs**:
-  `await ref.deposit(context, amount=10)`, not
-  `await ref.deposit(context, DepositRequest(amount=10))`.
-- **`Queue`, `Topic`, `OrderedMap`, `Presence`, `Item` are
-  stdlib actor names — use them, don't redefine them.** When a design
-  names one ("publish to a `Topic`", "members in an `OrderedMap`"),
-  _import_ the stdlib actor; a same-named pydantic `Model` forfeits its
-  durability, ordering, blocking semantics and concurrency guarantees.
-  See the stdlib table under "Implementing a Servicer".
+  `default_factory=list`) and a `description=` of what the value means,
+  in state, request/response and error Models: `model_construct()`
+  drops fields without declared defaults, so reads raise
+  `AttributeError`; a non-zero default raises `UserPydanticError` at
+  import, so domain defaults (`turn="r"`, `delay=1.0`) go in the
+  constructor method. Describe the value, not the type ("What the
+  account holds, in dollars, never below zero", not "The balance
+  (float)"); the dashboard flags a property without one.
+- **Method types.** Cross-actor and external-service calls belong in a
+  `TransactionContext` (one-shot) or `WorkflowContext` (durable,
+  long-running); every method takes an explicit `mcp=`
+  (`references/api-methods.md`).
+- **Calls.** `await ref.deposit(context, amount=10)` with kwargs, never
+  `await ref.deposit(context, DepositRequest(amount=10))`. The actor's
+  ID is `self.ref().state_id` in writer/reader/transaction methods and
+  `context.state_id` in workflows; `self.state_id` raises
+  `AttributeError` (`references/rpc-calls.md`, `references/rpc-refs.md`).
+- **`.rbtrc` is line-based**, not YAML: `<subcommand> <flag>` per line,
+  with `--application-name=<app>` (canonical since Reboot 1.0.4;
+  `--name` is a deprecated alias that warns)
+  (`references/lifecycle-rbtrc.md`).
+- **Changing an API** that has persisted state or is deployed: read
+  `references/api-schema-evolution.md` first.
+- **`Queue`, `Topic`, `OrderedMap`, `Presence`, `Item` are stdlib actor
+  names: use them, don't redefine them.** When a design names one
+  ("publish to a `Topic`", "members in an `OrderedMap`"), _import_ the
+  stdlib actor; a same-named pydantic `Model` forfeits its durability,
+  ordering, blocking semantics and concurrency guarantees (the stdlib
+  table under "Implementing a Servicer").
 
 ## How to Use
 
@@ -231,6 +151,7 @@ and Web Apps read their builder skill's lists instead. -->
 
 <!-- generated:start reading-list front-door=backend-only step=servicer -->
 - `references/lifecycle-initialize-hook.md` — Each `initialize` call runs once per app lifetime, not per boot; migrations need new aliases; failures retry forever.
+- `references/lifecycle-seeding.md` — Concurrent or one-per-record seeding hangs or takes minutes; seed in sequential batched transactions with stable per-call aliases.
 - `references/rpc-calls.md` — Writers can't call writers or transactions, even their own; caller identity doesn't travel; writer cycles deadlock; pass kwargs.
 - `references/servicer-constructor.md` — Never set initial state in `__init__`; a second call aborts `StateAlreadyConstructed`; use `Transaction(factory=True)` if it constructs others.
 - `references/servicer-reader.md` — Mutating `self.state` in a reader is silently discarded; signature must match the API; reader-to-reader calls; subscription re-runs.
@@ -241,7 +162,6 @@ and Web Apps read their builder skill's lists instead. -->
 - `references/agent-pydantic-ai.md` — only when the backend calls an LLM.
 - `references/agent-tools.md` — only when an LLM agent needs tools that read or change Reboot state.
 - `references/crypto-root-keys.md` — only when building your own key-derivation feature.
-- `references/lifecycle-seeding.md` — only when the app seeds data in `initialize` or a script.
 - `references/scheduling-basic.md` — only when deferring work with `schedule()` or `spawn(when=…)`.
 - `references/servicer-transaction.md` — only when you declared a `Transaction`.
 - `references/stdlib-ciphertext.md` — only when storing secrets or PII encrypted at rest.
@@ -263,8 +183,8 @@ etc. is almost always wrong:
 | Durable FIFO — work queue, job queue, intake      | `Queue`             | `stdlib-queue.md`        |
 | Sorted key-value with pagination / ordering       | `OrderedMap`        | `stdlib-ordered-map.md`  |
 | Presence — who's online / connected               | `Presence`          | `stdlib-presence.md`     |
-| Pubsub / broadcast / fan-out to subscribers       | `PubSub`            | `stdlib-pubsub.md`       |
-| Item builder for `Queue` / `PubSub` payloads      | `Item`              | `stdlib-item.md`         |
+| Pubsub / broadcast / fan-out to subscribers       | `Topic`             | `stdlib-pubsub.md`       |
+| Item builder for `Queue` / `Topic` payloads       | `Item`              | `stdlib-item.md`         |
 | Store OAuth access/refresh tokens from a provider | `OAuthTokenManager` | `stdlib-oauth-tokens.md` |
 | A field holds a password/API key/secret/PII       | `Ciphertext`        | `stdlib-ciphertext.md`   |
 | Encrypt at rest / crypto-shred (right-to-erasure) | `Ciphertext`        | `stdlib-ciphertext.md`   |
@@ -300,7 +220,6 @@ work (agree in English, tag `@wip`, iterate on scenarios) is the
 [`feature` skill](../feature/SKILL.md).
 
 <!-- generated:start reading-list front-door=backend-only step=tests -->
-- `references/patterns-idempotency.md` — Replayed calls return the first run's response; what `IdempotencyUncertainError` means, when retries need keys, idempotent `create`/`initialize`.
 - `references/testing-features.md` — Built-in steps match their exact spelling; who calls, `creates` / `does`, saved values, `eventually`, aborts, `@wip`, custom steps.
 - `references/testing-project-setup.md` — Missing `pytest.ini` paths break `_rbt` imports; no `pytest-asyncio`; `tests/` layout, fixture with `allowed_origins=[]`, `reboot[dev]`.
 - `references/testing-external-context.md` — only when writing custom steps or harness tests.
