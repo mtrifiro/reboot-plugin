@@ -1,6 +1,6 @@
 ---
 name: deploy
-description: Deploy a finished Reboot app to production — the backend on Reboot Cloud, and the web frontend (if the app has one) published to a static host (Cloudflare Pages) under the user's own custom domain, talking to the backend cross-origin. Every deploy runs the project's `scripts/deploy.sh`, which checks each rule (a pushed commit, an additive API, the revision serving, the live bundle) and records it; this skill installs and configures it on the first deploy, and covers the one-time parts: the production frontend build settings, the Pages project and domain, and the Application(allowed_origins=...) configuration that lets the browser reach the backend.
+description: "Deploy a finished Reboot app to production — the backend on Reboot Cloud, and the web frontend (if the app has one) published to a static host (Cloudflare Pages) under the user's own custom domain, talking to the backend cross-origin. Every deploy runs the project's `scripts/deploy.sh`, which checks each rule (a pushed commit, an additive API, the revision serving, the live bundle) and records it; this skill installs and configures it on the first deploy, and covers the one-time parts: the production frontend build settings, the Pages project and domain, and the OAuth(allowed_origins=...) configuration that lets the browser reach the backend."
 argument-hint: [<project-directory>]
 allowed-tools: Bash, Read, Write, Glob, Grep, Edit, AskUserQuestion
 ---

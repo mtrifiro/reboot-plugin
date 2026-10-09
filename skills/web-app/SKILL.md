@@ -1,6 +1,6 @@
 ---
 name: web-app
-description: Build complete Reboot Web Apps — a Reboot backend behind a standalone browser-facing React frontend, served at a normal URL (not embedded in an MCP host). Layers on top of the python skill for backend mechanics; covers what's specific to standalone Web Apps — no MCP front door, no UI() methods, normal React/Vite SPA scaffolding, and Reboot auth for browser users.
+description: Build complete Reboot Web Apps — a Reboot backend behind a standalone browser-facing React frontend, served at a normal URL (not embedded in an MCP host). Layers on the build skill's shared design-and-build flow; holds what is specific to Web Apps — the web/ Vite shell, VITE_REBOOT_URL, browser sign-in and allowed_origins — and each build step's reading list. The backend stays ready for an MCP UI.
 argument-hint: [<app-description>]
 allowed-tools: Bash, Read, Write, Glob, Grep, Edit
 ---

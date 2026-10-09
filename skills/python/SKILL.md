@@ -1,13 +1,7 @@
 ---
 name: python
-description: Reboot Python framework for building transactional microservices with durable actor state; APIs are defined in pydantic Python (`reboot.api`). Use when writing Python for a Reboot application: defining APIs with reader/writer/transaction/workflow methods; changing an API of an application already deployed or holding persisted state (schema evolution rules; see `references/api-schema-evolution.md`); implementing Servicers; calling actor refs across services; scheduling work (including recurring / "cron" jobs); building durable workflows with the right call primitive (`.per_workflow(alias)` / `.per_iteration(alias)` / `.always()` for Reboot calls; `at_least_once` / `at_most_once` for external calls; `until` / `until_changes` for reactive waiting on Reboot state); calling an LLM / building an AI agent in the backend via the durable `reboot.agents.pydantic_ai.Agent`; or testing with Gherkin feature files run by `reboot.bdd` (and, for crash recovery, the `Reboot()` test harness).
+description: 'Reboot Python framework for building transactional microservices with durable actor state; APIs are defined in pydantic Python (`reboot.api`). Use when writing Python for a Reboot application: defining APIs with reader/writer/transaction/workflow methods; changing an API of an application already deployed or holding persisted state (schema evolution rules; see `references/api-schema-evolution.md`); implementing Servicers; calling actor refs across services; scheduling work (including recurring / "cron" jobs); building durable workflows with the right call primitive (`.per_workflow(alias)` / `.per_iteration(alias)` / `.always()` for Reboot calls; `at_least_once` / `at_most_once` for external calls; `until` / `until_changes` for reactive waiting on Reboot state); calling an LLM / building an AI agent in the backend via the durable `reboot.agents.pydantic_ai.Agent`; or testing with Gherkin feature files run by `reboot.bdd` (and, for crash recovery, the `Reboot()` test harness).'
 license: Apache-2.0
-metadata:
-  author: reboot
-  version: "1.0.0"
-  organization: Reboot
-  date: April 2026
-  abstract: Comprehensive guide for building Reboot Python applications. Covers pydantic API definitions, the Servicer pattern, reader/writer/transaction/workflow contexts, the workflow call-classification model (Reboot scopes `.per_workflow` / `.per_iteration` / `.always()` for Reboot calls; external-call primitives `at_least_once` / `at_most_once`; reactive-waiting primitives `until` / `until_changes`), actor refs, scheduling, the standard library (OrderedMap, Queue, PubSub, Presence, Item), and testing.
 ---
 
 # Reboot Python Best Practices

@@ -1,6 +1,6 @@
 ---
 name: mcp-ui
-description: Build complete Reboot MCP UIs for ChatGPT, Claude, VSCode, Goose, and other MCP hosts. Layers on top of the python skill for backend mechanics; covers what's specific to MCP UIs — the User-type front door, MCP tool exposure, the UI() method type, and the full React/Vite scaffolding.
+description: Build complete Reboot MCP UIs for ChatGPT, Claude, VSCode, Goose, and other MCP hosts. Layers on the build skill's shared design-and-build flow; holds what is specific to MCP UIs — the User-type front door, MCP tool exposure, the UI() method type, the nested frontend/mcp/<name>/ bundles and the setup wizard — and each build step's reading list.
 argument-hint: [<app-description>]
 allowed-tools: Bash, Read, Write, Glob, Grep, Edit
 ---

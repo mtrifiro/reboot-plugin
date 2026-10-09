@@ -17,7 +17,7 @@ The skills work on `ia-restructure` (69 commits on top of `origin/main` 1f4f7bf,
 
 Decisions made:
 - **findings/ stays out.** It stays in the fork and reboot-findings.
-- **mods/ stays out.** That covers reboot-progress, reboot-schema-guard, reboot-activity, the marketplace wiring for them, and the `run_progress.py` test-run recorder that only the band reads.
+- **mods/ stays out.** That covers reboot-progress, reboot-schema-guard, the marketplace wiring for them, and the `run_progress.py` test-run recorder that only the band reads.
 - **Stacked PRs.** Each PR in the stack holds small commits in #186 style.
 
 What the branch looks like without findings/ and mods/: about 378 files, +28.7k/−13.5k, in roughly 35 commits that matter.
