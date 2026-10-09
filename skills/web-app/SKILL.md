@@ -10,6 +10,10 @@ allowed-tools: Bash, Read, Write, Glob, Grep, Edit
 > **Version notices:** if `rbt` reports a version mismatch or a newer
 > Reboot, follow the [upgrade skill](../upgrade/SKILL.md).
 
+A web app is one of a Reboot app's two **front doors** (the ways people
+reach its backend; [`app` skill](../app/SKILL.md)): a website in a
+browser.
+
 **Follow [`../build/SKILL.md`](../build/SKILL.md)** (design phase, state
 model assessment, build steps, update flow). This skill holds the Web
 App differences: a plain React SPA in a top-level `web/` Vite shell at a

@@ -7,7 +7,13 @@ allowed-tools: Bash, Read, Write, Glob, Grep, Edit
 
 # app — Build a Reboot Application
 
-Decide which **front door** to build first, then build it with the
+A **front door** is the way people reach a Reboot app's backend: the
+interface they use to get to its data and actions. There are two: a
+**web app** (a website in a browser) and an **MCP UI** (tools and views
+inside an AI chat app such as Claude or ChatGPT). An app can have
+either or both; the backend behind them is the same.
+
+Decide which front door to build first, then build it with the
 [`build` skill](../build/SKILL.md) plus the matching front-door skill
 (`mcp-ui`, `web-app`, or both). The backend is always ready for both.
 

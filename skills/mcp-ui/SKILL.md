@@ -10,6 +10,10 @@ allowed-tools: Bash, Read, Write, Glob, Grep, Edit
 > **Version notices:** if `rbt` reports a version mismatch or a newer
 > Reboot, follow the [upgrade skill](../upgrade/SKILL.md).
 
+An MCP UI is one of a Reboot app's two **front doors** (the ways people
+reach its backend; [`app` skill](../app/SKILL.md)): tools and views
+inside an AI chat app such as Claude or ChatGPT.
+
 **Follow [`../build/SKILL.md`](../build/SKILL.md)** (design phase, state
 model assessment, build steps, update flow). This skill holds the MCP UI
 differences: the `User`-type front door, `mcp=`, `UI()`, `oauth=`
