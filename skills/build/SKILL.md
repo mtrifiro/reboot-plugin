@@ -346,6 +346,11 @@ Read "Before the frontend".
    accessible markup (paired labels, named buttons, captioned tables)
    from the start so scenarios can drive the page; the look per
    `web-app/references/ui-design.md`.
+   Every page the browser opens has a favicon: the template's
+   `index.html` ships a placeholder, the title's initial on the accent.
+   Keep it, or swap in the brand's mark in its colors; never ship
+   without one (the browser then asks for `/favicon.ico` and logs a
+   404 on every page). An MCP UI needs none: the host frames it.
 5. `npm run build` there (sanity check). web-app: with the app
    running, `uv run --with playwright python scripts/screenshots.py <routes>` saves every
    route at desktop and phone width, light and dark; open and check each
@@ -470,7 +475,8 @@ skill and make the project look like `templates/both/`.
   `@api/…`, and point `.rbtrc`'s `generate --react=` at
   `frontend/api` (one output directory per project; two `node_modules`
   would load React twice). Delete `web/`.
-- To an MCP UI: copy `both/frontend/web/`.
+- To an MCP UI: copy `both/frontend/web/`, and fill `__Title__` and
+  `__Initial__` in its `index.html`.
 Then switch the AI's methods to `mcp=Tool()`, add any `UI()` methods,
 write the new front door's scenarios, and take `AGENTS.md`'s
 frontend rows from `templates/both/AGENTS.md`.

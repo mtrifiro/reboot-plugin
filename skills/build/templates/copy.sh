@@ -8,6 +8,7 @@
 #   <project>  kebab-case project name  (e.g. todo-list)  -> __project__
 #   <app>      snake_case API package   (e.g. todo_list)  -> __app__
 #   <Title>    human-readable title     (e.g. Todo List)  -> __Title__
+#              and its first letter, capitalized (T)     -> __Initial__
 #
 # Refuses to write into a directory that already has an `.rbtrc`.
 
@@ -23,6 +24,9 @@ DEST="$2"
 PROJECT="$3"
 APP="$4"
 TITLE="$5"
+# The title's first character, upper-cased (Unicode-aware), for the
+# placeholder favicon.
+INITIAL="$(perl -CSA -e 'print uc substr($ARGV[0], 0, 1)' "$TITLE")"
 
 TEMPLATES="$(cd "$(dirname -- "$0")" && pwd)"
 SRC="$TEMPLATES/$FRONT_DOOR"
@@ -58,9 +62,9 @@ done
 # Fill placeholders in file contents. Values go through the
 # environment so a title with spaces or punctuation needs no escaping.
 find "$DEST" -type f ! -path '*/node_modules/*' -print | while IFS= read -r file; do
-  if grep -q '__project__\|__app__\|__Title__' "$file"; then
-    T_PROJECT="$PROJECT" T_APP="$APP" T_TITLE="$TITLE" perl -pi -e \
-      's/__project__/$ENV{T_PROJECT}/g; s/__app__/$ENV{T_APP}/g; s/__Title__/$ENV{T_TITLE}/g' \
+  if grep -q '__project__\|__app__\|__Title__\|__Initial__' "$file"; then
+    T_PROJECT="$PROJECT" T_APP="$APP" T_TITLE="$TITLE" T_INITIAL="$INITIAL" perl -pi -e \
+      's/__project__/$ENV{T_PROJECT}/g; s/__app__/$ENV{T_APP}/g; s/__Title__/$ENV{T_TITLE}/g; s/__Initial__/$ENV{T_INITIAL}/g' \
       "$file"
   fi
 done

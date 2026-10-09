@@ -57,7 +57,7 @@ for FD in "${FRONT_DOORS[@]}"; do
   "$TEMPLATES/copy.sh" "$FD" "$PROJ" smoke-app smoke_app "Smoke App"
 
   step "no placeholders left"
-  if grep -rn '__project__\|__app__\|__Title__' "$PROJ"; then
+  if grep -rn '__project__\|__app__\|__Title__\|__Initial__' "$PROJ"; then
     echo "FAIL: unsubstituted placeholders" >&2
     exit 1
   fi

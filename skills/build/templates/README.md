@@ -37,6 +37,7 @@ rbt generate                   # again: the React bindings need node_modules
 | `__project__` | kebab-case project name | `todo-list` | `pyproject.toml` `name`, `.rbtrc` `--application-name`, `package.json` `name` (`__project__-web`) |
 | `__app__` | snake_case API package and module | `todo_list` | `api/__app__/v1/__app__.py`, `servicers/__app__.py`, `tests/__app___test.py`, imports (`__app__.v1.__app___rbt`), the `.mypy.ini` ignore stanza, the React import path |
 | `__Title__` | human-readable title | `Todo List` | `Application(title=...)`, `<title>`, docstrings |
+| `__Initial__` | the title's first letter, capitalized | `T` | the placeholder favicon in the web app's `index.html` |
 
 A second API module needs its own `[mypy-<pkg>.v1.<name>_rbt]` stanza
 in `.mypy.ini`.
@@ -91,7 +92,7 @@ Both front doors share the Python shell:
 | `web/vite.config.ts` | Stock config plus `resolve.dedupe`, `server.host: true`, a project port (`5273`), `strictPort: true` |
 | `web/tsconfig.json`, `tsconfig.app.json`, `tsconfig.node.json` | Split app / Vite-config projects (React 18 / TypeScript 5); `tsconfig.node.json` has `"types": ["node"]`; the app half includes `src/`, generated client and all, and type-checks cleanly at 1.6.0 |
 | `web/.env.development` | `VITE_REBOOT_URL=http://localhost:9991` |
-| `web/index.html`, `web/src/main.tsx` | Entry; `RebootClientProvider url={REBOOT_URL}`; imports Reboot's typefaces from `@fontsource` (Space Grotesk, DM Sans, DM Mono; no font CDN), then `styles.css` |
+| `web/index.html`, `web/src/main.tsx` | Entry; a placeholder favicon in `index.html` (the title's initial on the accent; swap in the brand's mark); `RebootClientProvider url={REBOOT_URL}`; imports Reboot's typefaces from `@fontsource` (Space Grotesk, DM Sans, DM Mono; no font CDN), then `styles.css` |
 | `web/src/styles.css` | Design tokens in Reboot's brand by default (cream page, navy ink and accent, sage tint, `--good`/`--warn`/`--bad` for one data dimension; light and dark; `web-app/references/ui-design.md`, "The default look"), base elements, and classes for the page anatomy (`topbar`, `page-head`, `stats`), each primary view (`filter-panel`/`list-card`/`row`, `board`, `chart`, `feed`), detail (`drawer`, `kv`) and actions (`confirm-bar`, `notice`), listed at its top (`web-app/references/ui-design.md`) |
 | `web/src/App.tsx` | Sign-in gate on `useUser()`, one reader and one mutation, laid out in the page anatomy (title block with a lede, then a stat tile) |
 | `web/src/theme.tsx` | `ThemeToggle` (light/dark, saved in `localStorage`, OS setting until chosen) and `applySavedTheme()`, called in `main.tsx` before render |
@@ -106,7 +107,7 @@ web app can find the user's counters) and the SPA beside the MCP UIs:
 
 | File | What it is |
 | --- | --- |
-| `frontend/web/index.html`, `src/main.tsx` | The SPA entry; served by the backend at `/__/frontend/web/`, so the provider's default origin is the backend (no `.env.development`) |
+| `frontend/web/index.html`, `src/main.tsx` | The SPA entry, with the placeholder favicon; served by the backend at `/__/frontend/web/`, so the provider's default origin is the backend (no `.env.development`) |
 | `frontend/web/src/App.tsx` | Sign-in gate, the user's counters as cards, `useCounter({ id })` per card; imports the one generated client via `@api/…` |
 | `frontend/styles.css` | The one shared stylesheet (the same tokens and classes as `web-app/`); `web/src/styles.css` and `mcp/styles.css` `@import` it and add only their own rules, so the front doors can't drift |
 | `frontend/web/src/styles.css`, `theme.tsx` | The web app's import of the shared sheet, and the light/dark toggle as in `web-app/` |
