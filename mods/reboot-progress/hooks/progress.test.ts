@@ -10,10 +10,8 @@ import {
   commandKind,
   describeTask,
   finishTurn,
-  formatStatus,
   listeningPorts,
   vitePortOf,
-  metricsPort,
   observe,
   skillKind,
   stepOf,
@@ -118,21 +116,12 @@ describe('links', () => {
   })
 })
 
-describe('status line', () => {
-  test('formats each process the app has', () => {
-    expect(formatStatus({ backend: true, frontend: false, tunnel: null, url: null })).toBe('rbt ●  web ○')
-    expect(
-      formatStatus({ backend: true, frontend: true, tunnel: true, url: 'https://a.trycloudflare.com' }),
-    ).toBe('rbt ●  web ●  tunnel ●  https://a.trycloudflare.com')
-  })
-
+describe('ports', () => {
   test('reads ports from lsof, .rbtrc and ps', () => {
     const lsof = 'Python 1 me 3u IPv4 0t0 TCP 127.0.0.1:9991 (LISTEN)\nnode 2 me 4u IPv6 0t0 TCP [::1]:4444 (LISTEN)'
     expect([...listeningPorts(lsof)]).toEqual([9991, 4444])
     expect(backendPort('dev run --python\n')).toBe(9991)
     expect(backendPort('dev run --port=9100\n')).toBe(9100)
-    expect(metricsPort('cloudflared tunnel --metrics localhost:4041 --url http://localhost:9991')).toBe(4041)
-    expect(metricsPort('/usr/bin/zsh')).toBe(null)
   })
 })
 

@@ -14,14 +14,12 @@ import {
   asTask,
   backendPort,
   dashboardPort,
-  formatStatus,
   beginTask,
   commandKind,
   describeTask,
   listeningPorts,
   vitePortOf,
   finishTurn,
-  metricsPort,
   observe,
   skillKind,
   taskAfterPrompt,
@@ -98,34 +96,13 @@ async function health($: EngineInterface, dir: string): Promise<Health & { links
   // Every port is this project's own: the backend's and the dashboard's
   // from its .rbtrc, Vite's from its running process (frontend/ for MCP
   // and dual apps, web/ for a web app).
-  const hasFrontend =
-    (await $.fs.exists(`${dir}/frontend/vite.config.ts`)) || (await $.fs.exists(`${dir}/web/vite.config.ts`))
   const vitePort = vitePortOf(lsof?.stdout ?? '', ps?.stdout ?? '', dir)
-
-  let tunnel: boolean | null = null
-  let url: string | null = null
-  if (isMcp) {
-    const metrics = metricsPort(ps?.stdout ?? '')
-    tunnel = metrics !== null
-    if (metrics !== null) {
-      try {
-        const res = await $.http.fetch(`http://localhost:${metrics}/quicktunnel`)
-        const hostname = res.ok ? JSON.parse(res.text).hostname : null
-        url = hostname ? `https://${hostname}` : null
-      } catch {
-        url = null
-      }
-    }
-  }
 
   const hasWebApp =
     (await $.fs.exists(`${dir}/web/src`)) || (await $.fs.exists(`${dir}/frontend/web`))
 
   return {
     backend: ports.has(backendPort(rbtrc)),
-    frontend: hasFrontend ? vitePort !== null : null,
-    tunnel,
-    url,
     links: appLinks(ports, { backendPort: backendPort(rbtrc), dashboardPort: dashboardPort(rbtrc), vitePort, hasWebApp }),
     ps: ps?.stdout ?? '',
     isMcp,
@@ -350,15 +327,12 @@ async function poll($: EngineInterface) {
   isPolling = true
   try {
     const dir = (await read($, root)) ?? (await findProject($))
-    if (!dir) {
-      $.ui.status(undefined)
-      return
-    }
-    // Each part on its own: a failed restore must not cost the status line.
+    if (!dir) return
+    // Each part on its own: a failed restore must not cost the rest.
     await restoreBuild($, dir).catch(() => undefined)
     const h = await health($, dir).catch(() => null)
     if (h === null) return
-    // The band's links first: a failed status line must not cost them.
+    // The band's links first: a later failure must not cost them.
     const was = await read($, links)
     if (was.dashboard !== h.links.dashboard || was.app !== h.links.app) await update($, links, () => h.links)
     if (h.isMcp !== (await read($, mcp))) await update($, mcp, () => h.isMcp)
@@ -367,7 +341,6 @@ async function poll($: EngineInterface) {
     await followSuite($, dir, h.ps).catch(() => undefined)
     announce($, 'app', h.backend)
     announce($, 'dashboard', h.links.dashboard !== null)
-    $.ui.status(formatStatus(h))
   } finally {
     isPolling = false
   }

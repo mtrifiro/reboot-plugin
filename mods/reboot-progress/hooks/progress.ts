@@ -1,5 +1,5 @@
 // Pure logic: which step a tool call shows, how the current task moves
-// through its steps, and how the status line reads. Kept free of `$` so the tests can call it directly.
+// through its steps, and which processes are up. Kept free of `$` so the tests can call it directly.
 
 export const STEPS = [
   'Planning', // design: agree on the app before any code
@@ -78,20 +78,6 @@ export function stepOf(call: Call): number | null {
 
 export type Health = {
   backend: boolean
-  frontend: boolean | null // null: the app has no frontend
-  tunnel: boolean | null // null: not an MCP app, so no tunnel
-  url: string | null
-}
-
-const dot = (isUp: boolean) => (isUp ? '●' : '○')
-
-export function formatStatus(h: Health): string {
-  const parts = [`rbt ${dot(h.backend)}`]
-  if (h.frontend !== null) parts.push(`web ${dot(h.frontend)}`)
-  if (h.tunnel !== null) parts.push(`tunnel ${dot(h.tunnel)}`)
-  const line = parts.join('  ')
-
-  return h.url ? `${line}  ${h.url}` : line
 }
 
 /** The band's links: the developer dashboard and the app's front end, while each serves. */
@@ -164,15 +150,6 @@ export function vitePortOf(lsof: string, ps: string, dir: string): number | null
   }
 
   return ports.length > 0 ? Math.min(...ports) : null
-}
-
-/** The cloudflared metrics port from a `ps` command line, else null. */
-export function metricsPort(ps: string): number | null {
-  const line = ps.split('\n').find(l => /cloudflared/.test(l) && /\btunnel\b/.test(l))
-  if (!line) return null
-  const m = line.match(/--metrics[= ](?:[\w.]+)?:(\d+)/)
-
-  return m ? Number(m[1]) : 4040
 }
 
 export type Task = { kind: TaskKind; step: number; isDone: boolean; isRestored?: boolean }
