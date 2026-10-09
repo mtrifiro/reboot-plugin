@@ -6,3 +6,7 @@ evals/results/
 # Written by Claude Code when it loads a mod
 mods/*/.claude-plugin/types/
 mods/*/tsconfig.json
+
+# OS and interpreter droppings
+.DS_Store
+__pycache__/
