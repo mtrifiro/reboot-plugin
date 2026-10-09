@@ -12,6 +12,7 @@ python3 tools/lint-frontmatter.py
 python3 tools/findings.py > /dev/null
 python3 tools/budget.py --readme check
 python3 tools/style-check.py
+python3 tests/hooks/auto_approve_test.py -q
 if [ "${1:-}" = "--full" ]; then
     python3 tools/check-cli.py
     python3 tools/check-symbols.py

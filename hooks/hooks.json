@@ -35,7 +35,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/auto-approve.sh"
+            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/hooks/auto-approve.sh\""
           }
         ]
       },
@@ -44,7 +44,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/auto-approve.sh"
+            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/hooks/auto-approve.sh\""
           }
         ]
       },
@@ -53,7 +53,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/auto-approve.sh"
+            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/hooks/auto-approve.sh\""
           }
         ]
       },
@@ -62,7 +62,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/auto-approve.sh"
+            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/hooks/auto-approve.sh\""
           }
         ]
       },
@@ -71,7 +71,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/auto-approve.sh"
+            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/hooks/auto-approve.sh\""
           }
         ]
       },
@@ -80,7 +80,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/auto-approve.sh"
+            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/hooks/auto-approve.sh\""
           }
         ]
       }
