@@ -14,8 +14,8 @@ reads.
 
 | Mod | What it does |
 | --- | --- |
-| [`reboot-progress`](reboot-progress/) | The band above the prompt: a Status heading, a sentence on what is being worked on now (the state types, methods and files involved), buttons that open the dashboard and the app (their addresses shown on hover), how far a test run is (its output's percentage and failures when it shows them, else its time beside the last run's of the same command), and during a deploy its stage and time so far (checking, building and pushing the image, rolling out, starting up, publishing the frontend), with toasts for how it ended and Cloud and Site buttons for where it lives (for an MCP app, an MCP button that opens its page for connecting an MCP client). A toast when the app or the dashboard starts or stops. |
-| [`reboot-schema-guard`](reboot-schema-guard/) | Refuses API edits an app with persisted dev state couldn't boot over (a deleted method, a reworded method description, a changed field tag or type, …), and holds other API edits until the model has read `api-schema-evolution.md` once per session. |
+| [`reboot-progress`](reboot-progress/) | Only in a Reboot project, or once a Reboot build, feature, fix or deploy is in view (another repository's session sees nothing and no summary is asked for). The band above the prompt: a Status heading, a sentence on what is being worked on now (the state types, methods and files involved), buttons that open the dashboard and the app (their addresses shown on hover), how far a test run is (its output's percentage and failures when it shows them, else its time beside the last run's of the same command), and during a deploy its stage and time so far (checking, building and pushing the image, rolling out, starting up, publishing the frontend), with toasts for how it ended and Cloud and Site buttons for where it lives (for an MCP app, an MCP button that opens its page for connecting an MCP client). A toast when the app or the dashboard starts or stops. |
+| [`reboot-schema-guard`](reboot-schema-guard/) | Refuses API edits an app with persisted dev state, or a production deploy in its ledger, couldn't boot over (a deleted method, a reworded or added method description, a changed field tag or type, a field without a default, a kind change on a `factory=True` constructor, …), judged from the project root; a shell command that rewrites an API file (`sed -i`, a redirect, `git checkout`) is sent through Edit or Write instead; other API edits wait until the model has read the whole of `api-schema-evolution.md`, again after each compaction. |
 
 ## The test-run file
 
@@ -82,7 +82,8 @@ A mod is a folder with a manifest, a hooks file and one hooks module:
   module's own variables start over on every reload.
 - **Fail open.** Every hook on a gating event (`tool.call`,
   `prompt.submit`) ends in `.catch(($, e, next) => next(e))`, so a bug in
-  a mod never blocks the person's work.
+  a mod never blocks the person's work (the engine skips a failed hook by
+  default; the `.catch` says so where it matters).
 
 The API is early access and may change between releases; the
 declarations Claude Code writes beside a loaded mod
@@ -129,6 +130,10 @@ tsc -p .                     # once the mod has loaded (it writes the tsconfig a
   before calling it done.
 
 ## Shipping
+
+Bump the mod's `version` in its `.claude-plugin/plugin.json` with every
+change that ships: an install keyed by version never sees an update
+otherwise.
 
 A new mod is a folder here plus an entry in
 `.claude-plugin/marketplace.json` (its `source` the folder) and its name
