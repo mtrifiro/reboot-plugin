@@ -82,11 +82,26 @@ def heading_exists(ref: str) -> bool:
     return section.lower() in headings
 
 
-def validate(item: dict, ids: set[str] | None = None) -> list[str]:
+def validate(item: dict, ids: set[str] | None = None,
+             by_id: dict[str, dict] | None = None) -> list[str]:
     errors = [f"missing {k}" for k in REQUIRED if k not in item]
     dup = item.get("duplicate_of")
     if dup and ids is not None and dup not in ids:
         errors.append(f"duplicate_of target {dup!r} does not exist")
+    # A duplicate shares its canonical item's fate: one gap, one status.
+    if dup and by_id is not None and dup in by_id:
+        canonical = by_id[dup]
+        if canonical.get("duplicate_of"):
+            errors.append(f"duplicate_of {dup!r} is itself a duplicate")
+        if item.get("status") != canonical.get("status"):
+            errors.append(f"status {item.get('status')!r} differs from canonical {dup!r} "
+                          f"({canonical.get('status')!r})")
+    for name in item.get("names", []):
+        if name.startswith("skills/"):
+            errors.append(f"names entry {name!r} is written with a skills/ prefix")
+        elif not (SKILLS / name).exists() and not (
+                name.split("/")[0] in ("bin", "hooks", "hooks-handlers", "lib") and (ROOT / name).exists()):
+            errors.append(f"names entry {name!r} does not exist under skills/ (or bin/, hooks/, lib/)")
     for key, allowed in ENUMS.items():
         if key in item and item[key] not in allowed:
             errors.append(f"{key}={item[key]!r} not in {sorted(allowed)}")
@@ -101,8 +116,9 @@ def validate(item: dict, ids: set[str] | None = None) -> list[str]:
             if not heading_exists(ref):
                 errors.append(f"resolved_by points at a missing section: {ref!r}")
         # A contradiction between two files must show both now agree; one
-        # between a file and the runtime is closed by fixing that file.
-        if ("contradiction" in item.get("tags", []) and len(item.get("names", [])) > 1
+        # between a file and the runtime is closed by fixing that file. A
+        # duplicate carries its canonical's resolution as it is.
+        if (not dup and "contradiction" in item.get("tags", []) and len(item.get("names", [])) > 1
                 and len({r.split("§")[0].strip() for r in refs}) < 2):
             errors.append("contradiction resolved without naming both sections")
     return errors
@@ -127,8 +143,9 @@ def main() -> int:
         items.append(item)
 
     ids = {i.get("id") for i in items}
+    by_id = {i.get("id"): i for i in items}
     for item in items:
-        for error in validate(item, ids):
+        for error in validate(item, ids, by_id):
             print(f"{item['_path']}: {error}")
             failures += 1
 

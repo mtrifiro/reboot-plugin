@@ -11,8 +11,8 @@ tags: [negative-space, error-text]
 cluster: ""
 duplicate_of: cineloop-33
 still_applies: no
-status: Resolved
-resolved_by: "python/references/rpc-refs.md § Never"
+status: Open
+resolved_by: ""
 ---
 
 # rpc-refs.md overpromises on missing actors: a no-factory singleton never written aborts too

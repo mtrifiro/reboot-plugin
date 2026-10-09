@@ -12,8 +12,8 @@ tags: [negative-space, contradiction]
 cluster: "4.1"
 duplicate_of: student-system-02
 still_applies: no
-status: Obsolete
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/testing-harness.md § Limits"
 ---
 
 # Reading an unconstructed OrderedMap aborts instead of reading empty

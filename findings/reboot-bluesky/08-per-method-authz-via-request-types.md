@@ -10,8 +10,8 @@ tags: [auth]
 cluster: "8.4"
 duplicate_of: student-system-06
 still_applies: unknown
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/auth-custom-predicates.md § Never; python/references/servicer-authorizer.md § Never"
 ---
 
 # Per-method authorization has to be smuggled through request types

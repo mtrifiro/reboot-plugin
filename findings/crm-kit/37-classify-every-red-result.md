@@ -11,8 +11,8 @@ tags: [testing, operations]
 cluster: "4.4"
 duplicate_of: reboot-crm-18
 still_applies: no
-status: Resolved
-resolved_by: "python/references/lifecycle-dev-loop.md § Never"
+status: Open
+resolved_by: ""
 ---
 
 # Classify every red result: no summary line with exit 0 means the run died, not that it passed

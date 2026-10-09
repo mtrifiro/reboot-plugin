@@ -12,8 +12,8 @@ tags: [negative-space, contradiction]
 cluster: "4.1"
 duplicate_of: reboot-crm-12
 still_applies: no
-status: Resolved
-resolved_by: "python/references/state-actor-decomposition.md § Never; python/references/api-schema-evolution.md § Limits"
+status: Open
+resolved_by: ""
 ---
 
 # Declare every factory as Transaction(mode=Exclusive(), factory=True); a Writer constructor cannot be promoted later

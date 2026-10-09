@@ -11,8 +11,8 @@ tags: [error-text]
 cluster: ""
 duplicate_of: reboot-air-141-13
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/rpc-refs.md § Limits"
 ---
 # A Reader named schedule fails rbt generate with only "protoc failed"
 

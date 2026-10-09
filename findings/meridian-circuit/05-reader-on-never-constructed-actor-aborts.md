@@ -12,8 +12,8 @@ tags: [negative-space, testing, frontend]
 cluster: ""
 duplicate_of: cineloop-33
 still_applies: no
-status: Resolved
-resolved_by: "python/references/rpc-refs.md § Never; python/references/react-generated-client.md § Limits"
+status: Open
+resolved_by: ""
 ---
 
 # A reader on a never-constructed actor aborts (the loser's Cart in a contested add)

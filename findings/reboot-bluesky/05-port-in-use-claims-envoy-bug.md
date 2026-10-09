@@ -10,8 +10,8 @@ tags: [error-text, operations]
 cluster: "4.4"
 duplicate_of: mattprd-03
 still_applies: unknown
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/lifecycle-rbtrc.md § Errors you will see; run/references/stop-restart-reset.md § Errors you will see"
 ---
 
 # Port-in-use error claims to be a Reboot Envoy bug

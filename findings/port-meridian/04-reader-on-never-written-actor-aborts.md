@@ -11,8 +11,8 @@ tags: [negative-space, error-text]
 cluster: "4.1"
 duplicate_of: cineloop-33
 still_applies: no
-status: Resolved
-resolved_by: "python/references/rpc-refs.md § Do this; python/references/rpc-refs.md § Never"
+status: Open
+resolved_by: ""
 ---
 
 # A reader on a never-written actor aborts StateNotConstructed, even with no factory

@@ -13,8 +13,8 @@ tags: [cost, pattern, error-text]
 cluster: ""
 duplicate_of: theater-network-08
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/patterns-cross-actor-reads.md § Do this"
 ---
 
 # Fan-out reads from inside a Reader 503 with 'ping timeout', even chunked forall, while each actor answers in 60ms

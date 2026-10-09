@@ -12,8 +12,8 @@ tags: [error-text, pattern]
 cluster: ""
 duplicate_of: theater-network-04
 still_applies: no
-status: Resolved
-resolved_by: "python/references/errors.md § Do this; python/references/servicer-workflow-calls.md § Errors you will see"
+status: Obsolete
+resolved_by: ""
 ---
 
 # Inline seats change the idempotency-alias calculus: repeated calls on one Showing need distinct aliases

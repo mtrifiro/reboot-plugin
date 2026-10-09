@@ -11,8 +11,8 @@ tags: [testing]
 cluster: "D"
 duplicate_of: reboot-crm-04
 still_applies: no
-status: Resolved
-resolved_by: "python/references/testing-features.md § Never"
+status: Open
+resolved_by: ""
 ---
 
 # Make every test double for an external call a pure function of its input

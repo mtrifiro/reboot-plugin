@@ -14,8 +14,8 @@ tags: [negative-space, contradiction, testing]
 cluster: "4.1"
 duplicate_of: student-system-08
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/servicer-writer.md § Limits; python/references/patterns-time-and-randomness.md § Do this"
 ---
 
 # Effect validation re-runs bodies: uuid4 in a constructor fails, failures look like hangs

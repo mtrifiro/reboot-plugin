@@ -12,8 +12,8 @@ tags: [cost, negative-space]
 cluster: "D"
 duplicate_of: reboot-crm-04
 still_applies: no
-status: Resolved
-resolved_by: "python/references/servicer-workflow-external.md § Limits; python/references/testing-failure-recovery.md § Counting calls: disable effect validation"
+status: Open
+resolved_by: ""
 ---
 
 # Pass effect_validation=EffectValidation.DISABLED to every at_least_once that wraps a paid call

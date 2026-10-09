@@ -11,8 +11,8 @@ tags: [contradiction, error-text, negative-space]
 cluster: "4.1"
 duplicate_of: cineloop-33
 still_applies: yes
-status: Resolved
-resolved_by: "python/references/rpc-refs.md § Do this"
+status: Open
+resolved_by: ""
 ---
 
 # A reader on a not-yet-constructed actor aborts; the reference says it returns zero state

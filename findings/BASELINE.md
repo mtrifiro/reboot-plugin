@@ -217,3 +217,22 @@ the facts the findings showed were missing.
 | mcp-ui | 48,306 | 42,897 | 43,000 | 30,000 |
 | web-app | 37,127 | 39,094 | 39,200 | 30,000 |
 | backend-only | — | 29,893 | 30,000 | 30,000 |
+
+---
+
+# Current (2026-10-09, after the ia-restructure fixes)
+
+Regenerate the numbers with `tools/findings.py`; this section is a
+dated snapshot, the earlier ones the history.
+
+| Measure | Value |
+| --- | ---: |
+| Items (projects) | 532 (32) |
+| Plugin items resolved / open / obsolete | 262 / 72 / 12 |
+| Distinct open plugin gaps (duplicates aside) | 46 |
+| Plugin items `still_applies` yes / no / unknown (at import) | 226 / 81 / 39 |
+
+Since Phase 5: every `duplicate_of` item carries its canonical's status
+(the validator checks it, and that every `names` path exists); the
+corpus is otherwise as imported. `still_applies` is the judgment made at
+import, not a live field (`findings/README.md`).

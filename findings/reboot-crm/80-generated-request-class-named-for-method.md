@@ -7,7 +7,7 @@ severity: green
 target: plugin
 names:
   - python/references/api-methods.md
-  - mcp-ui/references/gotchas.md
+  - python/references/patterns-common-gotchas.md
 tags: [negative-space, error-text]
 cluster: "4.1"
 still_applies: no

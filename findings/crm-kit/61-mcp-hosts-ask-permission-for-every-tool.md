@@ -12,8 +12,8 @@ tags: [negative-space]
 cluster: "8.4"
 duplicate_of: reboot-crm-62
 still_applies: no
-status: Resolved
-resolved_by: "mcp-ui/SKILL.md § Tool Exposure — `mcp=`"
+status: Open
+resolved_by: ""
 ---
 
 # MCP hosts ask permission for every tool, reads included: generated tools carry no readOnlyHint

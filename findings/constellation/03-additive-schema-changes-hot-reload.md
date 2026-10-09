@@ -11,8 +11,8 @@ tags: []
 cluster: "8.4"
 duplicate_of: showtime-25
 still_applies: unknown
-status: Resolved
-resolved_by: "python/references/api-schema-evolution.md § Do this"
+status: Open
+resolved_by: ""
 ---
 
 # Additive schema changes hot-reloaded over persisted dev state

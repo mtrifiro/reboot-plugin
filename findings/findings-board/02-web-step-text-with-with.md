@@ -11,8 +11,8 @@ tags: [testing, error-text]
 cluster: ""
 duplicate_of: reboot-crm-21
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/testing-web-app.md § Never"
 ---
 # A web-step text containing " with " fails "Almost: each clause goes in backticks"
 

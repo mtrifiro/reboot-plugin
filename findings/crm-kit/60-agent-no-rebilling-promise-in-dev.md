@@ -12,8 +12,8 @@ tags: [cost, contradiction]
 cluster: "D"
 duplicate_of: reboot-crm-04
 still_applies: no
-status: Resolved
-resolved_by: "python/references/agent-pydantic-ai.md § Limits; python/references/agent-tools.md § Limits"
+status: Open
+resolved_by: ""
 ---
 
 # reboot.agents.pydantic_ai.Agent's no-re-billing promise covers replay, not effect validation

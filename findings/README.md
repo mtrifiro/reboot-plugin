@@ -30,8 +30,8 @@ names:                   # skills / references the item names or implicates
   - python/references/rpc-refs.md
 tags: [negative-space]   # see vocabulary below
 cluster: "4.1"           # proposal change or task this lands in (4.1–4.6, A–G, 8.4)
-duplicate_of: ""         # id of the canonical item for the same gap; omit when canonical
-still_applies: unknown   # yes | no | unknown, checked against the skills at 1.6.0
+duplicate_of: ""         # id of the canonical item for the same gap; omit when canonical. A duplicate carries its canonical's status
+still_applies: unknown   # yes | no | unknown, as judged at import against the skills at 1.6.0 (a snapshot; `status` is current)
 status: Open             # Open | Resolved | Obsolete
 resolved_by: ""          # "<path> § <section>" once Resolved
 ---

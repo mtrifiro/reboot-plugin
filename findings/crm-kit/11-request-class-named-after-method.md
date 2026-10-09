@@ -12,8 +12,8 @@ tags: [error-text]
 cluster: "4.1"
 duplicate_of: reboot-crm-80
 still_applies: no
-status: Resolved
-resolved_by: "python/references/api-pydantic.md § Do this"
+status: Obsolete
+resolved_by: ""
 ---
 
 # Servicers type requests as <Type>.<MethodPascal>Request, whatever the model is called

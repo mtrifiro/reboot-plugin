@@ -13,8 +13,8 @@ tags: [cost, pattern]
 cluster: ""
 duplicate_of: theater-network-08
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/patterns-cross-actor-reads.md § Do this"
 ---
 
 # A reader that fans out is the wrong shape for a dashboard aggregate (48 actors: 8 s, or a 503)

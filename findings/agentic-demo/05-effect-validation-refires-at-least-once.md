@@ -11,8 +11,8 @@ tags: [negative-space, testing]
 cluster: "D"
 duplicate_of: reboot-crm-04
 still_applies: no
-status: Resolved
-resolved_by: "python/references/servicer-workflow-external.md § Limits"
+status: Open
+resolved_by: ""
 ---
 
 # Effect validation re-fires at_least_once external callables in workflows, and the re-run's result wins

@@ -6,8 +6,8 @@ reboot_version: 1.6.0
 severity: green
 target: plugin
 names:
-  - skills/run/SKILL.md
-  - skills/dashboard/SKILL.md
+  - run/SKILL.md
+  - dashboard/SKILL.md
 tags: [operations]
 cluster: ""
 still_applies: unknown
