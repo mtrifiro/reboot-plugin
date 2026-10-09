@@ -13,4 +13,8 @@ PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(cd "$(dirname -- "$0")/.." && pwd)}"
 
 NODE_DIR="$("$PLUGIN_ROOT/lib/install_node.sh")"
 
+# Record which agent session owns a long-running dev command; see
+# `lib/own.sh`. Never fails this shim.
+"$PLUGIN_ROOT/lib/own.sh" $$ npm "$@" || true
+
 exec "$NODE_DIR/bin/npm" "$@"

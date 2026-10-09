@@ -27,6 +27,10 @@ PYTHON_VERSION="3.12"
 # present) points at the same physical dir.
 PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(cd "$(dirname -- "$0")/.." && pwd)}"
 
+# Record which agent session owns a long-running dev command; see
+# `lib/own.sh`. Never fails this shim.
+"$PLUGIN_ROOT/lib/own.sh" $$ rbt "$@" || true
+
 exec "$PLUGIN_ROOT/bin/uvx" \
     "--from=reboot==$REBOOT_VERSION" \
     "--python=$PYTHON_VERSION" \

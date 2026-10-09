@@ -200,6 +200,19 @@ library) instead of inferring Reboot behavior from trial and error.
 See [`hooks-handlers/remind.sh`](hooks-handlers/remind.sh); it works
 identically in Claude Code and Codex.
 
+## Leftover dev processes
+
+An app, dashboard, dev server or tunnel keeps running after the session
+that started it exits. At session start the plugin reports any such
+group of processes, with its project, memory and CPU, and the agent
+offers to stop them; it never stops one on its own. The `uv`, `rbt`,
+`npm`, `cloudflared` and `mcpjam-inspector` shims record which Claude
+Code session started each long-running command, so a group is reported
+as soon as its session has exited and never while it is alive; one
+with no record is reported after an hour. See
+[`hooks-handlers/orphans.sh`](hooks-handlers/orphans.sh) and
+[`lib/own.sh`](lib/own.sh).
+
 ## Repository Structure
 
 ```
@@ -218,12 +231,16 @@ plugin/
 ├── install.sh                # installs for Claude Code and/or Codex
 ├── bin/                      # pinned tool shims (uv, node, rbt,
 │                             # cloudflared, …)
-├── lib/                      # shim install scripts
+├── lib/                      # shim install scripts, and own.sh
+│                             # (who started each dev process)
 ├── hooks/
 │   ├── hooks.json            # hook registrations (Claude Code + Codex)
 │   └── auto-approve.sh       # Claude Code PreToolUse auto-approval
-├── hooks-handlers/           # SessionStart PATH prepend (Claude Code)
-│                             # and the skill reminder (both CLIs)
+├── hooks-handlers/           # SessionStart PATH prepend (Claude Code),
+│                             # the skill reminder (both CLIs) and
+│                             # the leftover-process report
+├── tests/hooks/              # hook tests (tests/reboot/plugin/hooks
+│                             # upstream)
 ├── mods/                     # Claude Code mods, installed as reboot's
 │                             # dependencies (reboot-progress,
 │                             # reboot-schema-guard)

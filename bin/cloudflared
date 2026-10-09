@@ -12,4 +12,8 @@ PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(cd "$(dirname -- "$0")/.." && pwd)}"
 
 CLOUDFLARED_DIR="$("$PLUGIN_ROOT/lib/install_cloudflared.sh")"
 
+# Record which agent session owns a long-running dev command; see
+# `lib/own.sh`. Never fails this shim.
+"$PLUGIN_ROOT/lib/own.sh" $$ cloudflared "$@" || true
+
 exec "$CLOUDFLARED_DIR/cloudflared" "$@"

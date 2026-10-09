@@ -1,28 +1,40 @@
 #!/usr/bin/env sh
-# SessionStart hook: tell the model about Reboot dashboards an earlier
-# session left behind, so it can offer the developer to stop them.
+# SessionStart hook: tell the model about Reboot dev processes an
+# earlier session left running, so it can offer the developer to stop
+# them.
 #
-# `rbt dashboard` runs its backend as `python -m
-# reboot.dashboard.backend.main`, which starts Envoy (serving the
-# dashboard port) and a worker process. When the shell that ran
-# `rbt dashboard` goes away — a session closed, a terminal quit — the
-# backend is not taken down with it: it is reparented to launchd/init
-# (ppid 1) and keeps running, worker and Envoy included, no longer
-# reachable by whatever started it. A new session then starts another
-# one, and they pile up (reboot-crm, 1.6.0: three of them, ~1.5 GB,
-# each worker at ~67% CPU).
+# Every long-running dev process the skills start outlives the session
+# that started it: the app (`rbt dev run`, its `main.py`s and Envoy),
+# the dashboard (`rbt dashboard`, its backend, worker and Envoy), the
+# frontend dev server (Vite), the tunnel and the MCPJam inspector. When
+# the agent exits, the Bash tool's shell running each one is reparented
+# to launchd/init (pid 1) and keeps it alive, unreachable by whatever
+# started it. A new session starts another, and they pile up
+# (reboot-crm, 1.6.0: three dashboards, ~1.5 GB, each worker at ~67%
+# CPU; plugin-browser: a dashboard for 20 hours, an app and Vite).
 #
-# This handler only reports; it never kills. A dashboard the developer
-# started on purpose from a terminal they then closed looks the same,
-# so the decision stays with them. It reports a backend when:
+# Such a process is reported as part of a group: its topmost ancestor
+# below pid 1 and everything under it, so one line covers the shell, the
+# `uv` and `rbt` wrappers and every child. A process belongs to a live
+# owner, and is left alone, when walking up from it reaches anything
+# that is not a launcher (`sh -c`, `uv`, `rbt`, Python, Node, npm,
+# Envoy…): the `claude` process, an interactive shell in a terminal, a
+# tmux server.
 #
-#   - its parent is pid 1 (whoever started it has exited), and
-#   - it has been running for at least `min_age` seconds, so one a
-#     parallel session is just starting is left alone.
+# Ownership records settle the rest. The plugin's `uv`, `rbt`, `npm`,
+# `cloudflared` and `mcpjam-inspector` shims record each long-running
+# command's pid with the Claude Code process that started it
+# (`lib/own.sh`). A group holding a record is reported as soon as that
+# owner has exited, and never while it is alive, even when the command
+# was detached (`nohup`, `&`). A group with no record (started by hand,
+# by Codex, or before the shims kept records) is reported once its top
+# has run under pid 1 for at least `min_age` seconds, so one a parallel
+# session is just starting is left alone.
 #
-# Unlike `remind.sh`, this is not gated on a `.rbtrc`: orphans from any
-# project cost the same wherever the session starts. When there is
-# nothing to report it prints nothing.
+# This handler only reports; it never kills. Unlike `remind.sh`, it is
+# not gated on a `.rbtrc`: orphans from any project cost the same
+# wherever the session starts. When there is nothing to report it
+# prints nothing.
 
 set -eu
 
@@ -32,81 +44,196 @@ cat >/dev/null
 
 # One hour; overridable for testing.
 min_age=${REBOOT_ORPHAN_MIN_AGE:-3600}
+# Where `lib/own.sh` writes; overridable for testing.
+owners=${REBOOT_OWNERS_DIR:-$HOME/.claude/plugins/data/reboot/owners}
 
-# `ps -o etime` prints `[[dd-]hh:]mm:ss`; convert it to seconds.
-etime_seconds() {
-    printf '%s\n' "$1" | awk -F'[-:]' '{
-        n = NF; s = $n + 60 * $(n - 1)
-        if (n >= 3) s += 3600 * $(n - 2)
-        if (n >= 4) s += 86400 * $(n - 3)
-        print s
-    }'
-}
+# Each live record as `pid alive session kind`, where `alive` is 1
+# while its owner runs. A record whose pid is gone, or now names another
+# process (a different start time), is deleted.
+records=""
+if [ -d "$owners" ]; then
+    for f in "$owners"/*; do
+        [ -f "$f" ] || continue
+        pid="" started="" owner="" owner_started="" session="" kind=""
+        while IFS='=' read -r key value; do
+            case "$key" in
+                pid) pid=$value ;;
+                started) started=$value ;;
+                owner) owner=$value ;;
+                owner_started) owner_started=$value ;;
+                session) session=$value ;;
+                kind) kind=$value ;;
+            esac
+        done <"$f"
+        now=""
+        [ -n "$pid" ] && now=$(ps -o lstart= -p "$pid" 2>/dev/null || true)
+        if [ -z "$now" ] || [ "$now" != "$started" ]; then
+            rm -f "$f"
+            continue
+        fi
+        alive=0
+        if [ -n "$owner" ] &&
+            [ "$(ps -o lstart= -p "$owner" 2>/dev/null || true)" = "$owner_started" ]
+        then
+            alive=1
+        fi
+        records="${records}${pid} ${alive} ${session:--} ${kind:--}\\n"
+    done
+fi
 
-# The backend's project is its working directory: `rbt dashboard` runs
-# from the project root. `lsof` is on macOS and most Linux installs;
-# without it the project is reported as unknown.
+# One line per orphaned group: `top|age|session|pids|rss_kb|cpu|what`.
+# `-ww` keeps command lines untruncated so the patterns match.
+groups=$(ps -axww -o pid=,ppid=,etime=,rss=,%cpu=,command= | awk \
+    -v records="$records" -v min_age="$min_age" '
+    # `[[dd-]hh:]mm:ss` to seconds.
+    function seconds(t,    n, f, s) {
+        n = split(t, f, /[-:]/)
+        s = f[n] + 60 * f[n - 1]
+        if (n >= 3) s += 3600 * f[n - 2]
+        if (n >= 4) s += 86400 * f[n - 3]
+        return s
+    }
+    function base(p,    a) {
+        a = cmd[p]
+        sub(/ .*/, "", a)
+        sub(/.*\//, "", a)
+        return a
+    }
+    # A process that only exists to run the one below it.
+    function launcher(p,    a) {
+        a = base(p)
+        if (a ~ /^(sh|bash|zsh|dash)$/) return cmd[p] ~ / -c /
+        return a ~ /^(uv|uvx|rbt|npm|npx|node|esbuild|vite|cloudflared)$/ ||
+            a ~ /^python[0-9.]*$/ || a ~ /^envoy/
+    }
+    # A Reboot project root, from a path inside it.
+    function in_project(path,    d, i) {
+        d = path
+        for (i = 0; i < 3 && d != ""; i++) {
+            if (system("test -f \"" d "/.rbtrc\"") == 0) return 1
+            sub(/\/[^\/]*$/, "", d)
+        }
+        return 0
+    }
+    # What a process is, for the report; "" when not Reboot dev.
+    function what(p,    c, m) {
+        c = cmd[p]
+        if (c ~ /-m reboot\.dashboard\.backend\.main|reboot\/dashboard\/backend\/main\.py/) return "dashboard"
+        if (c ~ /\/rbt dashboard( |$)/) return "dashboard"
+        if (c ~ /\/rbt dev run( |$)/) return "app"
+        if (c ~ /\/plugins\/data\/reboot\/bin\/envoy-/) return "Envoy"
+        if (c ~ /\/plugins\/data\/reboot\/bin\/cloudflared-/) return "tunnel"
+        if (c ~ /@mcpjam\/inspector/) return "MCPJam"
+        if (p in kind && kind[p] != "-") return kind[p]
+        if (match(c, /[^ ]*\/backend\/src\/main\.py/)) {
+            m = substr(c, RSTART, RLENGTH - length("/backend/src/main.py"))
+            if (in_project(m)) return "app"
+        }
+        if (match(c, /[^ ]*\/node_modules\/(\.bin\/vite|vite\/bin\/vite\.js)/)) {
+            m = substr(c, RSTART, RLENGTH)
+            sub(/\/node_modules\/.*/, "", m)
+            if (in_project(m)) return "frontend"
+        }
+        return ""
+    }
+    BEGIN {
+        n = split(records, rows, /\n/)
+        for (i = 1; i <= n; i++) {
+            if (split(rows[i], r, / /) == 4) {
+                owned[r[1]] = r[2]; sess[r[1]] = r[3]; kind[r[1]] = r[4]
+            }
+        }
+    }
+    {
+        pid = $1
+        ppid[pid] = $2; etime[pid] = $3; rss[pid] = $4; cpu[pid] = $5
+        c = $0
+        sub(/^ *[0-9]+ +[0-9]+ +[^ ]+ +[0-9]+ +[0-9.,]+ +/, "", c)
+        cmd[pid] = c
+        kids[$2] = kids[$2] " " pid
+        order[++count] = pid
+    }
+    END {
+        for (i = 1; i <= count; i++) {
+            p = order[i]
+            if (!(p in owned) && what(p) == "") continue
+            # Walk up to the topmost ancestor below pid 1, or to a live
+            # owner.
+            q = p; top = ""; session = ""; dead = 0
+            while (1) {
+                if (q in owned) {
+                    if (owned[q] == 1) break
+                    dead = 1; session = sess[q]
+                }
+                if (!launcher(q)) break
+                par = ppid[q]
+                if (par == 1 || cmd[par] ~ /(^|\/)systemd( |$)/) { top = q; break }
+                if (!(par in ppid)) break
+                q = par
+            }
+            if (top == "" || (top in seen)) continue
+            seen[top] = 1
+            age = seconds(etime[top])
+            if (!dead && age < min_age) continue
+
+            # The group: the top and everything under it.
+            pids = ""; mem = 0; load = 0; kinds = ""
+            queue[1] = top; head = 1; tail = 1
+            while (head <= tail) {
+                x = queue[head++]
+                pids = pids (pids == "" ? "" : " ") x
+                mem += rss[x]; load += cpu[x]
+                k = what(x)
+                if (k != "" && index(" " kinds ",", " " k ",") == 0)
+                    kinds = kinds (kinds == "" ? "" : " ") k ","
+                m = split(kids[x], ch, / /)
+                for (j = 1; j <= m; j++) if (ch[j] != "") queue[++tail] = ch[j]
+            }
+            sub(/,$/, "", kinds)
+            printf "%s|%d|%s|%s|%d|%.0f|%s\n", top, age, (dead ? session : ""), pids, mem, load, kinds
+        }
+    }')
+
+[ -n "$groups" ] || exit 0
+
+# The group's project is its top process's working directory: the
+# skills start everything from the project root. `lsof` is on macOS
+# and most Linux installs; without it the project is reported unknown.
 project_of() {
     if command -v lsof >/dev/null 2>&1; then
         lsof -a -p "$1" -d cwd -Fn 2>/dev/null | sed -n 's/^n//p' | head -n 1
     fi
 }
 
-# The worker, Envoy and any other children of a backend, as a
-# space-separated list.
-children_of() {
-    ps -axo pid=,ppid= | awk -v p="$1" '$2 == p { printf "%s ", $1 }'
-}
-
-# Resident memory in KB of a pid and its children.
-rss_kb() {
-    ps -o rss= -p "$(printf '%s' "$*" | tr ' ' ',' | sed 's/,$//')" 2>/dev/null |
-        awk '{ s += $1 } END { print s + 0 }'
-}
-
-# CPU percent of a pid and its children.
-cpu_pct() {
-    ps -o %cpu= -p "$(printf '%s' "$*" | tr ' ' ',' | sed 's/,$//')" 2>/dev/null |
-        awk '{ s += $1 } END { printf "%.0f", s }'
-}
-
 lines=""
 count=0
-# `-ww` keeps the command line untruncated so the module name matches.
-for row in $(ps -axww -o pid=,ppid=,etime=,command= |
-    awk '$2 == 1 && $0 ~ /-m reboot\.dashboard\.backend\.main/ { print $1 "," $3 }')
-do
-    pid=${row%%,*}
-    age=$(etime_seconds "${row#*,}")
-    [ "$age" -ge "$min_age" ] || continue
-
-    pids="$pid $(children_of "$pid")"
-    project=$(project_of "$pid")
-    hours=$(awk -v s="$age" 'BEGIN { printf "%.1f", s / 3600 }')
-    mb=$(( $(rss_kb $pids) / 1024 ))
-    lines="${lines}- ${project:-unknown project}: pids ${pids% } (kill ${pid} first), up ${hours}h, ${mb} MB, $(cpu_pct $pids)% CPU\\n"
+old_ifs=$IFS
+IFS='
+'
+for group in $groups; do
+    IFS='|' read -r top age session pids rss cpu kinds <<EOF
+$group
+EOF
+    project=$(project_of "$top")
+    if [ "$age" -ge 3600 ]; then
+        up=$(awk -v s="$age" 'BEGIN { printf "%.1fh", s / 3600 }')
+    else
+        up="$((age / 60)) min"
+    fi
+    if [ -n "$session" ]; then
+        why="its session ${session} has exited"
+    else
+        why="no record of its session; its parent has exited"
+    fi
+    lines="${lines}- ${project:-unknown project} (${kinds:-processes}): pids ${pids}, up ${up}, $((rss / 1024)) MB, ${cpu}% CPU; ${why}\\n"
     count=$((count + 1))
 done
-
-# Processes orphaned on their own: SIGTERM to a backend stops it but
-# not its worker or Envoy (1.6.0), which keep their memory and ports.
-# Workers run `.../reboot/dashboard/backend/main.py`; Envoy is matched
-# by the plugin's own `envoy` shim path only, so an Envoy the developer
-# runs for something else is never reported.
-strays=$(ps -axww -o pid=,ppid=,command= | awk '$2 == 1 &&
-    ($0 ~ /reboot\/dashboard\/backend\/main\.py/ ||
-     $3 ~ /\/plugins\/data\/reboot\/bin\/envoy-/) { printf "%s ", $1 }')
-if [ -n "$strays" ]; then
-    lines="${lines}- leftover workers/Envoy whose dashboard is gone: pids ${strays% }, $(( $(rss_kb $strays) / 1024 )) MB, $(cpu_pct $strays)% CPU\\n"
-    count=$((count + 1))
-fi
-
-[ "$count" -gt 0 ] || exit 0
+IFS=$old_ifs
 
 # JSON-encoding needs no escaping beyond the `\n`s above: project
 # paths with a double quote or backslash are not worth the code.
 printf '{"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"'
-printf '[reboot-plugin-orphans] %s group(s) of Reboot dashboard processes from earlier sessions are still running, orphaned (parent pid 1):\\n' "$count"
+printf '[reboot-plugin-orphans] %s group(s) of Reboot dev processes from earlier sessions are still running:\\n' "$count"
 printf '%s' "$lines"
-printf 'Tell the developer about them in one or two lines, and offer to stop them. Do not stop them unless the developer says yes. To stop one, kill its first pid (SIGTERM), wait a few seconds, then kill whichever of the others are still running.'
+printf 'Tell the developer about them in one or two lines, and offer to stop them. Do not stop them unless the developer says yes. To stop a group, kill every pid listed for it (SIGTERM), wait a few seconds, then kill -9 whichever are still running.'
 printf '"}}\n'
