@@ -1,7 +1,7 @@
 {
   "name": "reboot-schema-guard",
-  "version": "0.1.0",
-  "description": "Stop API edits that would keep a Reboot app with persisted state from booting",
+  "version": "0.2.0",
+  "description": "Stop API edits (by Edit, Write or a shell command) that would keep a Reboot app with persisted dev state or a production deploy from booting",
   "types": "./types/index.d.ts",
   "author": {
     "name": "Reboot",
