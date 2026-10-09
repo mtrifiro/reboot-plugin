@@ -649,6 +649,8 @@ section. Add or change a trap in its owning reference, not here. -->
 - A green, amber or red accent in either scheme, including a brand's green highlight promoted to the dark accent
 - Font-specific `font-feature-settings` left after the font changes
 - Truncating the main text of a row or card
+- Page links in a row that scrolls with its scrollbar hidden: past the edge they are gone with no sign
+- A layout chosen from a measurement that the layout itself changes
 - Uppercase on identifiers or data (`text-transform` turns "A.14b" into "A.14B")
 <!-- generated:end -->
 

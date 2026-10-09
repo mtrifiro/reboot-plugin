@@ -95,6 +95,7 @@ Both front doors share the Python shell:
 | `web/index.html`, `web/src/main.tsx` | Entry; a placeholder favicon in `index.html` (the title's initial on the accent; swap in the brand's mark); `RebootClientProvider url={REBOOT_URL}`; imports Reboot's typefaces from `@fontsource` (Space Grotesk, DM Sans, DM Mono; no font CDN), then `styles.css` |
 | `web/src/styles.css` | Design tokens in Reboot's brand by default (cream page, navy ink and accent, sage tint, `--good`/`--warn`/`--bad` for one data dimension; light and dark; `web-app/references/ui-design.md`, "The default look"), base elements, and classes for the page anatomy (`topbar`, `page-head`, `stats`), each primary view (`filter-panel`/`list-card`/`row`, `board`, `chart`, `feed`), detail (`drawer`, `kv`) and actions (`confirm-bar`, `notice`), listed at its top (`web-app/references/ui-design.md`) |
 | `web/src/App.tsx` | Sign-in gate on `useUser()`, one reader and one mutation, laid out in the page anatomy (title block with a lede, then a stat tile) |
+| `web/src/nav.tsx` | `SiteNav`, the top bar's page links once there are two or more pages: beside the title, else a second line of their own, else that line tighter, else a ☰ menu left of the title; measured, never scrolled out of sight. `useBarHeight`, used in `App.tsx`, keeps `--topbar-h` at the bar's real height (`web-app/references/ui-design.md`, 03) |
 | `web/src/theme.tsx` | `ThemeToggle` (light/dark, saved in `localStorage`, OS setting until chosen) and `applySavedTheme()`, called in `main.tsx` before render |
 | `web/src/vite-env.d.ts` | Vite client types for `import.meta.env` |
 | `tests/conftest.py` | The look steps (phone fit, no loading text, own fonts, light and dark, no clipped labels); defined only when Playwright is installed (`python/references/testing-web-app.md`, "Look steps") |
@@ -110,7 +111,7 @@ web app can find the user's counters) and the SPA beside the MCP UIs:
 | `frontend/web/index.html`, `src/main.tsx` | The SPA entry, with the placeholder favicon; served by the backend at `/__/frontend/web/`, so the provider's default origin is the backend (no `.env.development`) |
 | `frontend/web/src/App.tsx` | Sign-in gate, the user's counters as cards, `useCounter({ id })` per card; imports the one generated client via `@api/…` |
 | `frontend/styles.css` | The one shared stylesheet (the same tokens and classes as `web-app/`); `web/src/styles.css` and `mcp/styles.css` `@import` it and add only their own rules, so the front doors can't drift |
-| `frontend/web/src/styles.css`, `theme.tsx` | The web app's import of the shared sheet, and the light/dark toggle as in `web-app/` |
+| `frontend/web/src/styles.css`, `theme.tsx`, `nav.tsx` | The web app's import of the shared sheet, the light/dark toggle and the page links as in `web-app/` |
 | `frontend/mcp/web-app-url.ts` | `webAppUrl(path)`: the web app's address for an MCP UI's "Open in web app": `VITE_WEB_APP_URL` in production, the backend's `/__/frontend/web/` in dev |
 | `scripts/screenshots.py` | As in `web-app/`, pointed at the backend's `/__/frontend/web` |
 

@@ -1,18 +1,24 @@
+import { useRef } from "react";
 import { useSignIn, useSignOut } from "@reboot-dev/reboot-react";
 import {
   type UseUserApi,
   useCounter,
   useUser,
 } from "@api/__app__/v1/__app___rbt_react";
+import { useBarHeight } from "./nav";
 import { ThemeToggle } from "./theme";
 
 export function App() {
   const { user, isLoading } = useUser();
   const signIn = useSignIn();
   const signOut = useSignOut();
+  const bar = useRef<HTMLElement>(null);
+  useBarHeight(bar);
   return (
     <>
-      <header className="topbar">
+      {/* With two or more pages, `<SiteNav items={...} />` (nav.tsx) goes
+          right after the brand. */}
+      <header className="topbar" ref={bar}>
         <span className="brand">__Title__</span>
         <span className="spacer" />
         <ThemeToggle />

@@ -95,13 +95,32 @@ a { color: var(--accent); text-decoration: none; } a:hover { text-decoration: un
 
 /* Shell: the app bar on the deep accent, then a title block saying what
    the page is for (in a brand-band, or plain at the top of main) */
-.topbar { min-height: var(--topbar-h); display: flex; align-items: center; gap: var(--space-6); padding: 10px 20px; background: var(--accent-deep); color: var(--on-deep); position: sticky; top: 0; z-index: 10; }
+.topbar { min-height: 52px; display: flex; flex-wrap: wrap; align-items: center; gap: 4px var(--space-6); padding: 10px 20px; background: var(--accent-deep); color: var(--on-deep); position: sticky; top: 0; z-index: 10; }
 .topbar .brand { font-family: var(--font-display); font-weight: 600; white-space: nowrap; }
-.topbar nav { display: flex; min-width: 0; overflow-x: auto; scrollbar-width: none; }  /* nav links scroll; the bar never widens the page */
-.topbar nav::-webkit-scrollbar { display: none; }
+/* Page links (nav.tsx): beside the title, else a second line of their
+   own, else that line tighter, else a menu button left of the title;
+   measured, never scrolled out of sight. min-height above is a number:
+   App.tsx writes the bar's real height to --topbar-h. */
+.topbar nav { display: flex; flex-wrap: wrap; min-width: 0; }  /* a nav without SiteNav wraps; never cut off */
+.nav-slot nav, .nav-measure { display: flex; flex-wrap: nowrap; }
+.nav-slot { position: relative; flex: 0 1 auto; min-width: 0; }
+.topbar[data-nav="row"] .nav-slot, .topbar[data-nav="row-tight"] .nav-slot { order: 10; flex: 1 0 100%; margin-left: -10px; }
+.topbar[data-nav="row-tight"] .nav-slot { margin-left: -6px; }
+.topbar[data-nav="menu"] .nav-slot { order: -1; flex: none; }
+.nav-measure-box { position: absolute; left: 0; top: 0; width: 0; height: 0; overflow: hidden; visibility: hidden; pointer-events: none; }  /* clipped to nothing: never widens the page */
+.nav-measure { width: max-content; }
+.nav-measure > span { white-space: nowrap; padding: 6px 10px; }
+.topbar[data-nav="row-tight"] nav a, .nav-measure.tight > span { padding-inline: 6px; }  /* never reaches the untight copy */
+.nav-menu { position: relative; }
+.nav-menu-button { display: inline-flex; align-items: center; gap: var(--space-2); }
+.topbar .nav-menu-panel { position: absolute; left: 0; top: calc(100% + 8px); min-width: 200px; display: grid; padding: var(--space-2); background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: 0 6px 20px var(--shadow); z-index: 30; }
 .topbar nav a { white-space: nowrap; color: color-mix(in srgb, var(--on-deep) 78%, transparent); padding: 6px 10px; border-radius: var(--radius-sm); }
 .topbar nav a:hover { text-decoration: none; color: var(--on-deep); }
 .topbar nav a.active { color: var(--on-deep); background: color-mix(in srgb, var(--on-deep) 14%, transparent); }
+.topbar .nav-menu-panel a { color: var(--ink); padding: 8px 10px; border-radius: var(--radius-sm); white-space: nowrap; }
+.topbar .nav-menu-panel a:hover { text-decoration: none; background: var(--bg-glow); }
+.topbar .nav-menu-panel a.active { color: var(--ink); background: var(--bg-glow); font-weight: 600; }
+@media (max-width: 480px) { .nav-menu-current { display: none; } }  /* the ☰ alone leaves the title room */
 .topbar button, .brand-band button { white-space: nowrap; flex: none; background: transparent; color: var(--on-deep); border-color: color-mix(in srgb, var(--on-deep) 35%, transparent); }
 .brand-band button.primary { background: var(--on-deep); color: var(--accent-deep); border-color: var(--on-deep); }
 .brand-band { background: var(--accent-deep); color: var(--on-deep); padding: var(--space-4) var(--space-4) calc(var(--space-8) + var(--space-6)); }
@@ -264,7 +283,7 @@ tr:hover td { background: var(--bg-glow); }
    go first so the title keeps its room */
 @media (max-width: 640px) {
   main { padding: var(--space-4); }
-  .topbar { gap: var(--space-2); padding: 8px var(--space-4); }
+  .topbar { gap: 4px var(--space-2); padding: 8px var(--space-4); }
   .page-head { align-items: stretch; }
   .row .secondary { display: none; }
   .row.row-grid { display: flex; }  /* the app's columns don't fit; the title takes the room */

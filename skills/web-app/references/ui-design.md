@@ -95,7 +95,12 @@ a question the first can't.
 `page-head` in a `brand-band` (a headline saying what the page is for, a
 `lede` on what to do here, the main action or view switch on its right)
 → summary, its tiles overlapping the band's edge → controls → content.
-Data never starts above the title block.
+Data never starts above the title block. With two or more pages, the
+template's `SiteNav` (`web/src/nav.tsx`) goes after the product name:
+the links sit beside it, then on a second line of their own, then that
+line tighter, then behind a ☰ menu left of the name, each step taken
+only when the last would cut a link off. Anything placed below the bar
+uses `--topbar-h`, which `useBarHeight` keeps at the bar's real height.
 
 **04 Summary first, simplest form.** Counts: `stats` tiles (label, big
 number, optional `meter`); a tile that filters is a `button.stat`, marked
@@ -207,6 +212,15 @@ textures); for a working tool, default to colors and type.
   green highlight promoted to the dark accent.
 - Font-specific `font-feature-settings` left after the font changes.
 - Truncating the main text of a row or card.
+- Page links in a row that scrolls with its scrollbar hidden: past the
+  edge they are gone with no sign. Wrap, then a menu (`SiteNav`).
+- A layout chosen from a measurement that the layout itself changes.
+  The bar's `min-height` read from the `--topbar-h` it writes only grew;
+  a "tight" style that reached the measured copy flipped the nav
+  between two layouts at one width. Measure what no layout touches, and
+  check by sweeping the window width both ways, 4 px at a time, then
+  holding still at each switch point: the layout changes once per
+  point and never while still.
 - Uppercase on identifiers or data (`text-transform` turns "A.14b" into
   "A.14B").
 
