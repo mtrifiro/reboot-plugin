@@ -1,6 +1,6 @@
 ---
 name: build
-description: The shared design-and-build flow every Reboot app follows — design phase, state model assessment, the build steps in dependency order (API definition → project shell → servicer → authorizers → frontend → tests → run) and the update flow. Reached from the app, mcp-ui and web-app skills; follow it together with your front-door skill, which holds what differs and the per-step reading lists.
+description: The shared design-and-build flow every Reboot app with a frontend follows, reached from the app, mcp-ui and web-app skills (use it through one of them, with that front-door skill open) — design phase, state model assessment, the build steps in dependency order (API definition → project shell → servicer → authorizers → frontend → tests → run) and the update flow for an existing app.
 argument-hint: [<app-description>]
 allowed-tools: Bash, Read, Write, Glob, Grep, Edit
 ---
@@ -27,6 +27,9 @@ Everything read is re-sent every later turn:
 - **One reference per tool call**; `cat`-ing several can exceed the
   output limit and be cut off unseen.
 - Skip a reading-list line ending *only when …* unless it holds.
+- When a reference is wrong or silent about something you hit, append
+  an item to the project's `FINDINGS.md` (format inside it) and keep
+  going; the `report` skill files them later.
 
 ### Never Read Generated or Installed Source in the Main Thread
 
@@ -56,7 +59,9 @@ method types mean regenerating a dozen or more files.
 
 0. Per capability, follow the [`feature` skill](../feature/SKILL.md):
    agree on it in plain English and write a `@wip` feature file before
-   the API exists. The design derives from those features.
+   the API exists. The design derives from those features. Its Step 2a
+   (run each scenario and see it fail) needs Step 2's project shell and
+   test module: do it right after Step 2, before Step 3.
 1. **Implement the brief literally** — the interactions the user
    described, not a pattern "common on sites like this". List any
    deviation (extra confirm step, staging area, batching) with its
@@ -137,7 +142,10 @@ The reader hasn't read the skill files; make the design stand alone:
    forces a rewrite as it grows. A collection **synced or scraped from
    an external system** (a repo's issues, a mailbox) is an entity
    collection, unbounded by definition. Signals:
-   `python/references/state-collections.md` Step 1.
+   `python/references/state-collections.md` Step 1. Counter-test: items
+   one action must change all-or-none ("hold these 4 seats") stay
+   inline on one actor, which is the lock (its "Counter-test:
+   cohesion").
 2. **`User`: always** — the MCP front door, and the owner of per-user
    state in the web app; route creation through it in both. `User`
    holds identity and the **IDs** of what it owns; unrelated concerns
@@ -181,8 +189,9 @@ The reader hasn't read the skill files; make the design stand alone:
    OAuth tokens `OAuthTokenManager`; a secret/API key/PII field
    `Ciphertext`. Never declare a `Model` with one of those names — it
    forfeits durability, ordering and concurrency guarantees. Register
-   each with its `<thing>_library()`: a missing one fails on first call
-   with an unknown-state-type error; a missing library dependency (e.g.
+   each in `servicers/registry.py`, its `<thing>.servicers()` and
+   `<thing>_library()`: a missing one fails on first call with an
+   unknown-state-type error; a missing library dependency (e.g.
    `ordered_map_library()` for `Ciphertext`) fails at startup with
    `Missing required libraries: …`.
 9. **Backend LLM calls** use the durable
@@ -351,8 +360,9 @@ Read "Before the frontend".
    Keep it, or swap in the brand's mark in its colors; never ship
    without one (the browser then asks for `/favicon.ico` and logs a
    404 on every page). An MCP UI needs none: the host frames it.
-5. `npm run build` there (sanity check). web-app: with the app
-   running, `uv run --with playwright python scripts/screenshots.py <routes>` saves every
+5. `npm run build` there (sanity check). web-app: start the app now
+   with the [`run` skill](../run/SKILL.md) (Step 7 only hands it off),
+   then `uv run --with playwright python scripts/screenshots.py <routes>` saves every
    route at desktop and phone width, light and dark; open and check each
    against `ui-design.md` principles 03–09 and its Never list, fix
    what fails in one pass, then pin it with a look scenario per page.
@@ -366,6 +376,8 @@ Read "Before the frontend".
      next frame ideally (RAIL; INP's threshold is 200 ms): the button
      shows its pending state at once, the result follows. Never block
      a handler on work the person didn't ask to wait for.
+     (`page_timing.py` doesn't measure input; hold to this by
+     construction.)
 
    Time the loads on every route, cold and warm, against the local
    backend with the demo data. web-app: with the app running, on the
@@ -388,7 +400,7 @@ Read "Before the frontend".
    (`python/references/patterns-cross-actor-reads.md`: one fan-out
    deep, materialize on write). Fix what you can in one pass; name each
    route still over, with its numbers and cause, in the handoff; stop
-   the preview. MCP UIs render inside the host, which no script times:
+   the preview (`pkill -f 'vite preview --outDir dist-timing'`). MCP UIs render inside the host, which no script times:
    hold them to the same thresholds by keeping each to one reader and a
    small bundle.
 
@@ -441,11 +453,20 @@ never bare `rbt dev run` / `npm run dev`.
 - web-app: check the page at the URL a person would type
   (`localhost`).
 
-**Hand off** only after the final test run has finished: the app's
-URL, the result (scenarios passed, mypy clean, anything `@blocked`,
-page loads against the thresholds),
-and, unless the user asked for only one front door, the one-line offer
-of the other (`app` skill, "At handoff").
+**Hand off** only after the final test run has finished, with:
+
+1. The app's URL (mcp-ui: the setup wizard's; web-app: the page's).
+2. The result: scenarios passed, anything `@blocked` and why, mypy
+   clean, each route's load against the thresholds (Step 5) with any
+   still over and its cause.
+3. Every deviation from the brief or from the plan's own specs, with
+   its reason (Design Phase, Step 5).
+4. The state types and methods as built, one line each (Step 1), when
+   they changed after the design.
+5. `AGENTS.md` current (Step 2.4), and the `FINDINGS.md` items added;
+   when there are any, offer the [`report` skill](../report/SKILL.md).
+6. Unless the user asked for only one front door, the one-line offer of
+   the other (`app` skill, "At handoff").
 
 ## Update Flow
 
@@ -484,5 +505,3 @@ skill and make the project look like `templates/both/`.
 Then switch the AI's methods to `mcp=Tool()`, add any `UI()` methods,
 write the new front door's scenarios, and take `AGENTS.md`'s
 frontend rows from `templates/both/AGENTS.md`.
-   Under `rbt dev run`, `--watch` globs reload code and editing `.env`
-   restarts it, so `--env-file` re-reads secrets.

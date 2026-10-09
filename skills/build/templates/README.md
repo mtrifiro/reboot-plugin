@@ -10,7 +10,7 @@ counter) with the app's own.
 ## Copy
 
 ```sh
-<plugin>/skills/build/templates/copy.sh <mcp-ui|web-app> <dest-dir> <project> <app> "<Title>"
+<plugin>/skills/build/templates/copy.sh <mcp-ui|web-app|both> <dest-dir> <project> <app> "<Title>"
 # e.g.
 <plugin>/skills/build/templates/copy.sh web-app . todo-list todo_list "Todo List"
 ```
@@ -100,6 +100,7 @@ Both front doors share the Python shell:
 | `web/src/vite-env.d.ts` | Vite client types for `import.meta.env` |
 | `tests/conftest.py` | The look steps (phone fit, no loading text, own fonts, light and dark, no clipped labels); defined only when Playwright is installed (`python/references/testing-web-app.md`, "Look steps") |
 | `scripts/screenshots.py` | Signs in through the Development picker and saves every route at 1440 and 375 px, light and dark, to `screenshots/` (gitignored) for the design review (`web-app/references/ui-design.md`, principle 12) |
+| `scripts/page_timing.py` | Against a production build served locally, loads every route cold and warm and prints its worst content time, LCP and CLS; exits 1 over the thresholds (build Step 5) |
 
 ### `both/` adds
 
@@ -113,7 +114,7 @@ web app can find the user's counters) and the SPA beside the MCP UIs:
 | `frontend/styles.css` | The one shared stylesheet (the same tokens and classes as `web-app/`); `web/src/styles.css` and `mcp/styles.css` `@import` it and add only their own rules, so the front doors can't drift |
 | `frontend/web/src/styles.css`, `theme.tsx`, `nav.tsx` | The web app's import of the shared sheet, the light/dark toggle and the page links as in `web-app/` |
 | `frontend/mcp/web-app-url.ts` | `webAppUrl(path)`: the web app's address for an MCP UI's "Open in web app": `VITE_WEB_APP_URL` in production, the backend's `/__/frontend/web/` in dev |
-| `scripts/screenshots.py` | As in `web-app/`, pointed at the backend's `/__/frontend/web` |
+| `scripts/screenshots.py`, `scripts/page_timing.py` | As in `web-app/`, pointed at the backend's `/__/frontend/web` |
 
 `frontend/vite.config.ts` and `build.mjs` already serve and build
 `web/`. `tools/templates-smoke.sh` builds this template and runs its
