@@ -1,6 +1,6 @@
 ---
 name: mcp-ui
-description: Build complete Reboot MCP UIs for ChatGPT, Claude, VSCode, Goose, and other MCP hosts. Layers on the build skill's shared design-and-build flow; holds what is specific to MCP UIs — the User-type front door, MCP tool exposure, the UI() method type, the nested frontend/mcp/<name>/ bundles and the setup wizard — and each build step's reading list.
+description: Build complete Reboot MCP UIs for ChatGPT, Claude, VSCode, Goose, and other MCP hosts. Use when the prompt names an MCP host or runtime (MCP, ChatGPT, Claude, VSCode, Goose, a tool for an LLM or agent). Layers on the build skill's shared design-and-build flow; holds what is specific to MCP UIs — the User-type front door, MCP tool exposure, the UI() method type, the nested frontend/mcp/<name>/ bundles and the setup wizard — and each build step's reading list.
 argument-hint: [<app-description>]
 allowed-tools: Bash, Read, Write, Glob, Grep, Edit
 ---
@@ -54,7 +54,7 @@ restart the agent.
 entity's `Type` with `request=None`; only UIs about the user as a whole
 go on `User`. The most common scaffolding mistake is a per-entity UI on
 `User` with the ID in a `request=<Model>` field
-(`references/api-method-types.md`, "UI Placement"). The second is `User`
+(`references/api-method-types.md`, "Where a `UI()` goes"). The second is `User`
 accreting unrelated concerns (auth/session, persona, background-engine
 config, a UI cache): writers on one actor serialize, so a login contends
 with a persona edit — split each into its own `Type`
@@ -119,7 +119,7 @@ the root-page wizard offers a fresh user.
   least one.
 - Put them in `backend/src/example_prompts.py`, passed to
   `Application(example_prompts=...)`; shapes and a worked set in
-  `references/project-shell.md` (`mcp-ui-counter` is canonical).
+  `references/project-shell.md` (the template's `example_prompts.py` is canonical).
 
 ### Setup Wizard and MCPJam
 
@@ -133,50 +133,17 @@ the wizard.
 
 ## Project Structure
 
-```
-<project>/
-├── .python-version
-├── .rbtrc                   # Line-based config (NOT YAML!)
-├── .mypy.ini                # Type-check config (python skill)
-├── pyproject.toml           # Python deps (uv)
-├── pytest.ini               # testpaths: tests; pythonpath: backend/src backend/api api
-├── api/
-│   └── <pkg>/v1/
-│       └── <name>.py        # API definition
-├── backend/
-│   └── src/
-│       ├── main.py          # Application entrypoint
-│       ├── example_prompts.py  # Wizard example prompts
-│       └── servicers/
-│           └── <name>.py    # Servicer implementation
-├── tests/
-│   ├── <capability>.feature  # One feature per capability
-│   └── <name>_test.py       # `application` fixture + `scenarios(...)`
-└── frontend/
-    ├── package.json
-    ├── build.mjs            # Discovers + builds every UI
-    ├── tsconfig.json
-    ├── tsconfig.app.json
-    ├── tsconfig.node.json
-    ├── vite.config.ts       # Nested output: dist/mcp/<name>/index.html
-    ├── api/                 # Generated React bindings (rbt generate)
-    ├── mcp/
-    │   └── <ui-name>/
-    │       ├── index.html
-    │       ├── index.css        # Theme variables
-    │       ├── main.tsx         # RebootClientProvider entry
-    │       ├── App.tsx          # React component
-    │       └── App.module.css
-    └── web/                 # Optional standalone browser SPA
-        ├── index.html
-        └── src/
-            ├── main.tsx
-            └── App.tsx
-```
-
-Starting files: `../build/templates/mcp-ui/`. Each UI builds to
-`frontend/dist/mcp/<ui-name>/index.html`, where the host discovers it;
-flattening that output breaks discovery.
+The template's tree (`../build/templates/mcp-ui/`, each file in its
+README): the Python shell (`api/`, `backend/src/main.py`,
+`backend/src/servicers/registry.py` and the servicers,
+`backend/src/example_prompts.py`, `tests/`, `scripts/`, `deploy/`,
+`AGENTS.md`), and `frontend/` with one bundle per UI under
+`frontend/mcp/<name>/` (`index.html`, `main.tsx`, `App.tsx`,
+`App.module.css`, `index.css`), the shared `frontend/mcp/styles.css` and
+`host-theme.ts`, and the generated client in `frontend/api/`. Each UI
+builds to `frontend/dist/mcp/<ui-name>/index.html`, where the host
+discovers it; flattening that output breaks discovery. A dual-frontend
+app adds the SPA in `frontend/web/` (`../build/templates/both/`).
 
 ## Which References to Read, and When
 
@@ -196,6 +163,10 @@ by tools/gen-index.py. Edit the frontmatter, not the lists. -->
 > `frontend/mcp/<name>/` bundles an MCP host loads. Use
 > [`references/react-scaffolding.md`](references/react-scaffolding.md)
 > and [`references/react-app-tsx.md`](references/react-app-tsx.md).
+> Sole exception:
+> [`web-app/references/ui-design.md`](../web-app/references/ui-design.md)
+> holds the design principles every front door follows (build's design
+> phase names 01–02; `references/ui-design.md` names the rest).
 
 **Before the API definition:**
 
@@ -228,6 +199,7 @@ by tools/gen-index.py. Edit the frontmatter, not the lists. -->
 <!-- generated:start reading-list front-door=mcp-ui step=servicer -->
 - `references/servicer-patterns.md` — Never await a workflow from `UserServicer.create_<X>`, `.schedule()` it; the Transaction calls `<X>.create(context)`, returns `state_id`; workflow-body idioms.
 - `python/references/lifecycle-initialize-hook.md` — Each `initialize` call runs once per app lifetime, not per boot; migrations need new aliases; failures retry forever.
+- `python/references/lifecycle-seeding.md` — Concurrent or one-per-record seeding hangs or takes minutes; seed in sequential batched transactions with stable per-call aliases.
 - `python/references/rpc-calls.md` — Writers can't call writers or transactions, even their own; caller identity doesn't travel; writer cycles deadlock; pass kwargs.
 - `python/references/servicer-constructor.md` — Never set initial state in `__init__`; a second call aborts `StateAlreadyConstructed`; use `Transaction(factory=True)` if it constructs others.
 - `python/references/servicer-reader.md` — Mutating `self.state` in a reader is silently discarded; signature must match the API; reader-to-reader calls; subscription re-runs.
@@ -238,7 +210,6 @@ by tools/gen-index.py. Edit the frontmatter, not the lists. -->
 - `python/references/agent-pydantic-ai.md` — only when the backend calls an LLM.
 - `python/references/agent-tools.md` — only when an LLM agent needs tools that read or change Reboot state.
 - `python/references/crypto-root-keys.md` — only when building your own key-derivation feature.
-- `python/references/lifecycle-seeding.md` — only when the app seeds data in `initialize` or a script.
 - `python/references/scheduling-basic.md` — only when deferring work with `schedule()` or `spawn(when=…)`.
 - `python/references/servicer-transaction.md` — only when you declared a `Transaction`.
 - `python/references/stdlib-ciphertext.md` — only when storing secrets or PII encrypted at rest.
@@ -258,10 +229,10 @@ servicer before the first test):
 - `python/references/auth-allow-deny.md` — `allow()` to silence warnings, pass tests or mark internal methods makes them public; `deny()` blocks everyone; `return allow()`.
 - `python/references/auth-allow-if.md` — `is_app_internal` in `any` turns anonymous `Unauthenticated` into `PermissionDenied`; `allow_if(all=[...])` or `allow_if(any=[...])`, never both or nested; `all` short-circuits.
 - `python/references/auth-built-in-predicates.md` — Token predicates alone deny servicer-to-servicer calls; `has_verified_token`, `is_app_internal`, `state_id_is_user_id` and compositions.
-- `references/auth-oauth-providers.md` — Switching providers later strands user state; `OAuthProviderByEnvironment(dev=Development(), prod=Google(...))`, credentials as secrets, `/__/oauth/callback`.
 - `python/references/servicer-authorizer.md` — Without real rules every external call is denied; identity doesn't cross servicer calls; tokenless paths; `oauth=` vs `token_verifier=`.
 - `python/references/auth-custom-predicates.md` — Predicates must be keyword-only with `**kwargs` and check `context.app_internal` first; per-method rules via `<Type>.Authorizer(method=rule, _default=rule)`.
 - `python/references/auth-external-api-calls.md` — only when calling an external service's API as the user.
+- `references/auth-oauth-providers.md` — only when you pick a real (production) provider.
 - `references/auth-store-tokens.md` — only when the app acts as the user at its own identity provider's API.
 - `python/references/stdlib-oauth-tokens.md` — only when storing a user's OAuth tokens for an external service.
 - `python/references/auth-claims.md` — only when you use claims or `set_claims`.
@@ -281,7 +252,6 @@ servicer before the first test):
 **Before the tests:**
 
 <!-- generated:start reading-list front-door=mcp-ui step=tests -->
-- `python/references/patterns-idempotency.md` — Replayed calls return the first run's response; what `IdempotencyUncertainError` means, when retries need keys, idempotent `create`/`initialize`.
 - `python/references/testing-features.md` — Built-in steps match their exact spelling; who calls, `creates` / `does`, saved values, `eventually`, aborts, `@wip`, custom steps.
 - `python/references/testing-project-setup.md` — Missing `pytest.ini` paths break `_rbt` imports; no `pytest-asyncio`; `tests/` layout, fixture with `allowed_origins=[]`, `reboot[dev]`.
 - `python/references/testing-external-context.md` — only when writing custom steps or harness tests.

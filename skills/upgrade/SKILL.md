@@ -18,7 +18,7 @@ The single authoritative upgrade procedure. Triggers:
 
 Never start an upgrade without the developer's approval. Order is
 fixed: make the **plugin** current (steps 1–2), then bring the
-**application** to the plugin's version (steps 3–8).
+**application** to the plugin's version (steps 3–9).
 
 ## Step 1 — Is this plugin itself up to date?
 
@@ -109,9 +109,9 @@ check fires next run, and this skill can be rerun.
 From the project root:
 
 1. `uv sync` (Python) or the project's package manager (Node.js).
-2. `rbt generate`.
-3. Run the tests; fix upgrade-caused failures, guided by the migration
-   notes.
+2. `uv run rbt generate`.
+3. `uv run mypy backend/ tests/`, then the tests; fix upgrade-caused
+   failures, guided by the migration notes.
 
 ## Step 9 — Report
 

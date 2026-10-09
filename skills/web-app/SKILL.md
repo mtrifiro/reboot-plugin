@@ -1,6 +1,6 @@
 ---
 name: web-app
-description: Build complete Reboot Web Apps — a Reboot backend behind a standalone browser-facing React frontend, served at a normal URL (not embedded in an MCP host). Layers on the build skill's shared design-and-build flow; holds what is specific to Web Apps — the web/ Vite shell, VITE_REBOOT_URL, browser sign-in and allowed_origins — and each build step's reading list. The backend stays ready for an MCP UI.
+description: Build complete Reboot Web Apps — a Reboot backend behind a standalone browser-facing React frontend, served at a normal URL (not embedded in an MCP host). Use when the prompt names a URL, a page or a website, or names no front door (the default). Layers on the build skill's shared design-and-build flow; holds what is specific to Web Apps — the web/ Vite shell, VITE_REBOOT_URL, browser sign-in and allowed_origins — and each build step's reading list. The backend stays ready for an MCP UI.
 argument-hint: [<app-description>]
 allowed-tools: Bash, Read, Write, Glob, Grep, Edit
 ---
@@ -163,6 +163,7 @@ by tools/gen-index.py. Edit the frontmatter, not the lists. -->
 
 <!-- generated:start reading-list front-door=web-app step=servicer -->
 - `python/references/lifecycle-initialize-hook.md` — Each `initialize` call runs once per app lifetime, not per boot; migrations need new aliases; failures retry forever.
+- `python/references/lifecycle-seeding.md` — Concurrent or one-per-record seeding hangs or takes minutes; seed in sequential batched transactions with stable per-call aliases.
 - `python/references/rpc-calls.md` — Writers can't call writers or transactions, even their own; caller identity doesn't travel; writer cycles deadlock; pass kwargs.
 - `python/references/servicer-constructor.md` — Never set initial state in `__init__`; a second call aborts `StateAlreadyConstructed`; use `Transaction(factory=True)` if it constructs others.
 - `python/references/servicer-reader.md` — Mutating `self.state` in a reader is silently discarded; signature must match the API; reader-to-reader calls; subscription re-runs.
@@ -173,7 +174,6 @@ by tools/gen-index.py. Edit the frontmatter, not the lists. -->
 - `python/references/agent-pydantic-ai.md` — only when the backend calls an LLM.
 - `python/references/agent-tools.md` — only when an LLM agent needs tools that read or change Reboot state.
 - `python/references/crypto-root-keys.md` — only when building your own key-derivation feature.
-- `python/references/lifecycle-seeding.md` — only when the app seeds data in `initialize` or a script.
 - `python/references/scheduling-basic.md` — only when deferring work with `schedule()` or `spawn(when=…)`.
 - `python/references/servicer-transaction.md` — only when you declared a `Transaction`.
 - `python/references/stdlib-ciphertext.md` — only when storing secrets or PII encrypted at rest.
@@ -213,7 +213,6 @@ Apps" above):
 **Before the tests:**
 
 <!-- generated:start reading-list front-door=web-app step=tests -->
-- `python/references/patterns-idempotency.md` — Replayed calls return the first run's response; what `IdempotencyUncertainError` means, when retries need keys, idempotent `create`/`initialize`.
 - `python/references/testing-features.md` — Built-in steps match their exact spelling; who calls, `creates` / `does`, saved values, `eventually`, aborts, `@wip`, custom steps.
 - `python/references/testing-project-setup.md` — Missing `pytest.ini` paths break `_rbt` imports; no `pytest-asyncio`; `tests/` layout, fixture with `allowed_origins=[]`, `reboot[dev]`.
 - `python/references/testing-web-app.md` — Pages need accessible markup (labels, named buttons) to be driven; the `frontend` fixture, web steps, clicked-through sign-in, recordings.

@@ -15,7 +15,8 @@ allowed-tools: Bash, Read
 scriptable. Use it for _runtime state_ questions ("did `create` persist
 this field?", "which account IDs exist?", "what does actor `alice` hold
 now?"). To start an app first see the [run skill](../run/SKILL.md); to
-change what it stores, the [python skill](../python/SKILL.md).
+change what it stores, the [`build` skill](../build/SKILL.md)'s Update
+Flow (backend-only: the [python skill](../python/SKILL.md)).
 
 ## The three operations
 

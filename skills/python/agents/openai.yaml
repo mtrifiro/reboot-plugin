@@ -1,3 +1,4 @@
 interface:
   display_name: "Reboot Python"
   short_description: "Reboot Python framework: APIs, servicers, workflows, testing"
+  default_prompt: "Use Reboot Python for backend-only work on this Reboot application."

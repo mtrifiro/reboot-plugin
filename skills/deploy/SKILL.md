@@ -1,6 +1,6 @@
 ---
 name: deploy
-description: "Deploy a finished Reboot app to production — the backend on Reboot Cloud, and the web frontend (if the app has one) published to a static host (Cloudflare Pages) under the user's own custom domain, talking to the backend cross-origin. Every deploy runs the project's `scripts/deploy.sh`, which checks each rule (a pushed commit, an additive API, the revision serving, the live bundle) and records it; this skill installs and configures it on the first deploy, and covers the one-time parts: the production frontend build settings, the Pages project and domain, and the OAuth(allowed_origins=...) configuration that lets the browser reach the backend."
+description: Deploy a finished Reboot app to production. Use when the user asks to deploy, ship, go live or publish. The backend goes on Reboot Cloud and the web frontend, if any, to a static host (Cloudflare Pages) under the user's own domain, calling the backend cross-origin. Every deploy runs the project's `scripts/deploy.sh` (a pushed commit, an additive API, the revision serving, the live bundle); the first deploy also sets up the Pages project, the domain and `OAuth(allowed_origins=...)`.
 argument-hint: [<project-directory>]
 allowed-tools: Bash, Read, Write, Glob, Grep, Edit, AskUserQuestion
 ---
@@ -15,9 +15,8 @@ web frontend (a React SPA) on a **static host** (here Cloudflare Pages)
 at the user's **own domain**. They talk cross-origin: the SPA calls
 `https://<application-id>.<cell>.rbt.cloud:9991` directly, allowed by
 `OAuth(allowed_origins=[...])`. This skill changes only production
-configuration; to build see the [`mcp-ui` skill](../mcp-ui/SKILL.md) and
-the [web-app skill](../web-app/SKILL.md); to run locally, the
-[run skill](../run/SKILL.md).
+configuration; to build see the [`app` skill](../app/SKILL.md); to run
+locally, the [run skill](../run/SKILL.md).
 
 **Every deploy is `scripts/deploy.sh`.** It ships a pushed commit, never
 a working tree, and stops at the first thing wrong:

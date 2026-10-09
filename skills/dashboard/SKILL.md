@@ -1,6 +1,6 @@
 ---
 name: dashboard
-description: Start the Reboot developer dashboard (`rbt dashboard`) for a project and open it once in the browser. Puts the minimum files in place (a `pyproject.toml` depending on `reboot[dev]`, a `.rbtrc`, the API directory) and starts the dashboard in a background shell unless one is already serving. Use while BUILDING an app — it watches the API directory before anything runs, so the developer sees the API take shape. Not for running an app (see the run skill); `rbt dev run` does not start a dashboard, it only finds one already serving on `--dashboard-port` (default 9871), so start this whenever the developer wants it, before or after the app runs.
+description: Start the Reboot developer dashboard (`rbt dashboard`) for a project and open it once in the browser. Use while building, before the first API file, so the developer watches the API take shape, and whenever the user asks for the dashboard; not for running an app (the run skill). `rbt dev run` only finds a dashboard already serving on `--dashboard-port` (default 9871), so start it here, before or after the app runs.
 argument-hint: [<project-directory>]
 allowed-tools: Bash, Read, Write, Glob, Grep, Edit
 ---
@@ -18,8 +18,8 @@ feature **files**, not a running app, so start it early in a build —
 before the first API file — and the developer watches the API take
 shape.
 
-Come here when a build flow directs you (`mcp-ui` and `web-app` do,
-right before the API is written) or the user asks for the dashboard.
+Come here when the [`build` skill](../build/SKILL.md) directs you
+(before its Step 1, the API) or the user asks for the dashboard.
 
 > This skill only **starts the dashboard**; running the app is the
 > [run skill](../run/SKILL.md). `rbt dev run` doesn't start a
