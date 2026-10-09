@@ -82,9 +82,11 @@ if [ -d "$owners" ]; then
 fi
 
 # One line per orphaned group: `top|age|session|pids|rss_kb|cpu|what`.
-# `-ww` keeps command lines untruncated so the patterns match.
-groups=$(ps -axww -o pid=,ppid=,etime=,rss=,%cpu=,command= | awk \
-    -v records="$records" -v min_age="$min_age" '
+# `-ww` keeps command lines untruncated so the patterns match. Only
+# this user's processes are considered (the `uid` column): another
+# user's are not ours to report or stop.
+groups=$(ps -axww -o pid=,ppid=,uid=,etime=,rss=,%cpu=,command= | awk \
+    -v records="$records" -v min_age="$min_age" -v me="$(id -u)" '
     # `[[dd-]hh:]mm:ss` to seconds.
     function seconds(t,    n, f, s) {
         n = split(t, f, /[-:]/)
@@ -106,11 +108,17 @@ groups=$(ps -axww -o pid=,ppid=,etime=,rss=,%cpu=,command= | awk \
         return a ~ /^(uv|uvx|rbt|npm|npx|node|esbuild|vite|cloudflared)$/ ||
             a ~ /^python[0-9.]*$/ || a ~ /^envoy/
     }
-    # A Reboot project root, from a path inside it.
-    function in_project(path,    d, i) {
+    # A Reboot project root, from a path inside it. The path comes from
+    # a command line, i.e. untrusted text, so it never reaches a shell:
+    # `.rbtrc` is tested by opening it from awk (getline returns -1 when
+    # it cannot be opened; an empty file reads 0).
+    function in_project(path,    d, i, f, r) {
         d = path
         for (i = 0; i < 3 && d != ""; i++) {
-            if (system("test -f \"" d "/.rbtrc\"") == 0) return 1
+            f = d "/.rbtrc"
+            r = (getline line < f)
+            close(f)
+            if (r >= 0) return 1
             sub(/\/[^\/]*$/, "", d)
         }
         return 0
@@ -144,11 +152,12 @@ groups=$(ps -axww -o pid=,ppid=,etime=,rss=,%cpu=,command= | awk \
             }
         }
     }
+    $3 != me { next }
     {
         pid = $1
-        ppid[pid] = $2; etime[pid] = $3; rss[pid] = $4; cpu[pid] = $5
+        ppid[pid] = $2; etime[pid] = $4; rss[pid] = $5; cpu[pid] = $6
         c = $0
-        sub(/^ *[0-9]+ +[0-9]+ +[^ ]+ +[0-9]+ +[0-9.,]+ +/, "", c)
+        sub(/^ *[0-9]+ +[0-9]+ +[0-9]+ +[^ ]+ +[0-9]+ +[0-9.,]+ +/, "", c)
         cmd[pid] = c
         kids[$2] = kids[$2] " " pid
         order[++count] = pid
