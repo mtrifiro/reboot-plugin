@@ -32,6 +32,13 @@ cat > "$WRAP/.claude-plugin/plugin.json" <<EOF
 EOF
 rsync -a --exclude results "$ROOT/evals/" "$WRAP/evals/"
 
+# The wrapper is a fresh temp dir every run and holds this working tree,
+# so trust it: a non-interactive run can't ask, and refuses otherwise.
+case " $* " in
+  *" --trust-plugin "*) ;;
+  *) set -- --trust-plugin "$@" ;;
+esac
+
 # Sonnet judges by default: Haiku failed designs that plainly met a rubric.
 case " $* " in
   *" --judge-model "*|*" --judge-model="*) ;;
