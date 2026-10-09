@@ -20,13 +20,16 @@ skills front-load (which front door, the design) and before any code.
 | `design-roles` | A hotel with front desk and housekeeping: the design names the roles and enforces in the backend which methods each may call; dev-only demo data |
 
 Plain Claude also builds a web app without asking on the `route-*`
-prompts, so those cases guard against regressions more than they show
-a gain over no plugin. `mcp-ready` and the design case are where the
-plugin's effect shows (no plugin: 0–1 of 3 and 0 of 3).
+prompts, so those cases (and every `no-question` grader) guard against
+regressions more than they show a gain over no plugin: `route-both`,
+`route-just-website` and `route-mcp` score the same in both arms.
+`mcp-ready` and the design cases are where the plugin's effect shows
+(no plugin: 0–3 of 3 on `mcp-ready` across runs, so it is noisy; 0 of 3
+on the design cases).
 
-LLM graders use the default Haiku judge unless you pass
-`--judge-model sonnet`, which is more reliable on these rubrics; each
-grader asks the judge to quote the sentence it relied on. A check for
+`tools/run-evals.sh` passes `--judge-model sonnet` unless you pass a
+judge yourself: Haiku failed designs that plainly met a rubric. Each
+LLM grader asks the judge to quote the sentence it relied on. A check for
 something that sits late in a long design (`light-dark`, `demo-data`) is
 a `regex` grader: a judge failed designs that plainly had those
 sections, likely because it doesn't see the whole of a long message.
@@ -44,7 +47,10 @@ tools/run-evals.sh --case design-ready-for-both
 ```
 
 The script wraps the working tree as a plugin (the repo has no
-`plugin.json`) and copies results into `evals/results/` (gitignored).
+`plugin.json`; the mods are not under eval, and every run is a read-only
+planning session, so the feature skill's red-then-green loop, the schema
+guard and the run, deploy and report skills have no eval yet) and copies
+results into `evals/results/` (gitignored).
 Each run is a full Claude session on your credentials; the default model
 is your session's. Add `--max-cost-usd <n>` to cap a run.
 

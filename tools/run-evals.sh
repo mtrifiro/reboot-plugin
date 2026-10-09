@@ -32,6 +32,12 @@ cat > "$WRAP/.claude-plugin/plugin.json" <<EOF
 EOF
 rsync -a --exclude results "$ROOT/evals/" "$WRAP/evals/"
 
+# Sonnet judges by default: Haiku failed designs that plainly met a rubric.
+case " $* " in
+  *" --judge-model "*|*" --judge-model="*) ;;
+  *) set -- --judge-model sonnet "$@" ;;
+esac
+
 status=0
 (cd "$WRAP" && claude plugin eval . --no-publish "$@") || status=$?
 
