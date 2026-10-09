@@ -48,14 +48,16 @@ Copy the template; do not retype these files
   ([`lifecycle-dockerfile.md`](../../python/references/lifecycle-dockerfile.md)).
 - **`backend/src/example_prompts.py`** — the `ExamplePrompt`s the
   root-page wizard offers; rewrite them for the app (below).
-- **`backend/src/main.py`** — registers every servicer (`User` plus each
-  application type), passes `example_prompts=`, and sets
+- **`backend/src/main.py`** — takes `SERVICERS` and `libraries()` from
+  `backend/src/servicers/registry.py` (`User` plus each application
+  type, the one list the tests take too), passes `example_prompts=`, and sets
   `oauth=OAuth(provider=OAuthProviderByEnvironment(dev=Development(),
   prod=None), allowed_origins=[])`. Set human-readable `title` and
   `description`; the wizard shows both (`title` defaults to the
-  application name). No `initialize` hook is typical: the
-  auto-constructed `User` covers per-user setup and `User`'s
-  transactions create application instances.
+  application name). The auto-constructed `User` covers per-user
+  setup and `User`'s transactions create application instances;
+  `initialize` seeds the dev demo data
+  ([`lifecycle-seeding.md`](../../python/references/lifecycle-seeding.md)).
 
 ### Example prompts
 
@@ -65,8 +67,8 @@ chat messages, one per turn). Each example is a **sequence** walking an
 end-to-end flow through the app's tools (create → act → view). Write about
 three covering the main user stories in a user's phrasing, most ending on
 a "show me / open …" turn that renders a `UI()` (rule: `SKILL.md`,
-"Example Prompts"). Worked set:
-`public/reboot/examples/mcp-ui-counter/backend/src/example_prompts.py`.
+"Example Prompts"). Worked set: the template's
+`build/templates/mcp-ui/backend/src/example_prompts.py`.
 
 ### State is durable
 

@@ -96,47 +96,15 @@ runs, or pass-alone/fail-in-suite: `lifecycle-dev-loop.md`.
 
 ### Test-run progress: `.reboot/test-run.json`
 
-The Reboot band above Claude Code's prompt shows how far a run is and
-when it should end, then its result until code changes:
-
-```text
-So far: 11 of 20 modules, 958 passed, 1 skipped, 0 failed
-Left: 9 modules, about 2½ minutes, so it should finish around 11:49
-```
-
-It reads one file at the project root, which the runner rewrites as
-modules start and end:
-
-```json
-{
-  "started_at": "2026-10-08T11:24:00-05:00",
-  "finished_at": null,
-  "modules": [
-    {"name": "accounts_test", "status": "passed", "passed": 114, "failed": 0, "skipped": 1, "seconds": 130.1},
-    {"name": "leads_test", "status": "running", "started_at": "2026-10-08T11:26:11-05:00"},
-    {"name": "web_test", "status": "pending"}
-  ]
-}
-```
-
-- **`status`**: `pending`, `running`, `passed`, `failed`, or `rerun`
-  for a harness failure (a hang, a server not ready) the runner
-  retried, which the band names apart from the app failing.
-- **`finished_at`**: set when the run ends. A module's counts
-  (`passed`, `failed`, `skipped`) are of tests, kept current while it
-  runs; they and its `started_at` are optional, and without
-  `started_at` the band takes the modules to run one after another.
-- **The finish time** is each module's median `seconds` over the
-  project's last 5 finished runs, which the band keeps; with no history
-  for a module still to run, it shows no time.
-- **pytest writes it**: the template's `tests/run_progress.py`, whose
-  hooks `conftest.py` imports, one module per test file. An existing
-  project copies both from `build/templates/<front-door>/tests/` and
-  adds `.reboot/` to `.gitignore`.
-- **A suite script of the project's own** (one pytest per module, with
-  retries) writes the file itself and sets `REBOOT_TEST_RUN=external`
-  for each pytest, so `run_progress.py` leaves the file alone. Write it
-  whole each time (to a temporary file, then rename), never in place.
+The template's `tests/run_progress.py`, whose hooks `conftest.py`
+imports, rewrites `.reboot/test-run.json` (gitignored) as modules start
+and end; the Reboot band in Claude Code reads it to show how far a run
+is and when it should finish. An existing project copies both files from
+`build/templates/<front-door>/tests/` and adds `.reboot/` to
+`.gitignore`. A suite script of the project's own writes the file itself
+(whole, to a temporary file, then renamed) and sets
+`REBOOT_TEST_RUN=external` for each pytest, so `run_progress.py` leaves
+it alone; the format is in `mods/README.md`, "The test-run file".
 
 ## Never
 

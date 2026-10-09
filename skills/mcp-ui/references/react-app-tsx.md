@@ -60,11 +60,8 @@ export const ClickerApp: FC = () => {
   // No `id`: resolved from the tool-call target.
   const { counter, isLoading } = useCounter();
   if (counter === undefined) {
-    return (
-      <div className={css.loading}>
-        {isLoading ? "loading..." : "no counter"}
-      </div>
-    );
+    // A skeleton while the handle resolves, never "loading...".
+    return isLoading ? <div className="skeleton" /> : <p className="muted">No counter.</p>;
   }
   return <Clicker counter={counter} />;
 };
@@ -88,7 +85,7 @@ const Clicker: FC<{ counter: UseCounterApi }> = ({ counter }) => {
   };
 
   if (isLoading && response === undefined) {
-    return <div className={css.loading}>loading...</div>;
+    return <div className="skeleton" />;
   }
 
   return (
@@ -105,9 +102,10 @@ const Clicker: FC<{ counter: UseCounterApi }> = ({ counter }) => {
 };
 ```
 
-`App.module.css` sits beside it and themes through the scaffolded
-`index.css` variables (`var(--color-bg)`, `var(--color-text)`,
-`var(--color-pink)`, `var(--font-mono)`); copy the template's
+`App.module.css` sits beside it and themes through the shared
+`frontend/mcp/styles.css` tokens (`var(--bg)`, `var(--ink)`,
+`var(--accent)`, `var(--muted)`, `var(--font-mono)`; its classes such as
+`skeleton` and `muted` are global, `references/ui-design.md`); copy the template's
 `build/templates/mcp-ui/frontend/mcp/clicker/App.module.css` and add the
 classes the component uses.
 
@@ -168,7 +166,7 @@ import { type UseUserApi, useUser } from "@api/<pkg>/v1/<name>_rbt_react";
 export const Dashboard: FC = () => {
   const { user, isLoading } = useUser();
   if (user === undefined) {
-    return <div>{isLoading ? "loading..." : "not signed in"}</div>;
+    return isLoading ? <div className="skeleton" /> : <p className="muted">Not signed in.</p>;
   }
   return <DashboardPage user={user} />;
 };

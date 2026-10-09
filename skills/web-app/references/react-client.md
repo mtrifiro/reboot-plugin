@@ -118,7 +118,10 @@ every page this way from the start:
 <td data-testid="account-id">{account.id}</td>      {/* a backend-made value */}
 ```
 
-- A `<select>` gets a paired label too; a placeholder is not a label.
+- A `<select>` gets a paired label too, its `<option>`s saying the value
+  a scenario picks; a placeholder is not a label.
+- A table or list a scenario names has a labeled heading as above, or a
+  `<caption>`.
 - `data-testid` only on an element whose text is exactly a value a
   scenario reads back.
 - Nameable roles: `button`, `link`, `tab`, `checkbox`, `radio`,

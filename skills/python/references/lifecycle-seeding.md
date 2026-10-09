@@ -7,7 +7,6 @@ summary: "Concurrent or one-per-record seeding hangs or takes minutes; seed in s
 step: servicer
 applies: [mcp-ui, web-app, backend-only]
 always: false
-when: "the app seeds data in `initialize` or a script"
 verified: 1.6.0
 docs: ""
 ---

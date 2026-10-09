@@ -48,14 +48,18 @@ from reboot.api import Field, Model
 from typing import Optional
 
 class GuestPreferences(Model):
-    meal_type: str = Field(tag=1, default="")
-    calorie_level: str = Field(tag=2, default="")
-    dietary_restrictions: str = Field(tag=3, default="")
+    meal_type: str = Field(tag=1, default="", description="The meal the guest chose, e.g. vegetarian.")
+    calorie_level: str = Field(tag=2, default="", description="Low, regular or high.")
+    dietary_restrictions: str = Field(
+        tag=3, default="", description="Allergies and exclusions, as the guest wrote them.",
+    )
 
 class Guest(Model):
-    name: str = Field(tag=1, default="")
+    name: str = Field(tag=1, default="", description="The guest's full name.")
     # Optional + default=None; populated by factory `create`.
-    preferences: Optional[GuestPreferences] = Field(tag=2, default=None)
+    preferences: Optional[GuestPreferences] = Field(
+        tag=2, default=None, description="Meal preferences; None until `create` fills them.",
+    )
 
 
 # Servicer (`backend/src/servicers/<name>.py`):

@@ -34,7 +34,10 @@ from reboot.api import (
 
 
 class CreateCounterResponse(Model):
-    counter_id: str = Field(tag=1, default="")
+    counter_id: str = Field(
+        tag=1, default="",
+        description="The new counter's state id, for later tool calls.",
+    )
 
 
 class UserState(Model):
@@ -42,16 +45,18 @@ class UserState(Model):
 
 
 class CounterState(Model):
-    value: int = Field(tag=1, default=0)
-    description: str = Field(tag=2, default="")
+    value: int = Field(tag=1, default=0, description="The current count.")
+    description: str = Field(
+        tag=2, default="", description="What this counter counts, as the user said it.",
+    )
 
 
 class ValueResponse(Model):
-    value: int = Field(tag=1, default=0)
+    value: int = Field(tag=1, default=0, description="The count when read.")
 
 
 class AmountRequest(Model):
-    amount: int = Field(tag=1, default=0)
+    amount: int = Field(tag=1, default=0, description="How much to change the count by.")
 
 
 api = API(

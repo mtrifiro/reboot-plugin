@@ -76,7 +76,8 @@ class CounterServicer(Counter.Servicer):
         return Counter.GetResponse(value=self.state.value)
 ```
 
-Register every servicer in `Application(servicers=[...])`.
+Add every servicer class to `backend/src/servicers/registry.py`, the
+one list `main.py` and every test module take.
 `<X>.create(context)` with no ID mints one and returns `(ref, response)`;
 return `ref.state_id` so the AI can pass it to later tool calls.
 

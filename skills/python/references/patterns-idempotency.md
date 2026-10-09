@@ -4,7 +4,7 @@ impact: MEDIUM
 impactDescription: Non-idempotent setup duplicates state on restart; a replayed call's response describes its first run; one uncertain mutation blocks every later bare mutation from that context
 tags: patterns, idempotency, initialize, constructor, restart, IdempotencyUncertainError, idempotently, alias, replay, memoized
 summary: "Replayed calls return the first run's response; what `IdempotencyUncertainError` means, when retries need keys, idempotent `create`/`initialize`."
-step: tests
+step: any
 applies: [mcp-ui, web-app, backend-only]
 always: false
 verified: 1.6.0

@@ -7,7 +7,7 @@ summary: "Switching providers later strands user state; `OAuthProviderByEnvironm
 step: auth
 applies: [mcp-ui, web-app]
 always: false
-when-web-app: "you pick a real (production) provider"
+when: "you pick a real (production) provider"
 verified: 1.6.0
 docs: ""
 ---
@@ -35,10 +35,12 @@ from reboot.aio.auth.oauth_providers import (
     OAuthProviderByEnvironment,
 )
 from reboot.aio.auth.oauth import OAuth
+from servicers.registry import SERVICERS, libraries
 
 async def main():
     await Application(
-        servicers=[UserServicer, CounterServicer],
+        servicers=SERVICERS,
+        libraries=libraries(),
         oauth=OAuth(
             provider=OAuthProviderByEnvironment(
                 dev=Development(),
@@ -49,6 +51,9 @@ async def main():
                     ),
                 ),
             ),
+            # Required outside `rbt dev run`: `[]` for same-origin only,
+            # else each origin a browser signs in from (the web app's).
+            allowed_origins=[],
         ),
     ).run()
 ```

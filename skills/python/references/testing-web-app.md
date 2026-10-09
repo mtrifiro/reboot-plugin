@@ -51,7 +51,7 @@ dev = ["reboot[dev]==<version>", "playwright>=1.55.0", "pytest-playwright>=0.7.1
 ```sh
 uv sync
 uv run playwright install chromium
-cd frontend && npm install   # the web app's own dependencies
+cd web && npm install   # the web app's own dependencies (`frontend` in a dual-frontend app)
 ```
 
 With both present, the `reboot` pytest plugin registers the web app
@@ -70,12 +70,14 @@ from reboot.aio.auth.oauth_providers import (
 from reboot.bdd import scenarios
 from reboot.bdd.frontend import Frontend
 from reboot.bdd.vite import vite
+from servicers.registry import SERVICERS, libraries
 from typing import Iterator
 
 
 @pytest.fixture
 def frontend() -> Iterator[Frontend]:
-    with vite(directory='frontend') as frontend:
+    # `web/` holds the SPA (`frontend/` in a dual-frontend app).
+    with vite(directory='web') as frontend:
         yield frontend
 
 
@@ -84,7 +86,8 @@ def application(frontend: Frontend) -> Application:
     assert frontend.origin is not None
     development = Development()
     return Application(
-        servicers=[...],
+        servicers=SERVICERS,
+        libraries=libraries(),
         # The harness is neither `rbt dev run` nor `rbt serve`.
         oauth=OAuth(
             provider=OAuthProviderByEnvironment(
@@ -209,23 +212,16 @@ their browsers arrive signed in.
 
 ### Accessible markup the steps need
 
-- **A field's label is paired with it** (`<label htmlFor="amount">` +
-  `<input id="amount">`, or the input inside the label); not a
-  placeholder or nearby heading.
-- **A button, link, tab or menu item says what it does** in its text,
-  or `aria-label` if icon-only.
-- **A table, list or region a step names has a caption or a labeled
-  heading**: `<table aria-labelledby="your-accounts">` with
-  `<h2 id="your-accounts">Your Accounts</h2>`, or a `<caption>`.
-- **A select is a `<select>` with a paired label**, its `<option>`s
-  saying the value a scenario picks.
-- **A value a scenario reads back** (an app-generated id) carries
-  `data-testid` on the element whose text is exactly that value — the
-  only place a test id belongs.
-- **Text that changes on a backend event** is visible text, not only
-  an attribute or canvas.
-
-Build pages this way from the start; screen readers need the same.
+The steps find elements as a person does: a field by its paired label,
+a button, link, tab or menu item by its text (or `aria-label` if
+icon-only), a table, list or region by its caption or labeled heading, a
+select by its label and its options' text, a value a scenario reads back
+by `data-testid` on the element whose text is exactly that value (the
+only place a test id belongs), and text that changes on a backend event
+as visible text. The markup, with an example:
+[`web-app/references/react-client.md`](../../web-app/references/react-client.md),
+"Accessible markup". Build pages that way from the start; screen readers
+need the same.
 
 ### Recordings and running
 

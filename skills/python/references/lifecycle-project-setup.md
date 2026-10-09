@@ -27,7 +27,7 @@ deltas: `mcp-ui/references/project-shell.md`,
 Copy the front door's template; don't retype the files:
 
 ```sh
-<plugin>/skills/build/templates/copy.sh <mcp-ui|web-app> . <project> <app> "<Title>"
+<plugin>/skills/build/templates/copy.sh <mcp-ui|web-app|both> . <project> <app> "<Title>"
 ```
 
 Backend-only: copy `web-app`, delete `web/` and the `web/` lines of
@@ -41,6 +41,7 @@ Backend-only: copy `web-app`, delete `web/` and the `web/` lines of
   backend/
     api/                         # `rbt generate --python` output, git-ignored
     src/main.py                  # application entry
+    src/servicers/registry.py    # the one servicer list main.py and the tests take
     src/servicers/<app>.py       # servicers
   tests/<capability>.feature, tests/<app>_test.py
   frontend/ (mcp-ui) or web/ (web-app)

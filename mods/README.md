@@ -17,6 +17,38 @@ reads.
 | [`reboot-progress`](reboot-progress/) | The band above the prompt: a Status heading, a sentence on what is being worked on now (the state types, methods and files involved), buttons that open the dashboard and the app (their addresses shown on hover), how far a test run is (its output's percentage and failures when it shows them, else its time beside the last run's of the same command), and during a deploy its stage and time so far (checking, building and pushing the image, rolling out, starting up, publishing the frontend), with toasts for how it ended and Cloud and Site buttons for where it lives (for an MCP app, an MCP button that opens its page for connecting an MCP client). A toast when the app or the dashboard starts or stops. |
 | [`reboot-schema-guard`](reboot-schema-guard/) | Refuses API edits an app with persisted dev state couldn't boot over (a deleted method, a reworded method description, a changed field tag or type, …), and holds other API edits until the model has read `api-schema-evolution.md` once per session. |
 
+## The test-run file
+
+`reboot-progress` shows how far a test run is from `.reboot/test-run.json`
+at the project root, which the templates' `tests/run_progress.py`
+rewrites as modules start and end (whole, to a temporary file, then
+renamed):
+
+```json
+{
+  "started_at": "2026-10-08T11:24:00-05:00",
+  "finished_at": null,
+  "modules": [
+    {"name": "accounts_test", "status": "passed", "passed": 114, "failed": 0, "skipped": 1, "seconds": 130.1},
+    {"name": "leads_test", "status": "running", "started_at": "2026-10-08T11:26:11-05:00"},
+    {"name": "web_test", "status": "pending"}
+  ]
+}
+```
+
+- **`status`**: `pending`, `running`, `passed`, `failed`, or `rerun`
+  for a harness failure (a hang, a server not ready) the runner
+  retried, which the band names apart from the app failing.
+- **`finished_at`**: set when the run ends. A module's counts
+  (`passed`, `failed`, `skipped`) are of tests, kept current while it
+  runs; they and its `started_at` are optional, and without
+  `started_at` the band takes the modules to run one after another.
+- **The finish time** is each module's median `seconds` over the
+  project's last 5 finished runs, which the band keeps; with no history
+  for a module still to run, it shows no time.
+- A project's own suite script sets `REBOOT_TEST_RUN=external` for each
+  pytest it runs and writes the file itself.
+
 ## How a mod works
 
 A mod is a folder with a manifest, a hooks file and one hooks module:
