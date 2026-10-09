@@ -51,7 +51,8 @@ for (const surface of ['terminal', 'desktop'] as const) {
 
 for (const surface of ['terminal', 'desktop'] as const) {
   test(`the activity columns draw on ${surface}`, async ($, on) => {
-    on('fs.exists', () => ({ value: false }) as never)
+    on('session.cwd', () => ({ value: '/w/app' }) as never)
+    on('fs.exists', ($, e) => ({ value: (e as { path: string }).path === '/w/app/.rbtrc' }) as never)
     on('ui.render', { component: 'AbovePrompt' }, ($, e) => {
       const { Box } = $.ui.resolve(e)
 
@@ -93,7 +94,8 @@ for (const surface of ['terminal', 'desktop'] as const) {
 
 for (const surface of ['terminal', 'desktop'] as const) {
   test(`a prompt the summary calls a fix shows its Now on ${surface}`, async ($, on) => {
-    on('fs.exists', () => ({ value: false }) as never)
+    on('session.cwd', () => ({ value: '/w/app' }) as never)
+    on('fs.exists', ($, e) => ({ value: (e as { path: string }).path === '/w/app/.rbtrc' }) as never)
     on('ui.render', { component: 'AbovePrompt' }, ($, e) => {
       const { Box } = $.ui.resolve(e)
 
@@ -148,7 +150,8 @@ for (const surface of ['terminal', 'desktop'] as const) {
 
 for (const surface of ['terminal', 'desktop'] as const) {
   test(`Now leaves "Idle" the moment a prompt is sent on ${surface}`, async ($, on) => {
-    on('fs.exists', () => ({ value: false }) as never)
+    on('session.cwd', () => ({ value: '/w/app' }) as never)
+    on('fs.exists', ($, e) => ({ value: (e as { path: string }).path === '/w/app/.rbtrc' }) as never)
     on('ui.render', { component: 'AbovePrompt' }, ($, e) => {
       const { Box } = $.ui.resolve(e)
 
@@ -344,4 +347,77 @@ test("between turns the band shows the run the project's runner records, and its
   await wait(50)
   const after = await $.ui.mount({ plugin: PLUGIN, surface: 'terminal', component: 'AbovePrompt', props: BAND as never })
   expect((await after.findAll({ type: 'Text', text: /^Done: 2 modules, 114 passed, 1 failed \(web_test\)\nTook 7m 00s, finished at \d+:31$/ })).length).toBe(1)
+})
+
+test('a session outside a Reboot project draws nothing and asks for no summary', async ($, on) => {
+  let summaries = 0
+  on('ui.render', { component: 'AbovePrompt' }, ($, e) => {
+    const { Box } = $.ui.resolve(e)
+
+    return h(Box, {}) as never
+  })
+  on('session.cwd', () => ({ value: '/w/other' }) as never)
+  on('fs.exists', () => ({ value: false }) as never)
+  on('fs.list', () => ({ value: [] }) as never)
+  on('model.complete', () => {
+    summaries++
+    return { value: { isAnswered: true, text: 'NOW: Fixing the button\nDONE: NONE\nTASK: NEW FIX' } } as never
+  })
+  on('prompt.submit', ($, e) => ({ text: e.text }) as never)
+
+  await $.prompt.submit({ text: 'The sign-in button does nothing when I click it.' } as never)
+  await wait(50)
+
+  expect(summaries).toBe(0)
+  const band = await $.ui.mount({ plugin: PLUGIN, surface: 'terminal', component: 'AbovePrompt', props: BAND as never })
+  expect(await band.findAll({ text: /Reboot/ })).toEqual([])
+})
+
+test('a dry run of the deploy script, or a doc that mentions a site, starts no deploy', async ($, on) => {
+  on('ui.render', { component: 'AbovePrompt' }, ($, e) => {
+    const { Box } = $.ui.resolve(e)
+
+    return h(Box, {}) as never
+  })
+  on('clock.now', () => ({ value: 1000 }) as never)
+  on('tool.call', ($, e) => {
+    const command = String((e as { command?: string }).command)
+    const text = /dry-run/.test(command) ? 'would deploy revision 8' : 'https://app.pages.dev serves the current build'
+    return { result: {}, text } as never
+  })
+
+  await $.tool.call({ tool: 'Bash', command: 'scripts/deploy.sh --dry-run' })
+  await $.tool.call({ tool: 'Bash', command: 'grep -n pages.dev docs/DEPLOYING.md' })
+
+  const band = await $.ui.mount({ plugin: PLUGIN, surface: 'terminal', component: 'AbovePrompt', props: BAND as never })
+  expect(await band.findAll({ text: /Deploying|Site/ })).toEqual([])
+})
+
+test("a background deploy's output, read back, toasts and adds the Cloud button", async ($, on) => {
+  const toasts: string[] = []
+  on('ui.render', { component: 'AbovePrompt' }, ($, e) => {
+    const { Box } = $.ui.resolve(e)
+
+    return h(Box, {}) as never
+  })
+  on('clock.now', () => ({ value: 1000 }) as never)
+  on('ui.toast', ($, e) => {
+    toasts.push((e as { text: string }).text)
+    return { value: undefined } as never
+  })
+  on('tool.call', ($, e) => {
+    const text =
+      (e as { tool: string }).tool === 'Bash'
+        ? 'Command running in background with ID: b1\nOutput is being written to: /tmp/b1.output'
+        : "'app' revision 9 is available:\n\n  Your API is available at:      https://d4e5f6.c1.rbt.cloud:9991\n"
+    return { result: {}, text } as never
+  })
+
+  await $.tool.call({ tool: 'Bash', command: 'uv run rbt cloud up --organization=acme', run_in_background: true } as never)
+  // Its process has exited by the time its output is read.
+  await $.tool.call({ tool: 'Read', file_path: '/tmp/b1.output' })
+
+  expect(toasts).toEqual(['Deployed revision 9 to Reboot Cloud'])
+  const band = await $.ui.mount({ plugin: PLUGIN, surface: 'terminal', component: 'AbovePrompt', props: BAND as never })
+  expect((await band.findAll({ type: 'Button', text: /Cloud/ })).length).toBe(1)
 })

@@ -15,6 +15,12 @@ const UP = new Set<DeployStage>(['checking', 'build', 'push', 'rollout'])
 
 export const isRunning = (d: Deploy | null): boolean => d !== null && RUNNING.has(d.stage)
 
+/** Whether the deploy is in a stage `rbt cloud up` itself runs. */
+export const isUp = (d: Deploy | null): boolean => d !== null && UP.has(d.stage)
+
+/** How long a deploy script may run its own steps before `rbt cloud up` shows, before it counts as over. */
+export const SCRIPT_MS = 20 * 60 * 1000
+
 /** How long a failed deploy stays in the band after it fails. */
 export const FAILED_MS = 2 * 60 * 1000
 
@@ -42,8 +48,9 @@ export function seenIn(ps: string): Seen {
 }
 
 /** A new deploy at `stage`, keeping the URLs of the one before. */
-export const beginDeploy = (stage: DeployStage, now: number, was: Deploy | null): Deploy => ({
+export const beginDeploy = (stage: DeployStage, now: number, was: Deploy | null, source?: Deploy['source']): Deploy => ({
   stage,
+  ...(source ? { source } : {}),
   startedAt: now,
   stageAt: now,
   revision: null,
@@ -62,8 +69,8 @@ export const beginDeploy = (stage: DeployStage, now: number, was: Deploy | null)
  */
 export function advanceDeploy(d: Deploy | null, seen: Seen, now: number, isServing = false): Deploy | null {
   const active = isRunning(d)
-  if (!active && seen.isUp) return beginDeploy(seen.isPush ? 'push' : seen.isBuild ? 'build' : 'checking', now, d)
-  if (!active && seen.isPublish) return beginDeploy('publish', now, d)
+  if (!active && seen.isUp) return beginDeploy(seen.isPush ? 'push' : seen.isBuild ? 'build' : 'checking', now, d, 'up')
+  if (!active && seen.isPublish) return beginDeploy('publish', now, d, 'publish')
   if (d === null || !active) return d
 
   if (UP.has(d.stage)) {
@@ -77,6 +84,10 @@ export function advanceDeploy(d: Deploy | null, seen: Seen, now: number, isServi
             : 'rollout'
       return stage === d.stage ? d : { ...d, stage, stageAt: now }
     }
+    // A deploy script runs its own checks and a backup before `rbt cloud
+    // up` shows in the process list: not over until it has, or it has run
+    // too long to still be checking.
+    if (d.source === 'script' && d.stage === 'checking' && now - d.startedAt < SCRIPT_MS) return d
     // Exited without its output read yet: starting if the URL is known.
     return { ...d, stage: d.apiUrl ? 'starting' : 'deployed', stageAt: now }
   }
@@ -88,6 +99,81 @@ export function advanceDeploy(d: Deploy | null, seen: Seen, now: number, isServi
   if (d.stage === 'publish' && !seen.isPublish) return { ...d, stage: 'published', stageAt: now }
 
   return d
+}
+
+/**
+ * Whether a command is a deploy, whose output may say how one ended and
+ * where it lives: `rbt cloud up`, `wrangler pages deploy`, or a
+ * project's `scripts/deploy.sh`. Any other command's output (a doc
+ * printed, a ledger read) only mentions a deploy, and is not one.
+ */
+export function isDeployCommand(command: string): boolean {
+  return deployProgram(command) !== null
+}
+
+/**
+ * Which deploy a command runs, if any: `up` (`rbt cloud up`), `publish`
+ * (`wrangler pages deploy`) or `script` (a project's `scripts/deploy.sh`,
+ * not its `--dry-run`). Each piece of a compound command counts as the
+ * program it runs, past a `(`, `VAR=value`s, wrappers (`timeout 900`,
+ * `nohup`, `env`, `time`), runners (`uv run --directory app`, `uvx`,
+ * `npx -y`, `bunx`, `pnpm dlx`, `bash -lc`) and a path to the program
+ * (`.venv/bin/rbt`); a heredoc's body is text. So `cat scripts/deploy.sh`,
+ * `grep "rbt cloud up" doc.md`, or a script or test that merely contains
+ * those words, is not a deploy.
+ */
+export function deployProgram(command: string): 'up' | 'publish' | 'script' | null {
+  const text = command.replace(/<<-?\s*(['"]?)(\w+)\1[^\n]*\n[\s\S]*?\n\s*\2(?=\s|$)/g, '')
+  for (const piece of text.split(/&&|\|\||[;|\n]/)) {
+    const words = programWords(piece)
+    const program = words[0] ?? ''
+    if (program === 'rbt' && words[1] === 'cloud' && words[2] === 'up') return 'up'
+    if (/^wrangler(@\S+)?$/.test(program) && words[1] === 'pages' && words[2] === 'deploy') return 'publish'
+    if (/^(\S*\/)?scripts\/deploy\.sh$/.test(program)) return words.includes('--dry-run') ? null : 'script'
+  }
+  return null
+}
+
+/** The programs that only run the one after them, with the flags each takes before it. */
+const PROGRAM = /^(\S*\/)?(rbt|wrangler(@\S+)?|scripts\/deploy\.sh)$/
+
+/** A piece of a command as words, from the program it runs on: wrappers, runners and quotes stripped. */
+function programWords(piece: string): string[] {
+  const words = piece.trim().replace(/^\(\s*/, '').split(/\s+/).filter(w => w !== '')
+  for (;;) {
+    const w = words[0] ?? ''
+    if (PROGRAM.test(w.replace(/^['"]|['"]$/g, ''))) break
+    if (/^\w+=/.test(w) || /^(nohup|env|time|exec)$/.test(w)) words.shift()
+    else if (w === 'timeout') {
+      words.shift()
+      while (words.length > 0 && /^-/.test(words[0]!)) words.shift()
+      if (/^\d+[smhd]?$/.test(words[0] ?? '')) words.shift()
+    } else if (w === 'uv' && words[1] === 'run') {
+      words.splice(0, 2)
+      while (words.length > 0 && /^-/.test(words[0]!)) {
+        const flag = words.shift()!
+        // A flag with its value apart (`--directory app`), unless the next word is the program.
+        if (!flag.includes('=') && words.length > 0 && !PROGRAM.test(words[0]!) && !/^-/.test(words[0]!)) words.shift()
+      }
+    } else if (w === 'uvx') {
+      words.shift()
+      while (words.length > 0 && /^-/.test(words[0]!)) words.shift()
+    } else if (w === 'npx') {
+      words.shift()
+      while (words.length > 0 && /^(-y|--yes)$/.test(words[0]!)) words.shift()
+    } else if (w === 'bunx' || (w === 'pnpm' && words[1] === 'dlx')) {
+      words.splice(0, w === 'bunx' ? 1 : 2)
+    } else if (/^(bash|sh|zsh)$/.test(w)) {
+      words.shift()
+      while (words.length > 0 && /^-/.test(words[0]!)) words.shift()
+      // `bash -lc 'scripts/deploy.sh'`: the quoted script is the command.
+      const quoted = words.join(' ').match(/^(['"])(.*)\1$/)
+      if (quoted) return programWords(quoted[2]!)
+    } else break
+    if (words.length === 0) return []
+  }
+  if (words.length > 0) words[0] = words[0]!.replace(/^['"]|['"]$/g, '').replace(/^\S*\/(?=(rbt|wrangler|scripts\/deploy\.sh)\b)/, '')
+  return words
 }
 
 /** What a tool's output says of a deploy. */
@@ -104,13 +190,15 @@ export function outcomeOf(text: string): Outcome {
   const revision = text.match(/revision (\d+) is\s+available/)
   const failed =
     text.match(/Could not deploy revision \d+:\s*\n\s*(.+)/) ?? text.match(/🛑 (?:failed:\s*\n?\s*)?(.+)/)
-  const site = text.match(/https:\/\/[\w.-]+\.pages\.dev\b/)
+  // Wrangler names the `*.pages.dev` site; a project's deploy script
+  // names the custom domain it serves (`https://app.example.com serves …`).
+  const site = text.match(/https:\/\/[\w.-]+\.pages\.dev\b/) ?? text.match(/(https:\/\/[\w.-]+(?::\d+)?)\/?\s+serves\b/)
 
   return {
     apiUrl: api ? api[1]!.replace(/\/+$/, '') : null,
     revision: revision ? Number(revision[1]) : null,
     failure: failed ? failed[1]!.trim() : null,
-    siteUrl: site ? `${site[0]}/` : null,
+    siteUrl: site ? `${(site[1] ?? site[0]).replace(/\/+$/, '')}/` : null,
   }
 }
 

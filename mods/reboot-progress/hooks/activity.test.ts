@@ -132,3 +132,12 @@ describe('test progress', () => {
     expect(testCommand(shell)).toBe(testCommand('  9 /w/.venv/bin/python /w/.venv/bin/pytest tests -k signs in'))
   })
 })
+
+describe("a project's own test run", () => {
+  test('a runner is a word of its own, and the run names a path in the project', () => {
+    expect(testCommand('  9 vim pytest.ini')).toBe(null)
+    expect(testCommand('  9 /w/app/.venv/bin/python /w/app/.venv/bin/pytest -q', '/w/app')).toBe('pytest -q')
+    expect(testCommand('  9 /w/other/.venv/bin/pytest -q', '/w/app')).toBe(null)
+    expect(isTesting('  9 /w/other/.venv/bin/pytest -q', '/w/app')).toBe(false)
+  })
+})

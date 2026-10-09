@@ -73,15 +73,17 @@ export function testLine(run: TestRun, now: number): string {
 }
 
 /** The test runner in a command line: pytest, vitest, Playwright, npm test. */
-const RUNNER = /\b(pytest|vitest|playwright\s+test|npm\s+(?:run\s+)?test)\b/
+const RUNNER = /\b(pytest|vitest|playwright\s+test|npm\s+(?:run\s+)?test)(?=\s|$)/
 
 /**
  * A test run in `ps -axo pid=,command=` output (or a Bash command): its
  * command from the runner on (`pytest tests -q -k transfer`); null when
- * none runs.
+ * none runs. With `dir`, only a run of that project (its command names a
+ * path under it): another repository's suite is not this band's.
  */
-export function testCommand(ps: string): string | null {
+export function testCommand(ps: string, dir: string | null = null): string | null {
   for (const line of ps.split('\n')) {
+    if (dir !== null && !line.includes(`${dir}/`)) continue
     const m = line.match(RUNNER)
     if (m && !/\bgrep\b/.test(line.slice(0, m.index))) {
       // Quotes dropped and cut at a pipe, `;`, `&&` or a redirect, so the
@@ -94,7 +96,7 @@ export function testCommand(ps: string): string | null {
 }
 
 /** Whether `ps` output (or a Bash command) shows a test run. */
-export const isTesting = (ps: string): boolean => testCommand(ps) !== null
+export const isTesting = (ps: string, dir: string | null = null): boolean => testCommand(ps, dir) !== null
 
 /** The `$.store` key holding how long a test command took last time in a project. */
 export const testTimeKey = (root: string, command: string): string => `tests:${root}:${command}`

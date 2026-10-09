@@ -28,6 +28,8 @@ export type DeployStage =
 /** The latest deploy, and the deployed URLs the band's buttons open. */
 export type Deploy = {
   stage: DeployStage
+  /** What started it: `rbt cloud up` itself, a project's `scripts/deploy.sh`, or `wrangler`; absent on a deploy stored before this was kept. */
+  source?: 'up' | 'script' | 'publish'
   /** When the deploy started, for the time the band shows. */
   startedAt: number
   /** When it reached its stage, for how long a revision may take to start. */

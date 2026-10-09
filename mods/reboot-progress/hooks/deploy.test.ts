@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'claude-code/testing'
 
-import { advanceDeploy, afterOutput, beginDeploy, deployLine, elapsed, FAILED_MS, isRunning, isShown, outcomeOf, seenIn, STARTING_MS } from './deploy'
+import { advanceDeploy, afterOutput, beginDeploy, deployLine, elapsed, FAILED_MS, deployProgram, isDeployCommand, isRunning, isShown, outcomeOf, SCRIPT_MS, seenIn, STARTING_MS } from './deploy'
 
 const PS_UP = '/usr/bin/python3 /w/app/.venv/bin/rbt cloud up --organization=acme --name=app'
 const PS_BUILD = `${PS_UP}\ndocker build --file=Dockerfile --tag=reg/app:1 .`
@@ -110,5 +110,72 @@ describe('the band line', () => {
     expect(deployLine({ ...beginDeploy('starting', 0, null), revision: 7 }, 5000)).toBe(
       'Deploying to Reboot Cloud: revision 7 is starting up · 5s',
     )
+  })
+})
+
+describe('which commands are deploys', () => {
+  test('rbt cloud up, wrangler pages deploy and a project deploy script are', () => {
+    expect(isDeployCommand('uv run rbt cloud up --application-name=app --organization=acme')).toBe(true)
+    expect(isDeployCommand('npx --yes wrangler@4 pages deploy web/dist --project-name=app --branch=main')).toBe(true)
+    expect(isDeployCommand('scripts/deploy.sh --frontend-only')).toBe(true)
+    expect(isDeployCommand('cd app && ./scripts/deploy.sh')).toBe(true)
+    expect(isDeployCommand('set -a; . ./.deploy.env; set +a; uv run rbt cloud up --organization="$ORG"')).toBe(true)
+    expect(isDeployCommand('( cd "$build/web" && npx --yes wrangler@4 pages deploy dist )')).toBe(true)
+  })
+
+  test('a command that only prints a deploy guide or a ledger is not', () => {
+    // Printing reboot-crm's deploy guide put its pages.dev site on the
+    // band of a session that deployed nothing (2026-10-08).
+    expect(isDeployCommand("awk '/^## 7/,/^## 8/' docs/DEPLOYING.md")).toBe(false)
+    expect(isDeployCommand('grep -n pages.dev deploy/ledger.jsonl')).toBe(false)
+    expect(isDeployCommand('cat scripts/deploy.sh')).toBe(false)
+    expect(isDeployCommand('grep -n "rbt cloud up" docs/DEPLOYING.md')).toBe(false)
+    expect(isDeployCommand('ls scripts/deploy.sh.bak && echo wrangler pages deploy')).toBe(false)
+  })
+})
+
+describe('a deploy script', () => {
+  test("stays checking while its own steps run, before rbt cloud up shows", () => {
+    const d = beginDeploy('checking', 0, null, 'script')
+    const none = { isUp: false, isBuild: false, isPush: false, isPublish: false }
+    expect(advanceDeploy(d, none, 60_000)).toBe(d)
+    expect(advanceDeploy(d, none, SCRIPT_MS + 1)?.stage).toBe('deployed')
+    expect(advanceDeploy(d, { ...none, isUp: true, isBuild: true }, 60_000)?.stage).toBe('build')
+  })
+
+  test('names the site it serves', () => {
+    expect(outcomeOf('deploy: https://app.example.com serves 9f8e7d (2026-10-09)').siteUrl).toBe('https://app.example.com/')
+  })
+})
+
+describe('which deploy a command starts', () => {
+  test('rbt cloud up and a deploy script start one; wrangler publishes', () => {
+    expect(deployProgram('uv run rbt cloud up --organization=acme')).toBe('up')
+    expect(deployProgram('scripts/deploy.sh')).toBe('script')
+    expect(deployProgram('npx wrangler pages deploy dist --project-name=app')).toBe('publish')
+  })
+
+  test('wrappers, runners and a path to the program are seen through', () => {
+    expect(deployProgram('timeout 900 uv run rbt cloud up --organization=acme')).toBe('up')
+    expect(deployProgram('uv run --directory app rbt cloud up')).toBe('up')
+    expect(deployProgram('uv run --no-sync rbt cloud up')).toBe('up')
+    expect(deployProgram('.venv/bin/rbt cloud up')).toBe('up')
+    expect(deployProgram('nohup uv run rbt cloud up > up.log')).toBe('up')
+    expect(deployProgram('npx -y wrangler pages deploy dist')).toBe('publish')
+    expect(deployProgram('bunx wrangler@4 pages deploy dist')).toBe('publish')
+    expect(deployProgram("bash -lc 'scripts/deploy.sh'")).toBe('script')
+  })
+
+  test('a dry run and a heredoc holding the words start nothing', () => {
+    expect(deployProgram('scripts/deploy.sh --dry-run')).toBe(null)
+    expect(deployProgram("cat > note.md <<'EOF'\nrbt cloud up\nEOF\ncat note.md")).toBe(null)
+    expect(deployProgram('git commit -m "rbt cloud up"')).toBe(null)
+  })
+
+  test('a command whose text only contains the words starts nothing', () => {
+    // A heredoc writing this very test once put "Deploying to Reboot
+    // Cloud" on the band of a session that deployed nothing (2026-10-08).
+    expect(deployProgram("python3 - <<'EOF'\nexpect(isDeployCommand('uv run rbt cloud up'))\nEOF")).toBe(null)
+    expect(deployProgram('grep -rn "rbt cloud up" skills/')).toBe(null)
   })
 })

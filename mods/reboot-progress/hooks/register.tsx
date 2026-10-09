@@ -2,7 +2,7 @@ import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
 import type { Build, Deploy } from '../types'
-import { advanceDeploy, afterOutput, beginDeploy, deployKey, deployLine, isRunning, isShown, outcomeOf, seenIn } from './deploy'
+import { advanceDeploy, afterOutput, beginDeploy, deployKey, deployLine, deployProgram, isDeployCommand, isRunning, isShown, isUp, outcomeOf, seenIn } from './deploy'
 import { REBOOT_LOGO } from './logo'
 import { SUITE_FILE, type History, expectedFinish, isSuiteShown, parseSuite, remember, suiteLine, suiteStatus } from './suite'
 import { STARTING, WAITING, endTurn, fallback, isWorthSummarizing, parseSummary, startTask, summaryPrompt, isTesting, testCommand, testLine, testTimeKey, testProgress, testStatus, textOf } from './activity'
@@ -72,6 +72,24 @@ async function findProject($: EngineInterface): Promise<string | null> {
   return null
 }
 
+/**
+ * Whether the band has anything to do with this session: a Reboot project
+ * at hand, or a task, deploy or link already in view. In any other
+ * repository it draws nothing and asks for no summaries. A project found
+ * from the working directory is remembered as the root.
+ */
+async function isEngaged($: EngineInterface, find = true): Promise<boolean> {
+  if ((await read($, root)) !== null || (await read($, build)) !== null || (await read($, deploy)) !== null) return true
+  const to = await read($, links)
+  if (to.dashboard !== null || to.app !== null) return true
+  if (!find) return false
+  const dir = await findProject($).catch(() => null)
+  if (dir === null) return false
+  await update($, root, () => dir)
+
+  return true
+}
+
 async function readText($: EngineInterface, path: string): Promise<string> {
   try {
     return await $.fs.read(path)
@@ -127,6 +145,7 @@ let appWatch: Watch = UNWATCHED
 let dashboardWatch: Watch = UNWATCHED
 let isPolling = false
 let restoredRoot: string | null = null
+let deployOutput: string | null = null // where a deploy sent to the background writes its output
 let latestSummary = 0 // the newest summary asked for; older replies are dropped
 let lastReply = '' // the model's latest main-thread text, which the next prompt answers
 
@@ -235,7 +254,11 @@ async function followDeploy($: EngineInterface, ps: string) {
   const now = await $.clock.now()
   let isServing = false
   if (d?.stage === 'starting' && d.apiUrl) {
-    const res = await $.http.fetch(`${d.apiUrl}/__/inspect`).catch(() => null)
+    // Raced against the clock: one hung request must not stop the polls.
+    const res = await Promise.race([
+      $.http.fetch(`${d.apiUrl}/__/inspect`),
+      $.clock.sleep(5000).then(() => null),
+    ]).catch(() => null)
     isServing = res?.ok === true
   }
   const after = advanceDeploy(d, seenIn(ps), now, isServing)
@@ -256,7 +279,7 @@ async function followDeploy($: EngineInterface, ps: string) {
 async function followTests($: EngineInterface, dir: string, ps: string) {
   const run = await read($, testRun)
   const now = await $.clock.now()
-  const command = testCommand(ps)
+  const command = testCommand(ps, dir)
   if (command === null) {
     if (run === null || now - run.seenAt <= 2 * POLL_MS) return
     if (run.command && run.seenAt > run.startedAt) {
@@ -306,7 +329,7 @@ async function followSuite($: EngineInterface, dir: string, ps: string) {
     now,
     writtenAt: stat?.mtimeMs ?? now,
     lastEditAt: await read($, lastEdit),
-    isTesting: isTesting(ps),
+    isTesting: isTesting(ps, dir),
     history,
   })
   const isRunning = isShown && run.finishedAt === null
@@ -328,6 +351,7 @@ async function poll($: EngineInterface) {
   try {
     const dir = (await read($, root)) ?? (await findProject($))
     if (!dir) return
+    if ((await read($, root)) === null) await update($, root, () => dir)
     // Each part on its own: a failed restore must not cost the rest.
     await restoreBuild($, dir).catch(() => undefined)
     const h = await health($, dir).catch(() => null)
@@ -353,8 +377,6 @@ export const register: Register = on => {
       description: 'Show, hide or reset the band above the prompt (activity and build progress)',
       argumentHint: '[show|hide|reset]',
     })
-    // A new session starts Idle; a reload (session.start again) keeps what shows.
-    if ((await read($, activity)) === null) await update($, activity, () => ({ justCompleted: null, now: WAITING }))
     void poll($)
     $.clock.every(POLL_MS, () => void poll($))
 
@@ -377,8 +399,14 @@ export const register: Register = on => {
     // A deploy shows the moment it starts, and its output, once a tool's
     // result carries it (a failed one's too), says how it ended and where
     // it lives.
-    if (e.tool === 'Bash' && /\brbt\s+cloud\s+up\b/.test(String(e.command)) && !isRunning(await read($, deploy))) {
-      await saveDeploy($, beginDeploy('checking', await $.clock.now(), await read($, deploy)))
+    // Only a command that runs the deploy starts one; a command whose text
+    // merely contains `rbt cloud up` (a grep, a test being written) does not.
+    const starts = e.tool === 'Bash' ? deployProgram(String(e.command)) : null
+    const inBackground = e.tool === 'Bash' && e.run_in_background === true
+    let began: number | null = null
+    if ((starts === 'up' || starts === 'script') && !isRunning(await read($, deploy))) {
+      began = await $.clock.now()
+      await saveDeploy($, beginDeploy('checking', began, await read($, deploy), starts))
     }
     // A test run in the foreground is what the turn waits on until it returns.
     const isForegroundTest = e.tool === 'Bash' && e.run_in_background !== true && isTesting(String(e.command))
@@ -388,12 +416,37 @@ export const register: Register = on => {
     const isOutput =
       e.tool === 'Bash' || e.tool === 'GetTask' || (e.tool === 'Read' && /\.output$/.test(String(e.file_path)))
     const text = isOutput ? (ran.text ?? '') : ''
-    if (/Your API is available at|Could not deploy revision|🛑|\.pages\.dev/.test(text)) {
+    // Only a deploy's own output, or any output while one the band saw
+    // start is running (a background deploy's, read back), says how it
+    // ended: a doc or a log that merely mentions a `.pages.dev` site
+    // would otherwise show a Site button for a deploy that never ran.
+    // A deploy sent to the background names the file its output goes to;
+    // that file, read back later, is the deploy's own output too.
+    if (starts !== null && inBackground) {
+      const m = text.match(/Output is being written to: (\S+?\.output)\b/)
+      if (m) deployOutput = m[1]!
+    }
+    const readsDeployOutput =
+      deployOutput !== null && (e.tool === 'GetTask' || (e.tool === 'Read' && String(e.file_path) === deployOutput))
+    const fromDeploy =
+      (e.tool === 'Bash' && isDeployCommand(String(e.command))) || readsDeployOutput || isRunning(await read($, deploy))
+    if (fromDeploy && /Your API is available at|Could not deploy revision|🛑|\.pages\.dev|\s+serves\b/.test(text)) {
       const now = await $.clock.now()
       const { deploy: after, toast } = afterOutput(await read($, deploy), outcomeOf(text), now)
       await saveDeploy($, after)
       await update($, clock, () => now)
       if (toast) $.ui.toast(toast)
+    }
+    // A deploy run in the foreground that returned with no outcome in its
+    // output has ended all the same: failed if the call did, else done.
+    if (began !== null && !inBackground) {
+      const d = await read($, deploy)
+      if (d !== null && isUp(d) && d.startedAt === began) {
+        const now = await $.clock.now()
+        const lastLine = text.trim().split('\n').pop() ?? ''
+        await saveDeploy($, ran.isError === true ? { ...d, stage: 'failed', stageAt: now, failure: lastLine } : { ...d, stage: 'deployed', stageAt: now })
+        await update($, clock, () => now)
+      }
     }
 
     // A test run sent to the background names the file its output goes to.
@@ -414,7 +467,19 @@ export const register: Register = on => {
       await update($, lastEdit, () => editedAt)
       // Remembering the project is a nicety; never let it cost the band.
       const dir = await projectOf($, call.file_path).catch(() => null)
-      if (dir) await update($, root, () => dir)
+      if (dir) {
+        const was = await read($, root)
+        if (was !== null && was !== dir) {
+          // Another project: its own task, deploy and runs come back from the store.
+          await update($, build, () => null)
+          await update($, deploy, () => null)
+          await update($, testRun, () => null)
+          await update($, suite, () => null)
+          restoredRoot = null
+          deployOutput = null
+        }
+        await update($, root, () => dir)
+      }
     }
 
     const step = stepOf(call)
@@ -433,9 +498,6 @@ export const register: Register = on => {
   // slash command now, or the prompt's summary saying it is new work.
   on('prompt.submit', async ($, e, next) => {
     await update($, turnActive, () => true)
-    // Never "Idle" while a turn runs: until the summary names the
-    // work, Now says the request is being worked on.
-    await update($, activity, shown => ({ justCompleted: shown?.justCompleted ?? null, now: STARTING }))
     const b = await read($, build)
     // A typed /reboot:app (or build, mcp-ui, web-app, feature) starts its
     // task now, before the skill's planning, not when the model calls it.
@@ -444,6 +506,12 @@ export const register: Register = on => {
       const after = beginTask(b?.isDone ? null : b, kind)
       if (JSON.stringify(after) !== JSON.stringify(b)) await saveBuild($, after)
     }
+    // Outside a Reboot project, with no Reboot work in view, the band has
+    // nothing to say and no summary to ask for.
+    if (!(await isEngaged($))) return next(e)
+    // Never "Idle" while a turn runs: until the summary names the
+    // work, Now says the request is being worked on.
+    await update($, activity, shown => ({ justCompleted: shown?.justCompleted ?? null, now: STARTING }))
     if (e.text.trim()) void summarize($, e.text, 'request', kind === null)
 
     return next(e)
@@ -455,7 +523,7 @@ export const register: Register = on => {
     if (e.agentId === undefined && e.message.type === 'assistant') {
       const text = textOf(e.message.content)
       if (text) lastReply = text
-      if (isWorthSummarizing(text)) void summarize($, text, 'narration')
+      if (isWorthSummarizing(text) && (await isEngaged($, false))) void summarize($, text, 'narration')
     }
 
     return appended
@@ -504,9 +572,11 @@ export const register: Register = on => {
           ? testLine(run, Math.max(now, run.startedAt))
           : act?.now && status
             ? `${act.now} (tests ${status})`
-            : (act?.now ?? null)
+            : (act?.now ?? WAITING)
     const line = isShown(d, now) ? deployLine(d!, Math.max(now, d!.stageAt)) : nowText
-    if (e.props.hasSurvey || (b === null && line === null && !hasLinks) || (await read($, isHidden))) {
+    // Nothing to draw outside a Reboot project with no Reboot work in view.
+    const isEngaged = (await read($, root)) !== null || b !== null || d !== null || hasLinks
+    if (!isEngaged || e.props.hasSurvey || (await read($, isHidden))) {
       return next(e)
     }
 
