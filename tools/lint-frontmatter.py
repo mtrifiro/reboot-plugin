@@ -30,6 +30,7 @@ EXEMPT = (
     "skills/build/templates/*/FINDINGS.md",
     "skills/build/templates/*/AGENTS.md",
     "skills/build/templates/*/CLAUDE.md",
+    "skills/build/templates/*/deploy/api-exceptions.md",
 )
 
 # (glob, required keys, checked in full by)

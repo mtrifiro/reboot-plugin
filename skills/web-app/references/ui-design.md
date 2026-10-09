@@ -48,7 +48,7 @@ frequent colors on the page. A brand usually gives more than an accent:
 a page color, an ink, a highlight, and up to three typefaces (display,
 text, mono). Record each in the brief, with the site as the source.
 
-## The default look: Reboot's brand
+### The default look: Reboot's brand
 
 The template ships in it (values from reboot.dev). Keep it when the user
 names no brand; replace it whole when they do.
