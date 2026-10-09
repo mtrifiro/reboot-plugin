@@ -11,7 +11,7 @@ tags: [contradiction, operations]
 cluster: "4.2"
 still_applies: yes
 status: Resolved
-resolved_by: "run/SKILL.md § Tunnel — MCP branch only"
+resolved_by: "run/SKILL.md § Tunnel — MCP branch, only when the client is elsewhere"
 ---
 
 # run skill starts a public tunnel for Web Apps

@@ -1,6 +1,6 @@
 ---
 name: run
-description: Run, stop, restart or reset an existing Reboot application locally. Detects whether the project is a Web App (`web/`), an MCP UI (`frontend/mcp/`) or both, makes sure dependencies and secrets are in place, then starts every process the app needs — the backend (`rbt dev run`), the frontend dev server, and, for MCP UIs only, a Cloudflare quick tunnel via the bundled `cloudflared` shim and the setup wizard (from which the user can launch MCPJam on demand). Also says how to stop the app completely (orphaned `main.py` and Envoy processes, the RocksDB LOCK), restart it, and reset dev state with `rbt dev expunge --yes`. Use this to bring an app back up, e.g. at the start of a new session, or when a restart or reset is needed.
+description: Run, stop, restart or reset an existing Reboot application locally. Detects a Web App (`web/`), an MCP UI (`frontend/mcp/`) or both, puts dependencies and secrets in place, then starts every process the app needs — the backend (`rbt dev run`), the frontend dev server and, for an MCP UI, the setup wizard, plus a Cloudflare tunnel only when the MCP client runs elsewhere. Use at the start of a session, whenever the app must come back up, and for a clean stop, restart or `rbt dev expunge`.
 argument-hint: [<project-directory>]
 allowed-tools: Bash, Read, Write, Glob, Grep, Edit, AskUserQuestion
 ---
@@ -13,8 +13,8 @@ allowed-tools: Bash, Read, Write, Glob, Grep, Edit, AskUserQuestion
 The canonical procedure to start, stop, restart and reset an existing
 Reboot app — typically at the start of a fresh session, when no
 processes or exported environment survive. It **runs** an app; to
-build one see the [`mcp-ui` skill](../mcp-ui/SKILL.md) and the
-[web-app skill](../web-app/SKILL.md), which defer here to run.
+build one see the [`app` skill](../app/SKILL.md), whose build flow
+defers here to run.
 
 ## Step 1 — Locate the project
 
@@ -79,7 +79,7 @@ Run each process in its own background shell, from the project root.
 ### Before starting: is the port free?
 
 The backend serves on `9991` unless `.rbtrc` has `dev run --port=<port>`.
-Check both IP stacks:
+One command covers both IP stacks:
 
 ```sh
 lsof -nP -iTCP:9991 -sTCP:LISTEN
@@ -95,15 +95,19 @@ If held, inspect it (`ps -o pid,ppid,etime,command -p <pid>`):
 
 Check the frontend's Vite port the same way.
 
-### Tunnel — MCP branch only
+### Tunnel — MCP branch, only when the client is elsewhere
 
 **Skip for a Web App**: it has no MCP clients, and a tunnel publishes
 the dev server (and its `Development()` sign-in) on a public URL —
 start one only if the user asks for a shareable preview.
 
-For an MCP UI, before the backend, run the bundled `cloudflared` shim
-in its own background shell so external MCP clients (e.g. ChatGPT) can
-reach the dev server:
+For an MCP UI, a client on this machine (Claude Code, Claude Desktop,
+VSCode, Goose, MCPJam) reaches the backend at `http://localhost:9991`
+directly: skip the tunnel too. Start one only when the client runs
+elsewhere (ChatGPT, or a Claude on another machine) or the user asks,
+and say in the handoff that its URL is public and exposes the
+`Development()` sign-in. Then, before the backend, run the bundled
+`cloudflared` shim in its own background shell:
 
 - `--url http://localhost:<BACKEND_PORT>` — `9991` or the
   `dev run --port=` value.
@@ -170,8 +174,9 @@ npx @mcpjam/inspector@2.23.3 --url http://localhost:9991/mcp --oauth
 ```
 
 Run it yourself only if the user asks, via the plugin's
-`mcpjam-inspector` shim (pins the version; `--no-open` so you surface
-the URL instead of popping a tab):
+`mcpjam-inspector` shim (pins the version the plugin ships, which may
+trail the wizard's; `--no-open` so you surface the URL instead of
+popping a tab):
 
 ```sh
 mcpjam-inspector --url http://localhost:9991/mcp --oauth
@@ -192,7 +197,8 @@ Confirm every process is up from its logs, then give the user:
 - Both: all of the above.
 
 > **Always start every process the app needs**: backend, frontend (if
-> any), and for the MCP branch the tunnel (not MCPJam). The app is
+> any), and the tunnel only when the MCP client is elsewhere (never
+> MCPJam). The app is
 > unusable until all are up.
 
 ## Stop, restart, reset

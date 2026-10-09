@@ -1,4 +1,4 @@
 interface:
   display_name: "Run Reboot App"
-  short_description: "Run an existing Reboot app locally (backend, frontend, inspector)"
+  short_description: "Run an existing Reboot app locally (backend, frontend dev server, and for an MCP UI the setup wizard)"
   default_prompt: "Use Run Reboot App to bring an existing Reboot app up locally."

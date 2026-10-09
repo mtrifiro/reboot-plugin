@@ -12,7 +12,7 @@ cluster: "4.2"
 duplicate_of: reboot-air-141-11
 still_applies: yes
 status: Resolved
-resolved_by: "run/SKILL.md § Tunnel — MCP branch only"
+resolved_by: "run/SKILL.md § Tunnel — MCP branch, only when the client is elsewhere"
 ---
 
 # run skill tells a Web App to start a Cloudflare tunnel it has no use for
