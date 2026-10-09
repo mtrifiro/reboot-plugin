@@ -408,8 +408,12 @@ scenarios before handoff**, in the built-in steps of
   exercises real authorizers.
 - Register the **real** servicers; never subclass one to weaken its
   `authorizer()`.
-- Leave `oauth=` out of the test's `Application(...)` (the harness
-  installs a test provider); keep a production `token_verifier=`.
+- With `oauth=`, the fixture passes it as the template does:
+  `OAuth(provider=OAuthProviderByEnvironment(dev=development,
+  prod=development), allowed_origins=[])`, because the harness is
+  neither `rbt dev run` nor `rbt serve`
+  (`python/references/testing-project-setup.md`); keep a production
+  `token_verifier=`.
 - Seed per test, only what each scenario needs
   (`python/references/lifecycle-seeding.md`); let factories make ids up.
 - When a value depends on **who is calling**, assert it across every

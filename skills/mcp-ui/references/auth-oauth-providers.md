@@ -136,8 +136,9 @@ confirm `state_id_is_user_id` rules accept the owner and reject others.
   (`rbt serve`, Reboot Cloud, unclassified). Both arms required; a
   selected `None` arm fails startup, even with nothing to auto-construct.
 - No `oauth=` means no OAuth server; an app with a `User`-typed
-  auto-construct servicer then fails to start. In unit tests omit it: the
-  harness supplies a test provider;
+  auto-construct servicer then fails to start. The test fixture passes
+  it too, `Development()` on both arms with `allowed_origins=[]`
+  (`python/references/testing-project-setup.md`);
   `await rbt.create_external_context_as(name, user_id)` impersonates.
 - `oauth=` takes one provider; Google *and* GitHub needs design not
   covered here.
