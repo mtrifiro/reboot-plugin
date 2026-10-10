@@ -349,16 +349,16 @@ install_codex() {
 
     if [ -z "$disable_sandbox" ]; then
         printf >&2 "\n"
-        printf >&2 "${BOLD}Codex sandbox decision${RESET}\n"
+        printf >&2 '%sCodex sandbox decision%s\n' "$BOLD" "$RESET"
         printf >&2 "  The Reboot plugin's main commands (rbt dev run, rbt generate, ...)\n"
         printf >&2 "  hang silently inside Codex's sandbox because of an upstream Codex\n"
         printf >&2 "  bug that breaks Python asyncio cross-thread wakeups:\n"
-        printf >&2 "    ${BOLD}https://github.com/openai/codex/issues/24933${RESET}\n"
+        printf >&2 '    %shttps://github.com/openai/codex/issues/24933%s\n' "$BOLD" "$RESET"
         printf >&2 "  Until that is fixed, the only way to make the plugin actually work\n"
         printf >&2 "  under Codex is to opt out of Codex's sandbox.\n"
         printf >&2 "\n"
-        printf >&2 "  Doing so writes ${BOLD}sandbox_mode = \"danger-full-access\"${RESET} into\n"
-        printf >&2 "  ~/.codex/config.toml. That setting is ${BOLD}global${RESET}: it affects every\n"
+        printf >&2 '  Doing so writes %ssandbox_mode = "danger-full-access"%s into\n' "$BOLD" "$RESET"
+        printf >&2 '  ~/.codex/config.toml. That setting is %sglobal%s: it affects every\n' "$BOLD" "$RESET"
         printf >&2 "  Codex session on this machine, not just sessions that touch the\n"
         printf >&2 "  Reboot plugin. You can undo it later by removing the sandbox_mode\n"
         printf >&2 "  line (tagged '# reboot-plugin') from ~/.codex/config.toml.\n"
@@ -460,7 +460,7 @@ main() {
         ok "Installed for: $(IFS=', '; echo "${INSTALLED_FOR[*]}")."
     fi
     printf >&2 "\nStart a new agent session, then ask to build a Reboot app"
-    printf >&2 " — e.g. ${BOLD}build a todo-list MCP UI${RESET}.\n"
+    printf >&2 ' — e.g. %sbuild a todo-list MCP UI%s.\n' "$BOLD" "$RESET"
 }
 
 # Run the install when this file is executed, directly or via

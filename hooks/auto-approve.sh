@@ -436,6 +436,7 @@ case "$tool" in
                         in_reboot_project "$effective_dir" || exit 1
                         args="${trimmed#cloudflared tunnel }"
                         # Require exactly: --metrics localhost:<port> and --url http://localhost:<port> (either order).
+                        # shellcheck disable=SC2086  # splitting into words is the point
                         set -- $args
                         [ "$#" -eq 4 ] || exit 1
                         if [ "$1" = "--metrics" ] && [ "$3" = "--url" ]; then

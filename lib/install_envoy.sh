@@ -136,7 +136,7 @@ case "$ENVOY_SOURCE" in
             exit 1
         fi
         mv "$extracted" "$STAGE/envoy.bin"
-        rm -rf "$STAGE/$tarball" "$STAGE/envoy-v${ENVOY_VERSION}-${ENVOY_ARCH}"
+        rm -rf "${STAGE:?}/$tarball" "${STAGE:?}/envoy-v${ENVOY_VERSION}-${ENVOY_ARCH}"
         mv "$STAGE/envoy.bin" "$STAGE/envoy"
         chmod +x "$STAGE/envoy"
         ;;
