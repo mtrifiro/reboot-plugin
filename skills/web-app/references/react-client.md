@@ -44,9 +44,10 @@ in the templates README; two are load-bearing:
 
 `<RebootClientProvider>` with no `url` falls back to `window.REBOOT_URL`,
 then `?rebootUrl=`, then `window.location.origin` — the **wrong** origin
-in dev, where the SPA is on Vite's port and the backend on `:9991`. The
-template reads `web/.env.development`
-(`VITE_REBOOT_URL=http://localhost:9991`):
+in dev, where the SPA is on Vite's port and the backend on the port
+`.rbtrc` names. The template reads `web/.env.development`
+(`VITE_REBOOT_URL=http://localhost:<port>`, written by the scaffold with
+the same port as `.rbtrc`; a second copy of the app changes both):
 
 ```tsx
 const REBOOT_URL =

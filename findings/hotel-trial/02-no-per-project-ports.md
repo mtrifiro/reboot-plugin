@@ -12,8 +12,8 @@ names:
 tags: [operations, scaffold]
 cluster: "F"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "build/templates/README.md § Files"
 ---
 
 # Every project starts on the same ports; clashes are fixed by hand after they happen
@@ -48,3 +48,5 @@ clash error reads as an Envoy bug), client-portal-09.
 
 **Checked at 1.6.0.** `run/SKILL.md` handles a taken port when it is
 found; nothing assigns distinct ports when a project is created.
+
+**Resolution (2026-10-10).** The scaffold (`copy.sh`) now gives every project a backend, dashboard and Vite port of its own: a set from a hash of the project name, the next free set when one of its ports is held, and the ports the stub `.rbtrc` already names on a merge; written into `.rbtrc` (`dev run --port`, `--dashboard-port`, `dashboard --port`, the MCP UI's `--frontend-host`), the Vite config, `.env.development` and `scripts/screenshots.py`. `copy.sh --ports <project>` prints the set for the dashboard skill, which starts on it; the run and dashboard skills check a port owner's directory before trusting what answers.

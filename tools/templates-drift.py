@@ -61,6 +61,7 @@ DIFFERS = {
 PAIRS = [
     ("web-app/web/src/nav.tsx", "both/frontend/web/src/nav.tsx"),
     ("web-app/web/src/theme.tsx", "both/frontend/web/src/theme.tsx"),
+    ("web-app/web/.env.development", "both/frontend/web/.env.development"),
 ]
 
 

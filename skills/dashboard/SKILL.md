@@ -57,6 +57,12 @@ missing:
    dev run --application=backend/src/main.py
    ```
 
+   plus the dashboard's port, of this project's own so that projects on
+   one machine don't meet: `<plugin>/skills/build/templates/copy.sh
+   --ports <project>` prints `<backend> <dashboard> <vite>`; write
+   `dashboard --port=<dashboard>` and `dev run --dashboard-port=<dashboard>`.
+   The scaffold (build Step 2) keeps them.
+
 3. **The API directory** (`mkdir -p api`); empty is fine — files are
    picked up as they appear.
 
@@ -68,14 +74,16 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 
 ## Step 3 — Is a dashboard already serving?
 
-The dashboard serves at `http://127.0.0.1:9871/`. Probe it:
+The dashboard serves on the port `.rbtrc` names (`dashboard --port=`;
+9871 when it names none). Probe it:
 
 ```sh
-curl -sf -o /dev/null --max-time 2 http://127.0.0.1:9871/
+curl -sf -o /dev/null --max-time 2 http://127.0.0.1:<port>/
 ```
 
-If it answers, check it's **this project's**: 9871 belongs to whichever
-dashboard started first, with no warning (student-sor, 1.5.0).
+If it answers, check it's **this project's**: a port belongs to whichever
+dashboard started first, with no warning (student-sor, 1.5.0; two
+sessions building one plan, findings-board, 1.6.0).
 
 ```sh
 pgrep -fl "rbt dashboard"
@@ -116,26 +124,31 @@ uv run rbt dashboard
   coexists with it.
 - If it fails (e.g. the local Envoy check finds neither Docker nor an
   `envoy` executable), warn in one sentence and continue without it.
+- The plugin's `rbt` and `uv` shims give its pyright
+  `NODE_OPTIONS=--max-old-space-size=12288` unless `NODE_OPTIONS` is
+  set: on a mid-sized app the default heap runs out, the check retries
+  forever and the Call Graph never publishes (reboot-crm, 1.6.0).
 
 ## Step 5 — Open it once
 
 ```sh
-"$BROWSER" http://127.0.0.1:9871/ || \
-  xdg-open http://127.0.0.1:9871/ || \
-  python3 -m webbrowser http://127.0.0.1:9871/
+"$BROWSER" http://127.0.0.1:<port>/ || \
+  xdg-open http://127.0.0.1:<port>/ || \
+  python3 -m webbrowser http://127.0.0.1:<port>/
 ```
 
 Once, for good: the page tracks its viewers (`Presence`) and the
 developer's reopen preference, which `rbt dev run` consults. Never
 re-open it on reloads or restarts. Tell the user, e.g. "Developer
-dashboard (watch the API as I build it) at http://127.0.0.1:9871/", and
+dashboard (watch the API as I build it) at http://127.0.0.1:<port>/", and
 continue the build.
 
 ## Known issues
 
 | Error / symptom | Meaning | Fix |
 | --- | --- | --- |
-| Call Graph shows `0 calls` and "Your application imports generated code that does not exist yet ... Run `rbt generate`" although the generated code exists; one orphaned `node .../langserver.index.js` per analysis | Orphaned pyright child, hung shutdown (1.5.0); the 1.6.0 source kills pyright's process group on shutdown, so it should not recur | `pkill -f langserver.index.js`; the graph then publishes |
+| Call Graph shows `0 calls` and "Your application imports generated code that does not exist yet ... Run `rbt generate`" although the generated code exists; one orphaned `node .../langserver.index.js` per analysis | Orphaned pyright child, hung shutdown (1.5.0); the 1.6.0 source kills pyright's process group on shutdown, so it should not recur | `pkill -f langserver.index.js`; the graph then publishes. The plugin's session-start report names such an orphan |
+| Call Graph never publishes; the dashboard's Node sits at its heap limit, retrying | pyright out of Node's default heap on a mid-sized app (reboot-crm, 1.6.0) | The shims set `NODE_OPTIONS=--max-old-space-size=12288` for `rbt dashboard`; set a larger one yourself if it recurs |
 | Same banner, status `CODE NOT CHECKED YET`, and the dashboard log shows `RuntimeError: pyright exited` / `WatchCode' failed with SystemAborted` | Pyright out of Node heap on a large generated tree; the banner wrongly blames generated code (reboot-crm, 1.6.0) | Start with `NODE_OPTIONS="--max-old-space-size=12288" uv run rbt dashboard` |
 | "code checked at" an old time, deleted methods still drawn, or "Your API files changed since the generated code was written" right after `rbt generate` | Stale analysis after a dashboard restart (reboot-crm, 1.6.0) | Run `uv run rbt generate` once more |
 | Dashboard log keeps retrying an old app address (`WatchApi` ... `Connection refused`) after an expunge and restart | Watch tasks outlived their app (reboot-crm, 1.6.0) | Stop the dashboard, delete `.rbt/dashboard`, restart it |

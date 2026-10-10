@@ -15,9 +15,10 @@ export default defineConfig({
     // refused, so the page is unreachable from the browser even
     // though the dev server is healthy and logs no error.
     host: true,
-    // A port of this project's own, not Vite's default 5173, which
-    // another project's dev server may already hold on `[::1]`.
-    // Change it if another project on this machine uses it.
+    // A port of this project's own, written by copy.sh when the
+    // project was scaffolded (with the backend's and the dashboard's
+    // in `.rbtrc` and `.env.development`); never Vite's default 5173,
+    // which another project's dev server may already hold on `[::1]`.
     port: 5273,
     // Fail loudly if the port is taken instead of silently sliding
     // to the next one.

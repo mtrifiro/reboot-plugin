@@ -124,7 +124,7 @@ the root-page wizard offers a fresh user.
 ### Setup Wizard and MCPJam
 
 Hand off the **setup wizard at the backend root
-(`http://localhost:9991`)**, not the `/mcp` URL: it connects an MCP
+(`http://localhost:<port>`, the `dev run --port=` in `.rbtrc`)**, not the `/mcp` URL: it connects an MCP
 client (Claude, ChatGPT, MCPJam, …) and completes OAuth. Surface and open
 it once at first startup, as the `run` skill directs. Never start the
 MCPJam inspector yourself — the wizard launches it on demand. Bare

@@ -10,8 +10,8 @@ names:
 tags: [scaffold, frontend]
 cluster: ""
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "build/templates/README.md § Files"
 ---
 # `both` template: Vite prints an address whose sign-in can't work
 
@@ -22,3 +22,5 @@ resolved_by: ""
 **Repro.** Copy `both`, run the backend and `npm run dev`, open the URL Vite prints, press Sign in.
 
 **Where in the skills.** `build/templates/both/frontend/web/` (the missing file), `build/templates/README.md` ("`both/` adds"), the `run` skill's hand-off (which URL to give for a `both` app).
+
+**Resolution (2026-10-10).** The `both` template ships `frontend/web/.env.development` with the backend's port (`copy.sh` writes it), so the address Vite prints can sign in; the templates' README row for the SPA entry says so.

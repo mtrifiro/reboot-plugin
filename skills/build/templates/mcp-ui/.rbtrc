@@ -23,6 +23,14 @@ dev run --python
 dev run --application-name=__project__
 dev expunge --application-name=__project__
 
+# This project's ports, chosen when it was scaffolded (copy.sh) so that
+# two projects on one machine don't meet: the backend, the dashboard
+# `rbt dev run` looks for, and where `rbt dashboard` serves. A flag set
+# here can't also be passed on the command line.
+dev run --port=9991
+dev run --dashboard-port=9871
+dashboard --port=9871
+
 # Load secrets from a git-ignored env file. Put one KEY=VALUE line
 # per secret in `.env`. See `python/references/lifecycle-secrets.md`.
 dev run --env-file=.env

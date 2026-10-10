@@ -11,8 +11,8 @@ tags: [operations]
 cluster: "F"
 duplicate_of: hotel-trial-02
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "build/templates/README.md § Files"
 ---
 
 # Parallel demo apps collide on port 9991
@@ -26,3 +26,5 @@ resolved_by: ""
 **Where in the skills.** Not recorded.
 
 **Checked at 1.6.0.** `python/references/lifecycle-rbtrc.md` documents `--port=<n>` "off the default 9991, when another Reboot app holds it", and `run/SKILL.md` says to set `dev run --port=<port>` when the port is held by something else: both fix the clash after it happens. No skill assigns a project its own port up front (the open part of hotel-trial-02).
+
+**Resolution (2026-10-10).** The scaffold (`copy.sh`) now gives every project a backend, dashboard and Vite port of its own: a set from a hash of the project name, the next free set when one of its ports is held, and the ports the stub `.rbtrc` already names on a merge; written into `.rbtrc` (`dev run --port`, `--dashboard-port`, `dashboard --port`, the MCP UI's `--frontend-host`), the Vite config, `.env.development` and `scripts/screenshots.py`. `copy.sh --ports <project>` prints the set for the dashboard skill, which starts on it; the run and dashboard skills check a port owner's directory before trusting what answers.

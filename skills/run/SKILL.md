@@ -78,11 +78,12 @@ Run each process in its own background shell, from the project root.
 
 ### Before starting: is the port free?
 
-The backend serves on `9991` unless `.rbtrc` has `dev run --port=<port>`.
-One command covers both IP stacks:
+The backend serves on the port `.rbtrc` names (`dev run --port=`; the
+scaffold chose one of the project's own, and 9991 is only for a project
+that names none). One command covers both IP stacks:
 
 ```sh
-lsof -nP -iTCP:9991 -sTCP:LISTEN
+lsof -nP -iTCP:<port> -sTCP:LISTEN
 ```
 
 If held, inspect it (`ps -o pid,ppid,etime,command -p <pid>`):
@@ -93,7 +94,11 @@ If held, inspect it (`ps -o pid,ppid,etime,command -p <pid>`):
   in `.rbtrc` instead. A flag `.rbtrc` sets can't also be passed on the
   command line (`the flag '--port' was set multiple times`; 1.6.0).
 
-Check the frontend's Vite port the same way.
+Check the frontend's Vite port the same way. Before trusting whatever
+answers on a port, check the owner's directory (`lsof -a -d cwd -p <pid>`):
+another project's backend or dashboard may hold it (findings-board,
+1.6.0). `scripts/doctor.sh` in the project does these checks, and the
+ones under "Stop, restart, reset", in one command.
 
 ### Tunnel — MCP branch, only when the client is elsewhere
 

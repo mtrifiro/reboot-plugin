@@ -65,7 +65,10 @@ dev run --application=backend/src/main.py
   watches the `generate` directory and re-runs `rbt generate` (1.6.0
   source); the explicit `api/**` line keeps reloads under
   `--no-generate-watch`.
-- **`--port=<n>`**: off the default 9991, when another Reboot app holds it.
+- **`--port=<n>`**: the scaffold writes a port of the project's own here
+  (with `--dashboard-port` and `dashboard --port`), so projects on one
+  machine don't meet; change it here, never on the command line, when
+  one still does.
 
 ### `serve run` lines: production config
 
