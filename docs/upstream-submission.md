@@ -115,6 +115,14 @@ What the branch looks like without findings/ and mods/: about 378 files, +28.7k/
 - authorizer changes routed to Design, and the review table's example row ([`flywheel-primer-fixes.md`](flywheel-primer-fixes.md))
 - The PR body should name the primer passages this moves from "proposed" to "today".
 
+**PR 7 — `Flywheel: acceptance and evidence`.** Based on PR 6; the items the primer still called proposed that the plugin can ship on its own:
+- acceptance recorded in the repository (`design/accepted.json`, `design/review.md`, `model_diff.py --accept` and its default base; Chapter 6's "the repository doesn't keep it yet" and Chapter 1's release-record bullet move to today)
+- the release record's compatibility result and servicers without an authorizer (Chapter 1, Chapter 7)
+- the templates' `prove.yml` posting the scenario results and the model diff on the pull request (Chapter 7's "posting … is proposed")
+- the history to keep as a design question (Chapter 8), the ticket named in the feature file (Chapter 6's approximation), the stage cards, and inspect's path from a finding to a scenario (Chapter 8)
+- `copy.sh` no longer carries the template directory's build leftovers into a new project
+- Not in it: the band (mods stay in the fork) and the eval runner changes (PR 5).
+
 Also in the "Leftover dev processes" work (aa961a4): the hook tests move to `tests/reboot/plugin/hooks/` with a `py_test` target, and `lib/own.sh` needs a filegroup.
 
 The schema guard (`hooks/schema-guard.sh`, `hooks/schema-guard/`, `tests/hooks/schema_guard_test.py`) can go up with the hook tests, with a filegroup beside `auto_approve_sh`. It is a command hook that guards Claude Code and Codex alike, so it doesn't depend on mods/.
