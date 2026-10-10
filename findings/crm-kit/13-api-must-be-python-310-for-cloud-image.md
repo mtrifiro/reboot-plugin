@@ -11,8 +11,8 @@ names:
 tags: [negative-space, error-text]
 cluster: ""
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "build/templates/README.md § Files"
 ---
 
 # api/ must be valid Python 3.10: the Cloud base image runs 3.10.12 and the deploy fails in rbt generate
@@ -26,3 +26,5 @@ resolved_by: ""
 **Where in the skills.** Not named by the source.
 
 **Checked at 1.6.0.** `lifecycle-dockerfile.md` names the `reboot-base:1.6.0` image and `lifecycle-project-setup.md` says "Python 3.10+", but nothing says the image's interpreter is 3.10 or that quoted forward references fail there; `issubclass() arg 1` is not in `errors.md` (grep).
+
+**Resolution (2026-10-10).** `scripts/api_lint.py` in every template parses `api/` as Python 3.10 and refuses a quoted forward reference in a field's type, before `rbt generate`; `prove.yml` and the `Generate` line in AGENTS.md run it.

@@ -10,8 +10,8 @@ names:
 tags: [error-text]
 cluster: ""
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "build/templates/README.md § Files"
 ---
 # A Model shared across API packages forces per-package copies
 
@@ -22,3 +22,5 @@ resolved_by: ""
 **Repro.** Define `class Rejected(Model)` in `api/a/v1/a.py`, use it in `errors=[Rejected]` on a method in `api/b/v1/b.py`, run `rbt generate`, then import `b.v1.b_rbt`.
 
 **Where in the skills.** `python/references/api-pydantic.md` § Limits (documented, with workaround).
+
+**Resolution (2026-10-10).** `scripts/api_lint.py` in every template refuses an import from another API package before `rbt generate`, naming the `NameError` it would cause and the plain-module shape to use instead; `prove.yml` runs it.

@@ -33,6 +33,7 @@ jobs:
           chmod +x "$HOME/.local/bin/envoy"
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
       - run: uv sync
+      - run: python3 scripts/api_lint.py
       - run: uv run rbt generate
       - run: uv run mypy backend/ tests/
       - run: uv run pytest
