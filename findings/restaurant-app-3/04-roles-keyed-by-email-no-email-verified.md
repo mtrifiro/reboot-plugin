@@ -11,8 +11,8 @@ names:
 tags: [auth, negative-space]
 cluster: ""
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/auth-claims.md § Never"
 ---
 # Roles keyed by email with no word about `email_verified`
 
@@ -23,3 +23,5 @@ resolved_by: ""
 **Repro.** Any `set_claims` that links `claims["email"]` to a roster entry without checking `claims["email_verified"]`.
 
 **Where in the skills.** `python/references/auth-claims.md` (Do this; the claims table lists `email_verified` for every provider but nothing uses it; Never); `python/references/auth-custom-predicates.md` (Roles).
+
+**Resolution (2026-10-10).** `auth-claims.md` requests `email_verified` in its Do-this example, checks it in the `set_claims` example, and its Never forbids linking an email-keyed record on an unverified address; `auth-roles.md` carries the roster shape and the feature file that proves the refusal; the `design-roles` eval gains an `email-verified` grader.

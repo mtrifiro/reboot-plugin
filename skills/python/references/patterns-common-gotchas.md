@@ -36,7 +36,7 @@ section. Add or change a trap in its owning reference, not here. -->
 - `Application(servicers=[ChatRoomServicer()])`
 - A servicer list written out again in a test module
 - `ChatRoomServicer().serve()` or a sync `main` with no `Application`
-- Registering a stdlib type's `servicers()` without its `<name>_library()` (or the reverse)
+- Omitting a stdlib type's `<name>_library()`, or a library-less type's `servicers()`
 
 **`lifecycle-backup-restore.md`**
 - Never expunge without a backup taken after the last write, checked by its counts
@@ -51,6 +51,7 @@ section. Add or change a trap in its owning reference, not here. -->
 - Iterating on a state shape while the watcher is live
 - Counting log lines to measure progress
 - Trusting a browser tab across a backend restart
+- Saving a live-code edit in pieces: hot reload boots each save, and a reference to a constant the next save defines throws `NameError` in a scheduled chain until then (marquee-control, 1.4.1)
 
 **`lifecycle-dockerfile.md`**
 - `CMD ["rbt", "dev", "run"]` in a Cloud image
@@ -148,6 +149,8 @@ section. Add or change a trap in its owning reference, not here. -->
 - `allow()` as a "safe default"
 - Assume the caller's identity reaches an actor your servicer calls
 - Gate per-method rules by `isinstance(request, ...)` in one predicate (`auth-custom-predicates.md` § Never)
+- A predicate on type X that calls a reader on the actor it guards: the actor waits on itself
+- A client- or MCP-facing method that fans out and relies on the gates of what it reads: its nested calls arrive app-internal and pass every `is_app_internal` arm
 - Read `PermissionDenied` from `allow_if(any=[has_verified_token, is_app_internal])` as "signed in but forbidden"
 
 **`servicer-constructor.md`**
@@ -174,6 +177,7 @@ section. Add or change a trap in its owning reference, not here. -->
 - Touch shared actors in different orders in different transactions (A then B, B then A)
 - Cancel in-flight transaction calls (load drivers, timing-out tests, Ctrl-C)
 - Read `context.auth` in an actor called from this transaction
+- An aggregator, registry or dashboard among the participants
 
 **`servicer-workflow-calls.md`**
 - `at_least_once(...)` / `at_most_once(...)` / `.idempotently(...)` around a Reboot call
@@ -183,6 +187,7 @@ section. Add or change a trap in its owning reference, not here. -->
 - `asyncio.gather` over **transaction** calls in one workflow
 - Calling the same method on the same actor twice with a bare `.per_workflow()` / `.per_iteration()`
 - Calling a factory constructor from a workflow on an actor that may already exist
+- Feeding an `.always()` result into a memoized call, an id or a later step
 
 **`servicer-workflow-declare.md`**
 - `cls.ref()` or `self.ref()` inside the workflow
@@ -228,6 +233,7 @@ section. Add or change a trap in its owning reference, not here. -->
 - A plain `await` on anything with effects
 - `schedule(...)` from a workflow
 - A wall-clock or random value read directly in the body
+- Driving the phase after a commit from a plan rebuilt locally
 
 **`servicer-writer.md`**
 - Calling another actor's writer, transaction or constructor (`await Account.ref("audit-log").record(context, ...) # WRONG`)
@@ -366,6 +372,8 @@ section. Add or change a trap in its owning reference, not here. -->
 - Declare `set_claims` (or `create`) in the `User` API
 - Merge claims into existing state
 - Key roles or a directory by `Development()` user IDs
+- Link a sign-in to a roster entry, invitation or any email-keyed record unless `request.claims["email_verified"]` is true: an unverified address is a claim anybody can make, and `Development()` (five fabricated, verified addresses) never shows it (two builds of one brief, 1.6.0
+- A verified-email allowlist that may be empty while a real provider is configured: in the harness that is right, in production every account at the provider gets in
 
 **`auth-custom-predicates.md`**
 - `def can_edit(context, state, request):`
@@ -384,6 +392,14 @@ section. Add or change a trap in its owning reference, not here. -->
 - `app_internal=True` on a route that acts on unvalidated input
 - `app_internal=True` on a templated path (`/x/{id}`)
 - Crashing on "not connected"
+
+**`auth-roles.md`**
+- Link a sign-in to a roster entry, an invitation or any email-keyed record unless `request.claims["email_verified"]` is true
+- A `role` field on `User` that a method on `User` writes
+- Key the roster by `Development()` user ids ([`auth-claims.md`](auth-claims.md) § Never)
+- "The first to sign in is the admin" in production, or an allowlist that may be empty with a real provider configured: with `has_verified_token` alone every account at the provider can read the app
+- A predicate on the roster type calling a reader on the roster: the actor waits on itself
+- Asking the roster on every method of every type: put the access gate on the caller's own `User` and ask the roster only where a role decides
 
 **`rpc-calls.md`**
 - `await account.deposit(context, DepositRequest(amount=100))`
@@ -595,8 +611,7 @@ section. Add or change a trap in its owning reference, not here. -->
 - `process.env.PORT` in `vite.config.ts` without `@types/node`: `tsc -b` fails
 - Leaving the port at Vite's default 5173 or dropping `strictPort`: another project's server on `[::1]:5173` silently answers `localhost` while this one answers `127.0.0.1`, and without `strictPort` Vite slides to the next port, leaving `.env` and `allowed_origins` wrong
 - Deploying with `allowed_origins=[]`: a standalone SPA is cross-origin from its backend by construction
-- `#` in an actor id a page subscribes to (`react-generated-client.md` § Never)
-- Subscribing to an actor that may not exist: the reader aborts `StateNotConstructed` and retries about once a second, disturbing every other subscription on the page
+- The subscription traps (`#` in an id, an actor that may not exist, a seventh live read): `react-generated-client.md` § Never and Limits
 
 **`mcp-ui/references/react-scaffolding.md`**
 - Rewrite `vite.config.ts` to emit a flat `dist/<name>.html`: the MCP server only finds `frontend/dist/mcp/<name>/index.html`

@@ -39,8 +39,8 @@ application = Application(
     servicers=[UserServicer, ...],
     oauth=OAuth(
         provider=OAuthProviderByEnvironment(
-            dev=Development(claims=["email", "name"]),
-            prod=...,  # e.g. Google(<credentials>, claims=["email", "name"])
+            dev=Development(claims=["email", "email_verified", "name"]),
+            prod=...,  # e.g. Google(<credentials>, claims=["email", "email_verified", "name"])
         ),
     ),
 )
@@ -63,7 +63,10 @@ class UserServicer(User.Servicer):
     ) -> None:
         # Full replace: an absent claim is no longer asserted.
         self.state.email = request.claims.get("email", "")
+        self.state.email_verified = bool(request.claims.get("email_verified", False))
         self.state.name = request.claims.get("name", "")
+        # Anything keyed by the address (a roster entry, an invitation)
+        # is linked only when the provider verified it (auth-roles.md).
 ```
 
 `request.claims` is a `dict[str, Any]` of the complete current requested
@@ -99,7 +102,16 @@ Registered providers request the needed OAuth scopes automatically.
 - Merge claims into existing state — each delivery is the whole truth.
 - Key roles or a directory by `Development()` user IDs — opaque, per-app,
   changed by an expunge; only five identities (Alice, Ben, Carlos, Dani,
-  Esi). Key by the `email` claim; look up the user ID at runtime.
+  Esi). Key by the `email` claim, verified; look up the user ID at runtime.
+- Link a sign-in to a roster entry, invitation or any email-keyed
+  record unless `request.claims["email_verified"]` is true: an
+  unverified address is a claim anybody can make, and `Development()`
+  (five fabricated, verified addresses) never shows it (two builds of
+  one brief, 1.6.0; [`auth-roles.md`](auth-roles.md)).
+- A verified-email allowlist that may be empty while a real provider
+  is configured: in the harness that is right, in production every
+  account at the provider gets in. Refuse to boot instead
+  ([`auth-roles.md`](auth-roles.md), "The first admin").
 
 ## Limits
 
@@ -136,6 +148,6 @@ Registered providers request the needed OAuth scopes automatically.
 
 ## See also
 
+- [`auth-roles.md`](auth-roles.md) — a staff roster: roles, invitations, the first admin
 - [`servicer-authorizer.md`](servicer-authorizer.md) — rules, app-internal paths
 - [`testing-harness.md`](testing-harness.md) — deliver claims in tests
-- [`servicer-transaction.md`](servicer-transaction.md) — `set_claims` is a transaction

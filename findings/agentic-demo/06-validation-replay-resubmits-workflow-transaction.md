@@ -12,8 +12,8 @@ tags: [pattern, negative-space, testing]
 cluster: ""
 duplicate_of: returns-desk-06
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/servicer-workflow.md § Limits"
 ---
 
 # An effect-validation replay re-submits a workflow's per_workflow transaction after it completed; make terminal handling idempotent
@@ -27,3 +27,5 @@ resolved_by: ""
 **Where in the skills.** `python/references/servicer-workflow.md`.
 
 **Checked at 1.6.0.** `servicer-workflow.md` § Limits says effect validation re-runs memoized `at_least_once` callables and the last loop iteration; `patterns-idempotency.md` § Limits says it runs every writer and transaction body twice. Neither says a completed workflow's `per_workflow` transaction call can be re-submitted against state its first run already changed, and none of the three hardening rules appears (grep for monoton, demot, winner found nothing relevant). agentic-demo's learnings file repeats returns-desk's text for this section (it is the same file with §11 added); see returns-desk-06.
+
+**Resolution (2026-10-10).** As returns-desk-06.

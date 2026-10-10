@@ -56,9 +56,10 @@ if __name__ == '__main__':
 
 ### Multiple servicers and stdlib libraries
 
-A stdlib type is wired in **two** places: its `servicers()` list joins
-`servicers=[...]`, and its `<name>_library()` (where it has one) goes in
-`libraries=[...]`:
+A stdlib type with a `<name>_library()` is wired once, in
+`libraries=[...]`: the library registers its own servicers
+(`OrderedMapLibrary`, verified 1.6.0). A type without one (`presence`)
+lists its `servicers()` in `servicers=[...]`:
 
 ```python
 import reboot.thirdparty.mailgun
@@ -79,7 +80,7 @@ async def main():
 
 What each stdlib type registers:
 
-- [`stdlib-ordered-map.md`](stdlib-ordered-map.md) — `ordered_map.servicers()` + `ordered_map_library()`
+- [`stdlib-ordered-map.md`](stdlib-ordered-map.md) — `ordered_map_library()` alone (it brings its servicers)
 - [`stdlib-queue.md`](stdlib-queue.md) — `queue.servicers()` + the stdlib map library (`Queue` uses a stdlib sorted-map actor)
 - [`stdlib-pubsub.md`](stdlib-pubsub.md) — `pubsub.servicers()` (pulls in `queue.servicers()`) + the stdlib map library
 - [`stdlib-presence.md`](stdlib-presence.md) — `presence.servicers()` (three Servicers; no library factory)
@@ -120,9 +121,9 @@ def libraries() -> list:
   every lead import; reboot-crm, 1.6.0).
 - `ChatRoomServicer().serve()` or a sync `main` with no `Application` —
   Servicers run only inside the `Application`'s event loop.
-- Registering a stdlib type's `servicers()` without its
-  `<name>_library()` (or the reverse) — a runtime unknown-state-type
-  error on first call, not a startup check. Only a library missing its
+- Omitting a stdlib type's `<name>_library()`, or a library-less
+  type's `servicers()` — a runtime unknown-state-type error on first
+  call, not a startup check. Only a library missing its
   own dependency library fails at startup (`Missing required libraries: …`).
 
 ## Limits

@@ -148,20 +148,16 @@ every page this way from the start:
   hiding this in development. Set the production origin in `main.py`'s
   `OAuth(allowed_origins=[...])` when choosing the provider (`deploy`
   skill).
-- `#` in an actor id a page subscribes to (`react-generated-client.md`
-  § Never).
-- Subscribing to an actor that may not exist: the reader aborts
-  `StateNotConstructed` and retries about once a second, disturbing every
-  other subscription on the page. Mount the component after the actor is
-  constructed (observed at 1.4.x).
+- The subscription traps (`#` in an id, an actor that may not exist,
+  a seventh live read): `react-generated-client.md` § Never and Limits.
 
 ## Limits
 
-- Reactive readers hold streaming connections; HTTP/1.1 allows about six
-  per host, and Reboot logs a warning naming the fix (HTTP/2 via TLS).
-  Keep subscriptions per page few (observed at 1.4.x).
 - `useUser()` exists only when the API has a `User` type;
   `@reboot-dev/reboot-react` 1.6.0 exports no other session hook.
+  Without a `User` type, read a domain reader at the top of the tree and
+  treat `aborted.error.type === "Unauthenticated"` as signed out
+  (reboot-bluesky, 1.4.1).
 
 ## Scales as
 

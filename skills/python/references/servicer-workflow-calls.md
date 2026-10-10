@@ -138,6 +138,11 @@ async def control_loop(
 - Calling a factory constructor from a workflow on an actor that may
   already exist — aborts `StateAlreadyConstructed` and retries forever
   (observed at 1.6.0). Construct once, then call a writer.
+- Feeding an `.always()` result into a memoized call, an id or a later
+  step — it can differ on replay, so everything after it silently
+  diverges after a restart (port-meridian, 1.5.0). Scope a read later
+  steps depend on with `.per_workflow` / `.per_iteration`, and re-derive
+  a contested outcome from committed state, never from a replayed local.
 
 ## Limits
 

@@ -12,8 +12,8 @@ names:
 tags: [contradiction]
 cluster: ""
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/lifecycle-application-entry.md § Do this; python/references/stdlib-ordered-map.md § Do this"
 ---
 # Three references disagree on registering `OrderedMap`
 
@@ -24,3 +24,5 @@ resolved_by: ""
 **Repro.** Register only `ordered_map_library()`; run an insert and a range.
 
 **Where in the skills.** `python/references/lifecycle-application-entry.md`; `python/references/stdlib-ordered-map.md`; `python/references/state-collections.md`.
+
+**Resolution (2026-10-10).** `lifecycle-application-entry.md` now says a stdlib type with a `<name>_library()` is wired once, in `libraries=[...]`, which brings its servicers (verified 1.6.0), matching `stdlib-ordered-map.md` and `state-collections.md`; its Never and its per-type list say the same.

@@ -10,8 +10,8 @@ names:
 tags: [pattern, operations]
 cluster: ""
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/servicer-workflow.md § Never"
 ---
 
 # After an unclean kill a workflow replayed onto a different path; drive post-commit phases from committed state
@@ -25,3 +25,5 @@ resolved_by: ""
 **Where in the skills.** `python/references/servicer-workflow.md` (no reference named by the source).
 
 **Checked at 1.6.0.** grep for `kill -9`, SIGKILL, unclean and committed state finds only `run/references/stop-restart-reset.md` on SIGKILL orphaning processes; no workflow reference says to derive a post-commit phase from committed state rather than from replayed local values.
+
+**Resolution (2026-10-10).** `servicer-workflow.md` § Never: drive post-commit phases from the actor's committed state, never from a plan rebuilt locally.

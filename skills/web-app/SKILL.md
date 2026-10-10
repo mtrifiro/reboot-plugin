@@ -203,6 +203,7 @@ Apps" above):
 - `python/references/auth-custom-predicates.md` — Predicates must be keyword-only with `**kwargs` and check `context.app_internal` first; per-method rules via `<Type>.Authorizer(method=rule, _default=rule)`.
 - `python/references/auth-external-api-calls.md` — only when calling an external service's API as the user.
 - `mcp-ui/references/auth-oauth-providers.md` — only when you pick a real (production) provider.
+- `python/references/auth-roles.md` — only when staff sign in with roles (a manager, a host, a server; editors and readers).
 - `python/references/stdlib-oauth-tokens.md` — only when storing a user's OAuth tokens for an external service.
 - `python/references/auth-claims.md` — only when you use claims or `set_claims`.
 <!-- generated:end -->

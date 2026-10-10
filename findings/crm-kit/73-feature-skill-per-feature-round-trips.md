@@ -10,8 +10,8 @@ names:
 tags: [pattern, testing]
 cluster: ""
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "feature/SKILL.md § Step 5 — Ask before taking `@wip` off"
 ---
 
 # The feature skill agrees each feature one at a time and asks before removing @wip; at about 50 files that is 50 round trips
@@ -25,3 +25,5 @@ resolved_by: ""
 **Where in the skills.** `feature/SKILL.md` Step 5 and its per-feature agreement step.
 
 **Checked at 1.6.0.** `feature/SKILL.md` still has "Step 5 — Ask before taking `@wip` off" and agrees on features one at a time; no batch-agreement path.
+
+**Resolution (2026-10-10).** `feature/SKILL.md` Step 5: for a build with many features, agree the list once by milestone and take `@wip` off a milestone's features together, asking again only for a scenario that changed or was blocked.

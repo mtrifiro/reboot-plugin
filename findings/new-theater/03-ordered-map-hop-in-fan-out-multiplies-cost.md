@@ -10,8 +10,8 @@ names:
 tags: [cost, pattern]
 cluster: ""
 still_applies: unknown
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/patterns-cross-actor-reads.md § Scales as"
 ---
 # An OrderedMap hop inside a fan-out multiplies its cost
 
@@ -22,3 +22,5 @@ resolved_by: ""
 **Repro.** A reader fanning out to ~11 actors, each of which ranges an `OrderedMap` and reads ~5 further actors.
 
 **Where in the skills.** `python/references/patterns-cross-actor-reads.md`.
+
+**Resolution (2026-10-10).** `patterns-cross-actor-reads.md` § Scales as: an `OrderedMap` hop inside a fan-out multiplies its cost; keep what a listing needs inline on the fanned-out actor.

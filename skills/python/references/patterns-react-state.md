@@ -128,7 +128,7 @@ export function withDeadline<T>(call: Promise<T>, ms = 20_000): Promise<T> {
   ]);
 }
 
-// `idempotencyKey`: minted once per user intent (e.g. `newId()` when
+// `idempotencyKey`: a UUID (`crypto.randomUUID()`), minted once per user intent (e.g. `newId()` when
 // the form opens), reused on every retry of that intent.
 async function onSave() {
   setBusy(true);

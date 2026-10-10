@@ -91,6 +91,13 @@ Providers, rules before the first test, the `User` default rule and
 
 - The `oauth=` principal **is** the user, with no middle ground: every
   user signs in through this OAuth flow, or the app has no per-user auth.
+- **A signed-in app's views make no live calls from claude.ai** (1.6.0):
+  a view runs at a per-widget `claudemcpcontent.com` origin, and
+  `allowed_origins` is exact-match, so every preflight 404s. Pass the
+  record's data in as the tool call's arguments with `UI(request=<Model>)`
+  and present the view as a snapshot of that moment (reboot-crm). After a
+  deploy that adds or changes tools, a connected client must disconnect
+  and reconnect to see them; nothing tells it.
 - Providers, the `/__/oauth/callback` URL, switching costs:
   `references/auth-oauth-providers.md`; none fits (self-hosted
   Keycloak, internal SSO): `references/auth-custom-oauth-provider.md`.
@@ -238,6 +245,7 @@ servicer before the first test):
 - `python/references/auth-custom-predicates.md` — Predicates must be keyword-only with `**kwargs` and check `context.app_internal` first; per-method rules via `<Type>.Authorizer(method=rule, _default=rule)`.
 - `python/references/auth-external-api-calls.md` — only when calling an external service's API as the user.
 - `references/auth-oauth-providers.md` — only when you pick a real (production) provider.
+- `python/references/auth-roles.md` — only when staff sign in with roles (a manager, a host, a server; editors and readers).
 - `references/auth-store-tokens.md` — only when the app acts as the user at its own identity provider's API.
 - `python/references/stdlib-oauth-tokens.md` — only when storing a user's OAuth tokens for an external service.
 - `python/references/auth-claims.md` — only when you use claims or `set_claims`.

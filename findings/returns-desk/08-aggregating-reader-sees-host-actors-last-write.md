@@ -10,8 +10,8 @@ names:
 tags: [negative-space, pattern]
 cluster: ""
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/servicer-reader.md § Limits"
 ---
 
 # An aggregating reader on actor X saw other actors as of X's last write
@@ -25,3 +25,5 @@ resolved_by: ""
 **Where in the skills.** `python/references/servicer-reader.md`.
 
 **Checked at 1.6.0.** grep for snapshot, consistent and last write in `servicer-reader.md`, `patterns-cross-actor-reads.md` and `rpc-forall.md` finds nothing on this. The cause is the author's inference ("apparently"), not confirmed from source; compare showtime-27, which verified that reactive subscriptions do propagate through fan-out readers.
+
+**Resolution (2026-10-10).** `servicer-reader.md` § Limits: a reader fanning out from a read-mostly actor may see other actors as of its host's last write; have the events that matter also write to the aggregator.

@@ -11,8 +11,8 @@ names:
 tags: [pattern, negative-space]
 cluster: ""
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/servicer-workflow-external.md § Do this"
 ---
 
 # A rate-limited external call needs a durable backoff through a writer, not a raise
@@ -26,3 +26,5 @@ resolved_by: ""
 **Where in the skills.** Not recorded.
 
 **Checked at 1.6.0.** `python/references/servicer-workflow-external.md` § Limits says "No built-in retry budget or backoff on either primitive", and § Do this shows backoff only as an in-callable `asyncio.sleep(2**attempt)` loop returning exhaustion as data. Grep of `python/references/` for backoff / rate limit / throttle found no pattern for a durable delayed retry via a writer's `schedule(when=)`.
+
+**Resolution (2026-10-10).** `servicer-workflow-external.md` § Do this, "A rate limit: back off through a writer": the limit returned as data, a writer that marks the item throttled and reschedules itself with a growing `schedule(when=)`.

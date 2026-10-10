@@ -10,8 +10,8 @@ names:
 tags: [negative-space]
 cluster: ""
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "build/SKILL.md § Accept the Design"
 ---
 # "Implement the brief literally" did not hold in a sibling build
 
@@ -22,3 +22,5 @@ resolved_by: ""
 **Repro.** Compare restaurant-app-2's accepted design with the brief.
 
 **Where in the skills.** `build/SKILL.md`, Design Phase item 1 ("Implement the brief literally"); Accept the Design.
+
+**Resolution (2026-10-10).** The Accept the Design card carries a "Beyond the brief" list, one line per addition or change with its reason, recorded with the user's answer in `design/review.md`; the `design-accept-gate` eval gains a `beyond-the-brief` grader.

@@ -11,8 +11,8 @@ names:
 tags: [negative-space]
 cluster: ""
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/api-schema-evolution.md § Limits"
 ---
 
 # State type, package and method names, field tags, singleton ids, stored enum values and the OAuth provider are permanent from the first deploy; actors cannot be deleted
@@ -26,3 +26,5 @@ resolved_by: ""
 **Where in the skills.** Not named by the source.
 
 **Checked at 1.6.0.** `python/references/api-schema-evolution.md` (line ~30 and the table at ~37) says a rename is a delete plus an add; `mcp-ui/references/auth-oauth-providers.md` and `build/SKILL.md` (~292) say switching providers strands user state. Nothing found on renaming a singleton state id, stored enum/stage values, or that actors cannot be deleted (grep `cannot be deleted`, `delete an actor`, `state id`).
+
+**Resolution (2026-10-10).** `api-schema-evolution.md` § Limits lists what is permanent from the first deploy (names, tags, singleton ids, stored enum values, the OAuth provider) and that an actor cannot be deleted.

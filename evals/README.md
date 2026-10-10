@@ -14,11 +14,11 @@ skills front-load (which front door, the design) and before any code.
 | `route-mcp` | Claude named as the runtime: MCP UI first, backend ready for a web app |
 | `route-just-website` | "just a website": one front door, no MCP offer |
 | `route-both` | Both named: both front doors on one backend |
-| `design-ready-for-both` | The design has a `User` type, each method's AI role, AI-facing descriptions, a visual brief with a primary view, light/dark modes with a toggle, and dev-only demo data |
+| `design-ready-for-both` | The design has a `User` type, each method's AI role, AI-facing descriptions, a visual brief with a primary view, light/dark modes with a toggle, dev-only demo data, and no growing history list on an app-lifetime actor |
 | `design-look-triage` | Triage of a few hundred bug reports: a grouped list (not a chart) as the primary view, color on one dimension, stat tiles and labelled filters |
 | `design-look-board` | A dozen candidates through interview stages: still a board, so the principles add flexibility rather than a new house style |
-| `design-roles` | A hotel with front desk and housekeeping: the design names the roles and enforces in the backend which methods each may call; dev-only demo data |
-| `design-accept-gate` | The accept checkpoint: the design maps each rule to its owner, method, kind and caller, and stops for the user's acceptance. `explains-the-stop` (the stage card's plain words for why it stops) is reported, not scored: a planning session never reaches the checkpoint with the artifacts in hand, and no run has produced the card yet |
+| `design-roles` | A hotel with front desk and housekeeping: the design names the roles and enforces in the backend which methods each may call; roles on one roster, a sign-in linked only on a verified email, the first admin named; dev-only demo data |
+| `design-accept-gate` | The accept checkpoint: the design maps each rule to its owner, method, kind and caller, lists what goes beyond the brief, and stops for the user's acceptance. `explains-the-stop` (the stage card's plain words for why it stops) is reported, not scored: a planning session never reaches the checkpoint with the artifacts in hand, and no run has produced the card yet |
 | `design-skip-gate` | Told up front to build without stopping: the design is still shown, and nothing waits |
 
 Plain Claude also builds a web app without asking on the `route-*`

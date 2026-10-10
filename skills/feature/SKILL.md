@@ -232,7 +232,11 @@ see it fail, then make it pass.
 When every scenario passes (or is `@blocked` with a reason) and the
 user says the feature does what they meant, ask whether to remove the
 `@wip` tags; remove them only with agreement. `@blocked` stays until
-the blocking is resolved.
+the blocking is resolved. For a build with many features, agree the
+whole list once, grouped by milestone (Step 1 for each, in one
+message), and take `@wip` off a milestone's features together when its
+gate passes; ask again only for a scenario that changed or was blocked
+(crm-kit, 1.6.0: fifty files, fifty round trips).
 
 ## Converting an existing test suite
 

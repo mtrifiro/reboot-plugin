@@ -10,8 +10,8 @@ names:
 tags: [auth, pattern]
 cluster: ""
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/auth-claims.md § Never"
 ---
 
 # With a verified-email allowlist, refuse to boot when a real provider is configured but the allowlist is empty
@@ -25,3 +25,5 @@ resolved_by: ""
 **Where in the skills.** Not named by the source.
 
 **Checked at 1.6.0.** `python/references/auth-claims.md` (line ~79) documents that `Development` fabricates `alice@example.com`-style claims; no reference describes a verified-email allowlist or guarding against an empty one in production (grep `allowlist`).
+
+**Resolution (2026-10-10).** `auth-claims.md` § Never: an allowlist that may be empty with a real provider configured; `auth-roles.md` "The first admin" shows the boot refusal.

@@ -151,6 +151,10 @@ right before state first persists.
   [`lifecycle-backup-restore.md`](lifecycle-backup-restore.md).
 - On Reboot Cloud a rejected `rbt cloud up` does not take the running
   version down.
+- Permanent from the first deploy: state type, package and method
+  names, field tags, singleton ids, stored enum values and the OAuth
+  provider. An actor cannot be deleted, so design "delete" as dropping
+  its id from the index that lists it (crm-kit, 1.6.0).
 - `Writer(factory=True)` → `Transaction(factory=True)`: the 1.6.0
   validator allows it (mode ignored), but it was observed refused at
   1.6.0. Declare a factory a `Transaction` from the start if it might

@@ -39,12 +39,20 @@ results. Read each part below when you reach its moment.
 - `schedule(...)` from a workflow — use `spawn(...)` (declare part).
 - A wall-clock or random value read directly in the body — capture it
   with `at_least_once` (external part).
+- Driving the phase after a commit from a plan rebuilt locally — after
+  an unclean kill a workflow replayed onto a different path and wedged
+  (agentic-demo, 1.4.0). Drive post-commit phases from the actor's
+  committed state.
 
 ## Limits
 
 - Stopping the app pauses workflows; they resume on the next start.
 - Effect validation in development re-runs memoized `at_least_once`
-  callables and the last loop iteration.
+  callables and the last loop iteration, and can re-submit a completed
+  `per_workflow` transaction against state the first run already
+  changed (agentic-demo, 1.4.0): make terminal handling idempotent
+  (already resolved by me is success; never demote a terminal state;
+  gate narrative events on what the workflow observed).
 
 ## Scales as
 

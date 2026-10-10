@@ -11,8 +11,8 @@ names:
 tags: [pattern, negative-space]
 cluster: ""
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/patterns-cross-actor-reads.md § Do this"
 ---
 # A per-day aggregate reads as an error before its first write
 
@@ -23,3 +23,5 @@ resolved_by: ""
 **Repro.** A `DaySales` actor keyed by date; read it before any check settles that day.
 
 **Where in the skills.** `python/references/rpc-refs.md`; `python/references/patterns-cross-actor-reads.md`.
+
+**Resolution (2026-10-10).** `patterns-cross-actor-reads.md` § Do this, shape 7: a period-keyed aggregate gets a long-lived owner that answers for any period, or its reader catches the abort and returns the zero value.

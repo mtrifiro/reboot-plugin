@@ -10,8 +10,8 @@ names:
 tags: [frontend, cost, negative-space]
 cluster: ""
 still_applies: unknown
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/react-generated-client.md § Limits"
 ---
 
 # Every use<Type>({id}) handle opens its own reactive WebSocket, even with no reader hook
@@ -25,3 +25,5 @@ resolved_by: ""
 **Where in the skills.** `python/references/react-generated-client.md` (Limits / Scales as).
 
 **Checked at 1.6.0.** `react-generated-client.md` § Limits describes the local transport as 'a WebSocket multiplex' and budgets per subscription, not per handle; nothing says a bare handle opens a socket. Not re-tested against the 1.6.0 client, so whether it still applies is unknown.
+
+**Resolution (2026-10-10).** `react-generated-client.md` § Limits: every `useFoo({ id })` handle opens its own reactive WebSocket; a pool of handles costs one socket each.

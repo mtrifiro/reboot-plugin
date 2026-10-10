@@ -105,6 +105,11 @@ on an in-system actor that schedules the HTTP send in a workflow, then
   Ctrl-C) — see Limits. Drain: stop issuing, await in-flight calls.
 - Read `context.auth` in an actor called from this transaction — it is
   `None`; pass identity in the request (`servicer-authorizer.md`).
+- An aggregator, registry or dashboard among the participants — the
+  participant set is the lock set, and a burst of transactions then
+  convoys on that one actor for minutes (returns-desk, 1.4.0).
+  Participants are the actors whose invariants the transaction enforces;
+  write the rest from the workflow after commit, `per_workflow`.
 
 ## Limits
 

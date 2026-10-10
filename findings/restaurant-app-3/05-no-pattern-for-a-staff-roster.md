@@ -10,8 +10,8 @@ names:
 tags: [auth, negative-space, pattern]
 cluster: ""
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/auth-roles.md § Do this"
 ---
 # No pattern for a staff roster: roles, invitations, the first admin
 
@@ -22,3 +22,5 @@ resolved_by: ""
 **Repro.** Any brief that says "staff sign in with roles".
 
 **Where in the skills.** none; nearest is `python/references/auth-custom-predicates.md` § Roles. Cost here: one extra roster read on every call, live subscriptions included, plus a design round-trip with the developer.
+
+**Resolution (2026-10-10).** A new conditional reference, `auth-roles.md` (when staff sign in with roles): one roster actor, `my_role` and `role_of`, the access and role gates and their cost, invitations adopted on a verified email, the first admin from an allowlist with the boot refusal and the repair, and a feature file; `auth-custom-predicates.md` and the build skill's design phase point at it.

@@ -110,6 +110,12 @@ class CounterServicer(Counter.Servicer):
   use `context.auth.user_id`.
 - Gate per-method rules by `isinstance(request, ...)` in one predicate
   (`auth-custom-predicates.md` § Never).
+- A predicate on type X that calls a reader on the actor it guards:
+  the actor waits on itself. Read the `state` argument (crm-kit, 1.6.0).
+- A client- or MCP-facing method that fans out and relies on the gates
+  of what it reads: its nested calls arrive app-internal and pass every
+  `is_app_internal` arm. Authorize the caller in that method first
+  (crm-kit, 1.6.0).
 - Read `PermissionDenied` from `allow_if(any=[has_verified_token,
   is_app_internal])` as "signed in but forbidden" — anonymous callers
   get it too (`auth-allow-if.md` § Never).

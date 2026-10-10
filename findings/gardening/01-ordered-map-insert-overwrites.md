@@ -10,8 +10,8 @@ names:
 tags: [negative-space]
 cluster: ""
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/stdlib-ordered-map.md § Do this"
 ---
 # stdlib-ordered-map.md doesn't say insert on an existing key overwrites
 
@@ -22,3 +22,5 @@ resolved_by: ""
 **Repro.** `insert(key="a", bytes=b"1")` then `insert(key="a", bytes=b"2")`; `search(key="a")` returns `b"2"`.
 
 **Where in the skills.** `python/references/stdlib-ordered-map.md`, Methods table.
+
+**Resolution (2026-10-10).** The `insert` row of the Methods table in `stdlib-ordered-map.md` says an insert on an existing key replaces its value.

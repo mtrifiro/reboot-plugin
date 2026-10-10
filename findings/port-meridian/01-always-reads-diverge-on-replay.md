@@ -10,8 +10,8 @@ names:
 tags: [negative-space, pattern]
 cluster: ""
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/servicer-workflow-calls.md § Never"
 ---
 
 # .always() reads that feed later steps diverge on replay
@@ -25,3 +25,5 @@ resolved_by: ""
 **Where in the skills.** Not recorded.
 
 **Checked at 1.6.0.** `python/references/servicer-workflow-calls.md` § Reboot calls: pick a scope describes `.always()` only as "never memoized; a live read on every wake" and its example reads config with it; grep of `python/references/` for `always()` found no warning against feeding an `.always()` result into a memoized call or a later step.
+
+**Resolution (2026-10-10).** `servicer-workflow-calls.md` § Never: an `.always()` result never feeds a memoized call, an id or a later step; scope such reads and re-derive a contested outcome from committed state.

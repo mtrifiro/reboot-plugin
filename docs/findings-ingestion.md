@@ -391,6 +391,21 @@ allowance recorded in `budget.py` against the findings named there
   P3.101, P4.20 (primer); A.3, A.5, A.8, A.9, A.11, A.12, A.13 (the
   CRM).
 
+**Wave 3 status, 2026-10-10.** Done: the free prose (claims with
+`email_verified` and the allowlist refusal, the new conditional
+`auth-roles.md`, the workflow, transaction, reader and authorizer
+Nevers, the ordered-map, schema-evolution, cross-actor-reads and
+dev-loop lines, the registration answer in one place) and the paid
+items within the allowance (the claude.ai live-view limit in `mcp-ui`,
+the History sentence and the "Beyond the brief" list in `build`, the
+batch agreement in `feature`, the React client consolidation at net
+zero, `Any` plus `isinstance` in the predicate example). Twenty-three
+more corpus items Resolved; 19 open plugin items remain, the look items
+from restaurant-app-2 and the `step_order`-family among them. The paths
+after wave 3: 40,167 / 40,500, 39,763 / 40,000, 26,368 / 27,000.
+`findings.py --todo` (section 3d) now lists what is left with the
+report's fixes and a mechanism to try.
+
 ### Wave 4: evals for the rules prose failed to hold
 
 Add graders to cases that exist: `design-roles` gets `email-verified`
@@ -402,6 +417,11 @@ one kind no eval has: a judged rubric over the class page
 `tools/style-check.py --browser` renders, and the screenshot review as
 an artifact in the handoff (P4.35). The red-run rule (P3.192) cannot be an eval (runs are
 read-only); it is wave 1 item 10.
+
+**Wave 4 status, 2026-10-10.** The four graders are written
+(`email-verified` and `roster` on `design-roles`, `history-placement`
+on `design-ready-for-both`, `beyond-the-brief` on `design-accept-gate`)
+and not yet run: a run bills the account, so it waits for a go-ahead.
 
 ### Wave 5: upstream and obsolescence, ongoing
 

@@ -43,14 +43,14 @@ from <pkg>.v1.<name> import TaskListState
 def is_owner(
     *,
     context: ReaderContext,
-    state: TaskListState | None = None,
+    state: Any = None,
     **kwargs: Any,
 ) -> Authorizer.Decision:
     if context.app_internal:
         return errors.Ok()            # nested calls carry no identity
     if context.auth is None or context.auth.user_id is None:
         return errors.Unauthenticated()
-    if state is not None and state.owner_id == context.auth.user_id:
+    if isinstance(state, TaskListState) and state.owner_id == context.auth.user_id:
         return errors.Ok()
     return errors.PermissionDenied()  # fail closed, including state None
 
@@ -72,7 +72,9 @@ class TaskListServicer(TaskList.Servicer):
 - **Signature.** `(*, context, state, request, **kwargs)`, keyword-only;
   declare only what the body reads, `**kwargs` absorbs the rest. `context`
   is always a `ReaderContext`; `state` and `request` may be `None`.
-- **`state`** is annotated with the **pydantic** `<X>State` from your API.
+- **`state`** is `Any`, narrowed with `isinstance` to the **pydantic**
+  `<X>State` from your API: `state: <X>State | None` fails mypy inside
+  `allow_if` (`ContravariantStateType`; restaurant-app-3, 1.6.0).
 - **Check `context.app_internal` first** when other servicers,
   `initialize`, or scheduled work call the type: they carry no `context.auth`.
 - **`Unauthenticated`** = "no identity — sign in"; **`PermissionDenied`** =
@@ -91,10 +93,11 @@ async def is_team_member(*, context, state, **kwargs):
 allow_if(all=[has_verified_token, is_team_member])
 ```
 
-**Roles** are the same shape: the roster's reader returns each member's
-roles, and the predicate checks the one the method needs; give each
-method its rule in `<Type>.Authorizer(...)` (front desk checks guests
-in, housekeeping marks rooms clean).
+**Roles** are the same shape: the roster's reader returns a member's
+role and the predicate checks the one the method needs, per method in
+`<Type>.Authorizer(...)`. The roster itself (where roles live,
+invitations, verified email, the first admin) is
+[`auth-roles.md`](auth-roles.md).
 
 A predicate shared by several methods that reads `request` gets the union
 of their request models: annotate `request: Any = None` (or the union) and

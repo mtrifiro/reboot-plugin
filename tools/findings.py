@@ -15,6 +15,9 @@ Usage:
     tools/findings.py --check       # schema errors only, no summary (check-all.sh)
     tools/findings.py --open        # also list every open plugin item
     tools/findings.py --names X     # items that name skill/reference X
+    tools/findings.py --todo        # open items with the fixes the findings report lists,
+                                    # grouped by the file they name, with a mechanism to try
+                                    # (the report: ../reboot-findings, or --findings-repo DIR)
 """
 
 from __future__ import annotations
@@ -125,12 +128,94 @@ def validate(item: dict, ids: set[str] | None = None,
     return errors
 
 
+# The mechanism a finding's tags suggest (docs/findings-ingestion.md,
+# "The principle"): the cheapest one that reaches the agent at the
+# moment it stalls.
+MECHANISM = (
+    ("error-text", "a row in the owning reference's Errors table"),
+    ("scaffold", "a template file"),
+    ("version-drift", "fix the reference; tools/check-symbols or check-cli should catch it"),
+    ("operations", "a shim guard, a hook, or scripts/doctor.sh"),
+    ("testing", "a check in the templates' tests/ (step_order, feature_lint)"),
+    ("contradiction", "one answer in every file named"),
+    ("index-gap", "a reading-list `when:` or a pointer from the step that needs it"),
+    ("pattern", "a Do this shape in a conditional reference"),
+    ("negative-space", "a Never or Limits line"),
+    ("cost", "a Scales as line"),
+)
+
+
+def report_fixes(repo: Path) -> dict[str, dict]:
+    """Corpus id -> {number, fixes, workaround} from the combined report."""
+    index = repo / "corpus_index.json"
+    if not index.exists():
+        return {}
+    import json
+    numbers = json.loads(index.read_text())
+    out: dict[str, dict] = {}
+    for cid, number in numbers.items():
+        path = repo / "findings" / f"{number}.md"
+        if not path.exists():
+            continue
+        text = path.read_text()
+        fixes: list[str] = []
+        workaround = ""
+        for line in text.split("\n"):
+            if line.startswith("fixes:"):
+                try:
+                    fixes = json.loads(line[len("fixes:"):].strip())
+                except ValueError:
+                    fixes = []
+            elif line.startswith("workaround:"):
+                workaround = line[len("workaround:"):].strip().strip('"')
+            elif line.startswith("---") and fixes:
+                break
+        out[cid] = {"number": number, "fixes": fixes, "workaround": workaround}
+    return out
+
+
+def todo(items: list[dict], repo: Path) -> None:
+    """Open items (duplicates folded into their canonical) with the
+    report's Skills and App fixes, grouped by the first file they name."""
+    fixes = report_fixes(repo)
+    if not fixes:
+        print(f"\n(no combined report at {repo}; listing open items without fixes)")
+    groups: dict[str, list[dict]] = {}
+    for item in items:
+        if item.get("status") != "Open" or item.get("duplicate_of"):
+            continue
+        if item.get("target") not in ("plugin", "bdd", "framework", "cloud"):
+            continue
+        names = item.get("names") or ["(no file named)"]
+        groups.setdefault(names[0], []).append(item)
+    total = sum(len(v) for v in groups.values())
+    print(f"\nopen items to ingest: {total}, by the file they name")
+    for name in sorted(groups, key=lambda n: (-len(groups[n]), n)):
+        print(f"\n{name} ({len(groups[name])})")
+        for item in sorted(groups[name], key=lambda i: i["id"]):
+            report = fixes.get(item["id"], {})
+            number = report.get("number", "")
+            tags = item.get("tags", [])
+            mechanism = next((m for tag, m in MECHANISM if tag in tags), "a Never or Limits line")
+            print(f"  {number:<7} {item['id']:<28} {item['_title']}")
+            print(f"          try: {mechanism}")
+            for fix in report.get("fixes", []):
+                if fix.startswith(("Skills:", "App:")):
+                    print(f"          {fix}")
+            if report.get("workaround"):
+                print(f"          workaround: {report['workaround'][:160]}")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("--check", action="store_true",
                         help="report schema errors only, without the summary")
     parser.add_argument("--open", action="store_true", help="list open plugin items")
     parser.add_argument("--names", help="list items naming this skill/reference")
+    parser.add_argument("--todo", action="store_true",
+                        help="open items with the report's fixes, grouped by the file they name")
+    parser.add_argument("--findings-repo", default=str(ROOT.parent / "reboot-findings"),
+                        help="the combined findings report (numbering, fixes)")
     args = parser.parse_args()
 
     items, failures = [], 0
@@ -185,6 +270,8 @@ def main() -> int:
         for i in sorted(plugin, key=lambda i: (i.get("cluster", ""), i["id"])):
             if i.get("status") == "Open":
                 print(f"  {i.get('cluster', '?'):<4} {i['id']:<28} {i['_title']}")
+    if args.todo:
+        todo(items, Path(args.findings_repo))
 
     if failures:
         print(f"\n{failures} schema error(s)", file=sys.stderr)

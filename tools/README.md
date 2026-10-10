@@ -17,7 +17,7 @@ the plugin pins.
 | `lint-frontmatter.py` | Front matter on every other Markdown file (below) | a file has no front matter block, or lacks its category's keys |
 | `run-evals.sh` | Behavior: what a fresh agent decides with and without the plugin (`evals/`, via `claude plugin eval`) | not run in CI (it costs model calls); exits 1 if a case scores under `--threshold` |
 | `style-check.py` | The four template stylesheets agree (web is the source; MCP adds `.ui`); `--browser` renders `style-check.html`, a page using every class, at 320/375/1280 px in light and dark (`--screenshots DIR` saves PNGs) | a copy drifts; the page overflows a screen or cuts off a short label |
-| `findings.py` | Schema + summary of `findings/` | an item breaks the schema, or a `resolved_by` section doesn't exist |
+| `findings.py` | Schema + summary of `findings/`; `--todo` lists the open items with the fixes the combined report names, grouped by file, with a mechanism to try | an item breaks the schema, or a `resolved_by` section doesn't exist |
 | `check-manifests.py` | The JSON manifests parse; the Reboot version pins (`VERSION`, the manifests, `bin/rbt`, the templates' `pyproject.toml`) agree | a manifest doesn't parse, or two pins differ |
 | `check-mods.sh` | Each mod in `mods/` as the engine reads it: `claude plugin validate`, then its `*.test.ts` with `claude plugin test` | validation or a test fails |
 

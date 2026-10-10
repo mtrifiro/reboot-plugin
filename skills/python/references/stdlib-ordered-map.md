@@ -83,7 +83,7 @@ async def main():
 | Method | Type | Signature |
 | --- | --- | --- |
 | `create` | transaction | `degree?: int = 128, maintain_size?: bool = False`; on a ref: `OrderedMap.ref(id).create(context)` |
-| `insert` | transaction | single: `key: str` + one of `value` / `bytes` / `any`; bulk: `entries: dict[str, Item]`. May pass `degree` / `maintain_size` on implicit construction. |
+| `insert` | transaction | single: `key: str` + one of `value` / `bytes` / `any`; bulk: `entries: dict[str, Item]`. On an existing key, replaces its value. May pass `degree` / `maintain_size` on implicit construction. |
 | `remove` | transaction | single: `key: str`; bulk: `keys: list[str]` |
 | `search` | reader | `key: str` → `SearchResponse(found: bool, value? / bytes? / any?)` |
 | `range` | reader | `start_key?: str, limit: int` (required, non-zero) → `RangeResponse(entries, total_size?)` |

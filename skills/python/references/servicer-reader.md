@@ -69,6 +69,11 @@ class ChatRoomServicer(ChatRoom.Servicer):
   (`rpc-refs.md`).
 - A fan-out reader of about 150 actors did not finish inside the
   request window (`patterns-cross-actor-reads.md`).
+- A reader fanning out from a read-mostly actor may return the other
+  actors as of its own host's last write; a polled aggregator then
+  showed a frozen world for minutes (agentic-demo, 1.4.0; not
+  re-verified). Have the events that matter also write to the
+  aggregator.
 
 ## Scales as
 

@@ -144,6 +144,16 @@ async def send_login_sms(
         )
 ```
 
+### A rate limit: back off through a writer
+
+Return a rate-limited response as data (catch it before its base
+class), then have the workflow call a writer that marks the item
+throttled and reschedules itself with
+`self.ref().schedule(when=timedelta(...))`, the delay growing per
+attempt. Raising from `at_least_once` retries at once and hammers the
+limiter; a count kept in a closure resets on replay (constellation,
+1.4.0).
+
 ## Never
 
 - A plain `await` on an external call — it re-runs on every replay,

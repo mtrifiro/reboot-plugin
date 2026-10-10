@@ -11,8 +11,8 @@ names:
 tags: [negative-space, cost, pattern]
 cluster: ""
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "build/SKILL.md § Design Phase"
 ---
 # "History" in the design step leads to unbounded lists on singletons
 
@@ -23,3 +23,5 @@ resolved_by: ""
 **Repro.** Follow the History bullet for a rule enforced by a singleton.
 
 **Where in the skills.** `build/SKILL.md`, Design Phase, History; `python/references/state-collections.md` (Scales as; Shape C).
+
+**Resolution (2026-10-10).** The History bullet in the build skill's Design Phase says where events live: on the short-lived entity they explain or in an `OrderedMap` or per-day actor, never on an app-lifetime singleton; the `design-ready-for-both` eval gains a `history-placement` grader.

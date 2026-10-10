@@ -89,13 +89,19 @@ method types mean regenerating a dozen or more files.
    - Auth per method: anonymous, signed-in, owner only, app-internal,
      or by role. Where the domain has roles (front desk and
      housekeeping, editors and readers), name them and the methods each
-     may call; roles live in state, checked by a custom predicate
-     (`python/references/auth-custom-predicates.md`).
+     may call; roles live on one roster actor, checked by a custom
+     predicate (`python/references/auth-custom-predicates.md`); when
+     staff sign in with roles, the roster, its invitations and the first
+     admin follow `python/references/auth-roles.md`.
    - History: for each rule someone will later have to explain (an
      approval, a refund, anything that waits on a person or a provider),
      the events the owning state records: who, when, which step, the
      provider's reference. The runtime keeps no history the design
-     doesn't name; the `inspect` skill reads only what is stored.
+     doesn't name; the `inspect` skill reads only what is stored. Events
+     go on the short-lived entity they explain (a check, a reservation)
+     or in an `OrderedMap` or per-day actor, never on a singleton that
+     lives as long as the app: every write re-serializes the whole list
+     (`python/references/state-collections.md`, Scales as).
    - Demo data: a believable dev dataset (a dozen rooms on three floors,
      not one), seeded only under `rbt dev`, so every view has something
      to show the first time it opens
@@ -288,7 +294,10 @@ Show the **review table**, one row per rule, in the design's words:
 Every rule in a feature file gets a row; a rule with no owner, method
 or scenario is a gap to name, not to fill silently. List the feature
 files by path, and point at the dashboard's Models and Features pages.
-Then ask the user to accept, or to say what to change.
+Under the table, **Beyond the brief**: one line per interaction, rule or
+status the design adds to or changes from what the user asked, with its
+reason, so they accept those too; `design/review.md` records their
+answer to each. Then ask the user to accept, or to say what to change.
 
 **Stop and wait.** No answer is not acceptance. A change sends you back
 to the design (or the feature skill), then here again. Only when the

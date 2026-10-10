@@ -145,6 +145,17 @@ N live subscriptions over a dynamic list = N child components, one hook
 each ([`patterns-react-state.md`](patterns-react-state.md); cineloop-11,
 cineloop-17).
 
+### 7. A period-keyed aggregate answers for any period
+
+An aggregate keyed by date (today's sales) is built by its first write,
+so until then its reader aborts `StateNotConstructed` and the
+dashboard reads an empty day as an error
+([`rpc-refs.md`](rpc-refs.md)). Give it a long-lived owner that answers
+for every period: a ledger actor with an `OrderedMap` of closed items
+and a per-period totals map, whose reader returns zeros for a period
+with no entry; or catch the abort in the reader and return the zero
+value (restaurant-app-3, 1.6.0).
+
 ## Never
 
 - Return `self.state.<collection>` verbatim from a shared reader when
@@ -175,6 +186,10 @@ cineloop-17).
   size; pick the reader per page (step 3).
 - Fan-out first-push and per-page subscription numbers:
   [`patterns-load-and-benchmarking.md`](patterns-load-and-benchmarking.md).
+- An `OrderedMap` hop inside a fan-out multiplies its cost: a reader
+  over 11 actors that each ranged a map and read a few children took
+  about 3 s (new-theater, 1.6.0). Keep what a listing needs inline on
+  the fanned-out actor.
 
 ## Errors you will see
 

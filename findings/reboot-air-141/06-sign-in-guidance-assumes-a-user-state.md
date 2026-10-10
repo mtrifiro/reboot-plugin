@@ -10,8 +10,8 @@ names:
 tags: [auth, frontend, negative-space]
 cluster: "4.1"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "web-app/references/react-client.md § Limits"
 ---
 
 # Sign-in guidance assumes a User state type
@@ -25,3 +25,5 @@ resolved_by: ""
 **Where in the skills.** `web-app/references/react-client.md`, "Sign-in and Sign-out".
 
 **Checked at 1.6.0.** Still present. `web-app/references/react-client.md:209-227` still builds the gate on `useUser()` with no no-`User`-type variant; `web-app/SKILL.md:61` still calls the `User` type optional.
+
+**Resolution (2026-10-10).** `react-client.md` § Limits: without a `User` type, read a domain reader at the top of the tree and treat an `Unauthenticated` abort as signed out.

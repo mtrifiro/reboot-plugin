@@ -85,6 +85,10 @@ transaction, a failed workflow attempt. Find the quiet failure:
 - **Trusting a browser tab across a backend restart.** It retries dead
   subscriptions and stops receiving pushes; reload every tab after every
   restart or expunge.
+- Saving a live-code edit in pieces: hot reload boots each save, and a
+  reference to a constant the next save defines throws `NameError` in a
+  scheduled chain until then (marquee-control, 1.4.1). One write per
+  file, definitions before uses.
 
 ## Limits
 

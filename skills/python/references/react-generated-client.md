@@ -158,6 +158,10 @@ asynchronously: guard at the parent, mount the child with a real id.
   mount. After `rbt dev expunge` open tabs freeze; reload them all.
 - Each subscription holds a streaming fetch; HTTP/1.1 allows about 6
   per host (Reboot's warning names the fix: HTTP/2 via TLS).
+- Every `useFoo({ id })` handle opens its own reactive WebSocket, with
+  no reader hook called (marquee-control, 1.4.1; not re-verified at
+  1.6.0): a pool of handles costs one socket each; mount them only where
+  a component needs one.
 - Transport: gRPC server-streaming over `https:`, else a WebSocket
   multiplex (local `http://`). Cross-origin WebSocket frames carry no
   cookies, so the session JWT rides in the request payload, not a

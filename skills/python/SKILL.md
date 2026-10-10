@@ -215,6 +215,7 @@ first.
 - `references/servicer-authorizer.md` — Without real rules every external call is denied; identity doesn't cross servicer calls; tokenless paths; `oauth=` vs `token_verifier=`.
 - `references/auth-custom-predicates.md` — Predicates must be keyword-only with `**kwargs` and check `context.app_internal` first; per-method rules via `<Type>.Authorizer(method=rule, _default=rule)`.
 - `references/auth-external-api-calls.md` — only when calling an external service's API as the user.
+- `references/auth-roles.md` — only when staff sign in with roles (a manager, a host, a server; editors and readers).
 - `references/stdlib-oauth-tokens.md` — only when storing a user's OAuth tokens for an external service.
 <!-- generated:end -->
 
@@ -315,6 +316,7 @@ Load only what the task needs (the lists above say when). Full catalog:
 - `references/auth-claims.md` — Identity Claims and `User.set_claims`
 - `references/auth-custom-predicates.md` — Write Custom Authorizer Predicates
 - `references/auth-external-api-calls.md` — Calling External-Service APIs on the User's Behalf
+- `references/auth-roles.md` — A Staff Roster with Roles
 
 **RPC**
 - `references/rpc-calls.md` — Call Actor Methods with Kwargs and a Context
