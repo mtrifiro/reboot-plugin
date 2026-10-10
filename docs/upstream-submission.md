@@ -107,6 +107,16 @@ What the branch looks like without findings/ and mods/: about 378 files, +28.7k/
 - the grader fixes in 3ac4c56
 - `tools/run-evals.sh`
 
+**PR 6 — `Skills: the Reboot Flywheel`.** It is based on PRs 2, 4 and 5, since it changes the build flow, `deploy.sh` and the evals:
+- the stage map, the routing rule and the evidence references (`build/references/flywheel.md`, `evidence.md`), with the stage markers on the reading lists and their check in `gen-index.py`
+- the accept gate in `build` and the routing of fixes in `feature`
+- `scripts/model_diff.py`, `tests/last_run.py` and the release record in `deploy.sh`
+- the gate evals (`design-accept-gate`, `design-skip-gate`)
+- authorizer changes routed to Design, and the review table's example row ([`flywheel-primer-fixes.md`](flywheel-primer-fixes.md))
+- The PR body should name the primer passages this moves from "proposed" to "today".
+
+Also in the "Leftover dev processes" work (aa961a4): the hook tests move to `tests/reboot/plugin/hooks/` with a `py_test` target, and `lib/own.sh` needs a filegroup.
+
 Not submitted: findings/, mods/ (including the band's `run_progress.py`), BACKLOG.md (4aa5306).
 
 ## Critical files
