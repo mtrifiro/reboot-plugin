@@ -130,6 +130,11 @@ append an item to the project's `FINDINGS.md` (format inside it).
 - An application's behavior is specified and tested as `.feature`
 files (the `feature` skill): agree on a feature in English before
 writing its API or code, and iterate on its scenarios with the user.
+- Work follows the Reboot Flywheel (Design, Prove, Observe): write no
+implementation until the user accepts the domain model and feature
+files (the build skill, Accept the Design). A change to a rule, to
+`api/` or to an authorizer goes back there; `scripts/model_diff.py`
+sorts each change.
 - Before hand-rolling a primitive (maps, queues, pub/sub, presence,
 encryption), check Reboot's standard library: the `stdlib-*.md`
 references in the `python` skill.

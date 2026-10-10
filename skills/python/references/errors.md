@@ -89,6 +89,8 @@ here. -->
 | `DecryptAborted` with `ScopeShredded` | The scope was shredded | Treat as permanently erased | `python/references/stdlib-ciphertext.md` |
 | `` `degree` must be >= 2 `` | Bad construction option (`InvalidArgument`) | `degree >= 2` | `python/references/stdlib-ordered-map.md` |
 | `deploy/ledger.jsonl records no api_url` | An app already in production, ledger seeded without its address | Append the `api_url` line above | `python/references/lifecycle-backup-restore.md` |
+| `deploy: tests: no run recorded` | No full run since the project got `tests/last_run.py` | Run `uv run pytest`, then deploy | `build/references/evidence.md` |
+| `deploy: tests: not a clean, full, passing run of <sha>` | The last run was partial, failed, or older than the commit | Run the full suite on this commit; tell the user before promoting | `build/references/evidence.md` |
 | `does not deliver identity claims; remove \`claims=\`` | `claims=` on a provider with none (`Anonymous`) | Remove it | `python/references/auth-claims.md` |
 | `Duplicate agent run:` | Two indistinguishable runs in one method / iteration | Pass a distinct `variant=` | `python/references/agent-pydantic-ai.md` |
 | `'--env-file' '.env' does not exist.` | Warning only; app starts without those variables | Create the file, or ignore until secrets are needed | `python/references/lifecycle-rbtrc.md` |

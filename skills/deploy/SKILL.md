@@ -34,7 +34,15 @@ a working tree, and stops at the first thing wrong:
 4. Frontend: built from the commit in a scratch copy, published with
    wrangler, and the live site checked to serve the new bundle.
 5. A line in `deploy/ledger.jsonl` (commit, revision, bundle), committed
-   and pushed: what step 2 checks against next time.
+   and pushed: what step 2 checks against next time. Its `release`
+   field is the **release record**: the commits, the model diff and the
+   last test run since the previous deploy, also printed before anything
+   ships ([`build/references/evidence.md`](../build/references/evidence.md)).
+
+A deploy is the Reboot Flywheel's **promote** decision, the user's
+([`build/references/flywheel.md`](../build/references/flywheel.md)):
+show them the dry run's model diff and test line, and say plainly when
+the last run was not a clean, full, passing run of this commit.
 
 Steps 1–7 below are the first deploy. After it, a deploy is
 `scripts/deploy.sh --dry-run` (show the user what would ship), then

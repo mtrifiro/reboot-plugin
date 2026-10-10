@@ -18,6 +18,11 @@ now?"). To start an app first see the [run skill](../run/SKILL.md); to
 change what it stores, the [`build` skill](../build/SKILL.md)'s Update
 Flow (backend-only: the [python skill](../python/SKILL.md)).
 
+This is the Reboot Flywheel's **Observe** stage
+([`build/references/flywheel.md`](../build/references/flywheel.md)):
+what the running app holds, and why. A finding goes back by the routing
+rule there: a code fix to Prove, a missing or wrong rule to Design.
+
 ## The three operations
 
 Drill down: `type list` for the exact `--type`, `state list` for the

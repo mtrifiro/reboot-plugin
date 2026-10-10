@@ -34,7 +34,7 @@ import re
 import sys
 from pathlib import Path
 
-from reflib import (BUILD_STEPS, FRONT_DOORS, ROOT, SKILLS, STEPS, Ref, always_list,
+from reflib import (BUILD_STEPS, FRONT_DOORS, ROOT, SKILLS, STAGE_OF_STEP, STEPS, Ref, always_list,
                     concepts, load_refs, pinned_reboot_version, reading_list)
 
 BLOCK = re.compile(
@@ -232,6 +232,32 @@ def process(path: Path, refs: list[Ref]) -> tuple[str, str, int]:
     return text, BLOCK.sub(sub, text), count
 
 
+STAGE_MARK = re.compile(r"^_(Design|Prove|Observe)_ —", re.M)
+
+
+def stage_errors(path: Path) -> list[str]:
+    """A reading list sits under the Flywheel stage its step belongs to.
+
+    The stage markers (`_Design_ — …`, `_Prove_ — …`) are hand-written
+    above the lists; a file with none is not checked."""
+    text = path.read_text(encoding="utf-8")
+    marks = [(m.start(), m.group(1).lower()) for m in STAGE_MARK.finditer(text)]
+    if not marks:
+        return []
+    errors = []
+    for m in BLOCK.finditer(text):
+        if m.group("kind") != "reading-list":
+            continue
+        step = parse_args(m.group("args")).get("step", "")
+        before = [stage for at, stage in marks if at < m.start()]
+        want = STAGE_OF_STEP.get(step, "")
+        if not before or before[-1] != want:
+            rel = path.relative_to(ROOT)
+            errors.append(f"{rel}: the step={step} reading list is under "
+                          f"{before[-1] if before else 'no'} stage marker, not {want}")
+    return errors
+
+
 def check_invariants(refs: list[Ref], listed: set[str]) -> tuple[list[str], list[str]]:
     errors: list[str] = []
     warnings: list[str] = []
@@ -302,6 +328,8 @@ def main() -> int:
                 path.write_text(after, encoding="utf-8")
 
     errors, warnings = check_invariants(refs, LISTED)
+    for path in hosts:
+        errors += stage_errors(path)
     # A file marked `always` must appear in an `always` region for each of
     # its front doors, or no build would ever be told to read it.
     always_hosts = set()

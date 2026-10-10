@@ -604,6 +604,17 @@ section. Add or change a trap in its owning reference, not here. -->
 - Run the second `rbt generate` before `npm install`: the documented order is generate, install, generate
 - Copy a `tsconfig*.json` from `npm create vite@latest`: it now targets React 19 / TypeScript 6 (`erasableSyntaxOnly`), not the React 18 / TypeScript 5 set pinned here
 
+**`build/references/evidence.md`**
+- A pull request body that lists files: list the rules and the domain model
+- Evidence from another revision: a test run before the last commit, or with uncommitted changes, is not this revision's
+- Hand-editing `deploy/ledger.jsonl`
+
+**`build/references/flywheel.md`**
+- Writing the implementation (Step 2 onward) before the design is accepted, unless the user said up front to build without stopping
+- Folding a rule change into a "fix": a reworded `Rule:`, a changed declaration or a loosened authorizer is a Design change however small the diff
+- Calling a deploy, merge or acceptance done for the user: they decide
+- Treating a partial test run (`-k`, one module) as evidence for a merge or a release: run the full suite
+
 **`mcp-ui/references/pop-out-to-web-app.md`**
 - `window.open(url)` alone
 - `mcpApp.openLink(...)` without `?.`

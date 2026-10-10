@@ -127,6 +127,9 @@ and Web Apps read their builder skill's lists instead. -->
 
 ### Defining the API
 
+_Design_ — until the user accepts the domain model and feature files
+(build skill, "Accept the Design"):
+
 <!-- generated:start reading-list front-door=backend-only step=api -->
 - `references/api-methods.md` — The factory fixes the servicer's context type, and `mcp=` is required; `Reader`/`Writer`/`Transaction`/`Workflow`, `factory=True`, `errors=`, `description=`.
 - `references/api-pydantic.md` — A non-zero `Field` default is rejected at import; tags, zero defaults, `API(...)` wiring, Request/Response naming.
@@ -139,6 +142,8 @@ and Web Apps read their builder skill's lists instead. -->
 <!-- generated:end -->
 
 ### The project shell
+
+_Prove_ — building to the accepted design:
 
 <!-- generated:start reading-list front-door=backend-only step=shell -->
 - `references/lifecycle-application-entry.md` — Pass servicer classes, not instances, and register stdlib libraries; `async def main()` awaiting `Application(servicers=[...], initialize=...).run()`.

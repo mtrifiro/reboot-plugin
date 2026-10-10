@@ -136,6 +136,9 @@ by tools/gen-index.py. Edit the frontmatter, not the lists. -->
 > [mcp-ui/references/auth-oauth-providers.md](../mcp-ui/references/auth-oauth-providers.md)
 > is frontend-neutral; read it when you pick a real provider.
 
+_Design_ — until the user accepts the domain model and feature files
+(build skill, "Accept the Design"):
+
 **Before the API definition:**
 
 <!-- generated:start reading-list front-door=web-app step=api -->
@@ -148,6 +151,8 @@ by tools/gen-index.py. Edit the frontmatter, not the lists. -->
 - `python/references/api-errors.md` — only when the API declares typed errors.
 - `python/references/state-scalar-fields.md` — only when a field holds a secret, token or PII, or you want a non-zero default.
 <!-- generated:end -->
+
+_Prove_ — building to the accepted design:
 
 **Before the project shell** (`.rbtrc`, `pyproject.toml`,
 `.mypy.ini`, `main.py`):

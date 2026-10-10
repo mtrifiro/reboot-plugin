@@ -18,6 +18,12 @@ FRONT_DOORS = ("mcp-ui", "web-app", "backend-only")
 # .rbtrc depend on the API module (reboot-air-141 §4).
 BUILD_STEPS = ("api", "shell", "servicer", "auth", "frontend", "tests")
 STEPS = BUILD_STEPS + ("run", "deploy", "any")
+# The Reboot Flywheel stage each step belongs to (build/references/flywheel.md):
+# Design ends when the user accepts the domain model after the API step;
+# every later step builds to it. Derived, never written in frontmatter.
+STAGE_OF_STEP = {"api": "design", "shell": "prove", "servicer": "prove", "auth": "prove",
+                 "frontend": "prove", "tests": "prove", "run": "prove", "deploy": "prove",
+                 "any": "any"}
 IMPACT_ORDER = ("CRITICAL", "HIGH", "MEDIUM", "LOW-MEDIUM", "LOW")
 
 
@@ -74,6 +80,10 @@ class Ref:
     @property
     def step(self) -> str:
         return self.fm.get("step", "")
+
+    @property
+    def stage(self) -> str:
+        return STAGE_OF_STEP.get(self.step, "")
 
     @property
     def applies(self) -> list[str]:

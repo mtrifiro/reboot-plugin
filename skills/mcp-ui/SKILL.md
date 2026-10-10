@@ -168,6 +168,9 @@ by tools/gen-index.py. Edit the frontmatter, not the lists. -->
 > holds the design principles every front door follows (build's design
 > phase names 01–02; `references/ui-design.md` names the rest).
 
+_Design_ — until the user accepts the domain model and feature files
+(build skill, "Accept the Design"):
+
 **Before the API definition:**
 
 <!-- generated:start reading-list front-door=mcp-ui step=api -->
@@ -182,6 +185,8 @@ by tools/gen-index.py. Edit the frontmatter, not the lists. -->
 - `python/references/api-errors.md` — only when the API declares typed errors.
 - `python/references/state-scalar-fields.md` — only when a field holds a secret, token or PII, or you want a non-zero default.
 <!-- generated:end -->
+
+_Prove_ — building to the accepted design:
 
 **Before the project shell** (`.python-version`, `pyproject.toml`,
 `.rbtrc`, `.mypy.ini`, `main.py`):

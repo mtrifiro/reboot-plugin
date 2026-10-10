@@ -17,6 +17,11 @@ down, see it fail, then write the code; tag the unfinished `@wip`,
 untag only when the developer says so. A fix is a change: it follows
 the same order.
 
+In the **Reboot Flywheel**
+([`build/references/flywheel.md`](../build/references/flywheel.md)),
+Steps 1–2 are Design: the rules and scenarios the user accepts with the
+domain model. Steps 2a–5 are Prove.
+
 **A fix, a bug report or a review finding** starts at
 [A fix, a bug report, a review finding](#a-fix-a-bug-report-a-review-finding),
 not Step 1.
@@ -54,7 +59,10 @@ an API:
   flow, if that is how the feature is used.
 
 Ask whether that is the feature; iterate on the English until they
-agree — the file follows the words.
+agree — the file follows the words. In a build, this agreement feeds
+the build's "Accept the Design", where the user accepts the rules,
+their scenarios and the domain model together, before any
+implementation.
 
 ## Step 2 — Write it down, tagged `@wip`
 
@@ -138,10 +146,17 @@ change behavior, not permission to skip the feature. For each:
 1. Say in one line what the app does now and what it should do.
 2. Write that as a scenario under the rule it breaks (or a new rule),
    tagged `@wip`, in the feature that owns the behavior.
-3. Show the user the scenarios, and run them red (Step 2a), before
+3. Route it ([`flywheel.md`](../build/references/flywheel.md), "The
+   routing rule"; `python3 scripts/model_diff.py HEAD` sorts it). A new
+   scenario under an existing rule is a code fix: it stays in Prove. A
+   new or reworded rule, a changed scenario, or a fix that needs an API
+   change or changes who may call a method (an `authorizer()`) is a
+   design change: show the model diff and take it through
+   the build's "Accept the Design" before any code.
+4. Show the user the scenarios, and run them red (Step 2a), before
    any code. Approval of the fix ("go", "fix all 4") is not agreement
    on the scenarios: show them first.
-4. Fix, run them green, and ask before taking `@wip` off (Step 5).
+5. Fix, run them green, and ask before taking `@wip` off (Step 5).
 
 Only a change with no behavior a scenario could see (a typo in a
 comment, a rename inside one function) skips this, and you say so.

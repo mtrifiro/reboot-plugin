@@ -19,6 +19,19 @@ under **"Which References to Read, and When"**. Differences are marked
 inline (`mcp-ui: … / web-app: …`); a dual-frontend app does both.
 Backend-only work starts from the [`python` skill](../python/SKILL.md).
 
+The flow is the **Reboot Flywheel**'s first two stages
+([`references/flywheel.md`](references/flywheel.md)): **Design** runs
+through Step 1 and ends when the user accepts the domain model and the
+feature files ("Accept the Design"); **Prove** is Steps 2–7, building
+to that accepted design. A change that alters the design goes back
+through the acceptance.
+
+<!-- generated:start catalog skill=build -->
+**Lookups**
+- `references/evidence.md` — Evidence for Merge and Promote
+- `references/flywheel.md` — The Reboot Flywheel
+<!-- generated:end -->
+
 ## Reading References
 
 Everything read is re-sent every later turn:
@@ -218,7 +231,8 @@ web-app (summary vs. detail readers, aggregation, per-caller views):
 ## Step-by-Step Build Flow
 
 **Run all commands from the application directory**; before each step,
-read its front-door reading list.
+read its front-door reading list. Step 1 closes Design; "Accept the
+Design" sits between it and Step 2, where Prove begins.
 
 **Before step 1, start the developer dashboard** with the
 [`dashboard` skill](../dashboard/SKILL.md) so the user watches the API
@@ -247,6 +261,27 @@ Analytics property, with its cached numbers. `overview` shows the
 numbers for a period; `refresh` fetches new ones from Google"). Do it
 again, marking what changed, whenever a later step adds, removes or
 reshapes a state type or method.
+
+### Accept the Design
+
+Design ends here: the domain model (`api/`, generated) and the `@wip`
+feature files exist, and no implementation does. Show the **review
+table**, one row per rule, in the design's words:
+
+| State type | State ID | Rule | Method | Kind | Who may call | Scenario |
+| --- | --- | --- | --- | --- | --- | --- |
+| `Room` | hotel and room number | booked at most once per night | `book` | Writer | the app itself (from `Reservation.create`) | "A second guest requests a booked room" |
+
+Every rule in a feature file gets a row; a rule with no owner, method
+or scenario is a gap to name, not to fill silently. List the feature
+files by path, and point at the dashboard's Models and Features pages.
+Then ask the user to accept, or to say what to change.
+
+**Stop and wait.** No answer is not acceptance. A change sends you back
+to the design (or the feature skill), then here again. Only when the
+user said up front to build without stopping ("just build it", "don't
+check with me"): show the table and continue, and the handoff says the
+design was not accepted.
 
 ### Step 2 — Project shell
 
@@ -462,7 +497,9 @@ never bare `rbt dev run` / `npm run dev`.
 3. Every deviation from the brief or from the plan's own specs, with
    its reason (Design Phase, Step 5).
 4. The state types and methods as built, one line each (Step 1), when
-   they changed after the design.
+   they changed after the design; and whether the design was accepted
+   ("Accept the Design"). A pull request's body follows
+   [`references/evidence.md`](references/evidence.md).
 5. `AGENTS.md` current (Step 2.4), and the `FINDINGS.md` items added;
    when there are any, offer the [`report` skill](../report/SKILL.md).
 6. Unless the user asked for only one front door, the one-line offer of
@@ -479,9 +516,14 @@ never bare `rbt dev run` / `npm run dev`.
    before the API changes ([`feature` skill](../feature/SKILL.md)).
 4. Update the API (every new property with `description=`) →
    `uv run rbt generate`. Tell the user any state type or method added
-   or changed, one line each (Step 1).
+   or changed, one line each (Step 1). Run
+   `python3 scripts/model_diff.py HEAD`: any design change goes through
+   "Accept the Design" before step 5. None (a new scenario under an
+   existing rule, a code fix) stays in Prove.
 5. Update servicer methods, and the authorizer of any servicer whose
-   methods changed.
+   methods changed, as the accepted "Who may call" says. An authorizer
+   change the accepted design didn't name is a design change: back to
+   step 4's gate.
 6. Update the frontend. mcp-ui: a new user-facing capability gets an
    example prompt in `backend/src/example_prompts.py`.
    web-app: components and routes, markup kept accessible; time each
