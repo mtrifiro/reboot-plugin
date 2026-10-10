@@ -42,5 +42,6 @@ full original note; the originals are not part of this repo.
 | reboot-crm | 1.6.0 | `reboot-crm/docs/REBOOT_FINDINGS.md` |
 | new-theater | 1.6.0 | `new-theater/FINDINGS.md` |
 | findings-board | 1.6.0 | `findings-board/FINDINGS.md` |
+| plugin-browser | 1.6.0 | `plugin-browser/FINDINGS.md` |
 | restaurant-app-2 | 1.6.0 | `restaurant-app-2/FINDINGS.md` |
 | gardening | 1.6.0 | `gardening/FINDINGS.md` |
