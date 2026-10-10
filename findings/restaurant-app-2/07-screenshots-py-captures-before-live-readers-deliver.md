@@ -11,8 +11,8 @@ names:
 tags: [scaffold, frontend]
 cluster: ""
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "build/templates/README.md § `web-app/` adds"
 ---
 # `scripts/screenshots.py` captures before live readers deliver
 
@@ -23,3 +23,5 @@ resolved_by: ""
 **Repro.** Run the template's `screenshots.py` against a page with a live reader over seeded data; open the PNG.
 
 **Where in the skills.** `build/templates/web-app/scripts/screenshots.py`, `build/templates/both/scripts/screenshots.py`.
+
+**Resolution (2026-10-10).** The `web-app` and `both` templates' `scripts/screenshots.py` wait for `.skeleton` elements to reach zero (20 s) after `networkidle`, then 300 ms for the card fade, before capturing.

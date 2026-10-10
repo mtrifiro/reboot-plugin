@@ -69,7 +69,13 @@ def main() -> None:
                 for route in args.routes:
                     page.goto(base + route)
                     page.wait_for_load_state("networkidle")
-                    page.wait_for_timeout(500)  # let skeletons resolve
+                    # Reboot's readers stream in after networkidle: wait for
+                    # the skeletons they replace to go, then for the card fade.
+                    page.wait_for_function(
+                        "document.querySelectorAll('.skeleton').length === 0",
+                        timeout=20000,
+                    )
+                    page.wait_for_timeout(300)
                     path = args.out / f"{slug(route)}-{name}-{theme}.png"
                     page.screenshot(path=str(path), full_page=True)
                     print(path)
