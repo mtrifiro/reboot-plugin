@@ -37,12 +37,18 @@ renamed):
 }
 ```
 
-- **`status`**: `pending`, `running`, `passed`, `failed`, or `rerun`
+- **`status`**: `pending`, `running`, `passed`, `failed`, `rerun`
   for a harness failure (a hang, a server not ready) the runner
-  retried, which the band names apart from the app failing.
-- **`finished_at`**: set when the run ends. A module's counts
-  (`passed`, `failed`, `skipped`) are of tests, kept current while it
-  runs; they and its `started_at` are optional, and without
+  retried, which the band names apart from the app failing, or
+  `stopped` for the module running when the run was stopped.
+- **`finished_at`**: set when the run ends, finished or stopped.
+- **`stopped`**: `true` when the run was stopped before its end
+  (Ctrl-C, a terminate or hang-up signal); the band then shows
+  "Stopped" and how far it got. A run killed outright can't say so: the
+  band counts it stopped once it has seen it in the process list and
+  then not, for two polls.
+- **A module's counts** (`passed`, `failed`, `skipped`) are of tests,
+  kept current while it runs; they and its `started_at` are optional, and without
   `started_at` the band takes the modules to run one after another.
 - **The finish time** is each module's median `seconds` over the
   project's last 5 finished runs, which the band keeps; with no history

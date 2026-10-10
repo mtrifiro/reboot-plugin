@@ -62,8 +62,11 @@ export type TestRun = {
 /** One test module in a run's `.reboot/test-run.json`. */
 export type SuiteModule = {
   name: string
-  /** `rerun` is a harness failure (a hang, a server not ready), not the app failing. */
-  status: 'pending' | 'running' | 'passed' | 'failed' | 'rerun'
+  /**
+   * `rerun` is a harness failure (a hang, a server not ready), not the app
+   * failing; `stopped`, the module running when the run was stopped.
+   */
+  status: 'pending' | 'running' | 'passed' | 'failed' | 'rerun' | 'stopped'
   passed: number | null
   failed: number | null
   skipped: number | null
@@ -73,7 +76,14 @@ export type SuiteModule = {
 }
 
 /** A test run as its runner records it in `.reboot/test-run.json`. */
-export type SuiteRun = { startedAt: number; finishedAt: number | null; modules: SuiteModule[] }
+export type SuiteRun = {
+  startedAt: number
+  /** When it ended, finished or stopped; null while it runs. */
+  finishedAt: number | null
+  /** Whether it was stopped (Ctrl-C, killed) before its last module ended. */
+  isStopped: boolean
+  modules: SuiteModule[]
+}
 
 /** The run the band shows, and when it should end (null without the history to say). */
 export type SuiteView = { run: SuiteRun; expectedAt: number | null }

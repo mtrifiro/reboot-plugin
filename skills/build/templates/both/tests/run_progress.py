@@ -1,7 +1,12 @@
 """Records how far a test run is in `.reboot/test-run.json` at the
 project root, rewritten as each module starts and ends and at a test's
 first failure, for the Reboot band above Claude Code's prompt to show
-how far the run is and when it should end. Imported by `conftest.py`;
+how far the run is and when it should end. A run stopped before its end
+(Ctrl-C, or a terminate or hang-up signal: a timeout, a closed terminal,
+an agent stopping a background run) is written as stopped, its running
+module too; a terminate signal only in a Reboot project, through
+Reboot's cleanup hooks. A hard kill can't be caught; the band notices that one
+itself once the run is gone from the process list. Imported by `conftest.py`;
 the file's shape is in the python skill's
 `references/testing-project-setup.md` ("Test-run progress").
 
@@ -11,6 +16,7 @@ the file alone."""
 
 import json
 import os
+import signal
 import time
 from datetime import datetime
 from pathlib import Path
@@ -25,6 +31,10 @@ _index: dict[str, int] = {}
 _current: tuple[int, float] | None = None
 _failed_ids: set[str] = set()
 _skipped_ids: set[str] = set()
+# The handlers a stop signal had before ours, to hand it back to.
+_previous: dict[int, object] = {}
+# Pytest's exit status for a run stopped by Ctrl-C.
+_INTERRUPTED = 2
 
 
 def _now() -> str:
@@ -44,15 +54,55 @@ def _write() -> None:
     os.replace(partial, _path)
 
 
-def _end_current() -> None:
+def _end_current(stopped: bool = False) -> None:
     global _current
     if _run is None or _current is None:
         return
     index, began = _current
     entry = _run["modules"][index]
-    entry["status"] = "failed" if entry["failed"] else "passed"
+    entry["status"] = "stopped" if stopped else "failed" if entry["failed"] else "passed"
     entry["seconds"] = round(time.monotonic() - began, 1)
     _current = None
+
+
+def _end_run(stopped: bool) -> None:
+    """The run ends: finished, or stopped with its running module."""
+    if _run is None or _run["finished_at"] is not None:
+        return
+    _end_current(stopped)
+    _run["finished_at"] = _now()
+    if stopped:
+        _run["stopped"] = True
+    _write()
+
+
+def _on_stop_signal(signum: int, frame) -> None:
+    """Records the stop, then lets the signal do what it would have."""
+    try:
+        _end_run(stopped=True)
+    finally:
+        signal.signal(signum, _previous.pop(signum, signal.SIG_DFL))  # type: ignore[arg-type]
+        os.kill(os.getpid(), signum)
+
+
+def _catch_stop_signals() -> None:
+    """A terminate signal through Reboot's own cleanup hooks: its test
+    harness refuses to start beside any other SIGTERM handler. A hang-up,
+    which Reboot leaves alone, with ours, unless the run ignores it
+    (`nohup`)."""
+    try:
+        from reboot.aio.signals import install_cleanup
+
+        install_cleanup([signal.SIGTERM], lambda: _end_run(stopped=True))
+    except Exception:
+        pass  # Not a Reboot project, or no signals here: Ctrl-C still counts.
+    signum = getattr(signal, "SIGHUP", None)
+    if signum is None or signal.getsignal(signum) is signal.SIG_IGN:
+        return
+    try:
+        _previous[signum] = signal.signal(signum, _on_stop_signal)
+    except ValueError:  # not the main thread
+        pass
 
 
 def pytest_collection_finish(session) -> None:
@@ -73,6 +123,7 @@ def pytest_collection_finish(session) -> None:
         "modules": [{"name": name, "status": "pending"} for name in names],
     }
     _write()
+    _catch_stop_signals()
 
 
 def pytest_runtest_logstart(nodeid: str, location) -> None:
@@ -106,9 +157,6 @@ def pytest_runtest_logreport(report) -> None:
 
 
 def pytest_sessionfinish(session, exitstatus) -> None:
-    """The last module ends and the run with it; modules never reached stay pending."""
-    if _run is None:
-        return
-    _end_current()
-    _run["finished_at"] = _now()
-    _write()
+    """The last module ends and the run with it; modules never reached
+    stay pending. Ctrl-C stops the run and its running module."""
+    _end_run(stopped=int(exitstatus) == _INTERRUPTED)

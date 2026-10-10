@@ -17,7 +17,7 @@ export const HISTORY_RUNS = 5
 /** Each module's seconds in the runs before, oldest first. */
 export type History = Record<string, number[]>
 
-const STATUSES = new Set(['pending', 'running', 'passed', 'failed', 'rerun'])
+const STATUSES = new Set(['pending', 'running', 'passed', 'failed', 'rerun', 'stopped'])
 
 const num = (v: unknown): number | null => (typeof v === 'number' && Number.isFinite(v) ? v : null)
 const time = (v: unknown): number | null => {
@@ -33,7 +33,7 @@ export function parseSuite(text: string): SuiteRun | null {
   } catch {
     return null
   }
-  const r = raw as { started_at?: unknown; finished_at?: unknown; modules?: unknown }
+  const r = raw as { started_at?: unknown; finished_at?: unknown; stopped?: unknown; modules?: unknown }
   const startedAt = time(r?.started_at)
   if (startedAt === null || !Array.isArray(r.modules)) return null
   const modules: SuiteModule[] = []
@@ -50,7 +50,12 @@ export function parseSuite(text: string): SuiteRun | null {
     })
   }
 
-  return { startedAt, finishedAt: time(r.finished_at), modules }
+  const finishedAt = time(r.finished_at)
+
+  // Stopped: the runner says so, or a module of it was stopped mid-way.
+  const isStopped = finishedAt !== null && (r.stopped === true || modules.some(m => m.status === 'stopped'))
+
+  return { startedAt, finishedAt, isStopped, modules }
 }
 
 /** The history with a finished run's modules added: each that passed or failed, its last few runs. */
@@ -98,25 +103,51 @@ export function expectedFinish(run: SuiteRun, h: History, now: number): number |
   return now + left * 1000
 }
 
-/** How long a run whose file stopped changing may go before it counts as abandoned. */
-const ABANDONED_MS = 10 * 60 * 1000
+/**
+ * How long a run the band saw in `ps` may be gone from it, its file
+ * unchanged, before it counts as stopped: two polls, so a suite script
+ * starting its next pytest isn't caught between modules.
+ */
+export const STOPPED_AFTER_MS = 10_000
 
 /**
- * Whether the band shows the run: a finished one until code changes
- * after it; a running one unless it was abandoned (killed, the machine
- * asleep): no test run in `ps` and its file unchanged for twice the
- * running module's typical time, ten minutes at least.
+ * How long a run the band never saw in `ps` may go with its file
+ * unchanged before it counts as stopped: twice the running module's
+ * typical time, ten minutes at least. Such a runner may be one `ps`
+ * doesn't show as a test run, so it gets the benefit of the doubt.
  */
-export function isSuiteShown(
+const UNSEEN_MS = 10 * 60 * 1000
+
+/**
+ * The run as the band treats it. One its runner left without an end
+ * (killed, so no end-of-run hook ran) counts as stopped once no test
+ * runs in `ps` and its file is unchanged: soon after the band last saw
+ * it running (`seenTestingAt`), or, never seen, after the long wait. A
+ * stopped run ends when it was last written or seen, whichever is later,
+ * and its running module is the stopped one.
+ */
+export function settle(
   run: SuiteRun,
-  at: { now: number; writtenAt: number; lastEditAt: number; isTesting: boolean; history: History },
-): boolean {
-  if (run.finishedAt !== null) return at.lastEditAt <= run.finishedAt
-  if (at.isTesting) return true
+  at: { now: number; writtenAt: number; seenTestingAt: number | null; isTesting: boolean; history: History },
+): SuiteRun {
+  if (run.finishedAt !== null || at.isTesting) return run
+  const lastSign = Math.max(at.writtenAt, at.seenTestingAt ?? 0)
   const running = run.modules.find(m => m.status === 'running')
   const t = running ? typical(at.history, running.name) : null
+  const wait = at.seenTestingAt !== null ? STOPPED_AFTER_MS : Math.max(UNSEEN_MS, 2 * (t ?? 0) * 1000)
+  if (at.now - lastSign <= wait) return run
 
-  return at.now - at.writtenAt <= Math.max(ABANDONED_MS, 2 * (t ?? 0) * 1000)
+  return {
+    ...run,
+    finishedAt: lastSign,
+    isStopped: true,
+    modules: run.modules.map(m => (m.status === 'running' ? { ...m, status: 'stopped' } : m)),
+  }
+}
+
+/** Whether the band shows the run: a running one; an ended one, finished or stopped, until code changes after it. */
+export function isSuiteShown(run: SuiteRun, at: { lastEditAt: number }): boolean {
+  return run.finishedAt === null || at.lastEditAt <= run.finishedAt
 }
 
 /** `11:49`: a clock time, local, on the 12-hour clock the way a person says it. */
@@ -169,7 +200,7 @@ export function about(ms: number): string {
 /** How far the run is for a line that already says what the turn does: `7 of 20 modules`. */
 export function suiteStatus(view: SuiteView): string {
   const { modules } = view.run
-  const done = modules.filter(m => m.status !== 'pending' && m.status !== 'running').length
+  const done = modules.filter(m => m.status === 'passed' || m.status === 'failed' || m.status === 'rerun').length
 
   return `${done} of ${modules.length} modules`
 }
@@ -185,6 +216,11 @@ export function suiteStatus(view: SuiteView): string {
  *
  *     Done: 20 modules, 1,032 passed, 1 skipped, 1 failed (web_test)
  *     Took 23m 52s, finished at 11:49
+ *
+ * Or, stopped before its end, how far it got:
+ *
+ *     Stopped: 11 of 20 modules, 958 passed, 1 skipped, 0 failed
+ *     Ran 6m 10s, stopped at 11:31
  */
 export function suiteLine(view: SuiteView, now: number, clock: (ms: number) => string = clockTime): string {
   const { run, expectedAt } = view
@@ -193,6 +229,13 @@ export function suiteLine(view: SuiteView, now: number, clock: (ms: number) => s
     const finish =
       expectedAt === null ? '' : `, ${about(expectedAt - now)}, so it should finish around ${clock(expectedAt)}`
     return `So far: ${suiteStatus(view)}, ${tally(run)}\nLeft: ${left} ${left === 1 ? 'module' : 'modules'}${finish}`
+  }
+
+  if (run.isStopped) {
+    return (
+      `Stopped: ${suiteStatus(view)}, ${tally(run)}\n` +
+      `Ran ${elapsed(run.finishedAt - run.startedAt)}, stopped at ${clock(run.finishedAt)}`
+    )
   }
 
   return (

@@ -414,6 +414,53 @@ test("between turns the band shows the run the project's runner records, and its
   expect((await after.findAll({ type: 'Text', text: /^Done: 2 modules, 114 passed, 1 failed \(web_test\)\nTook 7m 00s, finished at \d+:31$/ })).length).toBe(1)
 })
 
+test('a recorded run killed mid-way shows as stopped within seconds, not as still running', async ($, on) => {
+  const file = JSON.stringify({
+    started_at: '2026-10-08T11:24:00-05:00',
+    finished_at: null,
+    modules: [
+      { name: 'accounts_test', status: 'passed', passed: 114, failed: 0, seconds: 130.1 },
+      { name: 'web_test', status: 'running' },
+    ],
+  })
+  let now = Date.parse('2026-10-08T11:30:00-05:00')
+  let ps = '  9 /w/app/.venv/bin/pytest tests/web_test.py'
+  // The store keeps when the band last saw the run in ps.
+  const store = new Map<string, unknown>()
+  on('store.get', ($, e) => ({ value: store.get((e as { key: string }).key) ?? null }) as never)
+  on('store.set', ($, e) => {
+    store.set((e as { key: string }).key, (e as { value: unknown }).value)
+    return { value: undefined } as never
+  })
+  on('ui.render', { component: 'AbovePrompt' }, ($, e) => {
+    const { Box } = $.ui.resolve(e)
+
+    return h(Box, {}) as never
+  })
+  on('clock.now', () => ({ value: now }) as never)
+  on('session.cwd', () => ({ value: '/w/app' }) as never)
+  on('fs.exists', ($, e) => ({ value: (e as { path: string }).path === '/w/app/.rbtrc' }) as never)
+  on('fs.read', ($, e) => ({ value: (e as { path: string }).path === '/w/app/.reboot/test-run.json' ? file : '' }) as never)
+  on('fs.stat', () => ({ value: { kind: 'file', size: 1, mtimeMs: Date.parse('2026-10-08T11:29:00-05:00') } }) as never)
+  on('ui.status', () => ({ value: undefined }) as never)
+  on('tool.call', () => ({ result: {}, text: 'ok' }) as never)
+  on('process.run', () => ({ value: { exitCode: 0, stdout: ps, stderr: '' } }) as never)
+
+  await $.tool.call({ tool: 'Bash', command: 'uv run rbt dev run' })
+  await wait(50)
+  const band = await $.ui.mount({ plugin: PLUGIN, surface: 'terminal', component: 'AbovePrompt', props: BAND as never })
+  expect((await band.findAll({ type: 'Text', text: 'So far: 1 of 2 modules, 114 passed, 0 failed\nLeft: 1 module' })).length).toBe(1)
+
+  // Killed: gone from ps, and its file never got an end.
+  ps = ''
+  now += 20_000
+  await $.tool.call({ tool: 'Bash', command: 'uv run rbt dev run' })
+  await wait(50)
+  const after = await $.ui.mount({ plugin: PLUGIN, surface: 'terminal', component: 'AbovePrompt', props: BAND as never })
+  expect((await after.findAll({ type: 'Text', text: /^Stopped: 1 of 2 modules, 114 passed, 0 failed\nRan 6m 00s, stopped at \d+:30$/ })).length).toBe(1)
+  expect(await after.findAll({ type: 'Text', text: /So far/ })).toEqual([])
+})
+
 test('a session outside a Reboot project draws nothing and asks for no summary', async ($, on) => {
   let summaries = 0
   on('ui.render', { component: 'AbovePrompt' }, ($, e) => {

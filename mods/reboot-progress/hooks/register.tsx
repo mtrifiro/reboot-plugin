@@ -23,7 +23,7 @@ import {
 } from './deploy'
 import type { LinkProbe } from './deploy'
 import { REBOOT_LOGO } from './logo'
-import { SUITE_FILE, type History, expectedFinish, isSuiteShown, parseSuite, remember, suiteLine, suiteStatus } from './suite'
+import { SUITE_FILE, type History, expectedFinish, isSuiteShown, parseSuite, remember, settle, suiteLine, suiteStatus } from './suite'
 import { STARTING, WAITING, endTurn, fallback, isWorthSummarizing, parseSummary, startTask, summaryPrompt, isTesting, testCommand, testLine, testTimeKey, testProgress, testStatus, textOf } from './activity'
 import type { Summary } from './activity'
 import {
@@ -374,34 +374,39 @@ async function followTests($: EngineInterface, dir: string, ps: string) {
 
 /**
  * Follows the run the project's runner records in `.reboot/test-run.json`:
- * once it finishes, adds its modules' times to the project's history (each
+ * once it ends, adds its modules' times to the project's history (each
  * run once); shows it while it goes and after, with when it should end,
- * and ticks the clock while it runs.
+ * and ticks the clock while it runs. A run left without an end counts as
+ * stopped soon after `ps` stops showing it (`settle`); when the band last
+ * saw it there is kept in the store, so a reload doesn't forget it.
  */
 async function followSuite($: EngineInterface, dir: string, ps: string) {
   const path = `${dir}/${SUITE_FILE}`
-  const run = parseSuite(await readText($, path))
+  const recorded = parseSuite(await readText($, path))
   const was = await read($, suite)
-  if (run === null) {
+  if (recorded === null) {
     if (was !== null) await update($, suite, () => null)
     return
   }
   const now = await $.clock.now()
   const historyKey = `suite-times:${dir}`
   const history = ((await $.store.get(historyKey).catch(() => null)) as History | null) ?? {}
+  const isTestingNow = isTesting(ps, dir)
+  const seenKey = `suite-seen:${dir}`
+  const seen = (await $.store.get(seenKey).catch(() => null)) as { startedAt: number; at: number } | null
+  let seenTestingAt = seen !== null && seen.startedAt === recorded.startedAt ? seen.at : null
+  if (isTestingNow && recorded.finishedAt === null) {
+    seenTestingAt = now
+    await $.store.set(seenKey, { startedAt: recorded.startedAt, at: now }).catch(() => undefined)
+  }
+  const stat = await $.fs.stat(path).catch(() => null)
+  const run = settle(recorded, { now, writtenAt: stat?.mtimeMs ?? now, seenTestingAt, isTesting: isTestingNow, history })
   if (run.finishedAt !== null && (await $.store.get(`suite-recorded:${dir}`).catch(() => null)) !== run.startedAt) {
     // Remembering is a nicety; never let it cost the band.
     await $.store.set(historyKey, remember(history, run)).catch(() => undefined)
     await $.store.set(`suite-recorded:${dir}`, run.startedAt).catch(() => undefined)
   }
-  const stat = await $.fs.stat(path).catch(() => null)
-  const isShown = isSuiteShown(run, {
-    now,
-    writtenAt: stat?.mtimeMs ?? now,
-    lastEditAt: await read($, lastEdit),
-    isTesting: isTesting(ps, dir),
-    history,
-  })
+  const isShown = isSuiteShown(run, { lastEditAt: await read($, lastEdit) })
   const isRunning = isShown && run.finishedAt === null
   await update($, suite, () => (isShown ? { run, expectedAt: isRunning ? expectedFinish(run, history, now) : null } : null))
   if (isRunning) await update($, clock, () => now)
