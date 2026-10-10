@@ -592,6 +592,34 @@ def accepted_line(accepted: dict | None, design_changes: int) -> str:
     )
 
 
+def last_run_line(accepted: dict | None, last_run: dict | None) -> str:
+    """One line on whether the scenarios have run since the design was
+    accepted: the red run before any servicer is written (build Step
+    2a), then the green one. `last_run` is `tests/.last-run.json`
+    (`tests/last_run.py`); "" when there is no acceptance to measure
+    from."""
+    if accepted is None:
+        return ""
+    if not last_run or last_run.get("when", "") < accepted.get("at", ""):
+        return (
+            "**Scenarios run since acceptance**: none recorded (`tests/.last-run.json`); "
+            "run them red before writing a servicer (build Step 2a), then green."
+        )
+    kind = "full run" if last_run.get("full") else "partial run"
+    return (
+        f"**Last scenario run**: a {kind} at {last_run.get('revision') or 'the working tree'} "
+        f"on {last_run.get('when', '')[:16]}: {last_run.get('passed', 0)} passed, "
+        f"{last_run.get('failed', 0)} failed."
+    )
+
+
+def read_last_run() -> dict | None:
+    try:
+        return json.loads((ROOT / "tests" / ".last-run.json").read_text())
+    except (OSError, ValueError):
+        return None
+
+
 def markdown(
     base: str,
     head: str,
@@ -599,6 +627,7 @@ def markdown(
     unauthorized: list[str] | None = None,
     accepted: dict | None = None,
     tickets: list[str] | None = None,
+    last_run: dict | None = None,
 ) -> str:
     if not changes:
         lines = [
@@ -636,6 +665,9 @@ def markdown(
         lines += ["", "_Tickets_: " + ", ".join(tickets)]
     design_count = sum(1 for c in changes if c.stage == "design")
     lines += ["", accepted_line(accepted, design_count)]
+    runs = last_run_line(accepted, last_run)
+    if runs:
+        lines.append(runs)
     return "\n".join(lines) + "\n"
 
 
@@ -683,6 +715,7 @@ def main() -> int:
         base = base[:7]
     if accepted:
         accepted["design_changes"] = sum(1 for c in changes if c.stage == "design")
+    last_run = read_last_run()
     if "--json" in flags:
         print(json.dumps({
             "base": base,
@@ -692,9 +725,10 @@ def main() -> int:
             "unauthorized_servicers": unauthorized,
             "accepted": accepted,
             "tickets": tickets,
+            "last_run": last_run,
         }, indent=2))
     else:
-        print(markdown(base, head_label, changes, unauthorized, accepted, tickets), end="")
+        print(markdown(base, head_label, changes, unauthorized, accepted, tickets, last_run), end="")
     return 0
 
 

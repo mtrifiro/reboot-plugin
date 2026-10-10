@@ -273,6 +273,21 @@ class ModelDiffTest(unittest.TestCase):
         self.assertFalse(stale["fingerprint_ok"])
         self.assertIn("does not match", model_diff.accepted_line({**stale, "is_base": True}, 0))
 
+    def test_scenarios_run_since_acceptance(self) -> None:
+        accepted = {"commit": "abc1234", "at": "2026-10-10T10:00:00-05:00",
+                    "fingerprint_ok": True, "is_base": True}
+        self.assertIn("none recorded", model_diff.last_run_line(accepted, None))
+        self.assertIn("none recorded", model_diff.last_run_line(
+            accepted, {"when": "2026-10-10T09:00:00-05:00"}), "a run before acceptance")
+        line = model_diff.last_run_line(accepted, {
+            "when": "2026-10-10T11:00:00-05:00", "revision": "def5678", "full": True,
+            "passed": 3, "failed": 0})
+        self.assertIn("full run", line)
+        self.assertIn("3 passed", line)
+        self.assertEqual(model_diff.last_run_line(None, None), "", "nothing to measure from")
+        self.assertIn("none recorded", model_diff.markdown("a", "b", [], [], accepted))
+        self.assertNotIn("Scenarios run", model_diff.markdown("a", "b", [], [], None))
+
     def test_tickets_named_in_changed_features(self) -> None:
         before = {"tests/a.feature": "Feature: A\n  Ticket: HOTEL-7\n", "tests/b.feature": "Feature: B\n"}
         after = {"tests/a.feature": "Feature: A\n  Ticket: HOTEL-7\n",
