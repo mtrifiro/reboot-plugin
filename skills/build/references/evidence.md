@@ -26,6 +26,12 @@ describes. The stages and the routing rule are in
 
 ### Before a pull request
 
+The template's `.github/workflows/prove.yml` runs the type check and
+the full suite on every pull request and posts the model diff and the
+scenario counts as one comment (`scripts/prove_comment.py`), so the
+reviewer has evidence that is not the agent's own report. The body
+below still carries the rules and the acceptance, in the agent's words.
+
 1. Run the **full** suite (`uv run pytest`) at the commit you'll push.
    It writes `tests/.last-run.json`: passed, failed, `@wip`,
    `@blocked`, the revision, and whether the run was full.

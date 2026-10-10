@@ -1,0 +1,54 @@
+name: prove
+
+# Prove, for a pull request: the type check and the full suite at this
+# commit, and the model diff, posted as one comment a reviewer reads
+# before the code (the Reboot plugin's build/references/evidence.md).
+# The comment is updated in place on later pushes.
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  prove:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # the model diff reads the base revision
+      - uses: astral-sh/setup-uv@v6
+      # Envoy, for the scenarios' local proxy. With no `envoy` on the path
+      # Reboot runs it in Docker, whose port publishing fails on this
+      # runner. The version is Reboot's own (ENVOY_VERSION in its
+      # settings; the plugin's lib/install_envoy.sh pins the same).
+      - name: Envoy
+        run: |
+          mkdir -p "$HOME/.local/bin"
+          curl -fsSL -o "$HOME/.local/bin/envoy" \
+            https://github.com/envoyproxy/envoy/releases/download/v1.38.4/envoy-1.38.4-linux-x86_64
+          echo "c994c452de131f59c9ec9f4a2fffcc65039f250a38b6279870bb95dac21db0fa  $HOME/.local/bin/envoy" | sha256sum -c -
+          chmod +x "$HOME/.local/bin/envoy"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+      - run: uv sync
+      - run: uv run rbt generate
+      - run: uv run mypy backend/ tests/
+      - run: uv run pytest
+      - name: Write the evidence
+        if: always()
+        run: python3 scripts/prove_comment.py "origin/$GITHUB_BASE_REF" > evidence.md && cat evidence.md
+      - name: Post it on the pull request
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          id="$(gh api "repos/$GITHUB_REPOSITORY/issues/$PR/comments" --paginate \
+            --jq '.[] | select(.body | startswith("<!-- prove -->")) | .id' | head -n 1)"
+          if [ -n "$id" ]; then
+            gh api --method PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$id" -F body=@evidence.md >/dev/null
+          else
+            gh pr comment "$PR" --body-file evidence.md
+          fi

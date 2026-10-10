@@ -108,10 +108,23 @@ def main() -> int:
         problems.append("the Reboot version pins disagree:")
         problems += [f"  {where}: {v}" for where, v in pins]
 
+    # Envoy: the plugin's installer and the templates' CI workflow fetch
+    # the same release (Reboot's own ENVOY_VERSION).
+    envoy = grep("lib/install_envoy.sh", r'^ENVOY_VERSION="([^"]+)"', problems)
+    envoy_sum = grep("lib/install_envoy.sh", r'^SHA256_LINUX_X64="([0-9a-f]+)"', problems)
+    for workflow in sorted(ROOT.glob("skills/build/templates/*/.github/workflows/prove.yml")):
+        rel = str(workflow.relative_to(ROOT))
+        envoy += grep(rel, r"envoy-([0-9.]+)-linux-x86_64$", problems)
+        envoy_sum += grep(rel, r'^\s*echo "([0-9a-f]{64})  ', problems)
+    for label, found in (("Envoy version", envoy), ("Envoy SHA-256", envoy_sum)):
+        if len({v for _, v in found}) > 1:
+            problems.append(f"the {label} pins disagree:")
+            problems += [f"  {where}: {v}" for where, v in found]
+
     for p in problems:
         print(p, file=sys.stderr)
     if not problems:
-        print(f"manifests OK; {len(pins)} pins at {versions.pop()}")
+        print(f"manifests OK; {len(pins)} pins at {versions.pop()}, Envoy {envoy[0][1]}")
     return 1 if problems else 0
 
 

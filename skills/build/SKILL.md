@@ -525,7 +525,8 @@ prototype card ([`references/flywheel.md`](references/flywheel.md),
    they changed after the design; and whether the design was accepted
    ("Accept the Design"), as `python3 scripts/model_diff.py` says. A
    pull request's body follows
-   [`references/evidence.md`](references/evidence.md).
+   [`references/evidence.md`](references/evidence.md); the template's
+   `prove.yml` workflow posts the evidence on the pull request itself.
 5. `AGENTS.md` current (Step 2.4), and the `FINDINGS.md` items added;
    when there are any, offer the [`report` skill](../report/SKILL.md).
 6. Unless the user asked for only one front door, the one-line offer of
