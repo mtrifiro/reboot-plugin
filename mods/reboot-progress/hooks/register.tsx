@@ -687,6 +687,40 @@ export const register: Register = on => {
     // sets the links apart from the text; other surfaces keep plain buttons.
     const linkVariant = isTerminal ? 'primary' : undefined
     const deployColor = !isShown(d, now) ? undefined : d!.stage === 'failed' ? 'error' : 'warning'
+    // A link's address, shown while the pointer is on its button below. The
+    // terminal lays it over the right end of the heading's rule, out of the
+    // flow, so the heading never wraps or moves; other surfaces keep it
+    // beside the logo. There a leading space keeps a gap from the rule.
+    const lead = isTerminal ? ' ' : ''
+    const addresses = (
+      <>
+      {to.dashboard !== null && (
+        <Box display="none" hover={{ scope: 'link-dashboard', display: 'flex' }}>
+          <Text dimColor>{lead}Opens the dashboard: {to.dashboard}</Text>
+        </Box>
+      )}
+      {to.app !== null && (
+        <Box display="none" hover={{ scope: 'link-app', display: 'flex' }}>
+          <Text dimColor>{lead}Opens the app: {to.app}</Text>
+        </Box>
+      )}
+      {mcpUrl !== null && (
+        <Box display="none" hover={{ scope: 'link-mcp', display: 'flex' }}>
+          <Text dimColor>{lead}Opens the page that connects an MCP client to the app: {mcpUrl}</Text>
+        </Box>
+      )}
+      {cloud !== null && mcpUrl === null && (
+        <Box display="none" hover={{ scope: 'link-cloud', display: 'flex' }}>
+          <Text dimColor>{lead}Opens the app on Reboot Cloud: {cloud}</Text>
+        </Box>
+      )}
+      {site !== null && (
+        <Box display="none" hover={{ scope: 'link-site', display: 'flex' }}>
+          <Text dimColor>{lead}Opens the published site: {site}</Text>
+        </Box>
+      )}
+      </>
+    )
     // On top, a bold Status heading with Reboot at the right margin; below
     // it what is happening now on the left, the links on the right.
 
@@ -698,11 +732,13 @@ export const register: Register = on => {
                 other surfaces keep Status here and the logo on the right. */}
             {isTerminal ? (
               <Box flexDirection="row" flexGrow={1}>
-                <Text bold color="success">
-                  Reboot Status
-                </Text>
-                {/* A rule to the right edge; clipped to one row where a
-                    link's address, on hover, takes some of it. */}
+                <Box flexShrink={0}>
+                  <Text bold color="success">
+                    Reboot Status
+                  </Text>
+                </Box>
+                {/* A rule to the right edge; a link's address, on hover,
+                    draws over its right end (`addresses`). */}
                 <Box flexGrow={1} flexShrink={1} height={1} overflow="hidden" marginLeft={1}>
                   <Text color="success">{'─'.repeat(Math.max(0, e.props.bodyColumns - 'Reboot Status '.length))}</Text>
                 </Box>
@@ -711,33 +747,13 @@ export const register: Register = on => {
               <Text bold>Status</Text>
             )}
           </Box>
+          {isTerminal ? (
+            <Box position="absolute" top={0} right={0} flexDirection="row">
+              {addresses}
+            </Box>
+          ) : null}
           <Box flexShrink={0} flexDirection="row" gap={1} alignItems="center">
-            {/* A link's address, shown while the pointer is on its button below. */}
-            {to.dashboard !== null && (
-              <Box display="none" hover={{ scope: 'link-dashboard', display: 'flex' }}>
-                <Text dimColor>Opens the dashboard: {to.dashboard}</Text>
-              </Box>
-            )}
-            {to.app !== null && (
-              <Box display="none" hover={{ scope: 'link-app', display: 'flex' }}>
-                <Text dimColor>Opens the app: {to.app}</Text>
-              </Box>
-            )}
-            {mcpUrl !== null && (
-              <Box display="none" hover={{ scope: 'link-mcp', display: 'flex' }}>
-                <Text dimColor>Opens the page that connects an MCP client to the app: {mcpUrl}</Text>
-              </Box>
-            )}
-            {cloud !== null && mcpUrl === null && (
-              <Box display="none" hover={{ scope: 'link-cloud', display: 'flex' }}>
-                <Text dimColor>Opens the app on Reboot Cloud: {cloud}</Text>
-              </Box>
-            )}
-            {site !== null && (
-              <Box display="none" hover={{ scope: 'link-site', display: 'flex' }}>
-                <Text dimColor>Opens the published site: {site}</Text>
-              </Box>
-            )}
+            {!isTerminal && addresses}
             {/* The favicon where the surface draws Svg. */}
             {Svg && <Svg source={REBOOT_LOGO} alt="Reboot logo" width={14} height={14} />}
             {!isTerminal && <Text bold>Reboot</Text>}
