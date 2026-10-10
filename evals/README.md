@@ -28,9 +28,14 @@ regressions more than they show a gain over no plugin: `route-both`,
 `mcp-ready` and the design cases are where the plugin's effect shows
 (no plugin: 0–3 of 3 on `mcp-ready` across runs, so it is noisy; 0 of 3
 on the design cases). The gate cases, three runs per arm on 2026-10-10:
-`design-accept-gate` 0.53 with the plugin, 0.00 without (two of the
-three plugin runs stopped for acceptance; one went on), and
-`design-skip-gate` 1.00 with, 0.56 without.
+`design-accept-gate` 1.00 with the plugin, 0.50 without, and
+`design-skip-gate` 1.00 with, 0.56 without. On the accept gate the
+plugin's gain is the rule mapping: plain Claude also asks before it
+builds in a planning session, so `waits-for-acceptance` guards against
+a regression more than it shows a gain. An earlier wording of that
+grader asked for a stop after the API and feature files, a moment a
+planning session never reaches, and failed runs that had stopped at the
+features; it scored 0.53 with the plugin before the rewording.
 
 `tools/run-evals.sh` copies the skills into its wrapper rather than
 linking them (a run may read inside the plugin under test, judged by the
