@@ -105,6 +105,41 @@ Asked where things are, answer with the stage and the next decision:
 "Prove: 11 of 12 scenarios pass; the merge needs the last one", not a
 list of files touched.
 
+### The decisions log
+
+`design/decisions.md` keeps why the design is what it is, after the
+conversation that settled it is gone. Each acceptance appends one entry,
+newest last; no entry is edited or removed, so a later change that
+overturns one adds its own entry naming it.
+
+```markdown
+## 2026-10-10 — Design accepted: Front desk
+
+- **Decided:** each Room is its own state, keyed by hotel and room
+  number; `book` is a Writer on Room.
+- **Why:** a room is booked at most once per night, and one Room's
+  writer is the lock that keeps it so.
+- **Set aside:** rooms as a list on Hotel: every booking would lock
+  the whole hotel.
+- **The user's words:** "housekeeping never sees guest names."
+- **Replaces:** nothing (first design).
+```
+
+- One **Decided** / **Why** pair per choice the user would need
+  explained later: a state type, a container, a method type, who may
+  call, the primary view, a deviation from the brief.
+- **Set aside** only for alternatives actually raised.
+- **The user's words** quotes them, or says they accepted without
+  comment.
+- **Replaces** names the earlier entries it overturns by heading, or
+  "nothing".
+- A build without stopping still gets its entry, headed "Design not
+  accepted: <title>".
+
+Before a change, read the log: a change that goes against an entry
+says so to the user, naming the entry and its why, before the design
+changes.
+
 ### Stage cards
 
 The first time a project reaches one of these moments, say where the
@@ -188,9 +223,12 @@ Tone, for these and any card written later:
   (types generated in a loop), or an authorizer assigned rather than
   defined as a method, is not seen.
 - Acceptance is recorded as `design/accepted.json` (the date, a
-  fingerprint of `api/` and the feature files) beside `design/review.md`,
-  in the commit that holds the accepted design; the user's reasons stay
-  in the conversation unless the agent wrote them into `review.md`.
+  fingerprint of `api/` and the feature files) beside `design/design.md`
+  (the design as accepted), `design/review.md` (its review table) and
+  `design/decisions.md` (each acceptance's decisions, reasons and the
+  user's words, appended), in the commit that holds the accepted design.
+  The reasons are what the agent wrote there: anything said only in
+  the conversation is lost with it.
 - Observe today is stored state only: no per-request traces.
 
 ## Scales as

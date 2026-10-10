@@ -18,6 +18,7 @@ change it here in the same commit.
 | Scenarios (the spec) | `tests/*.feature` |
 | Test modules | `tests/*_test.py`; each `scenarios(...)` names the features it runs |
 | Deploy, backup, restore | `scripts/deploy.sh`, `deploy/config`, `deploy/before-backend`, `scripts/backup.sh`, `scripts/restore.py` |
+| The design and why each choice was made (read before changing it) | `design/design.md`, `design/decisions.md` (one entry per acceptance, appended) |
 | The accepted design, what a change did to it (Design or Prove), the last test run, each deploy's release record | `design/accepted.json` and `design/review.md`, `scripts/model_diff.py`, `tests/.last-run.json`, `deploy/ledger.jsonl` |
 | `rbt` config | `.rbtrc` (line-based, not YAML) |
 | Surprises about Reboot or its skills | `FINDINGS.md` |

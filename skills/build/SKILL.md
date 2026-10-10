@@ -121,6 +121,13 @@ method types mean regenerating a dozen or more files.
      turn that renders a `UI()`.
    - web-app: the SPA's pages and the methods each calls; the visual
      brief per `web-app/references/ui-design.md`.
+4. Write the design, as you state it, to `design/design.md` in the
+   project: the same words the user reads, every choice with its why,
+   the deviations from the brief and the alternatives set aside. Keep
+   it current as the user changes the design; it is the document
+   "Accept the Design" asks them to accept, and it stays in the
+   repository when the conversation is gone, a build without stopping
+   included.
 Updates start with the design too (Update Flow).
 
 ### Writing the Design for a Human Reader
@@ -291,7 +298,8 @@ check with me"): show the table and continue, and the handoff says the
 design was not accepted.
 
 Once accepted, Step 2 records it in the repository (its item 5): the
-review table in `design/review.md`, the record `scripts/model_diff.py
+design in `design/design.md`, the review table in `design/review.md`,
+an entry in `design/decisions.md`, the record `scripts/model_diff.py
 --accept` writes in `design/accepted.json`, and one commit holding
 them with `api/` and the feature files. Every later model diff measures
 from that commit.
@@ -327,14 +335,22 @@ generated client). Then:
    already had: move its content into `AGENTS.md` and leave
    `@AGENTS.md` as its only line. Keep `AGENTS.md` current as you go:
    each new state type, UI, route or script adds its row.
-5. **Record the acceptance** (skip when the user built without
-   stopping): write `design/review.md` (the review table as shown, the
-   feature files by path, the user's words if they gave any), run
+5. **Record the acceptance.** `design/design.md` is the design as
+   accepted (Design Phase, item 4). Write `design/review.md` (the
+   review table as shown, the feature files by path) and add the first
+   entry to `design/decisions.md` (below). Run
    `python3 scripts/model_diff.py --accept`, and commit `api/`,
    `tests/*.feature` and `design/` with the scaffold as
    `Design accepted: <title>`, the project's first commit. That commit
    is the base every later `model_diff.py` measures from, and what the
-   pull request and the release record mean by "accepted".
+   pull request and the release record mean by "accepted". When the
+   user built without stopping, commit `design/design.md` and the
+   entry, marked not accepted, and skip `--accept`.
+
+   `design/decisions.md` is a log, newest entry last, never rewritten:
+   each acceptance adds one entry with what was decided and why
+   ([`references/flywheel.md`](references/flywheel.md), "The decisions
+   log").
 
 ### Step 3 — Servicer
 
@@ -534,11 +550,14 @@ prototype card ([`references/flywheel.md`](references/flywheel.md),
 
 ## Update Flow
 
-1. Read `.rbtrc`, the API definition, servicer, `main.py` and the
-   frontend entry (mcp-ui: `frontend/mcp/<ui-name>/App.tsx`; web-app:
-   `web/src/App.tsx`). Work on `main` or a branch as the developer
-   chose ([`references/flywheel.md`](references/flywheel.md), "Where
-   the work happens").
+1. Read `.rbtrc`, `design/design.md` and `design/decisions.md`, the
+   API definition, servicer, `main.py` and the frontend entry (mcp-ui:
+   `frontend/mcp/<ui-name>/App.tsx`; web-app: `web/src/App.tsx`). A
+   change that goes against a recorded decision says so to the user
+   before the design changes, naming the entry and its why. Work on
+   `main` or a branch as the developer chose
+   ([`references/flywheel.md`](references/flywheel.md), "Where the work
+   happens").
 2. Assess state model changes; with persisted state or a deploy, follow
    `python/references/api-schema-evolution.md`.
 3. Agree on the feature in English and write its `@wip` feature file
@@ -548,11 +567,14 @@ prototype card ([`references/flywheel.md`](references/flywheel.md),
    or changed, one line each (Step 1). Run
    `python3 scripts/model_diff.py` (it measures from the accepted
    design; `HEAD` as the base when the project has no record): any
-   design change goes through "Accept the Design" before step 5, and
-   once accepted, `python3 scripts/model_diff.py --accept` and a commit
-   of `api/`, `tests/*.feature` and `design/` ("Design accepted:
-   <what>") record it. None (a new scenario under an existing rule, a
-   code fix) stays in Prove.
+   design change goes through "Accept the Design" before step 5, with
+   `design/design.md` updated to the changed design. Once accepted,
+   `design/review.md` rewritten for it, a new entry at the end of
+   `design/decisions.md` (Step 2.5; **Replaces** names the entries it
+   overturns, which stay as they are), `python3 scripts/model_diff.py
+   --accept` and a commit of `api/`, `tests/*.feature` and `design/`
+   ("Design accepted: <what>") record it. None (a new scenario under an
+   existing rule, a code fix) stays in Prove.
 5. Update servicer methods, and the authorizer of any servicer whose
    methods changed, as the accepted "Who may call" says. An authorizer
    change the accepted design didn't name is a design change: back to
