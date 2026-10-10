@@ -128,6 +128,7 @@ groups=$(ps -axww -o pid=,ppid=,uid=,etime=,rss=,%cpu=,command= | awk \
         c = cmd[p]
         if (c ~ /-m reboot\.dashboard\.backend\.main|reboot\/dashboard\/backend\/main\.py/) return "dashboard"
         if (c ~ /\/rbt dashboard( |$)/) return "dashboard"
+        if (c ~ /langserver\.index\.js/) return "dashboard pyright"
         if (c ~ /\/rbt dev run( |$)/) return "app"
         if (c ~ /\/plugins\/data\/reboot\/bin\/envoy-/) return "Envoy"
         if (c ~ /\/plugins\/data\/reboot\/bin\/cloudflared-/) return "tunnel"

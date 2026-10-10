@@ -154,6 +154,16 @@ class OrphansTest(unittest.TestCase):
         self.assertIn("(app)", line)
         self.assertIn("no record of its session", line)
 
+    def test_dashboards_pyright_child_is_reported(self) -> None:
+        (pid,) = self.detached(
+            'exec -a "node /x/node_modules/pyright/dist/langserver.index.js" sleep 600 & '
+            'echo $! >"$PIDS"'
+        )
+        line = self.line_for(self.run_hook(min_age=0), pid)
+        self.assertIsNotNone(line)
+        assert line is not None
+        self.assertIn("(dashboard pyright)", line)
+
     def test_young_orphan_without_a_record_is_left_alone(self) -> None:
         pid = self.app()
         self.assertIsNone(self.line_for(self.run_hook(min_age=3600), pid))

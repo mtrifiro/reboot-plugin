@@ -60,12 +60,17 @@ lsof .rbt/dev/<application-name>/p000000/LOCK
 - Stop the frontend, tunnel and dashboard by stopping their background
   shells. A killed `rbt dashboard` can leave an Envoy on `9871`
   (student-system, 1.5.0); clear it the same way.
+- `scripts/doctor.sh`, in every scaffolded project, runs these checks
+  in one command, says who serves each of the project's ports and from
+  which directory, and names a test run in progress.
 
 ### Restart
 
 1. Stop completely and wait until step 4 prints nothing — two
    `rbt dev run`s over one state directory fight over the RocksDB lock
-   and crash-loop (theater-network, 1.4.0).
+   and crash-loop (theater-network, 1.4.0). The plugin's `rbt` shim waits
+   up to 10 s for the lock to clear after a SIGINT and refuses a
+   `dev run` while it is still held, naming the holder.
 2. Start the backend again (Step 5).
 3. Reload every open browser tab; a kept tab retries dead
    subscriptions.
@@ -87,8 +92,10 @@ uv run rbt dev expunge --yes
   1.4.1); an orphan
   keeps or re-creates the state (reboot-air, 1.5.0).
 - **Pass `--yes`.** Otherwise it asks for confirmation, and with no
-  terminal waits forever (reboot-crm, 1.6.0). `.rbtrc`'s
-  `dev expunge --application-name=` line supplies the name.
+  terminal waits forever (reboot-crm, 1.6.0); the plugin's `rbt` shim
+  refuses the command instead, as it does while a process holds the
+  state lock. `.rbtrc`'s `dev expunge --application-name=` line
+  supplies the name.
 - **Expect to sign in again**: it deletes the dev crypto root keys, so
   earlier OAuth tokens stop working (1.6.0 source).
 - **Reload every open browser tab** once the backend is up; a kept tab

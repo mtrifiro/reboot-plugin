@@ -8,7 +8,21 @@
 
 set -eu
 
-PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(cd "$(dirname -- "$0")/.." && pwd)}"
+# The plugin's root: `$CLAUDE_PLUGIN_ROOT`, else from this script's own
+# path through any symlink (see `bin/rbt`).
+self="$0"
+while [ -L "$self" ]; do
+    link="$(readlink "$self")"
+    case "$link" in
+        /*) self="$link" ;;
+        *) self="$(dirname -- "$self")/$link" ;;
+    esac
+done
+PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(cd "$(dirname -- "$self")/.." && pwd)}"
+if [ ! -f "$PLUGIN_ROOT/lib/install_cloudflared.sh" ]; then
+    echo "cloudflared: $PLUGIN_ROOT/lib/ is missing (this shim is $self; the plugin's lib/ must sit beside its bin/). Reinstall the plugin, or set CLAUDE_PLUGIN_ROOT to its directory." >&2
+    exit 1
+fi
 
 CLOUDFLARED_DIR="$("$PLUGIN_ROOT/lib/install_cloudflared.sh")"
 

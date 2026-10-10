@@ -11,8 +11,8 @@ names:
 tags: [operations, negative-space]
 cluster: ""
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "build/templates/README.md § Copy"
 ---
 
 # The bare rbt shim runs a separate Reboot install from the project venv, so patches to one do nothing for the other
@@ -26,3 +26,5 @@ resolved_by: ""
 **Where in the skills.** Not named by the source; `python/references/lifecycle-rbtrc.md` and `run/SKILL.md` cover how `rbt` is invoked.
 
 **Checked at 1.6.0.** `python/references/lifecycle-rbtrc.md` § Errors you will see and `errors.md` list `Failed to find 'protoc-gen-reboot_python'` with the fix `uv run rbt ...`; nothing under `skills/` says the bare shim runs a separate `uvx` copy of `reboot` from the venv's (grep `uvx`, `shim`, `archive-v0`).
+
+**Resolution (2026-10-10).** The plugin's `rbt` shim now runs the project's own `.venv/bin/rbt` (with the venv's `bin/` first on PATH, as `uv run` arranges) whenever the working directory is inside a project with a `.venv/`, so `rbt` and `uv run rbt` are one install; it says so on stderr when that Reboot differs from the plugin's pin.

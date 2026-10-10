@@ -9,7 +9,32 @@
 
 set -eu
 
-PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(cd "$(dirname -- "$0")/.." && pwd)}"
+# The plugin's root: `$CLAUDE_PLUGIN_ROOT`, else from this script's own
+# path through any symlink (see `bin/rbt`).
+self="$0"
+while [ -L "$self" ]; do
+    link="$(readlink "$self")"
+    case "$link" in
+        /*) self="$link" ;;
+        *) self="$(dirname -- "$self")/$link" ;;
+    esac
+done
+PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(cd "$(dirname -- "$self")/.." && pwd)}"
+if [ ! -f "$PLUGIN_ROOT/lib/install_uv.sh" ]; then
+    echo "uv: $PLUGIN_ROOT/lib/ is missing (this shim is $self; the plugin's lib/ must sit beside its bin/). Reinstall the plugin, or set CLAUDE_PLUGIN_ROOT to its directory." >&2
+    exit 1
+fi
+
+# `uv run rbt dashboard`: the dashboard's pyright runs out of Node's
+# default heap on a mid-sized app and keeps retrying (finding P1.12);
+# give it room unless the caller chose.
+previous=""
+for arg in "$@"; do
+    if [ "$previous" = "rbt" ] && [ "$arg" = "dashboard" ] && [ -z "${NODE_OPTIONS:-}" ]; then
+        export NODE_OPTIONS="--max-old-space-size=12288"
+    fi
+    previous="$arg"
+done
 
 UV_DIR="$("$PLUGIN_ROOT/lib/install_uv.sh")"
 

@@ -12,8 +12,8 @@ names:
 tags: [operations, error-text]
 cluster: "F"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "build/templates/README.md § Copy"
 ---
 
 # The `bin/` tool shims fail with a bare "No such file" when `lib/` isn't beside them
@@ -45,3 +45,5 @@ missing, where it looked, and what to do (reinstall the plugin, or set
 **Checked at 1.6.0.** The trigger was the trial's wrapper layout, not a
 normal marketplace install, which copies `lib/`. The unclear failure
 applies to any partial or symlinked install.
+
+**Resolution (2026-10-10).** Every shim in `bin/` resolves its own path through symlinks and, when `lib/` is not beside it, says which directory it looked in, that the plugin's `lib/` must sit beside its `bin/`, and to reinstall or set `CLAUDE_PLUGIN_ROOT`, instead of a bare "No such file".
