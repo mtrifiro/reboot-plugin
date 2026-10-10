@@ -45,3 +45,4 @@ full original note; the originals are not part of this repo.
 | plugin-browser | 1.6.0 | `plugin-browser/FINDINGS.md` |
 | restaurant-app-2 | 1.6.0 | `restaurant-app-2/FINDINGS.md` |
 | gardening | 1.6.0 | `gardening/FINDINGS.md` |
+| restaurant-app-3 | 1.6.0 | `restaurant-app-3/FINDINGS.md` (the narrative field report is `restaurant-app-3/docs/2026-10-10 Crudo Skills Field Report.md`) |
