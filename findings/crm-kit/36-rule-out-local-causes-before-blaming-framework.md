@@ -11,8 +11,8 @@ names:
 tags: [testing, operations, error-text]
 cluster: ""
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "build/templates/README.md § Files"
 ---
 
 # Rule out local causes before blaming the framework: each looks exactly like a framework flake
@@ -26,3 +26,5 @@ resolved_by: ""
 **Where in the skills.** Not named by the source.
 
 **Checked at 1.6.0.** `python/references/lifecycle-dev-loop.md` § Never covers the suite beside a watching `rbt dev run` (`Method not found!`); `testing-harness.md` § Limits covers the missing servicer; `run/references/stop-restart-reset.md` covers orphans. `PRESUMED_DEADLOCK` from two concurrent suites on a singleton is not mentioned anywhere under `skills/` (grep).
+
+**Resolution (2026-10-10).** `scripts/doctor.sh` in every template runs the rule-out-local-causes list in one command: this project's processes left by an earlier session, the state lock's holder, a test run in progress and two suites at once, the allowlist variables in the shell, and who serves each of the project's ports and from which directory; the run skill and `stop-restart-reset.md` point at it.
