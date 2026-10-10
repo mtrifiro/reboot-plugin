@@ -117,6 +117,11 @@ claude plugin test .         # the *.test.ts files, against the engine itself
 tsc -p .                     # once the mod has loaded (it writes the tsconfig and types)
 ```
 
+CI runs the first two for every mod on the latest Claude Code
+(`tools/check-mods.sh`, the `mods` job in
+`.github/workflows/skills-checks.yml`). `tsc` stays local: the engine
+writes a mod's tsconfig and types only when a session loads it.
+
 - **Logic** that needs no `$` lives in plain modules (`progress.ts`,
   `activity.ts`, `schema.ts`) with unit tests.
 - **Drawing** is tested by mounting the component on both the terminal

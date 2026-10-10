@@ -10,17 +10,21 @@ the plugin pins.
 | `budget.py` | Words an agent reads before writing code, per front door; `--readme write` refreshes the README table | `--readme check`: the README table is stale (reports the budget; never enforces it) |
 | `check-cli.py` | Every `rbt …` command and `.rbtrc` line vs `rbt --help` | a flag or subcommand is unknown |
 | `check-symbols.py` | Every `reboot…` import / dotted name / stdlib call vs the pinned package | a symbol doesn't resolve and isn't a tracked upstream defect in `known-defects.json` |
-| `templates-smoke.sh` | Copies each `skills/build/templates/<front-door>/`, then `rbt generate`, npm build, mypy, pytest | any step fails |
+| `templates-smoke.sh` | Copies each `skills/build/templates/<front-door>/`, then `rbt generate`, npm build, mypy, pytest (`SMOKE_FULL=1` runs the scenarios, as `--full` does) | any step fails |
 | `gen-index.py` | Rewrites every `<!-- generated:start … -->` region in the SKILL.md files from reference frontmatter; enforces the map's invariants | `--check`: a region differs from its generated form, or an invariant breaks |
 | `lint-references.py` | Frontmatter on every reference; the seven template sections on converted ones | a field or section is missing or out of order |
 | `lint-frontmatter.py` | Front matter on every other Markdown file (below) | a file has no front matter block, or lacks its category's keys |
 | `run-evals.sh` | Behavior: what a fresh agent decides with and without the plugin (`evals/`, via `claude plugin eval`) | not run in CI (it costs model calls); exits 1 if a case scores under `--threshold` |
 | `style-check.py` | The four template stylesheets agree (web is the source; MCP adds `.ui`); `--browser` renders `style-check.html`, a page using every class, at 320/375/1280 px in light and dark (`--screenshots DIR` saves PNGs) | a copy drifts; the page overflows a screen or cuts off a short label |
 | `findings.py` | Schema + summary of `findings/` | an item breaks the schema, or a `resolved_by` section doesn't exist |
+| `check-manifests.py` | The JSON manifests parse; the Reboot version pins (`VERSION`, the manifests, `bin/rbt`, the templates' `pyproject.toml`) agree | a manifest doesn't parse, or two pins differ |
+| `check-mods.sh` | Each mod in `mods/` as the engine reads it: `claude plugin validate`, then its `*.test.ts` with `claude plugin test` | validation or a test fails |
 
-`check-all.sh` runs them in order (`--full` adds the CLI, symbol and
-template-build checks); `.github/workflows/skills-checks.yml` runs both
-in CI.
+`check-all.sh` runs them in order, with the hook tests in
+`tests/hooks/` and `shellcheck` over every shell script (`--full` adds
+the CLI, symbol, template-build and rendered-style checks, and the mods
+when `claude` is on PATH); `.github/workflows/skills-checks.yml` runs
+the fast set, the mods and the full set on every pull request.
 
 - `known-defects.json` — symbols missing because of an upstream bug,
   each tied to the finding that tracks it. Remove an entry when the
