@@ -11,37 +11,9 @@
   "plugins": [
     {
       "name": "reboot",
-      "displayName": "Reboot",
       "description": "Build Reboot apps from your coding agent: MCP UIs for ChatGPT, Claude, VSCode, Goose and others, and standalone Web Apps, on one backend.",
-      "author": {
-        "name": "Reboot",
-        "email": "team@reboot.dev",
-        "url": "https://reboot.dev"
-      },
-      "homepage": "https://reboot.dev",
-      "repository": "https://github.com/reboot-dev/reboot-plugin",
-      "license": "Apache-2.0",
-      "keywords": ["reboot", "mcp", "mcp-ui", "web-app", "python", "agents"],
       "category": "development",
-      "source": "./",
-      "strict": false,
-      "skills": [
-        "./skills/app",
-        "./skills/build",
-        "./skills/feature",
-        "./skills/mcp-ui",
-        "./skills/web-app",
-        "./skills/run",
-        "./skills/dashboard",
-        "./skills/deploy",
-        "./skills/inspect",
-        "./skills/python",
-        "./skills/report",
-        "./skills/upgrade"
-      ],
-      "dependencies": [
-        "reboot-progress"
-      ]
+      "source": "./"
     },
     {
       "name": "reboot-progress",

@@ -257,7 +257,8 @@ plugin/
 │   │   └── marketplace.json  # Codex marketplace catalog (single-plugin)
 │   └── skills -> ../skills   # Codex repo-bundled skill discovery
 ├── .claude-plugin/
-│   └── marketplace.json      # Claude Code marketplace + plugin defs
+│   ├── marketplace.json      # Claude Code marketplace: reboot and the mods
+│   └── plugin.json           # Claude Code plugin manifest (skills, metadata)
 ├── .codex-plugin/
 │   └── plugin.json           # Codex plugin manifest (skills); see
 │                             # "Differences in Codex vs. Claude Code"

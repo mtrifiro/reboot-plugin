@@ -32,6 +32,7 @@ ROOT = Path(__file__).resolve().parent.parent
 
 MANIFESTS = [
     ".claude-plugin/marketplace.json",
+    ".claude-plugin/plugin.json",
     ".codex-plugin/plugin.json",
     ".agents/plugins/marketplace.json",
     "hooks/hooks.json",
