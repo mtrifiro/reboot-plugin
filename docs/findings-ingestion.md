@@ -264,12 +264,14 @@ from both shims; `orphans.sh` names pyright's orphan), 9 (`typecheck`;
 the `src/api` exclude was dropped, since `tsc` checks imported files
 either way), 10's `model_diff.py` line on runs since acceptance, 11
 (`hooks/suite-guard.sh`, `scripts/doctor.sh`) and 12. Seventeen corpus
-items moved to Resolved with a Resolution paragraph each. Still open:
-items 4 and 5 and the build skill's Step 2a renumbering and Step 6
-timeout number (P3.192, P3.193), which edit files the other session has
-in flight (`step_order.py`, `conftest.py`, `build/SKILL.md`); item 7,
-pending the venv-patching decision; and `reboot-findings`' hand-written
-`fixes` lists, which live in the other repository.
+items moved to Resolved with a Resolution paragraph each. Later the same day, items 4 and 5 and the build skill's Step 2a and
+Step 6 number landed too: `tests/feature_lint.py` (a sibling of
+`step_order.py`, on different hooks, since a conftest can import one
+`pytest_bdd_before_scenario`), `tests/harness_hygiene.py` (loopback
+binding, the database dialed on `[::1]`, the placeholder model key),
+Step 2a as a numbered step and the 600000 ms figure in Step 6. Still
+open: item 7, pending the venv-patching decision, and `reboot-findings`'
+hand-written `fixes` lists, which live in the other repository.
 
 ### Wave 2: error rows, one session
 

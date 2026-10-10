@@ -23,6 +23,17 @@ from last_run import (  # noqa: F401
     pytest_unconfigure,
 )
 
+# Harness settings for a developer's machine: servers on loopback, a
+# placeholder model key (harness_hygiene.py).
+import harness_hygiene  # noqa: F401
+
+# A Rule with no Scenario, and step shapes reboot.bdd reads as
+# something else, named before the scenario runs (feature_lint.py).
+from feature_lint import (  # noqa: F401
+    pytest_collection_modifyitems,
+    pytest_runtest_setup,
+)
+
 # How far a run is, for the Reboot band (run_progress.py).
 from run_progress import (  # noqa: F401
     pytest_collection_finish,

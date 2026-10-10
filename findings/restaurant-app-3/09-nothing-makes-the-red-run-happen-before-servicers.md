@@ -11,8 +11,8 @@ names:
 tags: [testing, index-gap]
 cluster: ""
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "build/SKILL.md § Step 2a — Run the scenarios red"
 ---
 # Nothing makes the red run happen before servicers are written
 
@@ -23,3 +23,5 @@ resolved_by: ""
 **Repro.** Follow the Step-by-Step Build Flow's numbered list as written.
 
 **Where in the skills.** `build/SKILL.md`, Step-by-Step Build Flow; `feature/SKILL.md` Step 2a.
+
+**Resolution (2026-10-10).** `build/SKILL.md` has a numbered Step 2a between the project shell and the servicer: servicers declared raising `NotImplementedError`, the scenarios run red with `scripts/test.sh full`; `scripts/model_diff.py` reports whether a run has happened since acceptance.

@@ -73,8 +73,7 @@ method types mean regenerating a dozen or more files.
 0. Per capability, follow the [`feature` skill](../feature/SKILL.md):
    agree on it in plain English and write a `@wip` feature file before
    the API exists. The design derives from those features. Its Step 2a
-   (run each scenario and see it fail) needs Step 2's project shell and
-   test module: do it right after Step 2, before Step 3.
+   (run each scenario and see it fail) is this flow's Step 2a.
 1. **Implement the brief literally** — the interactions the user
    described, not a pattern "common on sites like this". List any
    deviation (extra confirm step, staging area, batching) with its
@@ -352,6 +351,18 @@ generated client). Then:
    ([`references/flywheel.md`](references/flywheel.md), "The decisions
    log").
 
+### Step 2a — Run the scenarios red
+
+Before any servicer body: declare every servicer class with each
+method raising `NotImplementedError`, register them in
+`servicers/registry.py`, and run the design's scenarios
+(`scripts/test.sh full`). Each must fail for the reason its own
+words name, the [`feature` skill](../feature/SKILL.md)'s Step 2a; a
+step not found or a fixture that never started proves nothing.
+`scripts/model_diff.py` reports whether a run has happened since
+acceptance, so the handoff shows it. Then Step 3, one servicer at a
+time, each scenario going green.
+
 ### Step 3 — Servicer
 
 Read "Before the servicer". Write `backend/src/servicers/<app>.py`: an
@@ -507,12 +518,14 @@ scenarios before handoff**, in the built-in steps of
 - Tag what can't pass yet `@blocked` with its reason; leave `@wip` where
   work continues.
 
-Run `uv run pytest`, then `uv run mypy backend/ tests/` from the project
-root (config: `python/references/lifecycle-project-setup.md`); proceed
-only when every scenario passes (or is `@blocked`) and mypy is green.
-Each scenario boots the app, so the suite takes minutes: run it in the
-foreground with a timeout that covers the whole run and wait for the
-result. Never leave it in the background and end your turn: nothing
+Run `scripts/test.sh full`, then `uv run mypy backend/ tests/` from the
+project root (config: `python/references/lifecycle-project-setup.md`);
+proceed only when every scenario passes (or is `@blocked`) and mypy is
+green. Each scenario boots the app, so the suite takes minutes: run it
+in the foreground with the tool's longest timeout (600000 ms in Claude
+Code) and wait for the result; past about 40 scenarios, iterate one
+area at a time (`scripts/test.sh <area>`) and run `full` once before
+handoff. Never leave it in the background and end your turn: nothing
 brings you back to report it. A run silent for several minutes is
 stuck on a scenario; rerun with `-x -v` to name it. Point the user at the dashboard's Features page (web-app:
 and the browser recordings).

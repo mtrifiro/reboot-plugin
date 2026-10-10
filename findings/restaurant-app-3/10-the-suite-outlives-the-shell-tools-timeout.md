@@ -10,8 +10,8 @@ names:
 tags: [testing, operations]
 cluster: ""
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "build/SKILL.md § Step 6 — Tests"
 ---
 # The full suite outlives the shell tool's timeout
 
@@ -22,3 +22,5 @@ resolved_by: ""
 **Repro.** A suite of about 47 scenarios under the default tool timeout.
 
 **Where in the skills.** `build/SKILL.md` Step 6.
+
+**Resolution (2026-10-10).** Step 6 names the number to pass (600000 ms in Claude Code) and says to iterate one area at a time past about 40 scenarios (`scripts/test.sh <area>`) and run `full` once before handoff; `pytest-timeout` fails a hung scenario on its own.

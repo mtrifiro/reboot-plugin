@@ -23,6 +23,8 @@ python3 tests/templates/copy_test.py -q
 python3 tests/templates/run_progress_test.py -q   # skips itself without pytest
 python3 tests/templates/ports_test.py -q
 python3 tests/templates/test_sh_test.py -q   # skips itself without pytest
+python3 tests/templates/feature_lint_test.py -q   # skips itself without pytest-bdd
+python3 tests/templates/harness_hygiene_test.py -q
 python3 tests/templates/api_lint_test.py -q
 python3 tests/templates/doctor_test.py -q
 python3 tests/shims/rbt_test.py -q
@@ -40,6 +42,7 @@ if [ "${1:-}" = "--full" ]; then
     REBOOT_FETCH_NODE=1 python3 tests/hooks/schema_guard_test.py -q
     bin/uv run --no-project --with pytest==8.4.2 python tests/templates/run_progress_test.py -q
     bin/uv run --no-project --with pytest==8.4.2 python tests/templates/test_sh_test.py -q
+    bin/uv run --no-project --with pytest==8.4.2 --with pytest-bdd==8.1.0 python tests/templates/feature_lint_test.py -q
     SMOKE_FULL=1 tools/templates-smoke.sh
     bin/uv run --no-project --with playwright sh -c \
         'python -m playwright install --with-deps chromium >/dev/null && python tools/style-check.py --browser'
