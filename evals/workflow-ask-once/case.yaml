@@ -1,0 +1,13 @@
+schema_version: "1.1"
+name: workflow-ask-once
+description: "With no workflow chosen in AGENTS.md, the first change after the first build asks whether changes go onto main or a branch each, before any edit, and pushes or opens nothing unasked."
+tags: [workflow, flywheel]
+runs: 3
+execution:
+  prompt: "Add a due date to todos, so I can see which ones are late."
+  max_turns: 40
+  timeout_seconds: 900
+  allowed_tools: [Read, Glob, Grep, Skill, AskUserQuestion]
+  append_system_prompt: "You are in a planning-only session: you can read files and load skills but cannot write files or run commands. The project in your working directory is the app. Follow any skills that apply as far as you can without writing, and say what you would do at each step, in order. End with a short summary of what happens next."
+context:
+  scaffold_script: fixture.sh
