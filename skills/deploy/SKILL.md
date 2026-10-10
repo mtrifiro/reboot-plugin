@@ -42,7 +42,9 @@ a working tree, and stops at the first thing wrong:
 A deploy is the Reboot Flywheel's **promote** decision, the user's
 ([`build/references/flywheel.md`](../build/references/flywheel.md)):
 show them the dry run's model diff and test line, and say plainly when
-the last run was not a clean, full, passing run of this commit.
+the last run was not a clean, full, passing run of this commit. On
+another branch, say what isn't merged into the production branch yet
+and ask whether to merge it first; never merge or switch on your own.
 
 Steps 1–7 below are the first deploy. After it, a deploy is
 `scripts/deploy.sh --dry-run` (show the user what would ship), then

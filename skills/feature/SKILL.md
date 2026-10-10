@@ -150,7 +150,10 @@ until the failure is the behavior's.
 "Fix this", "fix all 4" or a list of review findings is a request to
 change behavior, not permission to skip the feature. For each:
 
-1. Say in one line what the app does now and what it should do.
+1. Say in one line what the app does now and what it should do, and
+   work on `main` or a branch as the developer chose
+   ([`flywheel.md`](../build/references/flywheel.md), "Where the work
+   happens").
 2. Write that as a scenario under the rule it breaks (or a new rule),
    tagged `@wip`, in the feature that owns the behavior, the ticket's
    id in its name when there is one.

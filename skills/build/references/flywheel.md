@@ -67,6 +67,38 @@ Design change stops there: show the
 model diff, say which rule or declaration changes and why, and take it
 through "Accept the design" before writing more code.
 
+### Where the work happens
+
+The developer decides whether changes go straight onto `main` or onto
+a branch each. The skills follow that choice and never make it for
+them.
+
+1. **Follow what the project already does.** The `Workflow:` line in
+   `AGENTS.md`, once it names a choice; else a branch other than `main` already checked out
+   (keep working there); else what the repository shows, such as a
+   `CONTRIBUTING.md`, a rule in `AGENTS.md` or `CLAUDE.md`, or merged
+   pull requests in `git log`. Say in one line which you're following.
+2. **Otherwise ask once,** at the first change after the first build.
+   The first build stays on `main` and ends in its "Design accepted"
+   commit. Ask:
+   > Where should changes go from now on? Straight onto `main`, or a
+   > branch for each change that you merge when you're happy with it?
+   > With a branch, a pull request on GitHub runs the app's tests and
+   > posts what changed before you merge.
+
+   The last sentence only when `origin` is on GitHub.
+3. **Record the answer** as the `Workflow:` line in `AGENTS.md`
+   (`main`, or `a branch per change, pull requests on GitHub`) and
+   commit it with the change. The developer changes it by saying so.
+4. **On a branch,** name it for the change or its ticket
+   (`add-transfers`, `hotel-7-late-checkout`). Say so in one line
+   before creating or switching, and never switch while the developer
+   has uncommitted changes. When the change is proven, the feature or
+   fix card offers the pull request with the
+   [`evidence.md`](evidence.md) body; push and open it only on the
+   developer's yes. A deploy ships `main`, so the merge comes first,
+   and it is the developer's.
+
 ### Where the work stands
 
 Asked where things are, answer with the stage and the next decision:
@@ -144,6 +176,10 @@ Tone, for these and any card written later:
   the skills show the evidence.
 - Treating a partial test run (`-k`, one module) as evidence for a
   merge or a release: run the full suite.
+- Choosing between `main` and branches for the developer, or going
+  against the `Workflow:` line in `AGENTS.md`.
+- Pushing, or opening, merging or closing a pull request, without the
+  developer's yes for that one.
 
 ## Limits
 

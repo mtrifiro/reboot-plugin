@@ -30,6 +30,9 @@ change it here in the same commit.
 - **Test:** `uv run pytest`, then `uv run mypy backend/ tests/`. The
   suite takes minutes: run it in the foreground and wait for it.
 - **Deploy:** `scripts/deploy.sh`, with the plugin's `deploy` skill.
+- **Workflow:** not chosen yet. At the first change after the first
+  build the agent asks whether changes go straight onto `main` or onto
+  a branch each, and writes the answer here.
 
 ## Rules that cost the most when broken
 

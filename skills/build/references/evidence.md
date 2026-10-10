@@ -26,6 +26,11 @@ describes. The stages and the routing rule are in
 
 ### Before a pull request
 
+Only when the developer wants one: their `Workflow:` line in
+`AGENTS.md` says so, or they asked
+([`flywheel.md`](flywheel.md), "Where the work happens"). Push the
+branch and open it with the body below on their yes.
+
 The template's `.github/workflows/prove.yml` runs the type check and
 the full suite on every pull request and posts the model diff and the
 scenario counts as one comment (`scripts/prove_comment.py`), so the

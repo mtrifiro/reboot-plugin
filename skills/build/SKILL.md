@@ -524,7 +524,7 @@ prototype card ([`references/flywheel.md`](references/flywheel.md),
 4. The state types and methods as built, one line each (Step 1), when
    they changed after the design; and whether the design was accepted
    ("Accept the Design"), as `python3 scripts/model_diff.py` says. A
-   pull request's body follows
+   pull request, only when the developer wants one, has the body in
    [`references/evidence.md`](references/evidence.md); the template's
    `prove.yml` workflow posts the evidence on the pull request itself.
 5. `AGENTS.md` current (Step 2.4), and the `FINDINGS.md` items added;
@@ -536,7 +536,9 @@ prototype card ([`references/flywheel.md`](references/flywheel.md),
 
 1. Read `.rbtrc`, the API definition, servicer, `main.py` and the
    frontend entry (mcp-ui: `frontend/mcp/<ui-name>/App.tsx`; web-app:
-   `web/src/App.tsx`).
+   `web/src/App.tsx`). Work on `main` or a branch as the developer
+   chose ([`references/flywheel.md`](references/flywheel.md), "Where
+   the work happens").
 2. Assess state model changes; with persisted state or a deploy, follow
    `python/references/api-schema-evolution.md`.
 3. Agree on the feature in English and write its `@wip` feature file

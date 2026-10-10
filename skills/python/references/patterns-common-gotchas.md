@@ -614,6 +614,8 @@ section. Add or change a trap in its owning reference, not here. -->
 - Folding a rule change into a "fix": a reworded `Rule:`, a changed declaration or a loosened authorizer is a Design change however small the diff
 - Calling a deploy, merge or acceptance done for the user: they decide
 - Treating a partial test run (`-k`, one module) as evidence for a merge or a release: run the full suite
+- Choosing between `main` and branches for the developer, or going against the `Workflow:` line in `AGENTS.md`
+- Pushing, or opening, merging or closing a pull request, without the developer's yes for that one
 
 **`mcp-ui/references/pop-out-to-web-app.md`**
 - `window.open(url)` alone
