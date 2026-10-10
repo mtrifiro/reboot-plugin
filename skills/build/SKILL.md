@@ -285,17 +285,18 @@ design was not accepted.
 
 ### Step 2 — Project shell
 
-Read "Before the project shell". Copy `templates/<front-door>/` (see
-[`templates/README.md`](templates/README.md)); never retype a scaffold
-file from memory or a reference. Its `copy.sh` fills `__project__` /
-`__app__` / `__Title__` and renames paths, but refuses a directory with
-an `.rbtrc` and would overwrite your API file with the sample. So copy
-into an empty scratch directory, delete the dashboard's stub `.rbtrc`
-and `pyproject.toml`, and merge with `cp -Rn <scratch>/. .` to keep
-step 1's API file. The sample servicer, feature, test module and UI (a
-counter) are replaced in steps 3, 5 and 6; a dual-frontend app copies
-`templates/both/` (MCP UIs in `frontend/mcp/`, the SPA in
-`frontend/web/`, one Vite server and one generated client). Then:
+Read "Before the project shell". Copy `templates/<front-door>/` with
+its `copy.sh --merge` (see [`templates/README.md`](templates/README.md));
+never retype a scaffold file from memory or a reference. `--merge`
+fills `__project__` / `__app__` / `__Title__`, renames paths, keeps
+every file the project already has (step 1's API file, a `CLAUDE.md`)
+and lists them, and replaces the dashboard's stub `.rbtrc`,
+`pyproject.toml` and `.python-version` with the template's (the
+dashboard keeps running: both name the same directories). The sample
+servicer, feature, test module and UI (a counter) are replaced in steps
+3, 5 and 6; a dual-frontend app copies `templates/both/` (MCP UIs in
+`frontend/mcp/`, the SPA in `frontend/web/`, one Vite server and one
+generated client). Then:
 
 1. `uv sync`.
 2. `uv run rbt generate`. Don't read the output; the servicer signature
@@ -309,7 +310,7 @@ counter) are replaced in steps 3, 5 and 6; a dual-frontend app copies
    (Step 4). mcp-ui: also `backend/src/example_prompts.py` →
    `Application(example_prompts=...)` (`mcp-ui/references/project-shell.md`).
 4. `AGENTS.md` is the project's map for a coding agent, and `CLAUDE.md`
-   is one line, `@AGENTS.md`. `cp -Rn` keeps a `CLAUDE.md` the project
+   is one line, `@AGENTS.md`. `--merge` keeps a `CLAUDE.md` the project
    already had: move its content into `AGENTS.md` and leave
    `@AGENTS.md` as its only line. Keep `AGENTS.md` current as you go:
    each new state type, UI, route or script adds its row.

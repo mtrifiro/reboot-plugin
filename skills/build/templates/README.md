@@ -13,12 +13,17 @@ counter) with the app's own.
 <plugin>/skills/build/templates/copy.sh <mcp-ui|web-app|both> <dest-dir> <project> <app> "<Title>"
 # e.g.
 <plugin>/skills/build/templates/copy.sh web-app . todo-list todo_list "Todo List"
+# into a project that already has its API file and the dashboard's
+# stubs (the build flow, Step 2):
+<plugin>/skills/build/templates/copy.sh --merge web-app . todo-list todo_list "Todo List"
 ```
 
 `<plugin>` is the plugin root (holding `bin/rbt`). `copy.sh` copies the
 tree (dotfiles included), renames paths containing `__app__`, fills the
 placeholders, and refuses a destination that already has an `.rbtrc`.
-Then:
+`--merge` instead keeps every file the destination already has, listing
+each, except the dashboard's stub `.rbtrc`, `pyproject.toml` and
+`.python-version`, which the template's replace. Then:
 
 ```sh
 uv sync

@@ -18,6 +18,7 @@ python3 tools/templates-drift.py
 python3 tools/check-manifests.py
 python3 tests/hooks/auto_approve_test.py -q
 python3 tests/hooks/orphans_test.py -q
+python3 tests/templates/copy_test.py -q
 if command -v shellcheck >/dev/null 2>&1; then
     shellcheck install.sh hooks/*.sh hooks-handlers/*.sh lib/*.sh bin/* tools/*.sh \
         skills/build/templates/copy.sh
