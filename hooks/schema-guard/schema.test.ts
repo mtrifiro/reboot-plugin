@@ -1,6 +1,15 @@
-import { describe, expect, test } from 'claude-code/testing'
+// The comparison rules, on Node's own test runner with type stripping
+// (`tests/hooks/schema_guard_test.py` runs it):
+//   bin/node --experimental-strip-types --no-warnings --test hooks/schema-guard/schema.test.ts
+import assert from 'node:assert/strict'
+import { describe, test } from 'node:test'
 
-import { applicationName, bashEditsApi, incompatibilities, isApiFile, isApiPath, normalizeType } from './schema'
+import { applicationName, bashEditsApi, incompatibilities, isApiFile, isApiPath, normalizeType } from './schema.ts'
+
+const expect = (actual: unknown) => ({
+  toEqual: (expected: unknown) => assert.deepStrictEqual(actual, expected),
+  toBe: (expected: unknown) => assert.strictEqual(actual, expected),
+})
 
 const API = `from reboot.api import API, Field, Methods, Model, Reader, Type, Writer
 

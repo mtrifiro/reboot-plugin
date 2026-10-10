@@ -42,7 +42,7 @@ every app.
   `.rbt/change-report/baseline.json`:
   - API files (`api/**/*.py`, AST): models with each field's tag, name
     and type; state types; methods with kind and `description=`. The
-    schema guard (`mods/reboot-schema-guard/hooks/schema.ts`) parses
+    schema guard (`hooks/schema-guard/schema.ts`) parses
     the same shape.
   - Code (`backend/src/**/*.py`, generated code excluded): a digest of
     each function's and method's AST, keyed `Type.method` (servicer

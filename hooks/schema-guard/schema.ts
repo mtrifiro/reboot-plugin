@@ -1,7 +1,8 @@
-// Pure logic: what an API file declares, and which changes between two
-// versions of it the runtime refuses over persisted state. Follows the
-// table in skills/python/references/api-schema-evolution.md. Regex, not
-// a parser: it reads the shape the build templates write.
+// Pure logic for the schema guard (`guard.mjs`): what an API file
+// declares, and which changes between two versions of it the runtime
+// refuses over persisted state. Follows the table in
+// skills/python/references/api-schema-evolution.md. Regex, not a
+// parser: it reads the shape the build templates write.
 
 export type Field = { name: string; type: string; hasDefault: boolean }
 export type Method = { kind: string; description: string | null; isFactory: boolean }

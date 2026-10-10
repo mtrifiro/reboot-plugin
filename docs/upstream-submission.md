@@ -17,7 +17,7 @@ The skills work on `ia-restructure` (69 commits on top of `origin/main` 1f4f7bf,
 
 Decisions made:
 - **findings/ stays out.** It stays in the fork and reboot-findings.
-- **mods/ stays out.** That covers reboot-progress, reboot-schema-guard, the marketplace wiring for them, and the `run_progress.py` test-run recorder that only the band reads.
+- **mods/ stays out.** That covers reboot-progress, the marketplace wiring for it, and the `run_progress.py` test-run recorder that only the band reads.
 - **Stacked PRs.** Each PR in the stack holds small commits in #186 style.
 
 What the branch looks like without findings/ and mods/: about 378 files, +28.7k/−13.5k, in roughly 35 commits that matter.
@@ -117,7 +117,7 @@ What the branch looks like without findings/ and mods/: about 378 files, +28.7k/
 
 Also in the "Leftover dev processes" work (aa961a4): the hook tests move to `tests/reboot/plugin/hooks/` with a `py_test` target, and `lib/own.sh` needs a filegroup.
 
-The schema guard for Codex (`hooks/schema-guard.sh`, `hooks/schema-guard/`, `tests/hooks/schema_guard_test.py`) can go up with the hook tests, with a filegroup beside `auto_approve_sh`. Upstream has no mod, so the guard there would serve Codex only; making it guard Claude Code too means dropping its `turn_id` check and reading Edit and Write payloads.
+The schema guard (`hooks/schema-guard.sh`, `hooks/schema-guard/`, `tests/hooks/schema_guard_test.py`) can go up with the hook tests, with a filegroup beside `auto_approve_sh`. It is a command hook that guards Claude Code and Codex alike, so it doesn't depend on mods/.
 
 Not submitted: findings/, mods/ (including the band's `run_progress.py`), BACKLOG.md (4aa5306).
 

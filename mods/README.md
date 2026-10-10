@@ -10,15 +10,13 @@ them too.
 rejects its `modules` key, so a mod never goes there, and Codex's
 catalog (`.agents/plugins/marketplace.json`) doesn't list the mods.
 Anything a mod enforces is also written into the skills, which Codex
-reads. The schema guard also runs in Codex as a command hook,
-`hooks/schema-guard.sh`, whose `schema-guard/schema.ts` is a copy of
-this mod's: change both together (`tests/hooks/schema_guard_test.py`
-fails when they differ).
+reads. A rule that only needs to refuse a tool call belongs in a
+command hook that both agents run, not a mod: the schema guard was a
+mod and is now `hooks/schema-guard.sh`.
 
 | Mod | What it does |
 | --- | --- |
 | [`reboot-progress`](reboot-progress/) | Only in a Reboot project, or once a Reboot build, feature, fix or deploy is in view (another repository's session sees nothing and no summary is asked for). The band above the prompt: a Status heading, a sentence on what is being worked on now (the state types, methods and files involved), buttons that open the dashboard and the app (their addresses shown on hover), how far a test run is (its output's percentage and failures when it shows them, else its time beside the last run's of the same command), and during a deploy its stage and time so far (checking, building and pushing the image, rolling out, starting up, publishing the frontend), with toasts for how it ended and Cloud and Site buttons for where it lives (for an MCP app, an MCP button that opens its page for connecting an MCP client). Those buttons show only addresses that answer: from a deploy the band followed or the project's `deploy/ledger.jsonl`, checked once a minute, hidden after two failed checks, and forgotten if one never answered. Only a process that runs `rbt cloud up` or `wrangler pages deploy` counts as a deploy, not one whose arguments name them. A toast when the app or the dashboard starts or stops. |
-| [`reboot-schema-guard`](reboot-schema-guard/) | Refuses API edits an app with persisted dev state, or a production deploy in its ledger, couldn't boot over (a deleted method, a reworded or added method description, a changed field tag or type, a field without a default, a kind change on a `factory=True` constructor, …), judged from the project root; a shell command that rewrites an API file (`sed -i`, a redirect, `git checkout`) is sent through Edit or Write instead; other API edits wait until the model has read the whole of `api-schema-evolution.md`, again after each compaction. |
 
 ## The test-run file
 
@@ -71,7 +69,7 @@ A mod is a folder with a manifest, a hooks file and one hooks module:
   `($, e, next)`. `e` is the event's input; `next(e)` runs the other
   plugins and then Claude Code's own behavior. A hook watches (`await
   next(e)` and reads the result), rewrites (`next({ ...e, … })`) or
-  answers by itself (the schema guard returns `{ deny }`).
+  answers by itself (returning `{ deny }` refuses the call).
 - **`$`** is the mod's only way out (no Node, no DOM): `$.fs`,
   `$.process`, `$.model`, `$.ui`, `$.store`, …, each spelled noun then
   method.
@@ -100,7 +98,7 @@ set it):
 
 ```json
 "env": {
-  "CLAUDE_CODE_PLUGIN_DIRS": "/path/to/reboot-plugin/mods/reboot-progress:/path/to/reboot-plugin/mods/reboot-schema-guard"
+  "CLAUDE_CODE_PLUGIN_DIRS": "/path/to/reboot-plugin/mods/reboot-progress"
 }
 ```
 
@@ -126,7 +124,7 @@ CI runs the first two for every mod on the latest Claude Code
 writes a mod's tsconfig and types only when a session loads it.
 
 - **Logic** that needs no `$` lives in plain modules (`progress.ts`,
-  `activity.ts`, `schema.ts`) with unit tests.
+  `activity.ts`, `deploy.ts`, `suite.ts`) with unit tests.
 - **Drawing** is tested by mounting the component on both the terminal
   and desktop surfaces (`$.ui.mount`), pressing buttons by key.
 - **Behavior that involves a model** (the activity summaries, the task

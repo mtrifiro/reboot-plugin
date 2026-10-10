@@ -29,19 +29,13 @@
         "./skills/upgrade"
       ],
       "dependencies": [
-        "reboot-progress",
-        "reboot-schema-guard"
+        "reboot-progress"
       ]
     },
     {
       "name": "reboot-progress",
       "description": "Claude Code only: a band above the prompt with what Claude is working on, the Reboot build's progress, buttons for the dashboard and the app, how far a test run or a deploy is, and toasts when the app or the dashboard starts or stops.",
       "source": "./mods/reboot-progress"
-    },
-    {
-      "name": "reboot-schema-guard",
-      "description": "Claude Code only: stops API edits that would keep a Reboot app with persisted state from booting.",
-      "source": "./mods/reboot-schema-guard"
     }
   ]
 }

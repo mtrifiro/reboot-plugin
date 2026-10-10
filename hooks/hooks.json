@@ -1,5 +1,5 @@
 {
-  "description": "SessionStart prepends the plugin's bin/ to the agent's PATH so our shims take precedence over system-installed binaries, reports Reboot dev processes (apps, dashboards, dev servers, tunnels) that earlier sessions left running so the agent can offer to stop them, and injects a reminder to consult the plugin's skills instead of guessing Reboot behavior. UserPromptSubmit re-injects that reminder once it has scrolled out of the transcript's recent tail. PreToolUse auto-approves this plugin's own skills, read-only calls on its files, and the run skill's Reboot dev commands when they run inside a Reboot project. Under Codex, which can't run the schema guard mod, PreToolUse, PostToolUse and PostCompact run the same guard as a command hook (hooks/schema-guard.sh): API edits an app with persisted state couldn't boot over are refused; Claude Code payloads pass through to the mod.",
+  "description": "SessionStart prepends the plugin's bin/ to the agent's PATH so our shims take precedence over system-installed binaries, reports Reboot dev processes (apps, dashboards, dev servers, tunnels) that earlier sessions left running so the agent can offer to stop them, and injects a reminder to consult the plugin's skills instead of guessing Reboot behavior. UserPromptSubmit re-injects that reminder once it has scrolled out of the transcript's recent tail. PreToolUse auto-approves this plugin's own skills, read-only calls on its files, and the run skill's Reboot dev commands when they run inside a Reboot project. PreToolUse, PostToolUse and PostCompact run the schema guard (hooks/schema-guard.sh) in both agents: API edits an app with persisted state couldn't boot over are refused, and other API edits wait until the session has read api-schema-evolution.md.",
   "hooks": {
     "SessionStart": [
       {
@@ -85,7 +85,7 @@
         ]
       },
       {
-        "matcher": "^(apply_patch|Bash)$",
+        "matcher": "^(Edit|MultiEdit|Write|apply_patch|Bash)$",
         "hooks": [
           {
             "type": "command",
@@ -97,7 +97,7 @@
     ],
     "PostToolUse": [
       {
-        "matcher": "^Bash$",
+        "matcher": "^(Read|Bash)$",
         "hooks": [
           {
             "type": "command",

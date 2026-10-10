@@ -1,12 +1,12 @@
-"""Tests for `hooks/schema-guard.sh`, the schema guard for Codex.
+"""Tests for `hooks/schema-guard.sh`, the schema guard for Claude Code
+and Codex.
 
-Each test feeds the hook the JSON Codex sends (with a `turn_id`, which
-Claude Code never sends for these events) and checks whether it denies.
-The comparison rules themselves are tested with the mod
-(`mods/reboot-schema-guard/hooks/schema.test.ts`); these cover what the
-Codex side adds: applying an `apply_patch` input, the shell commands it
-refuses, the rules counted as read line by line, compaction, and
-staying silent outside Codex.
+The comparison rules are `hooks/schema-guard/schema.test.ts`, which the
+first test runs on Node's test runner. The rest feed the hook the JSON
+each agent sends and check whether it denies: Claude Code's Edit,
+MultiEdit, Write and Read; Codex's `apply_patch` and its events (with
+a `turn_id`, which Claude Code never sends for these); shell rewrites;
+the rules counted as read line by line; and compaction.
 
 The hook runs on the plugin's own Node (`bin/node`). The fast checks
 have no network, so without a cached Node this skips itself;
@@ -173,31 +173,68 @@ class SchemaGuardTest(unittest.TestCase):
             "tool_response": {"exit_code": exit_code},
         }), "")
 
-    def test_the_copies_of_schema_ts_agree(self) -> None:
-        mod = os.path.join(ROOT, "mods/reboot-schema-guard/hooks/schema.ts")
-        if not os.path.exists(mod):
-            self.skipTest("no mods/ (the upstream plugin)")
-        with open(mod) as a, open(os.path.join(ROOT, "hooks/schema-guard/schema.ts")) as b:
-            self.assertEqual(a.read(), b.read(), "hooks/schema-guard/schema.ts must be a copy of the mod's")
+    def test_the_comparison_rules(self) -> None:
+        result = subprocess.run(
+            [os.path.join(ROOT, "bin/node"), "--experimental-strip-types", "--no-warnings", "--test",
+             os.path.join(ROOT, "hooks/schema-guard/schema.test.ts")],
+            capture_output=True, text=True, timeout=120,
+        )
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
     def test_without_state_nothing_is_guarded(self) -> None:
         self.assertEqual(self.patch(CHANGE_TYPE), "")
         self.assertEqual(self.bash("sed -i 's/int/str/' api/hello/v1/hello.py"), "")
 
-    def test_claude_code_payloads_are_left_to_the_mod(self) -> None:
-        self.with_dev_state()
+    def claude(self, tool: str, tool_input: dict, event: str = "PreToolUse") -> str:
+        """The deny reason for a Claude Code call (no turn_id), or ""."""
         payload = {
             "session_id": self.session,
             "cwd": self.project,
-            "hook_event_name": "PreToolUse",
-            "tool_name": "Bash",
-            "tool_input": {"command": "sed -i 's/int/str/' api/hello/v1/hello.py"},
+            "hook_event_name": event,
+            "tool_name": tool,
+            "tool_input": tool_input,
         }
         result = subprocess.run(
-            ["sh", HOOK], input=json.dumps(payload), capture_output=True, text=True, timeout=60,
-            env={**os.environ, "CLAUDE_PLUGIN_ROOT": ROOT, "PLUGIN_DATA": self.data},
+            ["sh", HOOK], input=json.dumps(payload), capture_output=True, text=True, timeout=120,
+            env={**os.environ, "CLAUDE_PLUGIN_ROOT": ROOT, "CLAUDE_PLUGIN_DATA": self.data},
         )
-        self.assertEqual((result.returncode, result.stdout), (0, ""))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        if not result.stdout.strip():
+            return ""
+        return json.loads(result.stdout)["hookSpecificOutput"]["permissionDecisionReason"]
+
+    def test_claude_code_edits_are_guarded(self) -> None:
+        self.with_dev_state()
+        api = os.path.join(self.project, "api/hello/v1/hello.py")
+        change_type = {"file_path": api, "old_string": "count: int = Field(tag=1, default=0)",
+                       "new_string": 'count: str = Field(tag=1, default="")'}
+        add_field = {"file_path": api, "old_string": '    label: str = Field(tag=2, default="")\n',
+                     "new_string": '    label: str = Field(tag=2, default="")\n    note: str = Field(tag=3, default="")\n'}
+        self.assertIn("changes type, int → str", self.claude("Edit", change_type))
+        self.assertIn("Read all of", self.claude("Edit", add_field))
+        self.assertIn("is deleted or renamed", self.claude("Write", {"file_path": api, "content": "x = 1\n"}))
+        self.assertIn("changes type", self.claude("MultiEdit", {"file_path": api, "edits": [add_field, change_type]}))
+        self.assertIn("with the Edit or Write tool", self.claude("Bash", {"command": "sed -i '' s/int/str/ api/hello/v1/hello.py"}))
+        # A partial Read doesn't count; the rest of the file does.
+        self.claude("Read", {"file_path": RULES, "offset": 1, "limit": 20}, event="PostToolUse")
+        self.assertIn("Read all of", self.claude("Edit", add_field))
+        self.claude("Read", {"file_path": RULES, "offset": 21}, event="PostToolUse")
+        self.assertEqual(self.claude("Edit", add_field), "")
+        self.assertEqual(self.claude("MultiEdit", {"file_path": api, "edits": [add_field]}), "")
+        self.assertIn("changes type", self.claude("Edit", change_type))
+        # A new API file and the generated copy are not guarded.
+        self.assertEqual(self.claude("Write", {"file_path": os.path.join(self.project, "api/hello/v1/new.py"), "content": "x = 1\n"}), "")
+        generated = os.path.join(self.project, "backend/api/hello/v1/hello.py")
+        self.assertEqual(self.claude("Edit", {**change_type, "file_path": generated}), "")
+        # Compaction forgets the rules here too.
+        self.claude("PostCompact", {}, event="PostCompact")
+        self.assertIn("Read all of", self.claude("Edit", add_field))
+
+    def test_a_whole_read_in_claude_code(self) -> None:
+        self.with_dev_state()
+        api = os.path.join(self.project, "api/hello/v1/hello.py")
+        self.claude("Read", {"file_path": RULES}, event="PostToolUse")
+        self.assertEqual(self.claude("Write", {"file_path": api, "content": API + "\n# note\n"}), "")
 
     def test_an_incompatible_patch_is_refused_with_the_reason(self) -> None:
         self.with_dev_state()

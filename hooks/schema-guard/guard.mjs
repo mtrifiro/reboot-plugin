@@ -1,24 +1,24 @@
-// The schema guard for Codex, which can't run Claude Code mods. It does
-// what `mods/reboot-schema-guard` does in Claude Code, through Codex's
-// command hooks (`hooks/schema-guard.sh` starts it):
+// The schema guard: stops API edits a Reboot app with persisted state
+// couldn't boot over. One command hook for Claude Code and Codex
+// (`hooks/schema-guard.sh` starts it; `hooks/hooks.json` registers it):
 //
-//   - PreToolUse `apply_patch`: in a project with persisted state (dev
-//     state under `.rbt/dev/`, or a production deploy in
-//     `deploy/ledger.jsonl`), applies the patch to each API definition
-//     file in memory and refuses it when the runtime couldn't boot over
-//     the change; an edit that is fine still waits until the session has
+//   - PreToolUse on an edit (Claude Code's Edit, MultiEdit and Write;
+//     Codex's apply_patch): in a project with persisted state (dev state
+//     under `.rbt/dev/`, or a production deploy in
+//     `deploy/ledger.jsonl`), builds each changed API definition file in
+//     memory and refuses the edit when the runtime couldn't boot over the
+//     change; an edit that is fine still waits until the session has
 //     read all of `api-schema-evolution.md`.
-//   - PreToolUse `Bash`: refuses a shell command that rewrites an API
+//   - PreToolUse on Bash: refuses a shell command that rewrites an API
 //     file (`sed -i`, a redirect, `mv`, `git checkout`, ...), which the
 //     check above can't see.
-//   - PostToolUse `Bash`: records which lines of the rules file a
-//     command printed (`cat`, `sed -n 'a,bp'`, `head`, `tail`), so the
-//     rules count as read once every line has been shown, over one
-//     command or several.
+//   - PostToolUse on Read and Bash: records which lines of the rules
+//     file were shown (a Read, `cat`, `sed -n 'a,bp'`, `head`, `tail`),
+//     so the rules count as read once every line has been, over one
+//     call or several.
 //   - PostCompact: the rules are out of the model's context again.
 //
-// `schema.ts` beside this file is a copy of the mod's and must stay
-// identical (`tests/hooks/schema_guard_test.py` checks). Every failure
+// The comparison itself is `schema.ts` beside this file. Every failure
 // is silent: a guard that breaks must not stop the build.
 
 import { existsSync, mkdirSync, readFileSync, readdirSync, realpathSync, renameSync, rmSync, writeFileSync } from 'node:fs'
@@ -28,7 +28,7 @@ import { pathToFileURL } from 'node:url'
 
 import { applicationName, bashEditsApi, incompatibilities, isApiFile, isApiPath } from './schema.ts'
 
-const NAME = 'reboot-schema-guard'
+const NAME = 'reboot schema guard'
 const RULES = 'api-schema-evolution.md'
 const PLUGIN = (process.env.PLUGIN_ROOT || process.env.CLAUDE_PLUGIN_ROOT || '').replace(/\/+$/, '')
 const RULES_FILE = PLUGIN ? `${PLUGIN}/skills/python/references/${RULES}` : null
@@ -173,16 +173,55 @@ export function applyChunks(before, chunks) {
   return `${lines.join('\n')}\n`
 }
 
-/** Each API file in a project with state this patch changes, and what the runtime would refuse. */
-export function patchProblems(input, cwd) {
-  const ops = parsePatch(input)
-  if (!ops) return { problems: [], states: [], guarded: false }
+/**
+ * The changes an `apply_patch` input makes, each as a path, where it
+ * moves to, and a function from the file's text to its new text (null
+ * when the patch doesn't apply, which apply_patch refuses itself).
+ */
+export function patchChanges(input, cwd) {
+  return (parsePatch(input) ?? []).map(op => ({
+    path: resolve(cwd, op.path),
+    dest: op.moveTo ? resolve(cwd, op.moveTo) : null,
+    apply: before =>
+      op.kind === 'delete'
+        ? ''
+        : op.kind === 'add'
+          ? op.added.length ? `${op.added.join('\n')}\n` : ''
+          : applyChunks(before, op.chunks),
+  }))
+}
+
+/** `text` with one Claude Code Edit applied, as the tool applies it. */
+const replaceIn = (text, { old_string: from, new_string: to, replace_all: all }) =>
+  typeof from !== 'string' || typeof to !== 'string' || from === ''
+    ? text
+    : all
+      ? text.split(from).join(to)
+      : text.replace(from, () => to)
+
+/** The change a Claude Code Edit, MultiEdit or Write makes, as `patchChanges` gives one. */
+export function editChanges(tool, input, cwd) {
+  if (typeof input?.file_path !== 'string') return []
+  const path = resolve(cwd, input.file_path)
+  if (tool === 'Write') return [{ path, dest: null, apply: () => (typeof input.content === 'string' ? input.content : null) }]
+  if (tool === 'Edit') return [{ path, dest: null, apply: before => replaceIn(before, input) }]
+  if (tool === 'MultiEdit' && Array.isArray(input.edits)) {
+    return [{ path, dest: null, apply: before => input.edits.reduce(replaceIn, before) }]
+  }
+
+  return []
+}
+
+/**
+ * For each change to an existing API file in a project with state, what
+ * the runtime would refuse. `guarded` says whether any change was to
+ * one (a new API file is additive, so it isn't).
+ */
+export function check(changes) {
   const problems = []
   const states = new Set()
   let guarded = false
-  for (const op of ops) {
-    const path = resolve(cwd, op.path)
-    const dest = op.moveTo ? resolve(cwd, op.moveTo) : null
+  for (const { path, dest, apply } of changes) {
     if (!isApiPath(path) && !(dest && isApiPath(dest))) continue
     const target = isApiPath(path) ? path : dest
     const root = projectOf(target)
@@ -190,17 +229,12 @@ export function patchProblems(input, cwd) {
     const state = stateOf(root)
     if (state === null) continue
     const before = readOr(path)
-    if (before === null) continue // a new file is additive
-    const rel = path.slice(root.length + 1)
-    let after
-    if (op.kind === 'delete') after = ''
-    else if (op.kind === 'add') after = op.added.length ? `${op.added.join('\n')}\n` : ''
-    else {
-      after = applyChunks(before, op.chunks)
-      if (after === null) continue // apply_patch will refuse it itself
-    }
+    if (before === null) continue
+    const after = apply(before)
+    if (after === null) continue
     guarded = true
     states.add(state)
+    const rel = path.slice(root.length + 1)
     if (dest && dest !== path) {
       problems.push(`\`${rel}\` is moved to \`${dest.slice(root.length + 1)}\`, which the guard can't check; edit it in place`)
     }
@@ -298,36 +332,60 @@ const deny = reason => ({
   hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'deny', permissionDecisionReason: reason },
 })
 
-/** The hook's answer to one Codex event, or null to let it be. */
+const EDITS = new Set(['Edit', 'MultiEdit', 'Write'])
+
+/** Records lines of the rules file a call showed; marks them read once all have been. */
+function recordShown(session, text, shown) {
+  if (!shown) return
+  const total = text.split('\n').length - (text.endsWith('\n') ? 1 : 0)
+  const state = loadSession(session)
+  const merged = merge([...state.shown, ...shown.map(([a, b]) => [a, Math.min(b, total)])])
+  const read = merged.length === 1 && merged[0][0] <= 1 && merged[0][1] >= total
+  saveSession(session, { read: state.read || read, shown: merged })
+}
+
+/**
+ * The hook's answer to one event, or null to let the call through.
+ * Codex sends a `turn_id` with these events and Claude Code doesn't;
+ * only the wording of a refusal depends on which agent it is.
+ */
 export function handle(e) {
-  if (!e || typeof e !== 'object' || !e.turn_id) return null // Claude Code: the mod does this there
+  if (!e || typeof e !== 'object') return null
+  const codex = Boolean(e.turn_id)
   const cwd = e.cwd || process.cwd()
-  const command = typeof e.tool_input?.command === 'string' ? e.tool_input.command : ''
+  const input = e.tool_input && typeof e.tool_input === 'object' ? e.tool_input : {}
+  const command = typeof input.command === 'string' ? input.command : ''
+  const editTools = codex ? 'apply_patch' : 'the Edit or Write tool'
 
   if (e.hook_event_name === 'PostCompact') {
     rmSync(stateFile(e.session_id), { force: true })
     return null
   }
 
-  if (e.hook_event_name === 'PostToolUse' && e.tool_name === 'Bash') {
-    if (!command.includes(RULES) || failed(e.tool_response)) return null
-    const path = rulesPathIn(command, cwd)
-    const text = (path && readOr(path)) ?? (RULES_FILE && readOr(RULES_FILE))
-    if (!text) return null
-    const total = text.split('\n').length - (text.endsWith('\n') ? 1 : 0)
-    const shown = linesShown(command, total)
-    if (!shown) return null
-    const session = loadSession(e.session_id)
-    const merged = merge([...session.shown, ...shown])
-    const read = merged.length === 1 && merged[0][0] <= 1 && merged[0][1] >= total
-    saveSession(e.session_id, { read: session.read || read, shown: merged })
+  if (e.hook_event_name === 'PostToolUse') {
+    if (e.tool_name === 'Read' && typeof input.file_path === 'string' && input.file_path.endsWith(`/${RULES}`)) {
+      const text = readOr(resolve(cwd, input.file_path))
+      if (!text) return null
+      // Read's offset is the 1-based first line; without a limit it reads 2000 lines.
+      const from = Math.max(1, Number(input.offset) || 1)
+      const count = Number(input.limit) > 0 ? Number(input.limit) : 2000
+      recordShown(e.session_id, text, [[from, from + count - 1]])
+    } else if (e.tool_name === 'Bash' && command.includes(RULES) && !failed(e.tool_response)) {
+      const path = rulesPathIn(command, cwd)
+      const text = (path && readOr(path)) ?? (RULES_FILE && readOr(RULES_FILE))
+      if (!text) return null
+      const total = text.split('\n').length - (text.endsWith('\n') ? 1 : 0)
+      recordShown(e.session_id, text, linesShown(command, total))
+    }
     return null
   }
 
   if (e.hook_event_name !== 'PreToolUse') return null
 
-  if (e.tool_name === 'apply_patch') {
-    const { problems, states, guarded } = patchProblems(command, cwd)
+  const changes =
+    e.tool_name === 'apply_patch' ? patchChanges(command, cwd) : EDITS.has(e.tool_name) ? editChanges(e.tool_name, input, cwd) : null
+  if (changes) {
+    const { problems, states, guarded } = check(changes)
     if (!guarded) return null
     const state = states.join('; ')
     if (problems.length > 0) {
@@ -355,7 +413,7 @@ export function handle(e) {
     if (!state) return null
     return deny(
       `${NAME}: this app has persisted state (${state}), and this command rewrites an API ` +
-        `definition file where the guard can't check it. Make the change with apply_patch ` +
+        `definition file where the guard can't check it. Make the change with ${editTools} ` +
         `instead, additively per ${RULES_PATH}.`,
     )
   }

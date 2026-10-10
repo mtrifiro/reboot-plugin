@@ -172,21 +172,22 @@ differ because of Codex limitations:
   hooks can only _deny_ a tool, never approve one, so there is no
   equivalent — reduce prompts with Codex's own `approval_policy` /
   `sandbox_mode` (e.g. `workspace-write` with network access) instead.
-- **No mods.** Installing `reboot` in Claude Code also installs two
-  mods (function-hook plugins in `mods/`, listed as its
-  dependencies): `reboot-progress` shows, above the prompt, a sentence
-  on what Claude is working on (summarized by Sonnet
-  from its narration), the build's progress, buttons for the dashboard
-  and the app, and how far a test run or a deploy is;
-  `reboot-schema-guard` refuses API edits that an app with
-  persisted dev state couldn't boot over. See
-  [`mods/README.md`](mods/README.md). Codex's catalog doesn't list
-  them. The schema guard runs in Codex anyway as a command hook
-  ([`hooks/schema-guard.sh`](hooks/schema-guard.sh)): it refuses the
-  same `apply_patch` edits and shell rewrites, and waits for the same
-  rules to be read. Codex skips a new or changed hook until you trust
-  it, so approve the plugin's hooks when Codex asks. The band has no
-  Codex equivalent. The skills carry the same rules for both.
+- **No mods.** Installing `reboot` in Claude Code also installs a
+  mod (a function-hook plugin in `mods/`, listed as its dependency):
+  `reboot-progress` shows, above the prompt, a sentence on what Claude
+  is working on (summarized by Sonnet from its narration), the build's
+  progress, buttons for the dashboard and the app, and how far a test
+  run or a deploy is. See [`mods/README.md`](mods/README.md). Codex's
+  catalog doesn't list it, and the band has no Codex equivalent.
+
+The schema guard is a plain command hook, so it runs in both
+([`hooks/schema-guard.sh`](hooks/schema-guard.sh)): in an app with
+persisted dev state or a production deploy, it refuses API edits the
+runtime couldn't boot over (an Edit or Write in Claude Code, an
+`apply_patch` in Codex, or a shell command that rewrites an API file),
+and holds other API edits until the session has read
+`api-schema-evolution.md`. Codex skips a new or changed hook until you
+trust it, so approve the plugin's hooks when Codex asks.
 
 ## Usage
 
@@ -270,17 +271,15 @@ plugin/
 ├── hooks/
 │   ├── hooks.json            # hook registrations (Claude Code + Codex)
 │   ├── auto-approve.sh       # Claude Code PreToolUse auto-approval
-│   └── schema-guard.sh       # the schema guard for Codex (logic in
-│                             # schema-guard/, schema.ts copied from
-│                             # the mod)
+│   ├── schema-guard.sh       # the schema guard, both CLIs
+│   └── schema-guard/         # its logic and the comparison's tests
 ├── hooks-handlers/           # SessionStart PATH prepend (Claude Code),
 │                             # the skill reminder (both CLIs) and
 │                             # the leftover-process report
 ├── tests/hooks/              # hook tests (tests/reboot/plugin/hooks
 │                             # upstream)
 ├── mods/                     # Claude Code mods, installed as reboot's
-│                             # dependencies (reboot-progress,
-│                             # reboot-schema-guard)
+│                             # dependencies (reboot-progress)
 └── skills/
     └── <name>/
         ├── SKILL.md          # skill definition (YAML frontmatter)
