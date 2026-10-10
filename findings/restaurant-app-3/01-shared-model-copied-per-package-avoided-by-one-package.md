@@ -11,8 +11,8 @@ tags: [pattern]
 cluster: ""
 duplicate_of: reboot-crm-26
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/api-pydantic.md § Limits"
 ---
 # A Model shared across API packages still has to be copied into each one; avoided here only by keeping one package
 
