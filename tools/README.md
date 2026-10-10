@@ -10,6 +10,7 @@ the plugin pins.
 | `budget.py` | Words an agent reads before writing code, per front door; `--readme write` refreshes the README table | `--readme check`: the README table is stale (reports the budget; never enforces it) |
 | `check-cli.py` | Every `rbt …` command and `.rbtrc` line vs `rbt --help` | a flag or subcommand is unknown |
 | `check-symbols.py` | Every `reboot…` import / dotted name / stdlib call vs the pinned package | a symbol doesn't resolve and isn't a tracked upstream defect in `known-defects.json` |
+| `templates-drift.py` | The three templates' shared files are byte-identical; `DIFFERS` lists the ones that differ by design, with the reason; `--sync <template>` propagates one template's copies | a shared file differs, or a `DIFFERS` entry no longer does |
 | `templates-smoke.sh` | Copies each `skills/build/templates/<front-door>/`, then `rbt generate`, npm build, mypy, pytest (`SMOKE_FULL=1` runs the scenarios, as `--full` does) | any step fails |
 | `gen-index.py` | Rewrites every `<!-- generated:start … -->` region in the SKILL.md files from reference frontmatter; enforces the map's invariants | `--check`: a region differs from its generated form, or an invariant breaks |
 | `lint-references.py` | Frontmatter on every reference; the seven template sections on converted ones | a field or section is missing or out of order |
