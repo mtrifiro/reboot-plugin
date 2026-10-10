@@ -50,9 +50,6 @@ renamed):
 - **A module's counts** (`passed`, `failed`, `skipped`) are of tests,
   kept current while it runs; they and its `started_at` are optional, and without
   `started_at` the band takes the modules to run one after another.
-- **The finish time** is each module's median `seconds` over the
-  project's last 5 finished runs, which the band keeps; with no history
-  for a module still to run, it shows no time.
 - A project's own suite script sets `REBOOT_TEST_RUN=external` for each
   pytest it runs and writes the file itself.
 

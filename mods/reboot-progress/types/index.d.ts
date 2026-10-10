@@ -44,13 +44,11 @@ export type Deploy = {
 
 /** A test run while it goes: when it was first seen, where its output is written, and how far it is. */
 export type TestRun = {
-  /** The run's command from the test runner on (`pytest tests -q -k transfer`), which keys its last time. */
+  /** The run's command from the test runner on (`pytest tests -q -k transfer`), which tells a new run from the same one. */
   command: string
   startedAt: number
-  /** When a poll last saw it, so its time is known once it ends. */
+  /** When a poll last saw it, so it is dropped once gone from `ps` for two polls. */
   seenAt: number
-  /** How long the same command took last time in this project; null on a first run. */
-  expectedMs: number | null
   /** A background run's output file (from its Bash result); null for a run in the foreground. */
   outputPath: string | null
   /** How far it is, from its output's `[ 42%]` or `[12/40]`; null when the output doesn't say. */
@@ -85,8 +83,8 @@ export type SuiteRun = {
   modules: SuiteModule[]
 }
 
-/** The run the band shows, and when it should end (null without the history to say). */
-export type SuiteView = { run: SuiteRun; expectedAt: number | null }
+/** The run the band shows. */
+export type SuiteView = { run: SuiteRun }
 
 declare module 'claude-code' {
   interface PluginState {

@@ -351,7 +351,6 @@ test('a turn waiting on tests in the foreground shows how long they have run', a
   on('fs.exists', ($, e) => ({ value: (e as { path: string }).path === '/w/app/.rbtrc' }) as never)
   on('fs.read', () => ({ value: '' }) as never)
   on('ui.status', () => ({ value: undefined }) as never)
-  on('store.get', () => ({ value: 357_100 }) as never)
   on('model.complete', () => ({ value: { isAnswered: false, reason: 'empty-reply' } }) as never)
   on('prompt.submit', ($, e) => ({ text: e.text }) as never)
   // The test run shows in ps, piped, so its output says nothing.
@@ -371,7 +370,7 @@ test('a turn waiting on tests in the foreground shows how long they have run', a
   await wait(50)
 
   const band = await $.ui.mount({ plugin: PLUGIN, surface: 'terminal', component: 'AbovePrompt', props: BAND as never })
-  expect((await band.findAll({ type: 'Text', text: 'Waiting for the tests to finish · 0s of about 6m' })).length).toBe(1)
+  expect((await band.findAll({ type: 'Text', text: 'Waiting for the tests to finish · 0s' })).length).toBe(1)
   release()
   await tests
   const after = await $.ui.mount({ plugin: PLUGIN, surface: 'terminal', component: 'AbovePrompt', props: BAND as never })

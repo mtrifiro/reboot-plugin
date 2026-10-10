@@ -1,8 +1,8 @@
 // Pure logic: a test run as its runner records it in the project's
 // `.reboot/test-run.json`, rewritten after each module (the build
 // templates' `tests/run_progress.py` for pytest, or a suite script of the
-// project's own), how long each module took in the runs before, and when
-// this one should end. The contract is in the python skill's
+// project's own), and how long each module took in the runs before, which
+// tells a stopped run from a slow one. The contract is in the python skill's
 // `references/testing-project-setup.md`.
 
 import type { SuiteModule, SuiteRun, SuiteView } from '../types'
@@ -77,30 +77,6 @@ export function typical(h: History, name: string): number | null {
   const mid = Math.floor(xs.length / 2)
 
   return xs.length % 2 ? xs[mid]! : (xs[mid - 1]! + xs[mid]!) / 2
-}
-
-/**
- * When a running run should end: now, plus what the running module's
- * typical time leaves (floored at 0), plus each pending module's typical
- * time. Null when any of them has no history: no time is better than an
- * invented one. A module that doesn't say when it started is taken to
- * have started when the modules before it, one after another, ended.
- */
-export function expectedFinish(run: SuiteRun, h: History, now: number): number | null {
-  let left = 0
-  let doneSeconds = 0
-  for (const m of run.modules) {
-    if (m.status === 'pending' || m.status === 'running') {
-      const t = typical(h, m.name)
-      if (t === null) return null
-      const since = m.startedAt ?? run.startedAt + doneSeconds * 1000
-      left += m.status === 'running' ? Math.max(0, t - (now - since) / 1000) : t
-    } else {
-      doneSeconds += m.seconds ?? 0
-    }
-  }
-
-  return now + left * 1000
 }
 
 /**
@@ -180,23 +156,6 @@ function tally(run: SuiteRun): string {
   return parts.join(', ')
 }
 
-/** `under a minute`, `about 2½ minutes`, `about 14 minutes`, `about 1 hour 10 minutes`. */
-export function about(ms: number): string {
-  const minutes = ms / 60_000
-  if (minutes < 1) return 'under a minute'
-  if (minutes < 10) {
-    const halves = Math.round(minutes * 2)
-    const whole = Math.floor(halves / 2)
-    const n = `${whole}${halves % 2 ? '½' : ''}`
-    return `about ${n} ${n === '1' ? 'minute' : 'minutes'}`
-  }
-  const m = Math.round(minutes)
-  if (m < 60) return `about ${m} minutes`
-  const rest = m % 60
-
-  return `about ${Math.floor(m / 60)} hour${m >= 120 ? 's' : ''}${rest ? ` ${rest} minute${rest === 1 ? '' : 's'}` : ''}`
-}
-
 /** How far the run is for a line that already says what the turn does: `7 of 20 modules`. */
 export function suiteStatus(view: SuiteView): string {
   const { modules } = view.run
@@ -207,10 +166,10 @@ export function suiteStatus(view: SuiteView): string {
 
 /**
  * The band's two rows for a run. While it goes, what is done and what is
- * left, with the finish only from history:
+ * left, with no guess at when it ends (history made a poor one):
  *
  *     So far: 11 of 20 modules, 958 passed, 1 skipped, 0 failed
- *     Left: 9 modules, about 2½ minutes, so it should finish around 11:49
+ *     Left: 9 modules
  *
  * Once it ends, the result and its time:
  *
@@ -222,13 +181,11 @@ export function suiteStatus(view: SuiteView): string {
  *     Stopped: 11 of 20 modules, 958 passed, 1 skipped, 0 failed
  *     Ran 6m 10s, stopped at 11:31
  */
-export function suiteLine(view: SuiteView, now: number, clock: (ms: number) => string = clockTime): string {
-  const { run, expectedAt } = view
+export function suiteLine(view: SuiteView, clock: (ms: number) => string = clockTime): string {
+  const { run } = view
   if (run.finishedAt === null) {
     const left = run.modules.filter(m => m.status === 'pending' || m.status === 'running').length
-    const finish =
-      expectedAt === null ? '' : `, ${about(expectedAt - now)}, so it should finish around ${clock(expectedAt)}`
-    return `So far: ${suiteStatus(view)}, ${tally(run)}\nLeft: ${left} ${left === 1 ? 'module' : 'modules'}${finish}`
+    return `So far: ${suiteStatus(view)}, ${tally(run)}\nLeft: ${left} ${left === 1 ? 'module' : 'modules'}`
   }
 
   if (run.isStopped) {

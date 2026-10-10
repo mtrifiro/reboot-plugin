@@ -23,8 +23,8 @@ import {
 } from './deploy'
 import type { LinkProbe } from './deploy'
 import { REBOOT_LOGO } from './logo'
-import { SUITE_FILE, type History, expectedFinish, isSuiteShown, parseSuite, remember, settle, suiteLine, suiteStatus } from './suite'
-import { STARTING, WAITING, endTurn, fallback, isWorthSummarizing, parseSummary, startTask, summaryPrompt, isTesting, testCommand, testLine, testTimeKey, testProgress, testStatus, textOf } from './activity'
+import { SUITE_FILE, type History, isSuiteShown, parseSuite, remember, settle, suiteLine, suiteStatus } from './suite'
+import { STARTING, WAITING, endTurn, fallback, isWorthSummarizing, parseSummary, startTask, summaryPrompt, isTesting, testCommand, testLine, testProgress, testStatus, textOf } from './activity'
 import type { Summary } from './activity'
 import {
   RUN,
@@ -340,9 +340,8 @@ async function followDeploy($: EngineInterface, ps: string) {
 
 /**
  * Follows a test run while `ps` shows it: how far its output says it is
- * (a background run's, whose file its Bash result named), how long the
- * same command took last time, and the clock, so its time redraws. Once
- * it ends, its time is kept for the next run of the command. A run just
+ * (a background run's, whose file its Bash result named), and the clock,
+ * so its time redraws. A run just
  * started may not show in `ps` yet, so one is dropped only once unseen
  * for two polls.
  */
@@ -352,20 +351,15 @@ async function followTests($: EngineInterface, dir: string, ps: string) {
   const command = testCommand(ps, dir)
   if (command === null) {
     if (run === null || now - run.seenAt <= 2 * POLL_MS) return
-    if (run.command && run.seenAt > run.startedAt) {
-      await $.store.set(testTimeKey(dir, run.command), run.seenAt - run.startedAt).catch(() => undefined)
-    }
     await update($, testRun, () => null)
     return
   }
   const isSame = run !== null && (run.command === command || run.command === '')
-  const expected = isSame && run.expectedMs !== null ? run.expectedMs : await $.store.get(testTimeKey(dir, command)).catch(() => null)
   const output = isSame && run.outputPath ? await readText($, run.outputPath) : ''
   await update($, testRun, () => ({
     command,
     startedAt: isSame ? run.startedAt : now,
     seenAt: now,
-    expectedMs: typeof expected === 'number' ? expected : null,
     outputPath: isSame ? run.outputPath : null,
     ...testProgress(output),
   }))
@@ -375,7 +369,7 @@ async function followTests($: EngineInterface, dir: string, ps: string) {
 /**
  * Follows the run the project's runner records in `.reboot/test-run.json`:
  * once it ends, adds its modules' times to the project's history (each
- * run once); shows it while it goes and after, with when it should end,
+ * run once); shows it while it goes and after,
  * and ticks the clock while it runs. A run left without an end counts as
  * stopped soon after `ps` stops showing it (`settle`); when the band last
  * saw it there is kept in the store, so a reload doesn't forget it.
@@ -408,7 +402,7 @@ async function followSuite($: EngineInterface, dir: string, ps: string) {
   }
   const isShown = isSuiteShown(run, { lastEditAt: await read($, lastEdit) })
   const isRunning = isShown && run.finishedAt === null
-  await update($, suite, () => (isShown ? { run, expectedAt: isRunning ? expectedFinish(run, history, now) : null } : null))
+  await update($, suite, () => (isShown ? { run } : null))
   if (isRunning) await update($, clock, () => now)
 }
 
@@ -532,7 +526,7 @@ export const register: Register = on => {
     if (testOutput) {
       const now = await $.clock.now()
       const run = await read($, testRun)
-      const base = { command: '', startedAt: now, seenAt: now, expectedMs: null, percent: null, failed: 0 }
+      const base = { command: '', startedAt: now, seenAt: now, percent: null, failed: 0 }
       await update($, testRun, () => ({ ...base, ...run, outputPath: testOutput[1]! }))
     }
 
@@ -658,7 +652,7 @@ export const register: Register = on => {
     const status = isRunningSuite ? suiteStatus(view) : run === null ? '' : testStatus(run)
     const nowText =
       view !== null && isAwaiting
-        ? suiteLine(view, now)
+        ? suiteLine(view)
         : run !== null && isAwaiting
           ? testLine(run, Math.max(now, run.startedAt))
           : act?.now && status

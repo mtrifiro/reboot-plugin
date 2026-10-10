@@ -99,7 +99,7 @@ runs, or pass-alone/fail-in-suite: `lifecycle-dev-loop.md`.
 The template's `tests/run_progress.py`, whose hooks `conftest.py`
 imports, rewrites `.reboot/test-run.json` (gitignored) as modules start
 and end; the Reboot band in Claude Code reads it to show how far a run
-is and when it should finish. An existing project copies both files from
+is. An existing project copies both files from
 `build/templates/<front-door>/tests/` and adds `.reboot/` to
 `.gitignore`. A suite script of the project's own writes the file itself
 (whole, to a temporary file, then renamed) and sets

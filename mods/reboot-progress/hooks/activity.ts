@@ -48,28 +48,11 @@ export function testStatus(run: TestRun): string {
   return parts.join(', ')
 }
 
-/** `40s`, `6m`: a time to the nearest ten seconds, or minute past one. */
-function roughly(ms: number): string {
-  const s = ms / 1000
-
-  return s < 60 ? `${Math.max(10, Math.round(s / 10) * 10)}s` : `${Math.round(s / 60)}m`
-}
-
-/**
- * Now between turns while tests run: what its output says of how far it
- * is, and its time so far beside the last run's of the same command.
- */
+/** Now between turns while tests run: what its output says of how far it is, and its time so far. */
 export function testLine(run: TestRun, now: number): string {
   const status = testStatus(run)
-  const took = now - run.startedAt
-  const time =
-    run.expectedMs === null
-      ? elapsed(took)
-      : took <= run.expectedMs
-        ? `${elapsed(took)} of about ${roughly(run.expectedMs)}`
-        : `${elapsed(took)}, longer than the last run's ${roughly(run.expectedMs)}`
 
-  return `${TESTING}${status ? `: ${status}` : ''} · ${time}`
+  return `${TESTING}${status ? `: ${status}` : ''} · ${elapsed(now - run.startedAt)}`
 }
 
 /** The test runner in a command line: pytest, vitest, Playwright, npm test. */
@@ -97,9 +80,6 @@ export function testCommand(ps: string, dir: string | null = null): string | nul
 
 /** Whether `ps` output (or a Bash command) shows a test run. */
 export const isTesting = (ps: string, dir: string | null = null): boolean => testCommand(ps, dir) !== null
-
-/** The `$.store` key holding how long a test command took last time in a project. */
-export const testTimeKey = (root: string, command: string): string => `tests:${root}:${command}`
 
 /** Now, from the moment a prompt is sent until its summary names the work. */
 export const STARTING = 'Working on your request'
