@@ -27,16 +27,17 @@
 #      commit, revision and bundle (step 2 compares against it next time),
 #      and the release record: the commits, the model diff
 #      (scripts/model_diff.py) and the last test run (tests/.last-run.json)
-#      since the last deploy, all printed before anything ships.
+#      since the last deploy, the additive-API check's result, and any
+#      servicer without an authorizer, all printed before anything ships.
 #   6. deploy/after, when the project has one.
 #
 # Settings are in deploy/config; credentials in .deploy.env (git-ignored):
 #   REBOOT_CLOUD_API_KEY, REBOOT_CLOUD_ORGANIZATION,
 #   CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID (with a frontend).
 #
-# deploy.sh version 2 (Reboot plugin, build templates).
+# deploy.sh version 3 (Reboot plugin, build templates).
 set -uo pipefail
-cd "$(dirname "$0")/.."
+cd "$(dirname "$0")/.." || exit 1
 ROOT="$PWD"
 
 LEDGER="deploy/ledger.jsonl"
@@ -104,6 +105,7 @@ PY
 }
 
 # -- 2. additive API -------------------------------------------------------
+api_check=""
 last_backend="$(last_field backend_commit)"
 api_url="$(last_field api_url)"
 if [ -z "$last_backend" ]; then
@@ -170,6 +172,15 @@ print(f"deploy: tests: {run.get('passed', 0)} passed, {run.get('failed', 0)} fai
 if run.get("revision") != sha or run.get("dirty") or not run.get("full") or run.get("failed"):
     print(f"deploy: tests: not a clean, full, passing run of {sha}; tell the developer before promoting")
 PY
+
+# Servicers with no authorizer: rbt dev allows every call to them with a
+# warning, Reboot Cloud denies every call, so they pass every local
+# scenario and fail in production. Named here and in the ledger.
+unauthorized="$(python3 scripts/model_diff.py HEAD --head --json 2>/dev/null \
+  | python3 -c 'import json, sys; print(" ".join(json.load(sys.stdin).get("unauthorized_servicers", [])))' 2>/dev/null || true)"
+if [ -n "$unauthorized" ]; then
+  say "authorizers: $unauthorized: no authorizer; rbt dev allows that with a warning, Reboot Cloud denies every call. Tell the developer before promoting."
+fi
 
 if [ "$dry" = 1 ]; then say "dry run: stopping before anything is deployed."; exit 0; fi
 
@@ -240,9 +251,10 @@ fi
 
 # -- 5. the ledger, in git -------------------------------------------------
 python3 - "$LEDGER" "$sha" "$revision" "$bundle" "$last_backend" "$api_url" "${SITE_URL:-}" \
-  "$last_commit" "$model_json" "$tests_json" <<'PY'
+  "$last_commit" "$model_json" "$tests_json" "$api_check" "$unauthorized" <<'PY'
 import datetime, json, subprocess, sys
-ledger, sha, revision, bundle, last_backend, api_url, site, since, model, tests = sys.argv[1:]
+(ledger, sha, revision, bundle, last_backend, api_url, site, since, model, tests,
+ api_check, unauthorized) = sys.argv[1:]
 row = {"at": datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds"), "commit": sha}
 row["backend_commit"] = sha if revision else last_backend
 if revision: row["revision"] = int(revision)
@@ -257,6 +269,12 @@ if since:
     ).stdout.splitlines()
     diff = json.loads(model)
     release["model_diff"] = {"design": diff.get("design", []), "prove": diff.get("prove", [])}
+# The additive-API check this script ran (step 2). The runtime's own
+# compatibility check at `rbt cloud up` is implied: a revision it
+# rejects never reaches this row.
+release["compatibility"] = {
+    "base": last_backend or None, "additive": True, "notes": api_check.splitlines()}
+release["unauthorized_servicers"] = unauthorized.split()
 row["release"] = release
 open(ledger, "a").write(json.dumps(row) + "\n")
 PY

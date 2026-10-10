@@ -156,6 +156,8 @@ commonly bites here:
   incl. registering `/__/oauth/callback` as the IdP redirect URI).
 - **Authorizers everywhere**: production denies externally reachable
   methods without one (`python/references/servicer-authorizer.md`).
+  The script names every servicer still without one beside the release
+  record and records them in the ledger; add them before promoting.
 - **Dual-frontend apps:** the image must still run the MCP UI builds so
   `dist/mcp/<name>/` is in it; the **web** SPA need _not_ be (it goes to
   the static host).

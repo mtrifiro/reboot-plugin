@@ -23,6 +23,9 @@ Each change is sorted by the Reboot Flywheel's routing rule
 - **Prove**: a new scenario under a rule that already existed, and
   `@wip` coming off a scenario. These stay in Prove.
 
+It also names every servicer with no `authorizer()`, which `rbt dev`
+allows with a warning and Reboot Cloud denies.
+
 It is evidence, not a gate: it always exits 0. `scripts/api_removals.py`
 is what stops a deploy that would break stored state.
 """
@@ -307,6 +310,43 @@ def authorizers_of(sources: dict[str, str]) -> dict[str, dict[str, str]]:
     return found
 
 
+def servicers_without_authorizer(sources: dict[str, str]) -> list[str]:
+    """Servicer classes (a base named `<Type>.Servicer`) with no
+    `authorizer()`. `rbt dev` runs them with a warning in its log;
+    `rbt serve` and Reboot Cloud deny every call to them, so a missing
+    one passes every local scenario and fails in production. The `User`
+    type is the exception: its generated default admits each signed-in
+    user to their own state (`state_id_is_user_id` or `is_app_internal`),
+    so a `User.Servicer` without one is by design."""
+    out = []
+    for source in sources.values():
+        try:
+            tree = ast.parse(source)
+        except SyntaxError:
+            continue
+        for cls in ast.walk(tree):
+            if not isinstance(cls, ast.ClassDef):
+                continue
+            bases = [
+                b.attr if isinstance(b, ast.Attribute) else getattr(b, "id", "")
+                for b in cls.bases
+            ]
+            if not any(b.endswith("Servicer") for b in bases):
+                continue
+            if any(
+                isinstance(b, ast.Attribute) and isinstance(b.value, ast.Name)
+                and b.value.id == "User" and b.attr == "Servicer"
+                for b in cls.bases
+            ):
+                continue
+            if not any(
+                isinstance(i, (ast.FunctionDef, ast.AsyncFunctionDef)) and i.name == "authorizer"
+                for i in cls.body
+            ):
+                out.append(cls.name.removesuffix("Servicer") or cls.name)
+    return sorted(out)
+
+
 def auth_changes(before: dict[str, str], after: dict[str, str]) -> list[Change]:
     old_all, new_all = authorizers_of(before), authorizers_of(after)
     out: list[Change] = []
@@ -452,30 +492,41 @@ def feature_changes(before: dict[str, str], after: dict[str, str]) -> list[Chang
 # -- output ----------------------------------------------------------------
 
 
-def markdown(base: str, head: str, changes: list[Change]) -> str:
+def markdown(
+    base: str, head: str, changes: list[Change], unauthorized: list[str] | None = None
+) -> str:
     if not changes:
-        return (
+        lines = [
             f"**Model diff** `{base}..{head}`: no change to the domain model, "
-            "who may call, or the feature files.\n"
-        )
-    design = [c for c in changes if c.stage == "design"]
-    lines = [f"**Model diff** `{base}..{head}`", ""]
-    if design:
-        lines.append(
-            f"**{len(design)} design change{'s' if len(design) != 1 else ''}**: "
-            "these go back to Design for acceptance."
-        )
+            "who may call, or the feature files."
+        ]
     else:
-        lines.append("**No design change**: this stays in Prove.")
-    for area, heading in (
-        ("model", "Domain model"),
-        ("auth", "Who may call"),
-        ("features", "Feature files"),
-    ):
-        group = [c for c in changes if c.area == area]
-        if group:
-            lines += ["", f"_{heading}_", ""]
-            lines += [f"- [{c.stage}] {c.what}" for c in group]
+        design = [c for c in changes if c.stage == "design"]
+        lines = [f"**Model diff** `{base}..{head}`", ""]
+        if design:
+            lines.append(
+                f"**{len(design)} design change{'s' if len(design) != 1 else ''}**: "
+                "these go back to Design for acceptance."
+            )
+        else:
+            lines.append("**No design change**: this stays in Prove.")
+        for area, heading in (
+            ("model", "Domain model"),
+            ("auth", "Who may call"),
+            ("features", "Feature files"),
+        ):
+            group = [c for c in changes if c.area == area]
+            if group:
+                lines += ["", f"_{heading}_", ""]
+                lines += [f"- [{c.stage}] {c.what}" for c in group]
+    if unauthorized:
+        lines += [
+            "",
+            "_Servicers without an authorizer_ (`rbt dev` allows every call with a "
+            "warning; Reboot Cloud denies every call):",
+            "",
+        ]
+        lines += [f"- `{name}`" for name in unauthorized]
     return "\n".join(lines) + "\n"
 
 
@@ -494,6 +545,7 @@ def main() -> int:
     ) + feature_changes(
         files_at(base, "tests", ".feature"), files_at(head, "tests", ".feature")
     )
+    unauthorized = servicers_without_authorizer(backend_files_at(head))
     head_label = head or "working tree"
     if "--json" in flags:
         print(json.dumps({
@@ -501,9 +553,10 @@ def main() -> int:
             "head": head_label,
             "design": [c.what for c in changes if c.stage == "design"],
             "prove": [c.what for c in changes if c.stage == "prove"],
+            "unauthorized_servicers": unauthorized,
         }, indent=2))
     else:
-        print(markdown(base, head_label, changes), end="")
+        print(markdown(base, head_label, changes, unauthorized), end="")
     return 0
 
 

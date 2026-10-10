@@ -221,6 +221,27 @@ class ModelDiffTest(unittest.TestCase):
             "`Guest` gains an `authorizer()`": "design",
         })
 
+    def test_servicers_without_an_authorizer_are_named(self) -> None:
+        self.assertEqual(
+            model_diff.servicers_without_authorizer(model_diff.backend_files_at(None)), []
+        )
+        self.servicer.write_text(
+            SERVICER_BEFORE
+            + "\nclass GuestServicer(Guest.Servicer):\n"
+            + "    async def profile(self, context):\n        pass\n"
+            # The User type's generated default is by design.
+            + "\nclass UserServicer(User.Servicer):\n"
+            + "    async def get(self, context):\n        pass\n"
+        )
+        self.assertEqual(
+            model_diff.servicers_without_authorizer(model_diff.backend_files_at(None)),
+            ["Guest"],
+        )
+        text = model_diff.markdown("a", "b", [], ["Guest"])
+        self.assertIn("without an authorizer", text)
+        self.assertIn("`Guest`", text)
+        self.assertNotIn("without an authorizer", model_diff.markdown("a", "b", [], []))
+
     def test_generated_code_is_not_read(self) -> None:
         generated = self.root / "backend" / "api" / "hotel" / "v1"
         generated.mkdir(parents=True)

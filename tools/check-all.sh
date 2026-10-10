@@ -22,7 +22,8 @@ python3 tests/hooks/schema_guard_test.py -q   # skips itself without a cached No
 python3 tests/templates/copy_test.py -q
 if command -v shellcheck >/dev/null 2>&1; then
     shellcheck install.sh hooks/*.sh hooks-handlers/*.sh lib/*.sh bin/* tools/*.sh \
-        skills/build/templates/copy.sh
+        skills/build/templates/copy.sh skills/build/templates/*/scripts/*.sh \
+        skills/build/templates/*/deploy/before-backend
 else
     echo "check-all: shellcheck is not installed; skipped (CI runs it)" >&2
 fi

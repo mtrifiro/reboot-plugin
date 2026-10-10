@@ -333,6 +333,7 @@ servicer now, before any test**: `rbt dev` only logs
 `*** <Type>.<Method> IS MISSING AUTHORIZATION ***`, but the `Reboot()`
 test harness, `rbt serve` and Reboot Cloud deny with `PermissionDenied`
 (modes: `python/references/servicer-authorizer.md`).
+`python3 scripts/model_diff.py HEAD` names any servicer still without one.
 
 - **Identity**, same for both front doors:
   `Application(oauth=OAuth(provider=OAuthProviderByEnvironment(dev=Development(), prod=...)))`

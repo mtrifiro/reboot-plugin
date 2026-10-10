@@ -57,9 +57,10 @@ before the pull request ([`flywheel.md`](flywheel.md)).
 
 `scripts/deploy.sh --dry-run` prints the commits since the last deploy,
 the model diff against it and the last test run, and warns when that run
-is not a clean, full, passing run of the commit being deployed. Show
-the user that output and let them decide; `deploy.sh` itself never
-stops on it.
+is not a clean, full, passing run of the commit being deployed, or when
+a servicer has no authorizer (allowed under `rbt dev`, denied on Reboot
+Cloud). Show the user that output and let them decide; `deploy.sh`
+itself never stops on it.
 
 ### The release record
 
@@ -72,8 +73,15 @@ pushed. Its `release` field is the record:
  "since": "9f8e7d6",
  "commits": ["abc1234 Book several rooms in one reservation"],
  "model_diff": {"design": ["`Reservation.create` added, Transaction"],
-                "prove": []}}
+                "prove": []},
+ "compatibility": {"base": "9f8e7d6", "additive": true, "notes": []},
+ "unauthorized_servicers": []}
 ```
+
+`compatibility` is the additive-API check the script ran against the
+commit production serves; the runtime's own check at `rbt cloud up` is
+implied, since a revision it rejects never reaches the ledger.
+`unauthorized_servicers` names any servicer with no `authorizer()`.
 
 To answer "what shipped, and on what evidence?" later, read the row for
 the deploy in question.

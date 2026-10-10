@@ -39,6 +39,9 @@ class CopyTest(unittest.TestCase):
             ["grep", "-rl", r"__project__\|__app__\|__Title__\|__Initial__", str(self.dest)],
             capture_output=True, text=True).stdout
         self.assertEqual(leftovers, "", "no placeholder survives")
+        junk = [p for p in self.dest.rglob("*") if p.name in (
+            "__pycache__", ".mypy_cache", ".pytest_cache", ".reboot", ".last-run.json")]
+        self.assertEqual(junk, [], "build and test leftovers in the template are not copied")
 
     def test_refuses_a_project_without_merge(self) -> None:
         self.dest.mkdir()

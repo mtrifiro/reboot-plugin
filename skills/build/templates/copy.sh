@@ -57,15 +57,24 @@ if [ -e "$DEST/.rbtrc" ] && [ "$MERGE" = 0 ]; then
   exit 1
 fi
 
+# Build and test leftovers a developer may have left in the template
+# directory (git ignores them; a new project must not start with them).
+JUNK_DIRS='-name __pycache__ -o -name .mypy_cache -o -name .pytest_cache -o -name .reboot -o -name node_modules -o -name .venv -o -name dist -o -name *.recordings'
+JUNK_FILES='-name .DS_Store -o -name .last-run.json'
+
 mkdir -p "$DEST"
 if [ "$MERGE" = 0 ]; then
   # `/.` copies dotfiles (.rbtrc, .gitignore, ...) too.
   cp -R "$SRC/." "$DEST/"
-  find "$DEST" -name .DS_Store -delete
+  # shellcheck disable=SC2086  # the expressions are lists of find predicates
+  find "$DEST" \( $JUNK_DIRS \) -prune -exec rm -rf {} + 2>/dev/null
+  # shellcheck disable=SC2086
+  find "$DEST" \( $JUNK_FILES \) -type f -delete
 else
   # File by file, with `__app__` already renamed in the destination
   # path so Step 1's API file is recognized as already there.
-  (cd "$SRC" && find . -type f ! -name .DS_Store) | while IFS= read -r rel; do
+  # shellcheck disable=SC2086
+  (cd "$SRC" && find . \( $JUNK_DIRS \) -prune -o -type f ! \( $JUNK_FILES \) -print) | while IFS= read -r rel; do
     rel="${rel#./}"
     target="$(printf '%s' "$rel" | sed "s/__app__/$APP/g")"
     if [ -e "$DEST/$target" ]; then
