@@ -16,21 +16,35 @@ from reboot.api import (
 
 
 class UserState(Model):
-    count: int = Field(tag=1, default=0)
+    count: int = Field(
+        tag=1,
+        default=0,
+        description="How many times this user has counted. It starts at zero.",
+    )
 
 
 class GetResponse(Model):
-    value: int = Field(tag=1, default=0)
+    value: int = Field(
+        tag=1,
+        default=0,
+        description="The user's count when it was read.",
+    )
 
 
 class IncrementRequest(Model):
-    amount: int = Field(tag=1, default=0)
+    amount: int = Field(
+        tag=1,
+        default=0,
+        description="How much to add to the count. A negative amount "
+        "lowers it.",
+    )
 
 
 api = API(
     User=Type(
         state=UserState,
-        description="The signed-in user and their own state.",
+        description="A person who has signed in, and the count that "
+        "belongs to them.",
         methods=Methods(
             get=Reader(
                 request=None,

@@ -26,36 +26,54 @@ class UserState(Model):
 
 
 class CreateCounterResponse(Model):
-    counter_id: str = Field(tag=1, default="")
+    counter_id: str = Field(
+        tag=1,
+        default="",
+        description="The ID of the new counter, to pass to later calls.",
+    )
 
 
 # -- Counter models. --
 
 
 class CounterState(Model):
-    value: int = Field(tag=1, default=0)
+    value: int = Field(
+        tag=1,
+        default=0,
+        description="The counter's current count. It starts at zero.",
+    )
 
 
 class GetResponse(Model):
-    value: int = Field(tag=1, default=0)
+    value: int = Field(
+        tag=1,
+        default=0,
+        description="The counter's count when it was read.",
+    )
 
 
 class IncrementRequest(Model):
-    amount: int = Field(tag=1, default=0)
+    amount: int = Field(
+        tag=1,
+        default=0,
+        description="How much to add to the count. A negative amount "
+        "lowers it.",
+    )
 
 
 api = API(
     User=Type(
         state=UserState,
-        description="The signed-in user; the front door to the app.",
+        description="A person who has signed in. Everything they "
+        "create in the app is reached from here.",
         methods=Methods(
             create_counter=Transaction(
                 mode=Exclusive(),
                 request=None,
                 response=CreateCounterResponse,
                 description="Create a new counter and return its ID. "
-                "The ID is not human-readable; pass it to later tool "
-                "calls, no need to tell the human what it is.",
+                "The ID is not meant for people. Pass it to later tool "
+                "calls instead of showing it to the user.",
                 mcp=Tool(),
             ),
         ),

@@ -36,7 +36,7 @@ class AccountState(Model):
     balance: float = Field(
         tag=1,
         default=0.0,
-        description="What the account holds, in dollars; never below zero.",
+        description="How much money the account holds, in dollars. It never goes below zero.",
     )
 
 
@@ -44,7 +44,7 @@ class DepositRequest(Model):
     amount: float = Field(
         tag=1,
         default=0.0,
-        description="How much to add, in dollars; any amount is accepted.",
+        description="How much money to add, in dollars. Any amount is accepted.",
     )
 
 
@@ -62,8 +62,8 @@ api = API(
     Account=Type(
         state=AccountState,
         methods=AccountMethods,
-        description="One customer's money, and the consistency "
-        "boundary for every change to it.",
+        description="One customer's account. Changes to it happen one "
+        "at a time, so two deposits never overwrite each other.",
     ),
 )
 ```
@@ -79,16 +79,38 @@ Rules, enforced at import or generate time:
 - **A single nested `Model` is `Optional[X] = Field(tag=N, default=None)`**,
   set in the constructor or on first write. `list[X]` / `dict[str, X]`
   of a `Model` use `default_factory`.
-- **Every `Field` has a `description=`**: meaning, unit, invariant — not
-  its type. The dashboard shows it beside the property; a missing one
-  shows "No description provided, please ask your friendly coding agent
-  to add one for you." A `Model`'s class docstring becomes its
-  description. Add it in the same change as the field.
-- **`Type(description=...)`** says what the type is _for_: what it is
-  the consistency boundary for, what one instance is, how its ID is
-  chosen — not its fields.
+- **Every `Field` has a `description=`**, written as "Writing a
+  description" below says. The dashboard shows it beside the property;
+  a missing one shows "No description provided, please ask your
+  friendly coding agent to add one for you." A `Model`'s class
+  docstring becomes its description. Add it in the same change as the
+  field.
+- **`Type(description=...)`** says what one instance is and how its ID
+  is chosen, not what fields it has.
 - **Everything reaches the generator through `API(...)`**: a `Type`
   binds `state=` and `methods=` under a public name.
+
+### Writing a description
+
+The developer reads every `description=` in the dashboard, and the AI
+reads a method's as its tool description under `mcp=Tool()`. Write for
+someone who knows the business but not the code. A description can't
+be reworded once state persists, so write it well the first time.
+
+- **Say what the code can't.** A field: what the value means, its
+  unit, what is always true of it. A method: what it does for the
+  user, what it changes, which error it raises and when. A type: what
+  one instance is and how its ID is chosen.
+- **One or two short sentences.** One idea each, under about 20
+  words, in the business's words ("a booking"), not Reboot's ("the
+  actor", "the consistency boundary").
+- **Plain punctuation and words.** Periods and commas only: no em or en
+  dashes, semicolons or parentheses. No "This field...", no "crucial",
+  "robust", "seamless" or "comprehensive", no "not just X but Y".
+
+Not `"The balance; tracks funds — essential for transfers."` but
+`"How much money the account holds, in dollars. It never goes below
+zero."`
 
 ### Generated names come from the **method** name
 

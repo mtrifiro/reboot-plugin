@@ -58,7 +58,7 @@ class Guest(Model):
     name: str = Field(tag=1, default="", description="The guest's full name.")
     # Optional + default=None; populated by factory `create`.
     preferences: Optional[GuestPreferences] = Field(
-        tag=2, default=None, description="Meal preferences; None until `create` fills them.",
+        tag=2, default=None, description="The guest's meal preferences. Empty until `create` fills them in.",
     )
 
 

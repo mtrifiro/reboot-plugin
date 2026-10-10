@@ -67,10 +67,9 @@ api = API(
                 mode=Exclusive(),
                 request=None,
                 response=CreateCounterResponse,
-                description="Create a new Counter. Returns the ID of "
-                "the new counter. That ID is not human-readable; "
-                "pass it to future tool calls where needed, but no "
-                "need to tell the human what it is.",
+                description="Create a new counter and return its ID. "
+                "The ID is not meant for people. Pass it to later tool "
+                "calls instead of showing it to the user.",
                 mcp=Tool(),
             ),
         ),
