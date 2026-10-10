@@ -107,6 +107,11 @@ Feature: Customers can transfer money between accounts
 - If the dashboard is running (the `dashboard` skill), the feature
   appears on its Features page at once as work in progress; tell the
   user.
+- The work has a ticket: name it in the feature's description
+  (`Ticket: ABC-123`), and a fix's reproducing scenario carries it in
+  its name. The model diff and the pull request body pick it up from
+  there; a link from the ticket into the repository is not yet
+  something Reboot keeps.
 
 ## Step 2a — See each scenario fail before writing the code
 
@@ -145,7 +150,8 @@ change behavior, not permission to skip the feature. For each:
 
 1. Say in one line what the app does now and what it should do.
 2. Write that as a scenario under the rule it breaks (or a new rule),
-   tagged `@wip`, in the feature that owns the behavior.
+   tagged `@wip`, in the feature that owns the behavior, the ticket's
+   id in its name when there is one.
 3. Route it ([`flywheel.md`](../build/references/flywheel.md), "The
    routing rule"; `python3 scripts/model_diff.py HEAD` sorts it). A new
    scenario under an existing rule is a code fix: it stays in Prove. A
@@ -157,6 +163,9 @@ change behavior, not permission to skip the feature. For each:
    any code. Approval of the fix ("go", "fix all 4") is not agreement
    on the scenarios: show them first.
 5. Fix, run them green, and ask before taking `@wip` off (Step 5).
+   Close with the fix card
+   ([`build/references/flywheel.md`](../build/references/flywheel.md),
+   "Stage cards"): in full the first time, one line after.
 
 Only a change with no behavior a scenario could see (a typo in a
 comment, a rename inside one function) skips this, and you say so.

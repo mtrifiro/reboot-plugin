@@ -22,7 +22,9 @@ Decide which front door to build first, then build it with the
 Every app gets a backend **ready for both front doors**: a `User` type,
 `oauth=`, and each method's AI role and AI-facing `description=` in the
 design (`build`, Design Phase). What varies is which front door is
-built first.
+built first. Design, the Reboot Flywheel's first stage, starts here and
+ends at the build skill's "Accept the Design"
+([`build/references/flywheel.md`](../build/references/flywheel.md)).
 
 ### The two destinations
 

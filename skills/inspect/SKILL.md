@@ -20,8 +20,12 @@ Flow (backend-only: the [python skill](../python/SKILL.md)).
 
 This is the Reboot Flywheel's **Observe** stage
 ([`build/references/flywheel.md`](../build/references/flywheel.md)):
-what the running app holds, and why. A finding goes back by the routing
-rule there: a code fix to Prove, a missing or wrong rule to Design.
+what the running app holds, and why. The history you can read is the
+history the design chose to record: a state keeps the events its domain
+model names (who approved, when, the provider's reference) and nothing
+more, so a question the stored state can't answer is a gap in the
+design. A finding goes back by the routing rule there: a code fix to
+Prove, a missing or wrong rule to Design.
 
 ## The three operations
 

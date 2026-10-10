@@ -46,7 +46,10 @@ the last run was not a clean, full, passing run of this commit.
 
 Steps 1–7 below are the first deploy. After it, a deploy is
 `scripts/deploy.sh --dry-run` (show the user what would ship), then
-`scripts/deploy.sh`.
+`scripts/deploy.sh`. The dry run's output comes with the "Ready to
+deploy" card and Step 7's checks end with "Live"
+([`build/references/flywheel.md`](../build/references/flywheel.md),
+"Stage cards"): in full the first time, one line after.
 
 ## When to Use
 

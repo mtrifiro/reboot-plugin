@@ -38,7 +38,8 @@ describes. The stages and the routing rule are in
 
 ```markdown
 ## Rules this changes
-<the feature-file changes from the model diff, or "None: a code fix">
+<the feature-file changes from the model diff, or "None: a code fix";
+the tickets it names, when the feature files name any>
 
 ## Domain model
 <the model diff's domain-model and who-may-call lines, or "No change">

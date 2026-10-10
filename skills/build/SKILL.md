@@ -92,6 +92,11 @@ method types mean regenerating a dozen or more files.
      housekeeping, editors and readers), name them and the methods each
      may call; roles live in state, checked by a custom predicate
      (`python/references/auth-custom-predicates.md`).
+   - History: for each rule someone will later have to explain (an
+     approval, a refund, anything that waits on a person or a provider),
+     the events the owning state records: who, when, which step, the
+     provider's reference. The runtime keeps no history the design
+     doesn't name; the `inspect` skill reads only what is stored.
    - Demo data: a believable dev dataset (a dozen rooms on three floors,
      not one), seeded only under `rbt dev`, so every view has something
      to show the first time it opens
@@ -265,8 +270,10 @@ reshapes a state type or method.
 ### Accept the Design
 
 Design ends here: the domain model (`api/`, generated) and the `@wip`
-feature files exist, and no implementation does. Show the **review
-table**, one row per rule, in the design's words:
+feature files exist, and no implementation does. The first time a
+project reaches this point, open with the design card
+([`references/flywheel.md`](references/flywheel.md), "Stage cards").
+Show the **review table**, one row per rule, in the design's words:
 
 | State type | State ID | Rule | Method | Kind | Who may call | Scenario |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -504,7 +511,9 @@ never bare `rbt dev run` / `npm run dev`.
 - web-app: check the page at the URL a person would type
   (`localhost`).
 
-**Hand off** only after the final test run has finished, with:
+**Hand off** only after the final test run has finished. Open with the
+prototype card ([`references/flywheel.md`](references/flywheel.md),
+"Stage cards"), then:
 
 1. The app's URL (mcp-ui: the setup wizard's; web-app: the page's).
 2. The result: scenarios passed, anything `@blocked` and why, mypy
@@ -554,6 +563,9 @@ never bare `rbt dev run` / `npm run dev`.
    `uv run pytest`; fix everything; ask before removing `@wip`.
 8. If a file, command or rule changed, update `AGENTS.md` to match.
 9. Not running: start it with the [`run` skill](../run/SKILL.md).
+10. Close with the feature or fix card
+    ([`references/flywheel.md`](references/flywheel.md), "Stage cards"):
+    in full the first time, one line after.
 
 **Adding the other front door** is an update like any other: load its
 skill and make the project look like `templates/both/`.

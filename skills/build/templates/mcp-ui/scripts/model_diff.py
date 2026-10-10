@@ -554,6 +554,15 @@ def feature_changes(before: dict[str, str], after: dict[str, str]) -> list[Chang
     return out
 
 
+def tickets_of(before: dict[str, str], after: dict[str, str]) -> list[str]:
+    """`Ticket: ABC-123` ids named in feature files that changed."""
+    found = set()
+    for path in before.keys() | after.keys():
+        if before.get(path) != after.get(path):
+            found.update(re.findall(r"\bTicket:\s*([A-Za-z0-9_#-]+)", after.get(path, "")))
+    return sorted(found)
+
+
 # -- output ----------------------------------------------------------------
 
 
@@ -589,6 +598,7 @@ def markdown(
     changes: list[Change],
     unauthorized: list[str] | None = None,
     accepted: dict | None = None,
+    tickets: list[str] | None = None,
 ) -> str:
     if not changes:
         lines = [
@@ -622,6 +632,8 @@ def markdown(
             "",
         ]
         lines += [f"- `{name}`" for name in unauthorized]
+    if tickets:
+        lines += ["", "_Tickets_: " + ", ".join(tickets)]
     design_count = sum(1 for c in changes if c.stage == "design")
     lines += ["", accepted_line(accepted, design_count)]
     return "\n".join(lines) + "\n"
@@ -657,13 +669,14 @@ def main() -> int:
         except subprocess.CalledProcessError:
             accepted["is_base"] = False
     head = "HEAD" if "--head" in flags else None
+    features_before = files_at(base, "tests", ".feature")
+    features_after = files_at(head, "tests", ".feature")
     changes = model_changes(
         files_at(base, "api", ".py"), files_at(head, "api", ".py")
     ) + auth_changes(
         backend_files_at(base), backend_files_at(head)
-    ) + feature_changes(
-        files_at(base, "tests", ".feature"), files_at(head, "tests", ".feature")
-    )
+    ) + feature_changes(features_before, features_after)
+    tickets = tickets_of(features_before, features_after)
     unauthorized = servicers_without_authorizer(backend_files_at(head))
     head_label = head or "working tree"
     if accepted and accepted.get("is_base"):
@@ -678,9 +691,10 @@ def main() -> int:
             "prove": [c.what for c in changes if c.stage == "prove"],
             "unauthorized_servicers": unauthorized,
             "accepted": accepted,
+            "tickets": tickets,
         }, indent=2))
     else:
-        print(markdown(base, head_label, changes, unauthorized, accepted), end="")
+        print(markdown(base, head_label, changes, unauthorized, accepted, tickets), end="")
     return 0
 
 

@@ -32,7 +32,7 @@ change goes back to Design. The evidence each decision rests on is in
 | --- | --- | --- | --- |
 | **Design** | `app` (routing); `feature` 1–2; `build` Design Phase, State Model Assessment, Step 1; `dashboard` (Models, Features); Update Flow 1–4 | Domain model: state types, state IDs, methods, method kinds, who may call. `@wip` feature files | **Accept**: the user accepts the domain model and feature files (`build`, "Accept the design") |
 | **Prove** | `build` Steps 2–7; `feature` 2a–5 and fixes; `python`; `run`; `upgrade`; `deploy` checks | Scenario results (`tests/.last-run.json`), mypy, page timing, the model diff | **Merge** (the pull request body) and **Promote** (`scripts/deploy.sh`, its release record) |
-| **Observe** | `inspect`; `deploy` Step 7; the app's logs | Stored state (`rbt inspect`) | A finding becomes a ticket, routed below |
+| **Observe** | `inspect`; `deploy` Step 7; the app's logs | Stored state (`rbt inspect`): the history the design chose to record | A finding becomes a ticket, routed below |
 
 The decisions are the user's. The skills put the evidence in front of
 them and wait; they never accept, merge or promote on the user's behalf.
@@ -72,6 +72,65 @@ through "Accept the design" before writing more code.
 Asked where things are, answer with the stage and the next decision:
 "Prove: 11 of 12 scenarios pass; the merge needs the last one", not a
 list of files touched.
+
+### Stage cards
+
+The first time a project reaches one of these moments, say where the
+work stands with a short card, in the user's own nouns and two or three
+of their own rules; after that, the moment gets one line ("11 of 12
+pass; the merge needs the last one"). The stage's name appears once, in
+a clause that says what it is for, never as a label; no chapter numbers
+or links. The models below are the hotel; write yours.
+
+> **The design, for your review.** Here is the design as I understood
+> it: `Room` owns "booked at most once per night", `Reservation.create`
+> books every room or none and is called only by the app, and each
+> rule has a scenario that will test it. This is the cheapest moment to
+> change any of it, before anything depends on it. Take your time; I'll
+> wait for your go-ahead or your changes.
+
+> **The prototype is built and tested.** The app is running at
+> http://localhost:9991; all 9 scenarios pass. This is the stage where
+> the code is checked against the design you accepted, so what you see
+> should match the rules we agreed on. Try the screens the way a guest
+> or a manager would: anything the prototype shows is missing, like
+> what happens when a second guest wants the same night, is a new rule,
+> and we can add it to the design from here.
+
+> **The feature is built and tested.** The full suite ran at this
+> commit: 11 of 12 scenarios pass; the one that doesn't is "A guest
+> cancels the day before check-in". This is the stage where the code is
+> checked against the design you accepted. If you open a pull request,
+> its description lists the rules the change touched first, so you can
+> decide how much code you want to read.
+
+> **Ready to deploy.** The dry run shows what would ship: two commits
+> since the last deploy, no change to the design, and a full passing run
+> of this exact commit. Deploying is yours to call; say so and it goes.
+
+> **Live.** The app is running in production. If a report comes in,
+> `rbt inspect` reads the stored state behind it, and the fix starts
+> from a scenario that reproduces it.
+
+The second card follows what was built: the prototype (a first build,
+with the URL and the invitation to try it), a feature (above), or a fix
+("The fix is in", with the reproducing scenario now passing). The pull
+request sentence appears only when the work is on a branch. First time
+or not: no `design/` before the first checkpoint, no ledger before the
+first deploy.
+
+Tone, for these and any card written later:
+
+- Say what the user gains, not what the agent withholds: "the cheapest
+  moment to change it", never "nothing is built until you accept".
+- The wait is the agent's choice, not a condition on the user: "I'll
+  wait for your go-ahead", never "silence does not count". The rule
+  itself is for the agent (Never, below), not for the user to hear.
+- The next stage is described when it happens, in the model diff's own
+  words, not announced as a gate.
+- Their nouns, two or three of their own rules, never the table
+  restated.
+- One clause of orientation; no stage labels in headers.
 
 ## Never
 

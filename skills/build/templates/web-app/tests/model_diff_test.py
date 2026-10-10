@@ -273,6 +273,14 @@ class ModelDiffTest(unittest.TestCase):
         self.assertFalse(stale["fingerprint_ok"])
         self.assertIn("does not match", model_diff.accepted_line({**stale, "is_base": True}, 0))
 
+    def test_tickets_named_in_changed_features(self) -> None:
+        before = {"tests/a.feature": "Feature: A\n  Ticket: HOTEL-7\n", "tests/b.feature": "Feature: B\n"}
+        after = {"tests/a.feature": "Feature: A\n  Ticket: HOTEL-7\n",
+                 "tests/b.feature": "Feature: B\n  Ticket: HOTEL-9\n  Rule: x\n"}
+        self.assertEqual(model_diff.tickets_of(before, after), ["HOTEL-9"],
+                         "only a changed feature's ticket is listed")
+        self.assertIn("_Tickets_: HOTEL-9", model_diff.markdown("a", "b", [], tickets=["HOTEL-9"]))
+
     def test_generated_code_is_not_read(self) -> None:
         generated = self.root / "backend" / "api" / "hotel" / "v1"
         generated.mkdir(parents=True)
