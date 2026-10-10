@@ -11,8 +11,8 @@ tags: [testing, operations]
 cluster: "4.4"
 duplicate_of: reboot-crm-18
 still_applies: no
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/testing-harness.md § Errors you will see"
 ---
 
 # Classify every red result: no summary line with exit 0 means the run died, not that it passed
@@ -26,3 +26,5 @@ resolved_by: ""
 **Where in the skills.** Not recorded.
 
 **Checked at 1.6.0.** `python/references/lifecycle-dev-loop.md` § Never ("Calling a run with no summary line a pass") and § Do this (timeout; `ps -o pid=,%cpu=,etime=` to tell alive from idle).
+
+**Resolution (2026-10-10).** Rows in `testing-harness.md` § Errors you will see: a run that ends with no summary line and exit 0 died; the dual-stack port collisions on macOS and the `conftest.py` loopback setting; the `sys.excepthook` noise. `pytest-timeout` in the templates fails a hang on its own.

@@ -10,8 +10,8 @@ names:
 tags: [negative-space, error-text, operations]
 cluster: "4.4"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/lifecycle-dev-loop.md § Errors you will see"
 ---
 
 # rbt generate dies with ENOBUFS once the generated TypeScript passes 1 MiB
@@ -25,3 +25,5 @@ resolved_by: ""
 **Where in the skills.** `python/references/patterns-common-gotchas.md`.
 
 **Checked at 1.6.0.** No `ENOBUFS` or `maxBuffer` anywhere under `skills/` (grep).
+
+**Resolution (2026-10-10).** Rows in `lifecycle-dev-loop.md` § Errors you will see: `spawnSync /bin/sh ENOBUFS` with the venv `maxBuffer` patch and the restart; a half-edited module after one of two saves (undeclared errors retry with backoff); the stale effect-validation docs link.

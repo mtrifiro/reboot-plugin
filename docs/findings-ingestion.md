@@ -73,7 +73,7 @@ each has a precedent in this repo.
 | | Mechanism | Fits when | Reading cost | Precedent |
 | --- | --- | --- | --- | --- |
 | M0 | Upstream issue (`Reboot:` fix) and `known-defects.json` | Reboot has the bug; the plugin can only work around it | none | `tool-checks-01`, the `report` skill |
-| M1 | Error row (`## Errors you will see`, generated into `errors.md`) | the agent will be holding an error string | none: `errors.md` is `step: any`, grepped on demand, and the reminder hook says to grep it | the 225-row index |
+| M1 | Error row (`## Errors you will see`, generated into `errors.md`) | the agent will be holding an error string | `errors.md` itself is `step: any`, grepped on demand, and the reminder hook says to grep it; the row's source table is in the owning reference, so a row in an on-path reference counts about 30 words | the 225-row index |
 | M2 | Template file (the fix ships in the project) | a scaffold or config fact: ports, env files, tsconfig, deps, fixtures, scripts | none | `registry.py` (A.6), `AGENTS.md` (A.1), `deploy.sh` setting `DOCKER_HOST` (P1.3), `strictPort` (P3.65) |
 | M3 | Shipped check (fails before the slow thing, with the fix in the message) | the agent only finds out after minutes: a suite run, a generate, a deploy | none, and it **replaces** prose | `tests/step_order.py` (P3.188), `model_diff.py`, `api_removals.py`, `backup.sh` refusing an empty export |
 | M4 | Plugin hook or shim (every project, every session) | machine and process traps: orphans, the RocksDB LOCK, a missing tty, venv patches, a port another cwd owns | none | `orphans.sh` (P2.47, P1.9), the schema guard (P1.4, P3.43), `own.sh`, the vendored `reboot-std-oauth` (P1.22) |
@@ -290,6 +290,16 @@ sequential-seed `presumed deadlocked` warnings (P2.45); `Error in
 sys.excepthook` (P3.87); the `/develop/side_effects` 404 (P3.104); the
 whoami CORS error (P3.41, P3.129); `Connector not found` (P3.182); the
 Vite cold-start `TimeoutError` (P3.179).
+
+**Wave 2 status, 2026-10-10.** Done: 31 rows across 16 references and
+the dashboard skill's Known issues, three existing rows widened, one
+Limits line, and 56 corpus items moved to Resolved (the
+`StateNotConstructed`-on-read family of ten, the effect-validation
+family of six, the convoy, wedge, port and harness items among them).
+The index has 256 rows. Rows in on-path references cost about 600
+words per path, which the sentence on M1 above now says; the allowance
+after wave 2 is 829 (MCP UI), 627 (Web App) and 839 (backend-only)
+words for wave 3.
 
 ### Wave 3: prose, on the record
 

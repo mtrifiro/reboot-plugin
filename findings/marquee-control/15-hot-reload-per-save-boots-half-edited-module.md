@@ -11,8 +11,8 @@ names:
 tags: [operations, error-text, negative-space]
 cluster: ""
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/lifecycle-dev-loop.md § Errors you will see"
 ---
 
 # Hot-reload lands per save, so a multi-edit change can boot a half-edited module
@@ -26,3 +26,5 @@ resolved_by: ""
 **Where in the skills.** `lifecycle-dev-loop.md` (Never), `scheduling-basic.md` (Limits).
 
 **Checked at 1.6.0.** `lifecycle-dev-loop.md` § Never says to write an API (state-shape) edit once in final form while the watcher is live, but says nothing about servicer code reloading per save. `scheduling-basic.md` § Limits says a scheduled method raising `<Method>Aborted` is not retried; that undeclared errors are retried with backoff is not stated.
+
+**Resolution (2026-10-10).** Rows in `lifecycle-dev-loop.md` § Errors you will see: `spawnSync /bin/sh ENOBUFS` with the venv `maxBuffer` patch and the restart; a half-edited module after one of two saves (undeclared errors retry with backoff); the stale effect-validation docs link.

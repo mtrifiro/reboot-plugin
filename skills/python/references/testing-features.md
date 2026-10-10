@@ -327,6 +327,9 @@ not waited for:
 | `Almost: each clause goes in backticks` | A `with` / `has` clause without backticks | `` `amount=50` `` |
 | `Nothing saved as "...";` | Recall before the save, or a misspelled name | Check the list of saved names it prints |
 | `StateNotConstructed` (from `eventually has`) | The actor does not exist yet | Custom polling step (Limits) |
+| `Step definition is not found` for a step whose quoted value holds a backtick | The clause parser splits on the inner backticks | Assert with `containing` on a backtick-free part of the value |
+| `StepDefinitionNotFoundError` for a `does a` step with its `with` clauses after the actor | The clauses go before ``on `<Type>` of "<id>"`` | ``does a `method` with `x=1` on `Type` of "id"`` |
+| `must be JSON` for a value holding `<name>` | A recall inside a JSON5 list or object literal; only a whole value is recalled | A custom step that saves the whole list or object, then `field=<name>` |
 
 ## See also
 

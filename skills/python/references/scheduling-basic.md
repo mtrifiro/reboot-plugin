@@ -100,6 +100,7 @@ while it runs.
   became a crash loop only `rbt dev expunge` cleared (observed at 1.4.0,
   framework issue). Keep an actor's timers few and coarse; never hold a
   lock across a cross-actor round-trip.
+- An undeclared exception in a scheduled method is retried with backoff; a declared `<Method>Aborted` is not (marquee-control, 1.4.1).
 
 ## Scales as
 
@@ -117,7 +118,7 @@ while it runs.
 | --- | --- | --- |
 | `TypeError: reboot.aio.contexts.WorkflowContext is not an instance or subclass of one of the expected type(s): ['reboot.aio.contexts.TransactionContext']` | `schedule()` from a workflow | `spawn(when=…)` |
 | `Cannot upgrade shared lock to exclusive` | Concurrent transactions read, then schedule on, the same actor | Give parallel chains their own actors; don't read before scheduling |
-| `database.cc:1374] Check failed: inserted` | Simultaneous scheduled transactions on one actor (worker exits with status -6) | One task per event; expunge dev state if it crash-loops |
+| `database.cc:1374] Check failed: inserted` | Simultaneous scheduled transactions on one actor, or a restart firing every past-due timer at once (worker exits with status -6) | One task per event; timer methods that only schedule per-actor work; expunge dev state if it crash-loops |
 
 ## See also
 

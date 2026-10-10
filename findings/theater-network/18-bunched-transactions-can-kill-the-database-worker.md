@@ -11,8 +11,8 @@ names:
 tags: [negative-space, cost, error-text]
 cluster: "D"
 still_applies: unknown
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/scheduling-basic.md § Errors you will see"
 ---
 
 # Bunched transactions on one actor can kill the database worker
@@ -26,3 +26,5 @@ resolved_by: ""
 **Where in the skills.** Framework bug (file upstream); the app-level mitigation belongs in `scheduling-basic.md` Never/Scales as.
 
 **Checked at 1.6.0.** Not checked against 1.6.0 runtime. `python/references/scheduling-recurring.md:204` covers catch-up after downtime firing once but not the multi-timer crash-loop.
+
+**Resolution (2026-10-10).** The `database.cc:1374` row in `scheduling-basic.md` now names a restart firing every past-due timer at once and the schedule-only timer shape; § Limits says undeclared exceptions in scheduled methods retry with backoff.

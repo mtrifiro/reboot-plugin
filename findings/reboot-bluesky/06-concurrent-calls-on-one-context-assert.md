@@ -9,8 +9,8 @@ names: []
 tags: [error-text, seeding]
 cluster: "4.4"
 still_applies: unknown
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/lifecycle-initialize-hook.md § Errors you will see"
 ---
 
 # Concurrent top-level calls on one context fail with an internal assertion
@@ -22,3 +22,5 @@ resolved_by: ""
 **Repro.** Not recorded.
 
 **Where in the skills.** Not recorded.
+
+**Resolution (2026-10-10).** `lifecycle-initialize-hook.md` § Errors you will see: the `Transaction '<id>' missing` assertion from concurrent calls on one context (one call at a time, or a context per caller); the `StateAlreadyConstructed` row already covered a factory create after an ordinary restart.

@@ -9,8 +9,8 @@ names: []
 tags: [testing, error-text]
 cluster: ""
 still_applies: unknown
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/testing-features.md § Errors you will see"
 ---
 # A backtick inside a quoted step value breaks the step
 
@@ -21,3 +21,5 @@ resolved_by: ""
 **Repro.** Assert a field whose quoted value contains a backtick code span.
 
 **Where in the skills.** None.
+
+**Resolution (2026-10-10).** Rows in `testing-features.md` § Errors you will see: a backtick inside a quoted value; `with` clauses after the actor; a recall inside a JSON5 literal.

@@ -11,8 +11,8 @@ names:
 tags: [frontend, negative-space]
 cluster: ""
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/react-generated-client.md § Errors you will see"
 ---
 # A page with more than ~6 live reads starves its own data
 
@@ -23,3 +23,5 @@ resolved_by: ""
 **Repro.** One page with seven or more `use<Method>()` reactive reads against `rbt dev run` on `http://localhost`.
 
 **Where in the skills.** `web-app/references/react-client.md`; `python/references/react-generated-client.md`.
+
+**Resolution (2026-10-10).** Rows in `react-generated-client.md` § Errors you will see: the UUID idempotency key; the second reader's hook throwing (1.4.0); int64 as `number`; a subscription on an unconstructed actor tearing the channel; the six-connection ceiling. The `#`-in-id trap already had its row; the `_rbt_web.ts` import failure is proto-era (1.4.0) and not carried.

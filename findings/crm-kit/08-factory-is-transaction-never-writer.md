@@ -12,8 +12,8 @@ tags: [negative-space, contradiction]
 cluster: "4.1"
 duplicate_of: reboot-crm-12
 still_applies: no
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/api-schema-evolution.md § Errors you will see"
 ---
 
 # Declare every factory as Transaction(mode=Exclusive(), factory=True); a Writer constructor cannot be promoted later
@@ -27,3 +27,5 @@ resolved_by: ""
 **Where in the skills.** `api-schema-evolution.md` (§11).
 
 **Checked at 1.6.0.** `python/references/state-actor-decomposition.md` § Never (line ~94) says start a constructor that may create another actor as `Transaction(mode=Exclusive(), factory=True)`; `api-schema-evolution.md` § Limits (line ~151) records the refusal observed at 1.6.0. The canonical reboot-crm-12 is still marked Open.
+
+**Resolution (2026-10-10).** A row in `api-schema-evolution.md` § Errors you will see for the `writer { constructor { } } to... transaction` refusal, with the lazy-construction workaround and the rule to declare new factories as `Transaction(mode=Exclusive(), factory=True)`; `scripts/api_lint.py` notes a `Writer(factory=True)`.

@@ -303,6 +303,8 @@ CI without a browser or `node_modules` passes
 | `"alice" has not opened the web app;` | A web step before `opens the web app` | Open it first |
 | `AssertionError: already serving` | `frontend` fixture shared across scenarios | Keep it function-scoped |
 | Playwright timeout with a `get_by_label` call log | The label's text differs from what the step says (often a hidden glyph) | Match the full label text, or drop the glyph from the label |
+| A bare `TimeoutError` from the `frontend` fixture on the first web scenario after adding a dependency | Vite's cold pre-bundle passed reboot.bdd's 60 s serving deadline | Rerun once Vite has pre-bundled (start it by hand once) |
+| `Page.goto: Timeout 30000ms exceeded ... waiting until "load"` on a scenario's first step, passing alone | The page's `load` waited on a slow request (a font CDN; several Vite servers at once) | Bundle fonts (`@fontsource`, as the template does); override `web_app` to report open requests |
 
 ## See also
 

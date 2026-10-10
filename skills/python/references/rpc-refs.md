@@ -135,8 +135,9 @@ implicitly; on a type with a `factory=True` constructor it aborts
 | `aborted with 'StateNotConstructed { requires_constructor: true }'` | A non-constructor writer on a type with a `factory=True` constructor | Call the constructor first |
 | `AttributeError: 'XServicer' object has no attribute 'state_id'` | `self.state_id` on a servicer | `self.ref().state_id` / `context.state_id` |
 | `MixedContextsError` / `has previously been used by a different \`Context\`` | One `WeakReference` reused across contexts | Fresh `Type.ref(id)` per context |
-| `has illegal name: Schedule is reserved` | A method named after a ref API verb | Rename the method |
+| `has illegal name: <Name> is reserved`, or only `protoc failed with exit status 1` | A method named `read`, `write`, `delete`, `state`, `schedule` or `spawn` | Rename it; `scripts/api_lint.py` finds it before generate |
 | `InvalidStateRefError: The 'state_id' option must be at least 1 character(s) long` | Ref built from an empty stored ID, usually a new ID field never back-filled on an existing actor | Allocate the ID lazily on first use; treat `""` as empty in readers; see Never |
+| `State '<id>' for state type '<type>' not constructed (call any writer to construct). Will silence this message for the next 5 minutes.` | A WARNING per probe of a missing actor | Expected when probing existence; construct singletons from `initialize` with a no-op writer |
 
 ## See also
 

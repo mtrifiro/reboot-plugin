@@ -9,8 +9,8 @@ names: []
 tags: [testing, frontend, error-text]
 cluster: "8.4"
 still_applies: unknown
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/testing-web-app.md § Errors you will see"
 ---
 
 # A browser scenario whose page does not load times out after 30 s and says nothing about why
@@ -22,3 +22,5 @@ resolved_by: ""
 **Repro.** Not recorded.
 
 **Where in the skills.** Not recorded.
+
+**Resolution (2026-10-10).** Rows in `testing-web-app.md` § Errors you will see: the bare `TimeoutError` from the `frontend` fixture after a new dependency (Vite's cold pre-bundle); `Page.goto: Timeout 30000ms` on a first step (a slow request holding `load`; bundle fonts, report open requests).

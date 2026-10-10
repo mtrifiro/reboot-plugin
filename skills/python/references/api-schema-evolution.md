@@ -170,6 +170,7 @@ right before state first persists.
 | `was removed from Pydantic model` | A field was deleted (any model) | Restore it |
 | `has switched type from` | A field's type changed | New field, new `tag` |
 | ``waiting for modification, or hit `x` to expunge`` | `rbt dev run` with `ask` | Fix the code (reloads) or press `x` |
+| `Reboot options for method 'create'` … `updated from... writer { constructor { } } to... transaction` | A factory constructor's kind cannot change against persisted state, though the kind change is compatible elsewhere | Keep the writer and construct the dependent actor lazily on first use; declare new factories `Transaction(mode=Exclusive(), factory=True)` |
 
 Recovery: `rbt dev run` — fix the code, or `x`, or
 `rbt dev expunge --application-name=<app> --yes`; `rbt serve` — delete

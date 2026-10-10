@@ -11,8 +11,8 @@ names:
 tags: [error-text, frontend, negative-space]
 cluster: ""
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/react-generated-client.md § Errors you will see"
 ---
 
 # A wire-level idempotency key must be a UUID; a readable one fails as an opaque Unknown
@@ -26,3 +26,5 @@ resolved_by: ""
 **Where in the skills.** `python/references/react-generated-client.md` (the `idempotencyKey?: string` option) and `patterns-react-state.md`.
 
 **Checked at 1.6.0.** `react-generated-client.md` types the option as `idempotencyKey?: string` with no format; `patterns-react-state.md` mints it with `newId()` but never says it must be a UUID. Grep for `badly formed`/`uuid string` across `skills/` found nothing.
+
+**Resolution (2026-10-10).** Rows in `react-generated-client.md` § Errors you will see: the UUID idempotency key; the second reader's hook throwing (1.4.0); int64 as `number`; a subscription on an unconstructed actor tearing the channel; the six-connection ceiling. The `#`-in-id trap already had its row; the `_rbt_web.ts` import failure is proto-era (1.4.0) and not carried.

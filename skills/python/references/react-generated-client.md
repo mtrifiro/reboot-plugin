@@ -186,6 +186,11 @@ asynchronously: guard at the parent, mount the child with a real id.
 | `[Reboot] '<Type>.<Method>' aborted with` | Console warning on every aborted call | Expected; handle `aborted` |
 | `[Reboot] Caught unknown exception: Not expecting stream to ever be done` | Open subscriptions during a dev-server restart | None; it reconnects |
 | `Expecting either a response or a status` | The one case a mutation promise rejects | Transport failure; handle in `try/finally` |
+| `ValueError: badly formed hexadecimal UUID string` (server), `rbt.v1alpha1.Unknown` (client) | A readable `idempotencyKey` on the wire | `crypto.randomUUID()`; readable aliases only for the backend's `idempotently(alias=)` |
+| `TypeError: Cannot set properties of undefined (setting '<uuid>') at <Type>Instance.use<Reader>` | A second `request=None` reader's hook (1.4.0 client; not re-verified at 1.6.0) | Call it one-shot (`await ref.<reader>()`) and poll |
+| `cannot encode field … to JSON` inside `httpCall`; the click does nothing | An int64 request field given a `BigInt` or a string (1.4.0 client) | Pass a plain `number` |
+| A hook on an actor that does not exist retries about once a second and every other subscription on the page stalls | `StateNotConstructed` on a subscription tears the shared channel | Mount the component only after the actor exists; a no-op `touch` writer constructs a no-factory type |
+| A page's seventh live read never loads, with no error; Reboot logs a warning naming HTTP/2 | HTTP/1.1 allows about six connections per origin and each reactive read holds one | Keep a page under six reactive reads; a plain call (a promise) for data read once |
 
 ## See also
 

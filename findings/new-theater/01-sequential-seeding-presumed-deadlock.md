@@ -9,8 +9,8 @@ names: []
 tags: [cost, seeding, error-text]
 cluster: ""
 still_applies: unknown
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/lifecycle-seeding.md § Errors you will see"
 ---
 # Sequential seeding transactions each log a presumed deadlock, then succeed on retry
 
@@ -21,3 +21,5 @@ resolved_by: ""
 **Repro.** Seed from `initialize` with one awaited transaction at a time (`Chain.add_cinema`, then `Screen.schedule_showtimes` per screen-day) under `rbt dev run`.
 
 **Where in the skills.** Not applicable to a skill. Related to reboot-crm-23 (`PRESUMED_DEADLOCK` names a cause it has not established).
+
+**Resolution (2026-10-10).** The presumed-deadlock row in `lifecycle-seeding.md` now says sequential `initialize` transactions trip it too at 1.6.0, about 2.5 s each, and to seed through bulk methods.

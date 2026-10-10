@@ -12,8 +12,8 @@ tags: [negative-space, testing, frontend]
 cluster: ""
 duplicate_of: cineloop-33
 still_applies: no
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/rpc-refs.md § Do this"
 ---
 
 # A reader on a never-constructed actor aborts (the loser's Cart in a contested add)
@@ -27,3 +27,5 @@ resolved_by: ""
 **Where in the skills.** `python/references/rpc-refs.md`; `react-generated-client.md` for the subscription case. Same gap as cineloop-33 and marquee-control-09.
 
 **Checked at 1.6.0.** `rpc-refs.md` now says a reader on a never-constructed actor aborts `StateNotConstructed` for every type ("Does this actor exist?") and § Never forbids assuming zero state; `react-generated-client.md` § Limits says subscribing to an unconstructed actor aborts and retries: construct, then mount.
+
+**Resolution (2026-10-10).** `rpc-refs.md` § Do this ("Does this actor exist?") says a reader on a never-constructed actor aborts `StateNotConstructed` for every type, with or without a factory, and shows the `isinstance(aborted.error, StateNotConstructed)` probe; § Never forbids assuming zero state; the Errors table carries the per-probe WARNING. `stdlib-ordered-map.md` has the `SearchAborted`/`RangeAborted` row and `rpc-constructor-calls.md` the `.idempotently()` constructor row.

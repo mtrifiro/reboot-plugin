@@ -177,6 +177,7 @@ every page this way from the start:
 | `error TS2688: Cannot find type definition file for 'node'.` | `"types": ["node"]` without `@types/node` | Copy the template's `package.json` |
 | `Cannot find name 'process'` | `process.env` in `vite.config.ts` without `@types/node` | Same |
 | `` `Application(oauth=...)` is running without `OAuth(allowed_origins=[...])` `` | `allowed_origins` left out: works under `rbt dev run`, production refuses to start | Pass a list (the template passes `[]`); list the SPA origin before deploying |
+| `/__/oauth/whoami` CORS error in the browser console on every load | The client probes it whether or not the app has `oauth=`; nothing breaks. On 1.4.0 the response lacked `access-control-allow-credentials` and the client retried forever | Ignore it; on 1.4.0 serve same-origin through a Vite proxy |
 
 ## See also
 

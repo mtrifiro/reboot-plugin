@@ -9,8 +9,8 @@ names: []
 tags: [negative-space, testing, operations, error-text]
 cluster: "F"
 still_applies: unknown
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/testing-harness.md § Errors you will see"
 ---
 
 # Test servers listen on 0.0.0.0 (dual-stack IPv6) and macOS hands out ports held on IPv4, so servers collide with orphaned Envoys
@@ -22,3 +22,5 @@ resolved_by: ""
 **Repro.** `scripts/orphan_envoy_experiment.sh 3 6`, then `scripts/diag_report.py`; the allocator alone with a few lines of Python `socket`; database: `CRM_LANDMINE=1 CRM_BIND_LOOPBACK=0 uv run pytest tests/canary_full_test.py -k comes_up_and_goes_down --count 4`.
 
 **Where in the skills.** Not a skill gap as written; relevant to `python/references/testing-harness.md` only if a note on orphaned Envoys and loopback binding is added.
+
+**Resolution (2026-10-10).** Rows in `testing-harness.md` § Errors you will see: a run that ends with no summary line and exit 0 died; the dual-stack port collisions on macOS and the `conftest.py` loopback setting; the `sys.excepthook` noise. `pytest-timeout` in the templates fails a hang on its own.

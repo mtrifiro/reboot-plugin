@@ -12,8 +12,8 @@ names:
 tags: [contradiction, negative-space, error-text]
 cluster: "4.1"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/api-schema-evolution.md § Errors you will see; python/references/state-actor-decomposition.md § Never"
 ---
 
 # A constructor cannot change from Writer to Transaction, though the table says the kind change is compatible
@@ -27,3 +27,5 @@ resolved_by: ""
 **Where in the skills.** `python/references/api-schema-evolution.md` (row ~line 50, text ~lines 72-73), `servicer-constructor.md`, `state-actor-decomposition.md`.
 
 **Checked at 1.6.0.** `api-schema-evolution.md` line 50 still lists `Writer`/`Transaction` as `yes` and lines 72-73 say it is legal when `factory=True` is unchanged, with no constructor exception; neither `servicer-constructor.md` nor `state-actor-decomposition.md` carries the design rule.
+
+**Resolution (2026-10-10).** A row in `api-schema-evolution.md` § Errors you will see for the `writer { constructor { } } to... transaction` refusal, with the lazy-construction workaround and the rule to declare new factories as `Transaction(mode=Exclusive(), factory=True)`; `scripts/api_lint.py` notes a `Writer(factory=True)`.

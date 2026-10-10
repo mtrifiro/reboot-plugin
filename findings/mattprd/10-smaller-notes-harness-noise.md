@@ -9,8 +9,8 @@ names: []
 tags: [error-text, testing]
 cluster: "8.4"
 still_applies: unknown
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/testing-harness.md § Errors you will see"
 ---
 
 # Smaller notes: excepthook noise and duplicate allowed_origins warning
@@ -22,3 +22,5 @@ resolved_by: ""
 **Repro.** Not recorded.
 
 **Where in the skills.** Not recorded.
+
+**Resolution (2026-10-10).** Rows in `testing-harness.md` § Errors you will see: a run that ends with no summary line and exit 0 died; the dual-stack port collisions on macOS and the `conftest.py` loopback setting; the `sys.excepthook` noise. `pytest-timeout` in the templates fails a hang on its own.

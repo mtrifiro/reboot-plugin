@@ -145,6 +145,9 @@ uv run rbt dev expunge --yes
 | Every reader fails with `Unavailable: ping timeout` for about 10 minutes after each restart; Envoy at several hundred % CPU | Envoy's LuaJIT on macOS arm64 (reboot-crm, 1.6.0) | Wait it out; restart less; report upstream |
 | Safari sign-in ends in `Missing pending-flow cookie` | Dev OAuth sets `Secure` cookies over http; WebKit drops them (1.6.0) | Chrome or Firefox locally, or TLS via `dev run --tls-certificate=... --tls-key=...` |
 | `Failed to flush monotonic clock high water mark: IO error: No such file or directory` every second | State expunged under a running backend | Stop completely, start |
+| `ResetAborted: 'Unavailable' … 127.0.0.1:<old port>` retried forever after a restart | A task resumed after `kill -9` pinned to the dead incarnation's internal port | Stop with SIGINT, never `kill -9`; expunge clears it |
+| `Task '…' failed with CreateAborted/ResetAborted: aborted with 'Unavailable': ping timeout; will retry after backoff`, surviving restarts | Dispatcher tasks wedged after Envoy saturated under sustained traffic and subscriptions (1.4.0) | Dedupe subscriptions and polls; no suite beside a live dev run; `rbt dev expunge --yes` clears it |
+| `UNAVAILABLE ... 0.0.0.0:<stale port>` from `/rbt.v1alpha1.Participant/Prepare`, retried forever; later writers to that actor fail the same | The worker was killed mid two-phase commit and the dev runtime keeps the dead participant's address | Stop completely, `rbt dev expunge --yes`; stop with SIGINT between kill-and-resume runs |
 
 ## See also
 

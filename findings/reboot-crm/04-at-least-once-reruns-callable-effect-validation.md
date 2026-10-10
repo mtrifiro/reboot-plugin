@@ -14,8 +14,8 @@ names:
 tags: [negative-space, cost, testing, contradiction]
 cluster: "D"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/servicer-workflow-external.md § Errors you will see; python/references/testing-features.md § Never"
 ---
 
 # at_least_once re-runs its callable to validate effects and keeps the second value; no skill mentions the per-call opt-out
@@ -29,3 +29,5 @@ resolved_by: ""
 **Where in the skills.** `python/references/servicer-workflow.md` (~line 640), `agent-pydantic-ai.md` (~19), `agent-tools.md` (~16), `testing-features.md` (~383), `testing-failure-recovery.md` (~167).
 
 **Checked at 1.6.0.** `effect_validation=` appears only in `python/references/testing-failure-recovery.md` line 183 (the harness-wide form); no reference documents it as a per-call argument on `at_least_once`/`at_most_once`, and `agent-pydantic-ai.md` still promises no re-billing on replay.
+
+**Resolution (2026-10-10).** `servicer-workflow-external.md` § Limits and its `Re-running block` row give the per-call `at_least_once(..., effect_validation=EffectValidation.DISABLED)` and say the second result is memoized; `testing-features.md` § Never has the pure-function rule for stand-ins; `agent-pydantic-ai.md` § Limits says which of the Agent's calls opt out. What is left is Reboot's: a WARNING when the two results differ.

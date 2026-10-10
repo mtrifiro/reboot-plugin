@@ -12,8 +12,8 @@ tags: [cost, contradiction]
 cluster: "D"
 duplicate_of: reboot-crm-04
 still_applies: no
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/servicer-workflow-external.md § Errors you will see"
 ---
 
 # reboot.agents.pydantic_ai.Agent's no-re-billing promise covers replay, not effect validation
@@ -27,3 +27,5 @@ resolved_by: ""
 **Where in the skills.** `agent-pydantic-ai.md`, `agent-tools.md` (§11).
 
 **Checked at 1.6.0.** `agent-pydantic-ai.md` § Limits (~117-119) now says the Agent's model calls pass `effect_validation=EffectValidation.DISABLED` (1.6.0 source), tool calls do not opt out, and the promise covers replay plus this opt-out, not other calls around the agent. `agent-tools.md` § Limits (~77) says tool calls keep effect validation on. The skill's statement disagrees with the source's claim about the Agent's own model calls; it was not re-verified here. `lifecycle-project-setup.md` names `reboot[anthropic]` as the extra.
+
+**Resolution (2026-10-10).** `servicer-workflow-external.md` § Limits and its `Re-running block` row give the per-call `at_least_once(..., effect_validation=EffectValidation.DISABLED)` and say the second result is memoized; `testing-features.md` § Never has the pure-function rule for stand-ins; `agent-pydantic-ai.md` § Limits says which of the Agent's calls opt out. What is left is Reboot's: a WARNING when the two results differ.

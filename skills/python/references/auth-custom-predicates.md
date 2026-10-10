@@ -161,6 +161,7 @@ StateAlreadyConstructed UnknownService UnknownTask InvalidMethod`.
 | `has incompatible type "list[function]"; expected "Sequence[AuthorizerCallable[...]]"` | Unannotated predicate under `mypy` | Annotate as in Do this |
 | `Need type annotation` | A helper returning a rule has no return type | `-> AuthorizerRule[Any, Any]` |
 | `aborted with 'Unauthenticated': You are not authorized to call` | A predicate demanded identity on a nested, tokenless call | Return `Ok` for `context.app_internal` first |
+| `Value of type variable "ContravariantStateType" of "allow_if" cannot be "<X>State \| None"  [type-var]` | A predicate annotated `state: XState \| None` inside `allow_if` (mypy) | Annotate `state: Any = None` and narrow with `isinstance(state, XState)` |
 
 ## See also
 

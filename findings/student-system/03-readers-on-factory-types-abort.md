@@ -11,8 +11,8 @@ tags: [contradiction, error-text, negative-space]
 cluster: "4.1"
 duplicate_of: cineloop-33
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/rpc-refs.md § Do this"
 ---
 
 # Readers on factory-constructed types abort instead of returning zero state
@@ -26,3 +26,5 @@ resolved_by: ""
 **Where in the skills.** `python/references/rpc-refs.md`, "Refs Don't Materialize Actors" (contradicts `python/references/stdlib-ordered-map.md` on unconstructed reads).
 
 **Checked at 1.6.0.** `python/references/rpc-refs.md` line ~105 still reads "A reader call on a non-existent actor returns the zero-valued state".
+
+**Resolution (2026-10-10).** `rpc-refs.md` § Do this ("Does this actor exist?") says a reader on a never-constructed actor aborts `StateNotConstructed` for every type, with or without a factory, and shows the `isinstance(aborted.error, StateNotConstructed)` probe; § Never forbids assuming zero state; the Errors table carries the per-probe WARNING. `stdlib-ordered-map.md` has the `SearchAborted`/`RangeAborted` row and `rpc-constructor-calls.md` the `.idempotently()` constructor row.

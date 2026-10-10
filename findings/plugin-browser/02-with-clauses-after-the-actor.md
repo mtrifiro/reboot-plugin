@@ -10,8 +10,8 @@ names:
 tags: [testing, error-text]
 cluster: ""
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/testing-features.md § Errors you will see"
 ---
 # Arguments after the actor get a bare "Step definition is not found", no "Almost" hint
 
@@ -22,3 +22,5 @@ resolved_by: ""
 **Repro.** Put a `with` clause list after ``on `<Type>` of "<id>"`` in a `does a` step.
 
 **Where in the skills.** `python/references/testing-features.md` (state the order), or an "Almost" step in `reboot/bdd/steps.py`.
+
+**Resolution (2026-10-10).** Rows in `testing-features.md` § Errors you will see: a backtick inside a quoted value; `with` clauses after the actor; a recall inside a JSON5 literal.

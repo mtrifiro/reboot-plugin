@@ -10,8 +10,8 @@ names:
 tags: [frontend, error-text]
 cluster: ""
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/react-generated-client.md § Errors you will see"
 ---
 
 # The generated reactive hook works for one reader and throws for another on the same type
@@ -25,3 +25,5 @@ resolved_by: ""
 **Where in the skills.** Runtime bug; `python/references/react-generated-client.md` has no note.
 
 **Checked at 1.6.0.** Not checked against the 1.6.0 client runtime. Grep for `Cannot set properties`/`setResponses` across `skills/` found nothing.
+
+**Resolution (2026-10-10).** Rows in `react-generated-client.md` § Errors you will see: the UUID idempotency key; the second reader's hook throwing (1.4.0); int64 as `number`; a subscription on an unconstructed actor tearing the channel; the six-connection ceiling. The `#`-in-id trap already had its row; the `_rbt_web.ts` import failure is proto-era (1.4.0) and not carried.

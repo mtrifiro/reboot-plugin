@@ -11,8 +11,8 @@ tags: [negative-space, testing]
 cluster: "D"
 duplicate_of: reboot-crm-04
 still_applies: no
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/servicer-workflow-external.md § Errors you will see"
 ---
 
 # Effect validation re-fires at_least_once external callables in workflows, and the re-run's result wins
@@ -26,3 +26,5 @@ resolved_by: ""
 **Where in the skills.** `python/references/servicer-workflow.md` (`at_least_once` section).
 
 **Checked at 1.6.0.** `python/references/servicer-workflow-external.md` § Limits now says effect validation runs an `at_least_once` callable twice in development and the test harness and memoizes the second result, with the per-call `effect_validation=EffectValidation.DISABLED` opt-out; § Never warns against list-popping test stand-ins; `errors.md` has the `Re-running block with idempotency alias` row. Same gap as reboot-crm-04.
+
+**Resolution (2026-10-10).** `servicer-workflow-external.md` § Limits and its `Re-running block` row give the per-call `at_least_once(..., effect_validation=EffectValidation.DISABLED)` and say the second result is memoized; `testing-features.md` § Never has the pure-function rule for stand-ins; `agent-pydantic-ai.md` § Limits says which of the Agent's calls opt out. What is left is Reboot's: a WARNING when the two results differ.

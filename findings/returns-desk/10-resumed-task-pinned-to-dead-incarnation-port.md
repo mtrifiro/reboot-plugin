@@ -9,8 +9,8 @@ names: []
 tags: [operations, error-text]
 cluster: ""
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "run/references/stop-restart-reset.md § Errors you will see"
 ---
 
 # A task resumed after an unclean kill retries forever against the dead incarnation's internal port
@@ -24,3 +24,5 @@ resolved_by: ""
 **Where in the skills.** Framework (file upstream). No skill names it.
 
 **Checked at 1.6.0.** grep for `ResetAborted` across `skills/` finds nothing. Not checked against the 1.6.0 runtime.
+
+**Resolution (2026-10-10).** Rows in `stop-restart-reset.md` § Errors you will see: `ResetAborted: 'Unavailable'` against a dead incarnation's port after `kill -9`; the dispatcher wedge (`ping timeout; will retry after backoff`) that survives restarts; the stale-address `Participant/Prepare` loop after a mid-commit kill. Each names the expunge as the reset.

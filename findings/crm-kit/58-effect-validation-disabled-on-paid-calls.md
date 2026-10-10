@@ -12,8 +12,8 @@ tags: [cost, negative-space]
 cluster: "D"
 duplicate_of: reboot-crm-04
 still_applies: no
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/servicer-workflow-external.md § Errors you will see"
 ---
 
 # Pass effect_validation=EffectValidation.DISABLED to every at_least_once that wraps a paid call
@@ -27,3 +27,5 @@ resolved_by: ""
 **Where in the skills.** `testing-failure-recovery.md` (§11).
 
 **Checked at 1.6.0.** `servicer-workflow-external.md` § Limits (line ~169) and `testing-failure-recovery.md` § Counting calls (line ~124) now give the per-call `at_least_once(..., effect_validation=EffectValidation.DISABLED)`; `errors.md` indexes the `Re-running block` log line with the same fix.
+
+**Resolution (2026-10-10).** `servicer-workflow-external.md` § Limits and its `Re-running block` row give the per-call `at_least_once(..., effect_validation=EffectValidation.DISABLED)` and say the second result is memoized; `testing-features.md` § Never has the pure-function rule for stand-ins; `agent-pydantic-ai.md` § Limits says which of the Agent's calls opt out. What is left is Reboot's: a WARNING when the two results differ.

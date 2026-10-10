@@ -10,8 +10,8 @@ names:
 tags: [operations, negative-space, error-text]
 cluster: ""
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "run/references/stop-restart-reset.md § Errors you will see"
 ---
 
 # Killing the worker mid-2PC wedges a durable Prepare retry loop that only expunge clears
@@ -25,3 +25,5 @@ resolved_by: ""
 **Where in the skills.** Not recorded.
 
 **Checked at 1.6.0.** Grep of `skills/` for `Participant/Prepare`, `stale`, `wedge` and `2PC` found only `servicer-transaction.md` (2PC participants and colliding prepares) and `lifecycle-dev-loop.md` (stack dumps for a wedge); `run/references/stop-restart-reset.md` § Reset dev state (expunge) lists when to expunge but not a stale-address Prepare loop after a mid-commit kill.
+
+**Resolution (2026-10-10).** Rows in `stop-restart-reset.md` § Errors you will see: `ResetAborted: 'Unavailable'` against a dead incarnation's port after `kill -9`; the dispatcher wedge (`ping timeout; will retry after backoff`) that survives restarts; the stale-address `Participant/Prepare` loop after a mid-commit kill. Each names the expunge as the reset.

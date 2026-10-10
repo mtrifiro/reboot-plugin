@@ -11,8 +11,8 @@ tags: [frontend, negative-space]
 cluster: "4.2"
 duplicate_of: theater-network-09
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/react-generated-client.md § Errors you will see"
 ---
 
 # The generated _rbt_web.ts was avoided with 8 state types in one API file (unverified)
@@ -26,3 +26,5 @@ resolved_by: ""
 **Where in the skills.** `python/references/react-generated-client.md` (not named by the source).
 
 **Checked at 1.6.0.** grep for `rbt_web` across `skills/` finds nothing; 1.6.0 projects still generate `*_rbt_web.ts`. Same gap as theater-network-09 (d). agentic-demo's learnings file repeats returns-desk's text for this section (it is the same file with §11 added); see returns-desk-12.
+
+**Resolution (2026-10-10).** Rows in `react-generated-client.md` § Errors you will see: the UUID idempotency key; the second reader's hook throwing (1.4.0); int64 as `number`; a subscription on an unconstructed actor tearing the channel; the six-connection ceiling. The `#`-in-id trap already had its row; the `_rbt_web.ts` import failure is proto-era (1.4.0) and not carried.

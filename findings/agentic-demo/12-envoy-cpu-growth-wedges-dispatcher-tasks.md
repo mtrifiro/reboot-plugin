@@ -11,8 +11,8 @@ names:
 tags: [cost, operations, error-text]
 cluster: ""
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "run/references/stop-restart-reset.md § Errors you will see"
 ---
 
 # Under sustained workflow traffic Envoy's CPU grows until internal pings time out, wedging dispatcher tasks in a retry loop that survives restarts
@@ -26,3 +26,5 @@ resolved_by: ""
 **Where in the skills.** Framework (file upstream). Operationally relevant to `run/SKILL.md`. Compare reboot-crm-07 (LuaJIT post-restart Envoy window on macOS arm64, which ends after ~10 minutes, whereas this grows and survives restart) and theater-network-23 (per-request Envoy cost); related to item 10 here.
 
 **Checked at 1.6.0.** `errors.md` and `run/references/stop-restart-reset.md` § Errors you will see list `Unavailable: ping timeout` only as the ~10-minute post-restart LuaJIT window, and `patterns-load-and-benchmarking.md` as a fan-out exceeding the request window. Nothing covers Envoy CPU growth under sustained traffic, `CreateAborted`/`ResetAborted` retry loops that survive a restart, or expunge as the only remedy. Not checked against the 1.6.0 runtime.
+
+**Resolution (2026-10-10).** Rows in `stop-restart-reset.md` § Errors you will see: `ResetAborted: 'Unavailable'` against a dead incarnation's port after `kill -9`; the dispatcher wedge (`ping timeout; will retry after backoff`) that survives restarts; the stale-address `Participant/Prepare` loop after a mid-commit kill. Each names the expunge as the reset.

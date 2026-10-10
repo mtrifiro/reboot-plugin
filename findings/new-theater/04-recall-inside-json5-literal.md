@@ -10,8 +10,8 @@ names:
 tags: [testing, negative-space]
 cluster: ""
 still_applies: unknown
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/testing-features.md § Errors you will see"
 ---
 # A saved value can't be recalled inside a JSON5 literal
 
@@ -22,3 +22,5 @@ resolved_by: ""
 **Repro.** Save two values, then use both inside one JSON5 list literal in a step.
 
 **Where in the skills.** `python/references/testing-features.md`.
+
+**Resolution (2026-10-10).** Rows in `testing-features.md` § Errors you will see: a backtick inside a quoted value; `with` clauses after the actor; a recall inside a JSON5 literal.

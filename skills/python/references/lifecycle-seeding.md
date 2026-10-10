@@ -184,7 +184,7 @@ Assert against seed constants (`LAB_SHOWINGS`), not literals (`48`).
 | --- | --- | --- |
 | `PermissionDenied` (on a seed call in a test) | Internal-only method called with a user context | Seed through `create_external_context(..., app_internal=True)` |
 | `database.cc Check failed` | Dev state from an incompatible earlier design | Stop the app, run `rbt dev expunge --application-name=<name> --yes`, reseed |
-| `is presumed deadlocked with it; aborting so that the older transaction proceeds` | Concurrent transactions contending for the same actors | Seed sequentially |
+| `is presumed deadlocked with it; aborting so that the older transaction proceeds` | Concurrent transactions contending for the same actors; at 1.6.0 also every sequential `initialize` transaction against its own previous run, about 2.5 s each, then succeeding | Seed sequentially, through bulk methods (one transaction per record group) |
 
 ## See also
 

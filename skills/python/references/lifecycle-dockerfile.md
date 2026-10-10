@@ -163,6 +163,7 @@ frontend/dist/
 | Error text (stable prefix) | Meaning | Fix |
 | --- | --- | --- |
 | `Could not find Dockerfile '...'` | `rbt cloud up` looked for `./Dockerfile` (or `--dockerfile=`) and found nothing | Add it at the project root, or pass `--dockerfile=` |
+| `issubclass() arg 1 must be a class` from `rbt generate` in the Cloud build | The image runs Python 3.10; a quoted forward reference or 3.11+ syntax in `api/` | `scripts/api_lint.py` finds it; define Models above their use, unquoted |
 
 ## See also
 

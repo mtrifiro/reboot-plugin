@@ -155,6 +155,9 @@ on an in-system actor that schedules the HTTP send in a workflow, then
 | `Timed out waiting 30.0s to acquire exclusive lock; retry the transaction.` | Another holder kept the actor locked past the deadline (long transaction, or a vanished caller) | Shrink the transaction; drain callers; restart clears an orphaned lock |
 | `Cannot upgrade shared lock to exclusive: another transaction is already upgrading the same state; retry the transaction.` | Two `Shared()` transactions both read then wrote (or scheduled on) the same actor | Use `Exclusive()`, or don't read before scheduling; give parallel chains their own actors |
 | `is presumed deadlocked with it; aborting so that the older transaction proceeds. Retry required.` | Deadlock broken by aborting the younger transaction (logged; retried automatically) | Keep one actor-touch order to avoid the retries |
+| `aborted with 'Unknown'` from a transaction whose nested call hit `StateNotConstructed` | A participant the transaction named was never constructed (a synthetic id); the abort crosses the transaction undeclared | Keep observers and display state out of the participant set; write them from the workflow after commit |
+| `Timed out waiting 30.0s to acquire exclusive lock` from many transactions released together onto one actor, converging over minutes | A convoy on one hot actor's lock; any aggregator, registry or dashboard a transaction touches is such an actor | No bursts of transactions against one actor; keep aggregators out of the participant set and update them after commit with `per_workflow` |
+| `TransactionShouldRetry { reason: PRESUMED_DEADLOCK ... }` repeating for minutes; a button in the UI does nothing | A long-held lock (a slow seed under load, a participant that died holding it), not a cycle; the retry never surfaces to the caller | Stop completely, `rbt dev expunge --yes`, restart; no suite beside the dev loop |
 
 ## See also
 

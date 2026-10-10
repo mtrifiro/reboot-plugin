@@ -9,8 +9,8 @@ names: []
 tags: [frontend, auth, error-text]
 cluster: "8.4"
 still_applies: unknown
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "web-app/references/react-client.md § Errors you will see"
 ---
 
 # RebootClientProvider probes /__/oauth/whoami even when the app has no OAuth
@@ -22,3 +22,5 @@ resolved_by: ""
 **Repro.** Not recorded.
 
 **Where in the skills.** Not recorded.
+
+**Resolution (2026-10-10).** A row in `react-client.md` § Errors you will see for the `/__/oauth/whoami` console error on an app without `oauth=`, and the 1.4.0 retry-forever variant with the same-origin proxy workaround.

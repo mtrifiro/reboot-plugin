@@ -9,8 +9,8 @@ names: []
 tags: [testing, frontend, error-text]
 cluster: ""
 still_applies: unknown
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/testing-web-app.md § Errors you will see"
 ---
 # The test Vite gives a cold start 60 s, which a new dependency can exceed
 
@@ -21,3 +21,5 @@ resolved_by: ""
 **Repro.** Add a frontend dependency, then run a web scenario on a cold Vite cache.
 
 **Where in the skills.** None.
+
+**Resolution (2026-10-10).** Rows in `testing-web-app.md` § Errors you will see: the bare `TimeoutError` from the `frontend` fixture after a new dependency (Vite's cold pre-bundle); `Page.goto: Timeout 30000ms` on a first step (a slow request holding `load`; bundle fonts, report open requests).

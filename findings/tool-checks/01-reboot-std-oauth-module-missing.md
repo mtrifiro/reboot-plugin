@@ -12,8 +12,8 @@ names:
 tags: [version-drift, auth, error-text]
 cluster: "A"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/stdlib-oauth-tokens.md § Errors you will see"
 ---
 
 # `reboot.std.oauth.v1.oauth` does not exist in the reboot 1.6.0 wheel
@@ -64,3 +64,5 @@ wheel it lands in reboot's own `reboot/std/` namespace: upstream's
 install it instead of falling back to hand-rolled `Ciphertext`; the
 upgrade skill removes it once a wheel ships the module. Still open
 upstream: the wheel should ship it.
+
+**Resolution (2026-10-10).** `stdlib-oauth-tokens.md` ships the vendored `reboot-std-oauth` package and its Errors row names the fix; `tools/known-defects.json` keeps the symbol tracked until the wheel ships it.

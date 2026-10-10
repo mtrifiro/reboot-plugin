@@ -11,8 +11,8 @@ tags: [negative-space, error-text]
 cluster: ""
 duplicate_of: cineloop-33
 still_applies: no
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/rpc-refs.md § Do this"
 ---
 
 # rpc-refs.md overpromises on missing actors: a no-factory singleton never written aborts too
@@ -26,3 +26,5 @@ resolved_by: ""
 **Where in the skills.** `python/references/rpc-refs.md`. Same gap as cineloop-33; this sighting shows it is not limited to factory types.
 
 **Checked at 1.6.0.** `rpc-refs.md` § "Does this actor exist?" now says the reader aborts for every type, with or without a factory, and gives the `isinstance(aborted.error, StateNotConstructed)` probe; § Never forbids assuming zero state. The `Unknown` wrapping when the abort crosses an undeclaring transaction is covered generally by the `propagating as 'Unknown'` row in `errors.md`.
+
+**Resolution (2026-10-10).** `rpc-refs.md` § Do this ("Does this actor exist?") says a reader on a never-constructed actor aborts `StateNotConstructed` for every type, with or without a factory, and shows the `isinstance(aborted.error, StateNotConstructed)` probe; § Never forbids assuming zero state; the Errors table carries the per-probe WARNING. `stdlib-ordered-map.md` has the `SearchAborted`/`RangeAborted` row and `rpc-constructor-calls.md` the `.idempotently()` constructor row.

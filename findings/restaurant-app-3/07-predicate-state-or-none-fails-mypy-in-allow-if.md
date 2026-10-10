@@ -11,8 +11,8 @@ names:
 tags: [auth, error-text]
 cluster: ""
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/auth-custom-predicates.md § Errors you will see"
 ---
 # The custom-predicate example's `state: XState | None` fails mypy inside `allow_if`
 
@@ -23,3 +23,5 @@ resolved_by: ""
 **Repro.** The reference's `is_owner` against a generated `<Type>.Authorizer(method=allow_if(all=[is_owner]))`, then `uv run mypy backend/`.
 
 **Where in the skills.** `python/references/auth-custom-predicates.md`, Do this; `python/references/auth-allow-if.md`.
+
+**Resolution (2026-10-10).** A row in `auth-custom-predicates.md` § Errors you will see for the `ContravariantStateType` type-var error, with the `Any` plus `isinstance` form.

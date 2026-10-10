@@ -10,8 +10,8 @@ names:
 tags: [frontend, auth, version-drift]
 cluster: "8.4"
 still_applies: unknown
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "web-app/references/react-client.md § Errors you will see"
 ---
 
 # 1.4.0: /__/oauth/whoami CORS breaks every cross-origin dev frontend
@@ -25,3 +25,5 @@ resolved_by: ""
 **Where in the skills.** Not a skill gap unless the bug persists; `web-app/references/react-client.md` covers backend URL in dev.
 
 **Checked at 1.6.0.** Not checked against the 1.6.0 runtime. `web-app/references/react-client.md:227` mentions the whoami probe only as an `isLoading` note.
+
+**Resolution (2026-10-10).** A row in `react-client.md` § Errors you will see for the `/__/oauth/whoami` console error on an app without `oauth=`, and the 1.4.0 retry-forever variant with the same-origin proxy workaround.

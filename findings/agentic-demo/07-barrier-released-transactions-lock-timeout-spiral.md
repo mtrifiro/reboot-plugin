@@ -11,8 +11,8 @@ tags: [cost, pattern, error-text]
 cluster: ""
 duplicate_of: returns-desk-07
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/servicer-transaction.md § Errors you will see"
 ---
 
 # Barrier-released transactions on one actor spiral into 30 s lock timeouts; keep aggregators out of the participant set
@@ -26,3 +26,5 @@ resolved_by: ""
 **Where in the skills.** `python/references/servicer-transaction.md`.
 
 **Checked at 1.6.0.** `servicer-transaction.md` § Limits documents the 30 s lock deadline and the `Unavailable` abort, § Errors you will see has the timeout string, and § Scales as says a transaction on a hot actor stalls every user writer on it (showtime-42). Nothing covers barrier-released herds or says to keep aggregators, registries and dashboards out of a transaction's participants. Compare theater-network-18 (same family, but there the failure is the `database.cc` worker assert). agentic-demo's learnings file repeats returns-desk's text for this section (it is the same file with §11 added); see returns-desk-07.
+
+**Resolution (2026-10-10).** Rows in `servicer-transaction.md` § Errors you will see: `StateNotConstructed` reaching a caller as `'Unknown'` through a transaction (keep observers out of the participant set); the lock convoy from a burst of transactions on one hot actor (aggregators out, updated after commit); `PRESUMED_DEADLOCK` repeating behind a long-held lock (expunge and restart).

@@ -157,3 +157,4 @@ continue the build.
 | Tab shows "live" off; a fresh `rbt dev run` finds no dashboard; `rbt dashboard` processes still running | The dashboard outlived its 9871 listener (reboot-crm, 1.6.0) | Stop it and start a fresh one |
 | Next start fails with `cannot bind ... Address already in use` on 9871 | A killed dashboard left its Envoy holding the port (student-system, 1.5.0) | `lsof -t -iTCP:9871 -sTCP:LISTEN \| xargs kill`, after checking the holder (see the [run skill](../run/SKILL.md) § "Stop, restart, reset") |
 | `rbt: error: unrecognized arguments` | A flag `rbt dashboard` does not take (e.g. `--no-open-browser`, `--api-directory`) | Use only the four flags in Step 4 |
+| Dashboard workers from earlier sessions, each at about 67% CPU, together over 1 GB | `rbt dashboard` outlives its session; SIGTERM to its backend leaves the worker and Envoy (reboot-crm, 1.6.0) | The session-start report names them; kill the group; `scripts/doctor.sh` lists this project's |

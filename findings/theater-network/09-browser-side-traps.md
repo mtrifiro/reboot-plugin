@@ -11,8 +11,8 @@ names:
 tags: [frontend, negative-space, error-text]
 cluster: "4.2"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/react-generated-client.md § Errors you will see"
 ---
 
 # Browser-side traps, all verified
@@ -26,3 +26,5 @@ resolved_by: ""
 **Where in the skills.** `web-app/references/react-client.md`, `python/references/react-generated-client.md` (Never / Limits / Errors).
 
 **Checked at 1.6.0.** No mention of `#` in ids, subscribing to unconstructed actors, the HTTP/1.1 connection limit or `_rbt_web.ts` import problems in `web-app/` or `python/references/react-generated-client.md`. Item (d) is proto-era (1.4.0) naming and may not apply to the pydantic API.
+
+**Resolution (2026-10-10).** Rows in `react-generated-client.md` § Errors you will see: the UUID idempotency key; the second reader's hook throwing (1.4.0); int64 as `number`; a subscription on an unconstructed actor tearing the channel; the six-connection ceiling. The `#`-in-id trap already had its row; the `_rbt_web.ts` import failure is proto-era (1.4.0) and not carried.

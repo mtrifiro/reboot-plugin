@@ -213,6 +213,7 @@ entity's Readers, Writers and UIs go on its own `Type`.
 | `'Resource()' is not yet supported; use 'Tool()' instead` | `mcp=Resource()` | `mcp=Tool()` |
 | `"type[<Type>]" has no attribute "create"` | mypy: the type has no `factory=True` method (observed at 1.4.1) | `factory=True` on its `create` Writer |
 | `AttributeError: type object '<Type>' has no attribute '<WrongName>'` | Request/response referenced by source class name | `<Type>.<MethodPascalCase>Request` — see [`api-pydantic.md`](../../python/references/api-pydantic.md) |
+| claude.ai shows `Connector not found` for a `UI(request=<Model>)` view after a 200 tool result | The host never requests the view's resource (claude.ai, 2026-10); the same read replayed with the session returns the page | A `UI(request=None)` view renders; diagnose on the host's side, not the server's |
 
 ## See also
 

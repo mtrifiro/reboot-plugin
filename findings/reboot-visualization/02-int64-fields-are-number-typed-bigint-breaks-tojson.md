@@ -10,8 +10,8 @@ names:
 tags: [frontend, error-text, negative-space]
 cluster: ""
 still_applies: unknown
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/react-generated-client.md § Errors you will see"
 ---
 
 # int64 request fields are number-typed in the generated client; a BigInt or string breaks toJson silently
@@ -25,3 +25,5 @@ resolved_by: ""
 **Where in the skills.** `python/references/react-generated-client.md` (no type-mapping note for 64-bit integers).
 
 **Checked at 1.6.0.** Grep for `int64`/`bigint` in `python/references/react-generated-client.md` and `web-app/` found nothing. The source used the 1.4.0 protobuf-es client; whether the 1.6.0 zod-based client has the same mapping was not checked.
+
+**Resolution (2026-10-10).** Rows in `react-generated-client.md` § Errors you will see: the UUID idempotency key; the second reader's hook throwing (1.4.0); int64 as `number`; a subscription on an unconstructed actor tearing the channel; the six-connection ceiling. The `#`-in-id trap already had its row; the `_rbt_web.ts` import failure is proto-era (1.4.0) and not carried.

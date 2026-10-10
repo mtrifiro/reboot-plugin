@@ -153,6 +153,7 @@ whole hook under one token instead (1.6.0 source).
 | `IdempotencyRequiredError: Calls to mutators from within your initialize function must use idempotency` | A mutation, typically a bare `.spawn()`, had no key | `ref.idempotently(alias=...)` before the call |
 | `initialize for application '...' failed with ...; will retry after backoff ...` | `initialize` raised; retried forever. Usually why `rbt.up()` hangs | Fix the named exception |
 | `StateAlreadyConstructed` | Explicit constructor on an existing actor; observed after an ordinary dev restart at 1.4.1, the hook then retrying forever | Leave the bare `create` to its persisted key; if it persists, probe with a reader before creating |
+| `AssertionError: Transaction '<id>' missing for state type '<type>'`, then `cygrpc` errors from `Participant/Abort` | Several calls at once on one context (`asyncio.gather` in `initialize`) | One call at a time per context, or a context per concurrent caller |
 
 ## See also
 

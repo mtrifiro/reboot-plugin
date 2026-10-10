@@ -9,8 +9,8 @@ names: []
 tags: [error-text, cost, negative-space]
 cluster: "4.4"
 still_applies: unknown
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/servicer-transaction.md § Errors you will see"
 ---
 
 # A retry against a long-held lock never surfaces to the caller, and PRESUMED_DEADLOCK names a cause it has not established
@@ -22,3 +22,5 @@ resolved_by: ""
 **Repro.** Run a test suite and `rbt dev run` against the same checkout so the demo seed is starved of CPU, then sign in and set a display name while the seed is still going. Workaround: `rbt dev expunge --yes` and restart.
 
 **Where in the skills.** Not applicable to a skill. Related to student-sor-05 and student-sor-06.
+
+**Resolution (2026-10-10).** Rows in `servicer-transaction.md` § Errors you will see: `StateNotConstructed` reaching a caller as `'Unknown'` through a transaction (keep observers out of the participant set); the lock convoy from a burst of transactions on one hot actor (aggregators out, updated after commit); `PRESUMED_DEADLOCK` repeating behind a long-held lock (expunge and restart).

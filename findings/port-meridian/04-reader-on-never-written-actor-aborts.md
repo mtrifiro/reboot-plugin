@@ -11,8 +11,8 @@ tags: [negative-space, error-text]
 cluster: "4.1"
 duplicate_of: cineloop-33
 still_applies: no
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/rpc-refs.md § Do this"
 ---
 
 # A reader on a never-written actor aborts StateNotConstructed, even with no factory
@@ -26,3 +26,5 @@ resolved_by: ""
 **Where in the skills.** Not recorded.
 
 **Checked at 1.6.0.** `python/references/rpc-refs.md` § Do this ("Does this actor exist?") now says a reader on a never-constructed actor aborts `StateNotConstructed` for every type, with or without a `factory=True` constructor, matching this observation (cineloop-33 had assumed only factory types abort); § Never warns against assuming zero-valued state. The `ensure`-from-`initialize` remedy for singletons is not described there.
+
+**Resolution (2026-10-10).** `rpc-refs.md` § Do this ("Does this actor exist?") says a reader on a never-constructed actor aborts `StateNotConstructed` for every type, with or without a factory, and shows the `isinstance(aborted.error, StateNotConstructed)` probe; § Never forbids assuming zero state; the Errors table carries the per-probe WARNING. `stdlib-ordered-map.md` has the `SearchAborted`/`RangeAborted` row and `rpc-constructor-calls.md` the `.idempotently()` constructor row.

@@ -13,8 +13,8 @@ names:
 tags: [contradiction, negative-space, operations]
 cluster: "4.1"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/rpc-refs.md § Do this; python/references/stdlib-ordered-map.md § Errors you will see"
 ---
 
 # Repeats of student-system findings, hit again
@@ -28,3 +28,5 @@ resolved_by: ""
 **Where in the skills.** `rpc-refs.md`, `run/SKILL.md`.
 
 **Checked at 1.6.0.** `python/references/rpc-refs.md` line ~105 still says reader returns zero-valued state; `run/SKILL.md` has no stop/restart guidance. The `MixedContextsError` rule now exists in `patterns-common-gotchas.md` §20 but not in `rpc-refs.md`.
+
+**Resolution (2026-10-10).** `rpc-refs.md` § Do this ("Does this actor exist?") says a reader on a never-constructed actor aborts `StateNotConstructed` for every type, with or without a factory, and shows the `isinstance(aborted.error, StateNotConstructed)` probe; § Never forbids assuming zero state; the Errors table carries the per-probe WARNING. `stdlib-ordered-map.md` has the `SearchAborted`/`RangeAborted` row and `rpc-constructor-calls.md` the `.idempotently()` constructor row.

@@ -111,6 +111,9 @@ transaction, a failed workflow attempt. Find the quiet failure:
 | `Not expecting stream to ever be done` (browser console) | Tab outlived its backend | Reload the tab |
 | `Failed to flush monotonic clock high water mark: IO error: No such file or directory` | State expunged under a running app | Stop, then restart, per [`../../run/SKILL.md`](../../run/SKILL.md) |
 | `has switched type from` | Watcher persisted a transient field type | Restore the persisted type, or expunge dev state |
+| `protoc-gen-es-with-deps: spawnSync /bin/sh ENOBUFS`, then `protoc-gen-es: Plugin failed with status code 1`; `rbt dev run` waits for modification | The generated TypeScript passed Node's 1 MiB `execSync` buffer: the whole response, from about five state types | Patch `reboot/protoc_gen_es_with_deps.cjs` in the venv with `maxBuffer: 256 * 1024 * 1024` on `execSync(...)`; restart `rbt dev run`; `uv sync` undoes it |
+| `NameError`, then `<Method>Aborted('Unknown')` and `retry after backoff`, in a live scheduled chain after a save | Hot reload applied one of two saves and booted the module half-edited; an undeclared error in a scheduled method retries with backoff | Write each file's edit once, definitions before uses; it heals on the next save |
+| `docs.reboot.dev/develop/side_effects` in the effect-validation log, a 404 | A stale link in 1.4.1 | Read `https://docs.reboot.dev/learn_more/side_effects/` |
 
 ## See also
 

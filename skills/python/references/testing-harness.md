@@ -242,6 +242,9 @@ or one transaction covering every actor involved.
 | `IdempotencyUncertainError: Because we don't know if the mutation` | The context was reused after a denied or failed mutation | Use a fresh context for each expected failure |
 | `has previously been used by a different` (`MixedContextsError`) | One `ref()` was used with two contexts | `Type.ref(id)` per call |
 | `ValueError: This application is already up` | `up()` was called twice | `await rbt.down()` first, and see [`testing-failure-recovery.md`](testing-failure-recovery.md) |
+| `Error in sys.excepthook:` / `Original exception was:` after the run | Teardown noise with no payload | Ignore it; the summary line above it is the result |
+| pytest ends with no summary line and exit 0 | The run died (an `F` may already be on screen) | Treat it as failed; rerun the file alone; `pytest-timeout` (the templates) fails a hang on its own |
+| `Unimplemented` 404s, hangs, or a bare `TimeoutError` after about 45 s from `DatabaseClient`, on macOS | Test servers bind dual-stack `0.0.0.0`, and macOS hands their ports to ones an orphaned Envoy holds on IPv4 | Clear orphans first (`scripts/doctor.sh`); in `conftest.py`, `server_managers.EVERY_LOCAL_NETWORK_ADDRESS = "127.0.0.1"` |
 
 ## See also
 

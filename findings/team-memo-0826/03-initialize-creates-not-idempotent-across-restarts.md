@@ -11,8 +11,8 @@ names:
 tags: [seeding, error-text]
 cluster: "C"
 still_applies: unknown
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/lifecycle-initialize-hook.md § Errors you will see"
 ---
 
 # initialize-hook creates are not idempotent across every restart
@@ -24,3 +24,5 @@ resolved_by: ""
 **Repro.** Not recorded.
 
 **Where in the skills.** `lifecycle-initialize-hook.md`, `servicer-constructor.md`, `rpc-constructor-calls.md`.
+
+**Resolution (2026-10-10).** `lifecycle-initialize-hook.md` § Errors you will see: the `Transaction '<id>' missing` assertion from concurrent calls on one context (one call at a time, or a context per caller); the `StateAlreadyConstructed` row already covered a factory create after an ordinary restart.
