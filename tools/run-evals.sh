@@ -20,9 +20,30 @@ WRAP="$(mktemp -d "${TMPDIR:-/tmp}/reboot-evals.XXXXXX")"
 trap 'rm -rf "$WRAP"' EXIT
 
 mkdir -p "$WRAP/.claude-plugin"
-for d in skills bin hooks hooks-handlers; do
+for d in bin hooks-handlers; do
   ln -s "$ROOT/$d" "$WRAP/$d"
 done
+# The skills are copied, not linked: a run may read inside the plugin
+# under test, judged by the real path, so a link to the checkout left
+# every reference read denied and the design cases measured the
+# SKILL.md text alone (the Skill tool loads a SKILL.md itself; its
+# references need Read).
+rsync -a "$ROOT/skills/" "$WRAP/skills/"
+# The hooks, less the leftover-process report: it runs at session start
+# and tells the agent about dev processes on this machine, which then
+# opens its answer by offering to stop them. An eval measures the
+# skills, not the machine.
+cp -R "$ROOT/hooks" "$WRAP/hooks"
+python3 - "$WRAP/hooks/hooks.json" <<'PY'
+import json, sys
+path = sys.argv[1]
+doc = json.load(open(path))
+events = doc["hooks"] if isinstance(doc.get("hooks"), dict) else doc
+for entries in events.values():
+    for entry in entries:
+        entry["hooks"] = [h for h in entry.get("hooks", []) if "orphans.sh" not in h.get("command", "")]
+json.dump(doc, open(path, "w"), indent=2)
+PY
 cat > "$WRAP/.claude-plugin/plugin.json" <<EOF
 {
   "name": "reboot",
@@ -31,6 +52,7 @@ cat > "$WRAP/.claude-plugin/plugin.json" <<EOF
 }
 EOF
 rsync -a --exclude results "$ROOT/evals/" "$WRAP/evals/"
+
 
 # The wrapper is a fresh temp dir every run and holds this working tree,
 # so trust it: a non-interactive run can't ask, and refuses otherwise.
