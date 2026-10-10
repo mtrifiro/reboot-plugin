@@ -5,9 +5,13 @@ An agent that follows the skills exactly reads a fixed set of SKILL.md
 files plus every reference the builder's reading list names, before
 it writes application code. Everything it reads is re-sent on every
 later turn, so this number is a release metric: reported against a
-target of 30,000 words per front door, and held under a ceiling that
-only moves down (`--check` fails when a path grows past its ceiling;
-a cut lowers the ceiling).
+target of 30,000 words per front door, and held under a ceiling
+(`--check` fails when a path grows past it). A cut lowers the ceiling.
+A raise is a record, kept in `CEILINGS` below: the findings the words
+are for, and the signal that will show whether they earned their
+place; words whose signal fails move into a mechanism and come back
+out (docs/findings-ingestion.md, "The managed budget"). `--ceilings`
+prints the record.
 
 The reading list comes from the references' frontmatter (`step:`,
 `applies:`, `always:`, `when:`; see skills/_template.md): every
@@ -21,6 +25,7 @@ Usage:
     tools/budget.py --json
     tools/budget.py --check            # README table current; every path under its ceiling
     tools/budget.py --readme write     # refresh the README's budget table
+    tools/budget.py --ceilings         # each ceiling: what it allows, and what judges it
 """
 
 from __future__ import annotations
@@ -29,7 +34,7 @@ import argparse
 import json
 import re
 import sys
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
 import reflib
@@ -52,11 +57,61 @@ SKILLS_READ = {
 # Words on each front door's minimal path to aim for.
 TARGET = 30000
 
-# The most words each front door's minimal path may hold: `--check`
-# fails above it. Lower one when a cut lands. Raise one only with the
-# reason in the commit, since this is the line every later edit is
-# held to.
-CEILINGS = {"mcp-ui": 39000, "web-app": 38500, "backend-only": 26000}
+@dataclass(frozen=True)
+class Ceiling:
+    """The most words a front door's minimal path may hold, and why.
+
+    A cut lowers `words` and names itself in `closes` (what moved into
+    a mechanism), with an empty `signal`. A raise names the findings
+    the allowed words are for and the signal that will show whether
+    they earned their place: none of them reported again by a project
+    built after the words landed, and the eval graders that cover
+    them. A raise with no signal is not a raise; it is a leak.
+    """
+
+    words: int
+    was: int      # the ceiling this one replaced
+    since: str    # the date it was set
+    closes: str   # the findings the words are for (a raise), or the cut
+    signal: str   # what judges the words; empty for a cut
+
+
+# `--check` fails above these. The first records are the raise of
+# 2026-10-10, when every path sat within 200 words of a ceiling that
+# until then only moved down, for the prose in wave 3 of
+# docs/findings-ingestion.md: about 1,000 words on the widest path,
+# plus a reserve. Prose outside the minimal path (a reference with a
+# `when:`) draws on nothing.
+_WAVE_3_SIGNAL = (
+    "no finding named here is reported again by a project built after its "
+    "words landed (findings/, sightings); the design-roles, design-history "
+    "and design-accept-gate graders stay green"
+)
+_WAVE_3_PYTHON = (
+    "P3.174 (feature/SKILL.md); P3.153 (servicer-reader.md); P3.166, P3.167 "
+    "(servicer-authorizer.md); P3.191 and the auth-roles pointer "
+    "(auth-custom-predicates.md); P3.102 (lifecycle-initialize-hook.md)"
+)
+_WAVE_3_BUILD = "P2.48, P3.194, P3.186 (build/SKILL.md)"
+_WAVE_3_REACT = "P2.43, P3.38, P3.141, P3.151, P3.158, P4.34 (react-generated-client.md)"
+CEILINGS = {
+    "mcp-ui": Ceiling(
+        40500, was=39000, since="2026-10-10",
+        closes=f"P1.23, P4.26 (mcp-ui/SKILL.md); P4.25, P4.27, P4.32 "
+               f"(api-method-types.md); P3.175 (api-state-shapes.md); "
+               f"{_WAVE_3_BUILD}; {_WAVE_3_REACT}; {_WAVE_3_PYTHON}",
+        signal=_WAVE_3_SIGNAL),
+    "web-app": Ceiling(
+        40000, was=38500, since="2026-10-10",
+        closes=f"{_WAVE_3_BUILD}; {_WAVE_3_REACT}; P3.94 (react-client.md); "
+               f"{_WAVE_3_PYTHON}",
+        signal=_WAVE_3_SIGNAL),
+    "backend-only": Ceiling(
+        27000, was=26000, since="2026-10-10",
+        closes=_WAVE_3_PYTHON,
+        signal="no finding named here is reported again by a project built "
+               "after its words landed (findings/, sightings)"),
+}
 
 README_LABELS = {"mcp-ui": "MCP UI", "web-app": "Web App", "backend-only": "Backend only"}
 
@@ -120,7 +175,15 @@ def print_table(report: Report) -> None:
     total, minimal = report.total(False), report.total(True)
     print(f"{'total':<14}{len(report.fixed) + len(report.items):>6}{total:>9}{minimal:>9}")
     print(f"\n~{round(minimal * 4 / 3):,} tokens on the minimal path; "
-          f"ceiling {CEILINGS[report.front_door]:,}, target {TARGET:,}\n")
+          f"ceiling {CEILINGS[report.front_door].words:,}, target {TARGET:,}\n")
+
+
+def print_ceilings() -> None:
+    for fd in FRONT_DOORS:
+        c = CEILINGS[fd]
+        print(f"{README_LABELS[fd]}: {c.words:,} words, was {c.was:,}, since {c.since}")
+        print(f"  for:     {c.closes}")
+        print(f"  judged:  {c.signal or '(a cut; nothing to judge)'}")
 
 
 def readme_text(reports: list[Report]) -> tuple[Path, str, str]:
@@ -129,7 +192,7 @@ def readme_text(reports: list[Report]) -> tuple[Path, str, str]:
             "| --- | ---: | ---: | ---: |"]
     for r in reports:
         rows.append(f"| {README_LABELS[r.front_door]} | {r.total(True):,} "
-                    f"| {CEILINGS[r.front_door]:,} | {TARGET:,} |")
+                    f"| {CEILINGS[r.front_door].words:,} | {TARGET:,} |")
     path = ROOT / "README.md"
     text = path.read_text(encoding="utf-8")
     m = re.search(r"(<!-- budget:start[^>]*-->\n)(.*?)(<!-- budget:end -->)", text, re.S)
@@ -145,15 +208,17 @@ def check(reports: list[Report]) -> int:
     if current != wanted:
         problems.append("README.md budget table is stale (run tools/budget.py --readme write)")
     for r in reports:
-        if r.total(True) > CEILINGS[r.front_door]:
+        ceiling = CEILINGS[r.front_door].words
+        if r.total(True) > ceiling:
             problems.append(f"{README_LABELS[r.front_door]}: {r.total(True):,} words on the "
-                            f"minimal path, over its ceiling of {CEILINGS[r.front_door]:,}; "
-                            "cut, or raise CEILINGS in tools/budget.py with the reason")
+                            f"minimal path, over its ceiling of {ceiling:,}; cut, or "
+                            "record a raise in CEILINGS (tools/budget.py): the findings "
+                            "the words are for and the signal that judges them")
     for p in problems:
         print(f"budget: {p}", file=sys.stderr)
     if not problems:
         print("budget: " + ", ".join(
-            f"{README_LABELS[r.front_door]} {r.total(True):,}/{CEILINGS[r.front_door]:,}"
+            f"{README_LABELS[r.front_door]} {r.total(True):,}/{CEILINGS[r.front_door].words:,}"
             for r in reports))
     return 1 if problems else 0
 
@@ -165,7 +230,13 @@ def main() -> int:
     parser.add_argument("--check", action="store_true",
                         help="the README table is current and every path is under its ceiling")
     parser.add_argument("--readme", choices=("write",), help="rewrite the README's budget table")
+    parser.add_argument("--ceilings", action="store_true",
+                        help="each ceiling: what it allows, and what judges it")
     args = parser.parse_args()
+
+    if args.ceilings:
+        print_ceilings()
+        return 0
 
     refs = reflib.load_refs()
     reports = [measure(fd, refs) for fd in FRONT_DOORS]
@@ -188,7 +259,8 @@ def main() -> int:
                     ],
                     "total_words": r.total(False),
                     "minimal_words": r.total(True),
-                    "ceiling": CEILINGS[r.front_door],
+                    "ceiling": CEILINGS[r.front_door].words,
+                    "ceiling_record": asdict(CEILINGS[r.front_door]),
                 }
                 for r in reports
             },

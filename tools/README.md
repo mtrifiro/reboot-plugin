@@ -7,7 +7,7 @@ the plugin pins.
 
 | Tool | What it measures | Fails when |
 | --- | --- | --- |
-| `budget.py` | Words an agent reads before writing code, per front door (the SKILL.md files every build reads, the dashboard's included, plus each step's required references); `--readme write` refreshes the README table | `--check`: the README table is stale, or a front door's minimal path is over its ceiling, which only moves down |
+| `budget.py` | Words an agent reads before writing code, per front door (the SKILL.md files every build reads, the dashboard's included, plus each step's required references); `--readme write` refreshes the README table | `--check`: the README table is stale, or a front door's minimal path is over its ceiling (a cut lowers it; a raise is a record in `budget.py` of the findings the words are for and the signal that judges them; `--ceilings` prints it) |
 | `check-cli.py` | Every `rbt …` command and `.rbtrc` line vs `rbt --help` | a flag or subcommand is unknown |
 | `check-symbols.py` | Every `reboot…` import / dotted name / stdlib call vs the pinned package | a symbol doesn't resolve and isn't a tracked upstream defect in `known-defects.json` |
 | `templates-drift.py` | The three templates' shared files are byte-identical; `DIFFERS` lists the ones that differ by design, with the reason; `--sync <template>` propagates one template's copies | a shared file differs, or a `DIFFERS` entry no longer does |
