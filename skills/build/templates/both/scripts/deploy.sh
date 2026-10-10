@@ -27,8 +27,9 @@
 #      commit, revision and bundle (step 2 compares against it next time),
 #      and the release record: the commits, the model diff
 #      (scripts/model_diff.py) and the last test run (tests/.last-run.json)
-#      since the last deploy, the additive-API check's result, and any
-#      servicer without an authorizer, all printed before anything ships.
+#      since the last deploy, the additive-API check's result, any
+#      servicer without an authorizer, and the accepted design the
+#      revision was built to, all printed before anything ships.
 #   6. deploy/after, when the project has one.
 #
 # Settings are in deploy/config; credentials in .deploy.env (git-ignored):
@@ -173,14 +174,34 @@ if run.get("revision") != sha or run.get("dirty") or not run.get("full") or run.
     print(f"deploy: tests: not a clean, full, passing run of {sha}; tell the developer before promoting")
 PY
 
-# Servicers with no authorizer: rbt dev allows every call to them with a
-# warning, Reboot Cloud denies every call, so they pass every local
-# scenario and fail in production. Named here and in the ledger.
-unauthorized="$(python3 scripts/model_diff.py HEAD --head --json 2>/dev/null \
+# The accepted design (design/accepted.json, written at the build's
+# "Accept the Design"; the diff measures from the commit that added it)
+# and any servicer with no authorizer (rbt dev allows every call to it
+# with a warning, Reboot Cloud denies every call, so it passes every
+# local scenario and fails in production). Said here, kept in the ledger.
+if [ -f design/accepted.json ]; then
+  design_json="$(python3 scripts/model_diff.py --head --json 2>/dev/null || echo '{}')"
+else
+  design_json="$(python3 scripts/model_diff.py HEAD --head --json 2>/dev/null || echo '{}')"
+fi
+unauthorized="$(printf '%s' "$design_json" \
   | python3 -c 'import json, sys; print(" ".join(json.load(sys.stdin).get("unauthorized_servicers", [])))' 2>/dev/null || true)"
+accepted="$(printf '%s' "$design_json" \
+  | python3 -c 'import json, sys; a = json.load(sys.stdin).get("accepted"); print(json.dumps(a) if a else "")' 2>/dev/null || true)"
 if [ -n "$unauthorized" ]; then
   say "authorizers: $unauthorized: no authorizer; rbt dev allows that with a warning, Reboot Cloud denies every call. Tell the developer before promoting."
 fi
+python3 - "$accepted" <<'PY'
+import json, sys
+a = json.loads(sys.argv[1]) if sys.argv[1] else None
+if a is None:
+    print("deploy: design: no acceptance record (design/accepted.json): built without stopping, or a project older than the record")
+elif a.get("design_changes"):
+    print(f"deploy: design: {a['design_changes']} design change(s) since the acceptance at "
+          f"{a['commit'][:7]} ({a.get('at', '')[:10]}); not accepted. Tell the developer before promoting")
+else:
+    print(f"deploy: design: accepted at {a['commit'][:7]} ({a.get('at', '')[:10]})")
+PY
 
 if [ "$dry" = 1 ]; then say "dry run: stopping before anything is deployed."; exit 0; fi
 
@@ -251,10 +272,10 @@ fi
 
 # -- 5. the ledger, in git -------------------------------------------------
 python3 - "$LEDGER" "$sha" "$revision" "$bundle" "$last_backend" "$api_url" "${SITE_URL:-}" \
-  "$last_commit" "$model_json" "$tests_json" "$api_check" "$unauthorized" <<'PY'
+  "$last_commit" "$model_json" "$tests_json" "$api_check" "$unauthorized" "$accepted" <<'PY'
 import datetime, json, subprocess, sys
 (ledger, sha, revision, bundle, last_backend, api_url, site, since, model, tests,
- api_check, unauthorized) = sys.argv[1:]
+ api_check, unauthorized, accepted) = sys.argv[1:]
 row = {"at": datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds"), "commit": sha}
 row["backend_commit"] = sha if revision else last_backend
 if revision: row["revision"] = int(revision)
@@ -275,6 +296,9 @@ if since:
 release["compatibility"] = {
     "base": last_backend or None, "additive": True, "notes": api_check.splitlines()}
 release["unauthorized_servicers"] = unauthorized.split()
+# The accepted design this revision was built to (design/accepted.json),
+# and how many design changes it carries since that acceptance.
+release["accepted"] = json.loads(accepted) if accepted else None
 row["release"] = release
 open(ledger, "a").write(json.dumps(row) + "\n")
 PY

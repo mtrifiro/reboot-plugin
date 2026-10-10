@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 """What a change did to the domain model and the feature files.
 
+    scripts/model_diff.py                    # the accepted design..working tree
     scripts/model_diff.py <base>             # base..working tree
-    scripts/model_diff.py <base> --head      # base..HEAD, committed
-    scripts/model_diff.py <base> --json      # for the release record
+    scripts/model_diff.py --head             # ..HEAD, committed, instead of the working tree
+    scripts/model_diff.py --json             # for the release record
+    scripts/model_diff.py --accept           # record the working tree's design as accepted
 
 The domain model is the API under `api/`: its state types, their
 methods and method kinds, and the fields of every model, with their
@@ -26,6 +28,13 @@ Each change is sorted by the Reboot Flywheel's routing rule
 It also names every servicer with no `authorizer()`, which `rbt dev`
 allows with a warning and Reboot Cloud denies.
 
+The accepted design is recorded in `design/accepted.json` (`--accept`
+writes it: the date and a fingerprint of `api/` and the feature files;
+commit it with them). With no `<base>`, the diff measures from the
+commit that last changed that file, the acceptance, and says whether
+the design is still the accepted one. Without a record the base is
+required.
+
 It is evidence, not a gate: it always exits 0. `scripts/api_removals.py`
 is what stops a deploy that would break stored state.
 """
@@ -34,6 +43,8 @@ from __future__ import annotations
 
 import ast
 import copy
+import datetime
+import hashlib
 import json
 import re
 import subprocess
@@ -42,6 +53,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+ACCEPTED = "design/accepted.json"
 
 # Method factories, as the API declares them (`reboot.api`).
 KINDS = ("Reader", "Writer", "Transaction", "Workflow", "UI")
@@ -74,6 +86,59 @@ def files_at(rev: str | None, folder: str, suffix: str) -> dict[str, str]:
         } if base.is_dir() else {}
     names = git("ls-tree", "-r", "--name-only", rev, "--", folder).split()
     return {n: git("show", f"{rev}:{n}") for n in names if n.endswith(suffix)}
+
+
+# -- the accepted design ---------------------------------------------------
+
+
+def fingerprint_of(api: dict[str, str], features: dict[str, str]) -> str:
+    """One hash over the API definition files and the feature files."""
+    digest = hashlib.sha256()
+    for path, text in sorted(api.items()) + sorted(features.items()):
+        digest.update(path.encode())
+        digest.update(b"\0")
+        digest.update(text.encode())
+        digest.update(b"\0")
+    return digest.hexdigest()
+
+
+def accept() -> dict:
+    """Write `design/accepted.json` for the working tree's design."""
+    api = files_at(None, "api", ".py")
+    features = files_at(None, "tests", ".feature")
+    record = {
+        "at": datetime.datetime.now().astimezone().isoformat(timespec="seconds"),
+        "fingerprint": fingerprint_of(api, features),
+        "api": sorted(api),
+        "features": sorted(features),
+    }
+    (ROOT / "design").mkdir(exist_ok=True)
+    (ROOT / ACCEPTED).write_text(json.dumps(record, indent=2) + "\n")
+    return record
+
+
+def read_accepted() -> dict | None:
+    """The committed acceptance: its commit, date, and whether the
+    record's fingerprint matches what that commit holds. None when
+    there is no record, or it is not committed yet."""
+    path = ROOT / ACCEPTED
+    if not path.is_file():
+        return None
+    try:
+        record = json.loads(path.read_text())
+    except ValueError:
+        return None
+    commit = git("log", "-1", "--format=%H", "--", ACCEPTED).strip()
+    if not commit:
+        return None
+    at_commit = fingerprint_of(
+        files_at(commit, "api", ".py"), files_at(commit, "tests", ".feature")
+    )
+    return {
+        "commit": commit,
+        "at": record.get("at", ""),
+        "fingerprint_ok": record.get("fingerprint") == at_commit,
+    }
 
 
 # -- the domain model ------------------------------------------------------
@@ -492,8 +557,38 @@ def feature_changes(before: dict[str, str], after: dict[str, str]) -> list[Chang
 # -- output ----------------------------------------------------------------
 
 
+def accepted_line(accepted: dict | None, design_changes: int) -> str:
+    """One line on whether the design is still the accepted one.
+    `accepted` carries `is_base` when the diff measures from the
+    acceptance commit."""
+    if accepted is None:
+        return (
+            "**Design accepted**: no record (`design/accepted.json`): built without "
+            "stopping, or a project older than the record."
+        )
+    sha, at = accepted["commit"][:7], accepted.get("at", "")[:10]
+    note = (
+        ""
+        if accepted.get("fingerprint_ok", True)
+        else " (the record's fingerprint does not match that commit's `api/` and feature files)"
+    )
+    if not accepted.get("is_base", True):
+        return f"**Design accepted** at {sha} on {at}{note}; this diff does not measure from it."
+    if design_changes == 0:
+        return f"**Design accepted**: yes, at {sha} on {at}{note}."
+    plural = "s" if design_changes != 1 else ""
+    return (
+        f"**Design accepted**: no, {design_changes} design change{plural} since the "
+        f"acceptance at {sha} on {at}{note}."
+    )
+
+
 def markdown(
-    base: str, head: str, changes: list[Change], unauthorized: list[str] | None = None
+    base: str,
+    head: str,
+    changes: list[Change],
+    unauthorized: list[str] | None = None,
+    accepted: dict | None = None,
 ) -> str:
     if not changes:
         lines = [
@@ -527,16 +622,40 @@ def markdown(
             "",
         ]
         lines += [f"- `{name}`" for name in unauthorized]
+    design_count = sum(1 for c in changes if c.stage == "design")
+    lines += ["", accepted_line(accepted, design_count)]
     return "\n".join(lines) + "\n"
 
 
 def main() -> int:
     flags = {a for a in sys.argv[1:] if a.startswith("--")}
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
-    if len(args) != 1 or not flags <= {"--head", "--json"}:
+    if len(args) > 1 or not flags <= {"--head", "--json", "--accept"}:
         print(__doc__, file=sys.stderr)
         return 2
-    base = args[0]
+    if "--accept" in flags:
+        record = accept()
+        print(
+            f"wrote {ACCEPTED}: {len(record['api'])} API file(s), "
+            f"{len(record['features'])} feature file(s). Commit api/, tests/*.feature "
+            "and design/ together (\"Design accepted: <title>\"): that commit is the "
+            "base every later model diff measures from."
+        )
+        return 0
+    accepted = read_accepted()
+    if args:
+        base = args[0]
+    elif accepted:
+        base = accepted["commit"]
+    else:
+        print(f"no {ACCEPTED} in this project: give the base revision to diff from.",
+              file=sys.stderr)
+        return 2
+    if accepted:
+        try:
+            accepted["is_base"] = git("rev-parse", base).strip() == accepted["commit"]
+        except subprocess.CalledProcessError:
+            accepted["is_base"] = False
     head = "HEAD" if "--head" in flags else None
     changes = model_changes(
         files_at(base, "api", ".py"), files_at(head, "api", ".py")
@@ -547,6 +666,10 @@ def main() -> int:
     )
     unauthorized = servicers_without_authorizer(backend_files_at(head))
     head_label = head or "working tree"
+    if accepted and accepted.get("is_base"):
+        base = base[:7]
+    if accepted:
+        accepted["design_changes"] = sum(1 for c in changes if c.stage == "design")
     if "--json" in flags:
         print(json.dumps({
             "base": base,
@@ -554,9 +677,10 @@ def main() -> int:
             "design": [c.what for c in changes if c.stage == "design"],
             "prove": [c.what for c in changes if c.stage == "prove"],
             "unauthorized_servicers": unauthorized,
+            "accepted": accepted,
         }, indent=2))
     else:
-        print(markdown(base, head_label, changes, unauthorized), end="")
+        print(markdown(base, head_label, changes, unauthorized, accepted), end="")
     return 0
 
 

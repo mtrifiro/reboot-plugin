@@ -283,6 +283,12 @@ user said up front to build without stopping ("just build it", "don't
 check with me"): show the table and continue, and the handoff says the
 design was not accepted.
 
+Once accepted, Step 2 records it in the repository (its item 5): the
+review table in `design/review.md`, the record `scripts/model_diff.py
+--accept` writes in `design/accepted.json`, and one commit holding
+them with `api/` and the feature files. Every later model diff measures
+from that commit.
+
 ### Step 2 — Project shell
 
 Read "Before the project shell". Copy `templates/<front-door>/` with
@@ -314,6 +320,14 @@ generated client). Then:
    already had: move its content into `AGENTS.md` and leave
    `@AGENTS.md` as its only line. Keep `AGENTS.md` current as you go:
    each new state type, UI, route or script adds its row.
+5. **Record the acceptance** (skip when the user built without
+   stopping): write `design/review.md` (the review table as shown, the
+   feature files by path, the user's words if they gave any), run
+   `python3 scripts/model_diff.py --accept`, and commit `api/`,
+   `tests/*.feature` and `design/` with the scaffold as
+   `Design accepted: <title>`, the project's first commit. That commit
+   is the base every later `model_diff.py` measures from, and what the
+   pull request and the release record mean by "accepted".
 
 ### Step 3 — Servicer
 
@@ -500,7 +514,8 @@ never bare `rbt dev run` / `npm run dev`.
    its reason (Design Phase, Step 5).
 4. The state types and methods as built, one line each (Step 1), when
    they changed after the design; and whether the design was accepted
-   ("Accept the Design"). A pull request's body follows
+   ("Accept the Design"), as `python3 scripts/model_diff.py` says. A
+   pull request's body follows
    [`references/evidence.md`](references/evidence.md).
 5. `AGENTS.md` current (Step 2.4), and the `FINDINGS.md` items added;
    when there are any, offer the [`report` skill](../report/SKILL.md).
@@ -519,9 +534,13 @@ never bare `rbt dev run` / `npm run dev`.
 4. Update the API (every new property with `description=`) →
    `uv run rbt generate`. Tell the user any state type or method added
    or changed, one line each (Step 1). Run
-   `python3 scripts/model_diff.py HEAD`: any design change goes through
-   "Accept the Design" before step 5. None (a new scenario under an
-   existing rule, a code fix) stays in Prove.
+   `python3 scripts/model_diff.py` (it measures from the accepted
+   design; `HEAD` as the base when the project has no record): any
+   design change goes through "Accept the Design" before step 5, and
+   once accepted, `python3 scripts/model_diff.py --accept` and a commit
+   of `api/`, `tests/*.feature` and `design/` ("Design accepted:
+   <what>") record it. None (a new scenario under an existing rule, a
+   code fix) stays in Prove.
 5. Update servicer methods, and the authorizer of any servicer whose
    methods changed, as the accepted "Who may call" says. An authorizer
    change the accepted design didn't name is a design change: back to

@@ -29,7 +29,10 @@ describes. The stages and the routing rule are in
 1. Run the **full** suite (`uv run pytest`) at the commit you'll push.
    It writes `tests/.last-run.json`: passed, failed, `@wip`,
    `@blocked`, the revision, and whether the run was full.
-2. `python3 scripts/model_diff.py $(git merge-base origin/main HEAD) --head`.
+2. `python3 scripts/model_diff.py --head`: from the accepted design
+   (`design/accepted.json`), with its "Design accepted" verdict. A
+   project with no record: `$(git merge-base origin/main HEAD)` as the
+   base.
 3. Write the body in this order, rules first, so a reviewer decides how
    much code to read:
 
@@ -45,13 +48,15 @@ describes. The stages and the routing rule are in
 @blocked: <scenario> — <why>
 
 ## Design accepted
-Yes, <when, in a word: "in this session, before Step 2">
-<or: "Built without stopping, at the user's request: not yet accepted">
+<the model diff's verdict: "Yes, at abc1234 on 2026-10-10", or
+"No, 2 design changes since the acceptance at abc1234", or
+"No record: built without stopping, at the user's request">
 ```
 
 Then the attribution line the session's instructions give. A design
 change in the diff with no acceptance behind it goes back to Design
-before the pull request ([`flywheel.md`](flywheel.md)).
+before the pull request ([`flywheel.md`](flywheel.md)); once accepted,
+`model_diff.py --accept` and a commit record it.
 
 ### Before a deploy
 
@@ -75,13 +80,18 @@ pushed. Its `release` field is the record:
  "model_diff": {"design": ["`Reservation.create` added, Transaction"],
                 "prove": []},
  "compatibility": {"base": "9f8e7d6", "additive": true, "notes": []},
- "unauthorized_servicers": []}
+ "unauthorized_servicers": [],
+ "accepted": {"commit": "7c1d2e3...", "at": "2026-10-10T16:02:11-07:00",
+              "fingerprint_ok": true, "is_base": true, "design_changes": 0}}
 ```
 
 `compatibility` is the additive-API check the script ran against the
 commit production serves; the runtime's own check at `rbt cloud up` is
 implied, since a revision it rejects never reaches the ledger.
 `unauthorized_servicers` names any servicer with no `authorizer()`.
+`accepted` is the design this revision was built to and how many design
+changes it carries since that acceptance; `null` when the project has
+no record.
 
 To answer "what shipped, and on what evidence?" later, read the row for
 the deploy in question.

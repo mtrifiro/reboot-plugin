@@ -42,11 +42,12 @@ Reboot and on these skills, not on the app.
 ### The routing rule
 
 Every change, whether from a ticket, a failed scenario or a production
-finding, goes to one stage. `scripts/model_diff.py <base>` sorts each
-change by this rule; use it, don't judge by eye. A project older than
-it has no copy: take `scripts/model_diff.py`, and `tests/last_run.py`
-with its import in `tests/conftest.py`, from
-`build/templates/<front door>/`.
+finding, goes to one stage. `scripts/model_diff.py` sorts each change
+by this rule, measuring from the accepted design (the commit that added
+`design/accepted.json`; `<base>` names another revision); use it, don't
+judge by eye. A project older than it has no copy: take
+`scripts/model_diff.py`, and `tests/last_run.py` with its import in
+`tests/conftest.py`, from `build/templates/<front door>/`.
 
 | Change | Goes to |
 | --- | --- |
@@ -91,8 +92,10 @@ list of files touched.
   and `tests/*.feature` statically; a domain model built at import time
   (types generated in a loop), or an authorizer assigned rather than
   defined as a method, is not seen.
-- Acceptance is recorded in the conversation and the pull request body,
-  not in the repository.
+- Acceptance is recorded as `design/accepted.json` (the date, a
+  fingerprint of `api/` and the feature files) beside `design/review.md`,
+  in the commit that holds the accepted design; the user's reasons stay
+  in the conversation unless the agent wrote them into `review.md`.
 - Observe today is stored state only: no per-request traces.
 
 ## Scales as

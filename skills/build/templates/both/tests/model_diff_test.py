@@ -242,6 +242,37 @@ class ModelDiffTest(unittest.TestCase):
         self.assertIn("`Guest`", text)
         self.assertNotIn("without an authorizer", model_diff.markdown("a", "b", [], []))
 
+    def test_acceptance_is_recorded_and_becomes_the_base(self) -> None:
+        self.assertIsNone(model_diff.read_accepted())
+        self.assertIn("no record", model_diff.markdown("a", "b", [], [], None))
+        record = model_diff.accept()
+        self.assertTrue((self.root / "design" / "accepted.json").is_file())
+        self.assertEqual(record["api"], ["api/hotel/v1/hotel.py"])
+        self.assertIsNone(model_diff.read_accepted(), "not committed yet")
+        git(self.root, "add", ".")
+        git(self.root, "commit", "-q", "-m", "Design accepted: hotel")
+        accepted = model_diff.read_accepted()
+        assert accepted is not None
+        self.assertEqual(accepted["commit"], git(self.root, "rev-parse", "HEAD"))
+        self.assertTrue(accepted["fingerprint_ok"])
+        # Unchanged since the acceptance: accepted.
+        line = model_diff.accepted_line({**accepted, "is_base": True}, 0)
+        self.assertIn("**Design accepted**: yes", line)
+        # A design change after it: not accepted.
+        line = model_diff.accepted_line({**accepted, "is_base": True}, 2)
+        self.assertIn("no, 2 design changes since", line)
+        # A diff from some other base says so.
+        line = model_diff.accepted_line({**accepted, "is_base": False}, 0)
+        self.assertIn("does not measure from it", line)
+        # A record whose fingerprint no longer matches its commit.
+        path = self.root / "design" / "accepted.json"
+        path.write_text(path.read_text().replace(record["fingerprint"], "0" * 64))
+        git(self.root, "commit", "-q", "-am", "tampered")
+        stale = model_diff.read_accepted()
+        assert stale is not None
+        self.assertFalse(stale["fingerprint_ok"])
+        self.assertIn("does not match", model_diff.accepted_line({**stale, "is_base": True}, 0))
+
     def test_generated_code_is_not_read(self) -> None:
         generated = self.root / "backend" / "api" / "hotel" / "v1"
         generated.mkdir(parents=True)
