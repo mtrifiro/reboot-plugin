@@ -10,7 +10,7 @@ audience: maintainer
 Work agreed on but not started. Each item says what it is, why, how it
 would work, and what's still open. Move an item out when its work lands.
 
-The model for both items is the Releases view in `alt-dashboard`
+The model for items 1 and 2 is the Releases view in `alt-dashboard`
 (`web/src/changelog/ReleasesPage.tsx`, `backend/src/history_reader.py`):
 per-revision rows of ADDED / CHANGED / REMOVED grouped API · DATA, CODE
 and SPEC, with "N scenarios call it · passing" on changed methods.
@@ -96,3 +96,83 @@ annotation shows it at the moment the change is reported.
 - It wraps a framework internal (`Middleware.create_context`): check it
   on each Reboot upgrade, and add it to the upgrade skill's checks.
 - Cost: a few lines per test run; confirm it doesn't slow the suite.
+
+## 3. References no build is told to read
+
+**What.** About 15 references carry `step: any`, `step: run` or
+`step: deploy`, and the build skill renders reading lists only for the
+shell, api, servicer, auth, frontend and tests steps. So no list names
+them, and agents rarely open them: `patterns-load-and-benchmarking.md`,
+`patterns-react-state.md`, `lifecycle-dockerfile.md`,
+`lifecycle-dev-loop.md` among them.
+
+**Why.** Found through the Plugin Browser's "What app builds skip"
+panel (deferred 2026-10-10). The panel blamed agents for skipping files
+the plugin never told them to read.
+
+**How.** Give each a real step, a `when:` that a skill renders, or both;
+or render an "any time" list in the build skill. `tools/gen-index.py`
+generates the lists, and `tools/budget.py` must stay under its
+ceilings.
+
+**Open.**
+- Which references deserve a step and which only a `when:`.
+- The Plugin Browser side (`~/projects/plugin-browser`): count
+  step-any, run and deploy items as on demand, not required, and judge
+  a build only against items that existed when it started.
+
+## 4. The `one-color-dimension` grader fails even with the plugin
+
+**What.** `evals/design-look-triage/graders/one-color-dimension.md`
+wants the design to name one accent color and keep status color for a
+single data dimension (such as severity), with other statuses neutral.
+In the 2026-10-09 runs it failed with the plugin as well as without.
+
+**Why.** A grader that fails with the plugin measures nothing about
+it: either `web-app/references/ui-design.md` doesn't say this clearly
+enough for the design step, or the grader asks for more than the skill
+teaches.
+
+**How.** Read the runs' design text against the grader. Then fix
+whichever is wrong: the principle in `ui-design.md` (and the build
+skill's five-line visual brief), or the grader's wording.
+
+**Open.** Whether the rule belongs in the design phase at all, or in
+the frontend step's look checks.
+
+## 5. Codex's PATH is frozen at install time
+
+**What.** `install.sh` writes `shell_environment_policy.set.PATH` into
+`~/.codex/config.toml` as the plugin's `bin/` followed by the
+installer's own PATH. Codex's setting replaces PATH wholesale, so
+anything the user adds to their PATH later never reaches Codex's
+shells until the installer runs again.
+
+**Why.** A tool installed after the plugin (a new Node, `gh`, a
+Homebrew package in a new place) is invisible to Codex with no error,
+only "command not found".
+
+**How.** Prepend instead of replace, if Codex's config can express it
+(an `include` or an inherit-and-prepend form). Otherwise a session-start
+check that warns when the baked PATH lacks entries the current PATH
+has, and says to re-run the installer.
+
+**Open.** Whether Codex supports prepending in config at all; check
+its current `shell_environment_policy` documentation.
+
+## 6. Shellcheck over the templates' scripts
+
+**What.** `tools/check-all.sh` runs shellcheck over the plugin's own
+scripts but not the templates' (`scripts/deploy.sh`, `backup.sh`,
+`deploy/before-backend`, in each of the three templates).
+
+**Why.** Every Reboot app ships these scripts, and `deploy.sh` is
+hundreds of lines that touch production. It was left out on
+2026-10-10 because another session had `deploy.sh` in flight.
+
+**How.** Add the templates' shell scripts to the shellcheck line and
+fix what it finds once. `tools/templates-drift.py` keeps the three
+copies identical, so a fix goes through `--sync`.
+
+**Open.** Nothing beyond the findings themselves.
+
