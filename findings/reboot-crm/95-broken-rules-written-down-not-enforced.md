@@ -10,8 +10,8 @@ names:
 tags: [operations, testing]
 cluster: "4.6"
 still_applies: unknown
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "build/templates/README.md § Files"
 ---
 
 # The rules that have been broken are written down, not enforced (Claude Code hooks)
@@ -25,3 +25,5 @@ resolved_by: ""
 **Where in the skills.** Possible home: the plugin's hooks and project template (`hooks/hooks.json`, `lifecycle-project-setup.md`).
 
 **Checked at 1.6.0.** `lifecycle-project-setup.md` was grepped for hook/CLAUDE.md guidance and none found; the plugin ships `hooks/hooks.json` and `auto-approve.sh` only.
+
+**Resolution (2026-10-10).** The plugin's suite guard (`hooks/suite-guard.sh`, a PreToolUse hook for Claude Code and Codex) refuses `rbt generate`, `rbt dev run`, a dev server, an expunge and any edit under `api/`, `backend/`, `web/` or `frontend/` while `tests/.suite-running` names a live pytest (kept by the templates' `tests/last_run.py`); the templates' `scripts/deploy.sh` already runs the backup itself.
