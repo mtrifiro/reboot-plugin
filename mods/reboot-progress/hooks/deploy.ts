@@ -34,17 +34,37 @@ export const STARTING_MS = 5 * 60 * 1000
 /** What the process list shows of a deploy. */
 export type Seen = { isUp: boolean; isBuild: boolean; isPush: boolean; isPublish: boolean }
 
-/** A deploy's processes in `ps -axo command=` output. */
+/**
+ * A deploy's processes in `ps -axo pid=,command=` output. Only a process
+ * that runs the deploy counts: `rbt cloud up` or `wrangler pages deploy`
+ * as its own program (or a script an interpreter runs), never a `grep`,
+ * a test or a shell whose arguments merely contain those words.
+ */
 export function seenIn(ps: string): Seen {
   const lines = ps.split('\n')
   const has = (re: RegExp) => lines.some(l => re.test(l))
+  const runs = (program: 'up' | 'publish') => lines.some(l => psProgram(l) === program)
 
   return {
-    isUp: has(/\brbt\s+cloud\s+up\b/),
+    isUp: runs('up'),
     isBuild: has(/\bdocker\b.*\s(build|buildx\s+build)\s/),
     isPush: has(/\bdocker\b.*\spush\s/),
-    isPublish: has(/\bwrangler\b.*\bpages\s+deploy\b/),
+    isPublish: runs('publish'),
   }
+}
+
+/**
+ * The deploy one process-list line runs, if any: its pid dropped, and an
+ * interpreter running a script (`python3 …/bin/rbt cloud up`, `node
+ * …/wrangler pages deploy`) read as that script.
+ */
+export function psProgram(line: string): 'up' | 'publish' | 'script' | null {
+  const words = line.trim().replace(/^\d+\s+/, '').split(/\s+/)
+  if (/(^|\/)(python[\d.]*|node|bun|deno)$/.test(words[0] ?? '')) {
+    words.shift()
+    while ((words[0] ?? '').startsWith('-')) words.shift()
+  }
+  return deployProgram(words.join(' '))
 }
 
 /** A new deploy at `stage`, keeping the URLs of the one before. */
@@ -258,3 +278,53 @@ export function deployLine(d: Deploy, now: number): string {
 
 /** The `$.store` key holding a project's deployed URLs across sessions. */
 export const deployKey = (root: string): string => `deploy:${root}`
+
+/**
+ * The latest Reboot Cloud and site URLs a project's `deploy/ledger.jsonl`
+ * records. `scripts/deploy.sh` writes a line only after a deploy
+ * succeeded, so these are the deployed app's, not ones a log mentions.
+ */
+export function ledgerUrls(text: string | null): { apiUrl: string | null; siteUrl: string | null } {
+  let apiUrl: string | null = null
+  let siteUrl: string | null = null
+  for (const line of (text ?? '').split('\n')) {
+    if (!line.trim()) continue
+    try {
+      const row = JSON.parse(line) as { api_url?: unknown; site?: unknown }
+      if (typeof row.api_url === 'string' && row.api_url) apiUrl = row.api_url
+      if (typeof row.site === 'string' && row.site) siteUrl = row.site
+    } catch {
+      continue
+    }
+  }
+  return { apiUrl, siteUrl }
+}
+
+/** How often a deployed link is checked while the band runs. */
+export const LINK_CHECK_MS = 60 * 1000
+
+/** How many failed checks in a row take a shown link away. */
+export const LINK_STRIKES = 2
+
+/** What the checks know of one deployed link. */
+export type LinkProbe = { ok: boolean; failures: number; checkedAt: number }
+
+/** Whether a link is due a check: never checked, or not for a while. */
+export const isProbeDue = (p: LinkProbe | undefined, now: number): boolean =>
+  p === undefined || now - p.checkedAt >= LINK_CHECK_MS
+
+/**
+ * A link after a check. It shows only once it has answered; a shown link
+ * survives one failed check (a blip) and goes after LINK_STRIKES in a row.
+ */
+export function afterProbe(p: LinkProbe | undefined, answered: boolean, now: number): LinkProbe {
+  const failures = answered ? 0 : (p?.failures ?? 0) + 1
+  return { ok: answered || (p?.ok === true && failures < LINK_STRIKES), failures, checkedAt: now }
+}
+
+/** Whether checks have given up on a link that never answered: one to forget. */
+export const isDead = (p: LinkProbe | undefined): boolean => p !== undefined && !p.ok && p.failures >= LINK_STRIKES
+
+/** The address that says whether a deployed link answers: the app's inspect page, the site itself. */
+export const probeTarget = (kind: 'cloud' | 'site', url: string): string =>
+  kind === 'cloud' ? `${url.replace(/\/+$/, '')}/__/inspect` : url

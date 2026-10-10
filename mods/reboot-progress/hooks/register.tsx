@@ -2,7 +2,26 @@ import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
 import type { Build, Deploy } from '../types'
-import { advanceDeploy, afterOutput, beginDeploy, deployKey, deployLine, deployProgram, isDeployCommand, isRunning, isShown, isUp, outcomeOf, seenIn } from './deploy'
+import {
+  advanceDeploy,
+  afterOutput,
+  afterProbe,
+  beginDeploy,
+  deployKey,
+  deployLine,
+  deployProgram,
+  isDead,
+  isDeployCommand,
+  isProbeDue,
+  isRunning,
+  isShown,
+  isUp,
+  ledgerUrls,
+  outcomeOf,
+  probeTarget,
+  seenIn,
+} from './deploy'
+import type { LinkProbe } from './deploy'
 import { REBOOT_LOGO } from './logo'
 import { SUITE_FILE, type History, expectedFinish, isSuiteShown, parseSuite, remember, suiteLine, suiteStatus } from './suite'
 import { STARTING, WAITING, endTurn, fallback, isWorthSummarizing, parseSummary, startTask, summaryPrompt, isTesting, testCommand, testLine, testTimeKey, testProgress, testStatus, textOf } from './activity'
@@ -43,6 +62,10 @@ const turnActive = atom({ plugin: 'reboot-progress', key: 'isTurnActive' } as co
 const activity = atom({ plugin: 'reboot-progress', key: 'activity' } as const, null)
 const mcp = atom({ plugin: 'reboot-progress', key: 'isMcp' } as const, false)
 const links = atom({ plugin: 'reboot-progress', key: 'links' } as const, { dashboard: null, app: null })
+const deployedLinks = atom({ plugin: 'reboot-progress', key: 'deployedLinks' } as const, { cloud: null, site: null })
+
+// Each deployed link's checks, by URL: the module's, so a reload starts over.
+const probes = new Map<string, LinkProbe>()
 
 const POLL_MS = 5000
 
@@ -248,6 +271,46 @@ async function saveDeploy($: EngineInterface, d: Deploy | null) {
   }
 }
 
+/**
+ * Which deployed links the band shows: of the deploy the band followed (or
+ * restored) and the project's ledger, the Cloud and Site addresses that
+ * answer when checked, every LINK_CHECK_MS. A link that never answers is
+ * forgotten (a stored address from a log or a test, not a deploy).
+ */
+async function checkLinks($: EngineInterface, dir: string | null) {
+  const now = await $.clock.now()
+  const d = await read($, deploy)
+  const ledger = ledgerUrls(dir ? await readText($, `${dir}/deploy/ledger.jsonl`) : null)
+  const pick = async (kind: 'cloud' | 'site', urls: (string | null | undefined)[]): Promise<string | null> => {
+    for (const url of [...new Set(urls.filter((u): u is string => !!u))]) {
+      let p = probes.get(url)
+      if (isProbeDue(p, now)) {
+        // Raced against the clock: one hung request must not stop the polls.
+        const res = await Promise.race([
+          $.http.fetch(probeTarget(kind, url)),
+          $.clock.sleep(5000).then(() => null),
+        ]).catch(() => null)
+        p = afterProbe(p, res?.ok === true, now)
+        probes.set(url, p)
+      }
+      if (p?.ok) return url
+    }
+    return null
+  }
+  const next = {
+    cloud: await pick('cloud', [d?.apiUrl, ledger.apiUrl]),
+    site: await pick('site', [d?.siteUrl, ledger.siteUrl]),
+  }
+  const was = await read($, deployedLinks)
+  if (was.cloud !== next.cloud || was.site !== next.site) await update($, deployedLinks, () => next)
+  // Forget a kept address that never answered, so no later session restores it.
+  if (d !== null && !isRunning(d)) {
+    const apiUrl = isDead(probes.get(d.apiUrl ?? '')) ? null : d.apiUrl
+    const siteUrl = isDead(probes.get(d.siteUrl ?? '')) ? null : d.siteUrl
+    if (apiUrl !== d.apiUrl || siteUrl !== d.siteUrl) await saveDeploy($, { ...d, apiUrl, siteUrl })
+  }
+}
+
 /** Moves the deploy on by what the process list shows, and the deployed app's answer. */
 async function followDeploy($: EngineInterface, ps: string) {
   const d = await read($, deploy)
@@ -361,6 +424,7 @@ async function poll($: EngineInterface) {
     if (was.dashboard !== h.links.dashboard || was.app !== h.links.app) await update($, links, () => h.links)
     if (h.isMcp !== (await read($, mcp))) await update($, mcp, () => h.isMcp)
     await followDeploy($, h.ps).catch(() => undefined)
+    await checkLinks($, dir).catch(() => undefined)
     await followTests($, dir, h.ps).catch(() => undefined)
     await followSuite($, dir, h.ps).catch(() => undefined)
     announce($, 'app', h.backend)
@@ -434,6 +498,8 @@ export const register: Register = on => {
       const now = await $.clock.now()
       const { deploy: after, toast } = afterOutput(await read($, deploy), outcomeOf(text), now)
       await saveDeploy($, after)
+      // The new addresses show as soon as they answer, not at the next poll.
+      await checkLinks($, await read($, root)).catch(() => undefined)
       await update($, clock, () => now)
       if (toast) $.ui.toast(toast)
     }
@@ -548,8 +614,10 @@ export const register: Register = on => {
     const to = await read($, links)
     const d = await read($, deploy)
     const now = await read($, clock)
-    const cloud = d?.apiUrl ?? null
-    const site = d?.siteUrl ?? null
+    // Only links that answered their last checks (`checkLinks`).
+    const deployed = await read($, deployedLinks)
+    const cloud = deployed.cloud
+    const site = deployed.site
     // An MCP app's root on Reboot Cloud is the page that connects an MCP
     // client to it: this deploy's own app, at its address without the port.
     const mcpUrl = cloud !== null && (await read($, mcp)) ? `${cloud.replace(/:9991$/, '')}/` : null

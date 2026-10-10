@@ -200,6 +200,10 @@ for (const surface of ['terminal', 'desktop'] as const) {
   test(`a deploy's output toasts and adds a Cloud button on ${surface}`, async ($, on) => {
     const toasts: string[] = []
     const opened: string[][] = []
+    // The deployed app answers its link's check, before the check's own
+    // five-second limit (which the test clock would otherwise reach at once).
+    on('http.fetch', () => ({ value: { status: 200, ok: true, headers: {}, text: '' } }) as never)
+    on('clock.sleep', () => new Promise(() => undefined) as never)
     on('ui.render', { component: 'AbovePrompt' }, ($, e) => {
       const { Box } = $.ui.resolve(e)
 
@@ -234,6 +238,10 @@ for (const surface of ['terminal', 'desktop'] as const) {
 for (const kind of ['an MCP UI', 'a web app serving MCP'] as const) {
   test(`${kind} deployed to Reboot Cloud gets an MCP button that opens its own connect page`, async ($, on) => {
     const opened: string[][] = []
+    // The deployed app answers its link's check, before the check's own
+    // five-second limit (which the test clock would otherwise reach at once).
+    on('http.fetch', () => ({ value: { status: 200, ok: true, headers: {}, text: '' } }) as never)
+    on('clock.sleep', () => new Promise(() => undefined) as never)
     on('ui.render', { component: 'AbovePrompt' }, ($, e) => {
       const { Box } = $.ui.resolve(e)
 
@@ -395,6 +403,10 @@ test('a dry run of the deploy script, or a doc that mentions a site, starts no d
 
 test("a background deploy's output, read back, toasts and adds the Cloud button", async ($, on) => {
   const toasts: string[] = []
+  // The deployed app answers its link's check, before the check's own
+  // five-second limit (which the test clock would otherwise reach at once).
+  on('http.fetch', () => ({ value: { status: 200, ok: true, headers: {}, text: '' } }) as never)
+  on('clock.sleep', () => new Promise(() => undefined) as never)
   on('ui.render', { component: 'AbovePrompt' }, ($, e) => {
     const { Box } = $.ui.resolve(e)
 
@@ -420,4 +432,27 @@ test("a background deploy's output, read back, toasts and adds the Cloud button"
   expect(toasts).toEqual(['Deployed revision 9 to Reboot Cloud'])
   const band = await $.ui.mount({ plugin: PLUGIN, surface: 'terminal', component: 'AbovePrompt', props: BAND as never })
   expect((await band.findAll({ type: 'Button', text: /Cloud/ })).length).toBe(1)
+})
+
+test('a deploy address that never answers shows no button, and is forgotten', async ($, on) => {
+  on('ui.render', { component: 'AbovePrompt' }, ($, e) => {
+    const { Box } = $.ui.resolve(e)
+
+    return h(Box, {}) as never
+  })
+  let now = 1000
+  on('clock.now', () => ({ value: now }) as never)
+  on('ui.toast', () => ({ value: undefined }) as never)
+  // Nothing is deployed there: a test's or a log's made-up address.
+  on('http.fetch', () => ({ value: { status: 404, ok: false, headers: {}, text: 'Not found' } }) as never)
+  on('tool.call', () =>
+    ({
+      result: {},
+      text: "'app' revision 7 is available:\n\n  Your API is available at:      https://a1b2c3.c1.rbt.cloud:9991\n  https://abc.app.pages.dev serves the current build\n",
+    }) as never,
+  )
+
+  await $.tool.call({ tool: 'Bash', command: 'uv run rbt cloud up --organization=acme' })
+  const band = await $.ui.mount({ plugin: PLUGIN, surface: 'terminal', component: 'AbovePrompt', props: BAND as never })
+  expect(await band.findAll({ type: 'Button', text: /Cloud|Site/ })).toEqual([])
 })

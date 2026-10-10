@@ -102,6 +102,8 @@ declare module 'claude-code' {
       isAwaitingTests: boolean
       /** The latest deploy. */
       deploy: Deploy | null
+      /** The deployed links the buttons open: only ones that answered a check (`checkLinks`). */
+      deployedLinks: { cloud: string | null; site: string | null }
       /** The clock at the latest poll, so a running deploy's time redraws. */
       clock: number
     }

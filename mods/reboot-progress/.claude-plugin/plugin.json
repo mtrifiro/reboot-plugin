@@ -1,6 +1,6 @@
 {
   "name": "reboot-progress",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "A band above the prompt: what Claude is working on, the Reboot build's progress, dashboard and app buttons, how far a test run or a deploy is, and toasts when the app or the dashboard starts or stops",
   "types": "./types/index.d.ts",
   "author": {

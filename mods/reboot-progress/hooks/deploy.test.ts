@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'claude-code/testing'
 
-import { advanceDeploy, afterOutput, beginDeploy, deployLine, elapsed, FAILED_MS, deployProgram, isDeployCommand, isRunning, isShown, outcomeOf, SCRIPT_MS, seenIn, STARTING_MS } from './deploy'
+import { advanceDeploy, afterOutput, afterProbe, beginDeploy, deployLine, elapsed, FAILED_MS, deployProgram, isDead, isDeployCommand, isProbeDue, isRunning, isShown, ledgerUrls, LINK_CHECK_MS, outcomeOf, probeTarget, psProgram, SCRIPT_MS, seenIn, STARTING_MS } from './deploy'
 
 const PS_UP = '/usr/bin/python3 /w/app/.venv/bin/rbt cloud up --organization=acme --name=app'
 const PS_BUILD = `${PS_UP}\ndocker build --file=Dockerfile --tag=reg/app:1 .`
@@ -31,6 +31,56 @@ describe('what the process list shows of a deploy', () => {
       isPush: false,
       isPublish: false,
     })
+  })
+})
+
+describe('only a process that runs a deploy is one', () => {
+  test('a grep, a test or a shell naming the words is not', () => {
+    const none = { isUp: false, isBuild: false, isPush: false, isPublish: false }
+    expect(seenIn('4242 grep -rn "rbt cloud up" mods')).toEqual(none)
+    expect(seenIn(`4243 /bin/zsh -c source x && eval 'grep "rbt cloud up" deploy.ts'`)).toEqual(none)
+    expect(seenIn('4244 bun test hooks/deploy.test.ts --filter "wrangler pages deploy"')).toEqual(none)
+  })
+  test('the deploy itself, with its pid, under an interpreter or not', () => {
+    expect(psProgram(`4245 ${PS_UP}`)).toBe('up')
+    expect(psProgram('4246 /usr/local/bin/rbt cloud up --name=app')).toBe('up')
+    expect(psProgram(`4247 ${PS_WRANGLER}`)).toBe('publish')
+    expect(seenIn(`4245 ${PS_UP}`).isUp).toBe(true)
+  })
+})
+
+describe('which deployed links the band shows', () => {
+  test("the ledger's latest URLs", () => {
+    const ledger = [
+      '{"at": "2026-10-01T00:00:00+00:00", "api_url": "https://old.c1.rbt.cloud", "site": "https://old.pages.dev/"}',
+      '{"at": "2026-10-02T00:00:00+00:00", "api_url": "https://new.c1.rbt.cloud"}',
+      'not json',
+    ].join('\n')
+    expect(ledgerUrls(ledger)).toEqual({ apiUrl: 'https://new.c1.rbt.cloud', siteUrl: 'https://old.pages.dev/' })
+    expect(ledgerUrls(null)).toEqual({ apiUrl: null, siteUrl: null })
+  })
+  test('a link shows once it answers, rides out one blip, and goes after two failures', () => {
+    let p = afterProbe(undefined, true, 0)
+    expect(p.ok).toBe(true)
+    p = afterProbe(p, false, LINK_CHECK_MS)
+    expect(p.ok).toBe(true)
+    p = afterProbe(p, false, 2 * LINK_CHECK_MS)
+    expect(p.ok).toBe(false)
+    expect(afterProbe(p, true, 3 * LINK_CHECK_MS).ok).toBe(true)
+  })
+  test('a link that never answered is never shown, and is forgotten', () => {
+    let p = afterProbe(undefined, false, 0)
+    expect(p.ok).toBe(false)
+    expect(isDead(p)).toBe(false)
+    p = afterProbe(p, false, LINK_CHECK_MS)
+    expect(isDead(p)).toBe(true)
+  })
+  test('checked once a minute; the app at its inspect page', () => {
+    expect(isProbeDue(undefined, 0)).toBe(true)
+    expect(isProbeDue({ ok: true, failures: 0, checkedAt: 0 }, LINK_CHECK_MS - 1)).toBe(false)
+    expect(isProbeDue({ ok: true, failures: 0, checkedAt: 0 }, LINK_CHECK_MS)).toBe(true)
+    expect(probeTarget('cloud', 'https://a.c1.rbt.cloud:9991/')).toBe('https://a.c1.rbt.cloud:9991/__/inspect')
+    expect(probeTarget('site', 'https://app.pages.dev/')).toBe('https://app.pages.dev/')
   })
 })
 
