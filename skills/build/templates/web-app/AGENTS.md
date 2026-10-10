@@ -18,6 +18,7 @@ change it here in the same commit.
 | Scenarios (the spec) | `tests/*.feature` |
 | Test modules | `tests/*_test.py`; each `scenarios(...)` names the features it runs |
 | Deploy, backup, restore | `scripts/deploy.sh`, `deploy/config`, `deploy/before-backend`, `scripts/backup.sh`, `scripts/restore.py` |
+| What a change did to the design (Design or Prove), the last test run, each deploy's release record | `scripts/model_diff.py <base>`, `tests/.last-run.json`, `deploy/ledger.jsonl` |
 | `rbt` config | `.rbtrc` (line-based, not YAML) |
 | Surprises about Reboot or its skills | `FINDINGS.md` |
 
@@ -32,8 +33,11 @@ change it here in the same commit.
 
 ## Rules that cost the most when broken
 
-1. **Behavior first.** A feature starts as a `@wip` `.feature` file,
-   agreed before the API or code changes.
+1. **Behavior first, then acceptance.** A feature starts as a `@wip`
+   `.feature` file, agreed before the API or code changes; the user
+   accepts the domain model and feature files before any
+   implementation, and again after any change `model_diff.py` calls a
+   design change (the plugin's `build/references/flywheel.md`).
 2. **The API only grows.** Add fields, methods, errors and types; never
    remove or rename one, and never reword a method's `description=`
    (it is schema). A removal Reboot allows ships only when

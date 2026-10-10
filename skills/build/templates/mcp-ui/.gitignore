@@ -25,6 +25,9 @@ frontend/dist/
 # How far a test run is, for the Reboot band (tests/run_progress.py).
 .reboot/
 
+# The last test run's results (tests/last_run.py).
+tests/.last-run.json
+
 # Deploy credentials, read by scripts/deploy.sh.
 .deploy.env
 

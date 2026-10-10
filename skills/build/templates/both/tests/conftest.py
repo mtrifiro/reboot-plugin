@@ -15,6 +15,10 @@ module defines nothing and the backend scenarios run as before."""
 
 import re
 
+# The last run's results, for the pull request and the release record
+# (last_run.py).
+from last_run import pytest_terminal_summary  # noqa: F401
+
 # How far a run is, for the Reboot band (run_progress.py).
 from run_progress import (  # noqa: F401
     pytest_collection_finish,

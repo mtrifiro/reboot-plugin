@@ -23,15 +23,18 @@
 #   4. Frontend: built from the commit in a scratch copy (generated code is
 #      not tracked, so it is generated there), published with wrangler, and
 #      the live site checked to serve the new bundle.
-#   5. A line in deploy/ledger.jsonl (when, which commit, revision, bundle),
-#      which step 2 compares against next time, committed and pushed.
+#   5. A line in deploy/ledger.jsonl, committed and pushed: when, which
+#      commit, revision and bundle (step 2 compares against it next time),
+#      and the release record: the commits, the model diff
+#      (scripts/model_diff.py) and the last test run (tests/.last-run.json)
+#      since the last deploy, all printed before anything ships.
 #   6. deploy/after, when the project has one.
 #
 # Settings are in deploy/config; credentials in .deploy.env (git-ignored):
 #   REBOOT_CLOUD_API_KEY, REBOOT_CLOUD_ORGANIZATION,
 #   CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID (with a frontend).
 #
-# deploy.sh version 1 (Reboot plugin, build templates).
+# deploy.sh version 2 (Reboot plugin, build templates).
 set -uo pipefail
 cd "$(dirname "$0")/.."
 ROOT="$PWD"
@@ -142,6 +145,32 @@ if [ "$frontend" = 1 ]; then
     || die "no $ENV_DIR/.env.production in the commit: write VITE_REBOOT_URL=<the API address> there and commit it${api_url:+ (the production API is at $api_url)}. The first deploy: --backend-only first, which prints the address."
 fi
 
+# -- the release record: what ships, as evidence ---------------------------
+# Promoting is the developer's decision (the Reboot Flywheel); this shows
+# what it rests on (build/references/evidence.md), and never stops a deploy.
+last_commit="$(last_field commit)"
+model_json='{}'
+if [ -n "$last_commit" ] && git cat-file -e "$last_commit^{commit}" 2>/dev/null; then
+  say "since $last_commit:"
+  git log --format='  %h %s' "$last_commit"..HEAD
+  python3 scripts/model_diff.py "$last_commit" --head | sed 's/^/  /'
+  model_json="$(python3 scripts/model_diff.py "$last_commit" --head --json)"
+fi
+tests_json="$(cat tests/.last-run.json 2>/dev/null || echo '{}')"
+python3 - "$tests_json" "$sha" <<'PY'
+import json, sys
+run, sha = json.loads(sys.argv[1]), sys.argv[2]
+if not run:
+    print("deploy: tests: no run recorded (tests/.last-run.json); run the full suite first")
+    sys.exit()
+where = "the full suite" if run.get("full") else "a partial run"
+print(f"deploy: tests: {run.get('passed', 0)} passed, {run.get('failed', 0)} failed, "
+      f"{run.get('wip', 0)} @wip, {run.get('blocked', 0)} @blocked; {where} at "
+      f"{run.get('revision', '?')}{' with uncommitted changes' if run.get('dirty') else ''}")
+if run.get("revision") != sha or run.get("dirty") or not run.get("full") or run.get("failed"):
+    print(f"deploy: tests: not a clean, full, passing run of {sha}; tell the developer before promoting")
+PY
+
 if [ "$dry" = 1 ]; then say "dry run: stopping before anything is deployed."; exit 0; fi
 
 revision=""
@@ -210,14 +239,25 @@ if [ "$frontend" = 1 ]; then
 fi
 
 # -- 5. the ledger, in git -------------------------------------------------
-python3 - "$LEDGER" "$sha" "$revision" "$bundle" "$last_backend" "$api_url" "${SITE_URL:-}" <<'PY'
-import datetime, json, sys
-ledger, sha, revision, bundle, last_backend, api_url, site = sys.argv[1:]
+python3 - "$LEDGER" "$sha" "$revision" "$bundle" "$last_backend" "$api_url" "${SITE_URL:-}" \
+  "$last_commit" "$model_json" "$tests_json" <<'PY'
+import datetime, json, subprocess, sys
+ledger, sha, revision, bundle, last_backend, api_url, site, since, model, tests = sys.argv[1:]
 row = {"at": datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds"), "commit": sha}
 row["backend_commit"] = sha if revision else last_backend
 if revision: row["revision"] = int(revision)
 if api_url: row["api_url"] = api_url
 if bundle: row["bundle"], row["site"] = bundle, site
+# The release record (build/references/evidence.md).
+release = {"tests": json.loads(tests)}
+if since:
+    release["since"] = since
+    release["commits"] = subprocess.run(
+        ["git", "log", "--format=%h %s", f"{since}..{sha}"], capture_output=True, text=True
+    ).stdout.splitlines()
+    diff = json.loads(model)
+    release["model_diff"] = {"design": diff.get("design", []), "prove": diff.get("prove", [])}
+row["release"] = release
 open(ledger, "a").write(json.dumps(row) + "\n")
 PY
 git add "$LEDGER"
