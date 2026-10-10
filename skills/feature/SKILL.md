@@ -24,7 +24,9 @@ domain model. Steps 2a–5 are Prove.
 
 **A fix, a bug report or a review finding** starts at
 [A fix, a bug report, a review finding](#a-fix-a-bug-report-a-review-finding),
-not Step 1.
+not Step 1. A finding from a running app starts one step earlier, at
+the stored state behind the report
+([`inspect` skill](../inspect/SKILL.md), "From a finding to a scenario").
 
 References (in the `python` skill), each at the step that needs it:
 

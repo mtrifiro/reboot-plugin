@@ -27,6 +27,29 @@ more, so a question the stored state can't answer is a gap in the
 design. A finding goes back by the routing rule there: a code fix to
 Prove, a missing or wrong rule to Design.
 
+## From a finding to a scenario
+
+A report names a reservation, a room or a person: a state ID. Go from
+the report to the state ID, from the state ID to the stored state
+(below), and from the stored state to the rule it breaks. Then the fix
+starts as a scenario, by the [`feature` skill](../feature/SKILL.md)'s
+"A fix, a bug report, a review finding":
+
+- Name the state ID and the revision that was live (the last row of
+  `deploy/ledger.jsonl`) in the scenario's description, so the next
+  reader can find the evidence again.
+- Reproduce the stored state through the methods that produce it (the
+  domain model's short list of what may change that state), never by
+  writing state directly: a scenario that sets up a state no method can
+  reach proves nothing about the app.
+- Put the scenario under the rule it breaks. When no rule says what
+  should have happened, the rule is the gap: write it, and it goes to
+  Design for acceptance before the fix.
+
+When one of those steps fails, the gap is in the domain model or the
+feature files (a history the state never recorded, a rule never
+written), and the fix starts in Design.
+
 ## The three operations
 
 Drill down: `type list` for the exact `--type`, `state list` for the
