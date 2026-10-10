@@ -100,6 +100,8 @@ declare module 'claude-code' {
       lastEditAt: number
       /** Whether the turn waits on a test run in the foreground (a Bash call running it). */
       isAwaitingTests: boolean
+      /** True while the design review is on screen and the build waits for the person to accept it. */
+      isAwaitingAcceptance: boolean
       /** The latest deploy. */
       deploy: Deploy | null
       /** The deployed links the buttons open: only ones that answered a check (`checkLinks`). */

@@ -39,8 +39,11 @@ import {
   listeningPorts,
   vitePortOf,
   finishTurn,
+  finishedToast,
+  isReviewTable,
   observe,
   skillKind,
+  stageOf,
   taskAfterPrompt,
   stepOf,
   storeKey,
@@ -56,6 +59,10 @@ const clock = atom({ plugin: 'reboot-progress', key: 'clock' } as const, 0)
 const suite = atom({ plugin: 'reboot-progress', key: 'suite' } as const, null)
 const lastEdit = atom({ plugin: 'reboot-progress', key: 'lastEditAt' } as const, 0)
 const awaitingTests = atom({ plugin: 'reboot-progress', key: 'isAwaitingTests' } as const, false)
+// The design review is on screen and the build waits for the person to
+// accept it: set when the narration shows the review table, cleared by
+// their next prompt.
+const awaitingAcceptance = atom({ plugin: 'reboot-progress', key: 'isAwaitingAcceptance' } as const, false)
 const testRun = atom({ plugin: 'reboot-progress', key: 'testRun' } as const, null)
 // The session's, not the module's: a reload mid-turn must not end the turn.
 const turnActive = atom({ plugin: 'reboot-progress', key: 'isTurnActive' } as const, false)
@@ -564,6 +571,7 @@ export const register: Register = on => {
   // slash command now, or the prompt's summary saying it is new work.
   on('prompt.submit', async ($, e, next) => {
     await update($, turnActive, () => true)
+    await update($, awaitingAcceptance, () => false)
     const b = await read($, build)
     // A typed /reboot:app (or build, mcp-ui, web-app, feature) starts its
     // task now, before the skill's planning, not when the model calls it.
@@ -589,6 +597,12 @@ export const register: Register = on => {
     if (e.agentId === undefined && e.message.type === 'assistant') {
       const text = textOf(e.message.content)
       if (text) lastReply = text
+      // The review table means the build has reached its checkpoint and
+      // waits for the person: the band says so until they answer.
+      if (isReviewTable(text) && (await isEngaged($, false)) && !(await read($, awaitingAcceptance))) {
+        await update($, awaitingAcceptance, () => true)
+        $.ui.toast('The design, for your review')
+      }
       if (isWorthSummarizing(text) && (await isEngaged($, false))) void summarize($, text, 'narration')
     }
 
@@ -599,7 +613,11 @@ export const register: Register = on => {
     await update($, turnActive, () => false)
     const b = await read($, build)
     const finished = finishTurn(b)
-    if (finished !== b) await saveBuild($, finished)
+    if (finished !== b) {
+      await saveBuild($, finished)
+      // The card's header line, as the handoff opens.
+      if (finished?.isDone) $.ui.toast(finishedToast(finished.kind))
+    }
     await update($, activity, shown => endTurn(shown))
     // A turn that ends on a test run in the background is waiting on it,
     // not idle: look now rather than at the next poll.
@@ -641,7 +659,15 @@ export const register: Register = on => {
           : act?.now && status
             ? `${act.now} (tests ${status})`
             : (act?.now ?? WAITING)
-    const line = isShown(d, now) ? deployLine(d!, Math.max(now, d!.stageAt)) : nowText
+    // The Flywheel stage in front of the sentence: Design or Prove from
+    // the task's step, Promote while a deploy runs, and the checkpoint's
+    // wait while the design review is on screen.
+    const isDeploying = isShown(d, now)
+    const stage = isDeploying ? 'Promote' : b !== null && !b.isDone ? stageOf(b.step) : null
+    const isAwaitingAcceptance = !isDeploying && (await read($, awaitingAcceptance))
+    const line = isAwaitingAcceptance
+      ? 'Design · awaiting your acceptance'
+      : `${stage !== null ? `${stage} · ` : ''}${isDeploying ? deployLine(d!, Math.max(now, d!.stageAt)) : nowText}`
     // Nothing to draw outside a Reboot project with no Reboot work in view.
     const isEngaged = (await read($, root)) !== null || b !== null || d !== null || hasLinks
     if (!isEngaged || e.props.hasSurvey || (await read($, isHidden))) {

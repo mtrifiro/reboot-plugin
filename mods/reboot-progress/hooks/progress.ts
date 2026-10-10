@@ -13,6 +13,32 @@ export const STEPS = [
 ] as const
 
 export const RUN = STEPS.length - 1
+
+/**
+ * The Reboot Flywheel stage a step belongs to: Design until the data
+ * model is accepted, Prove from the project shell on. A deploy is
+ * Promote, which the band shows while one runs.
+ */
+export function stageOf(step: number): 'Design' | 'Prove' {
+  return step <= 1 ? 'Design' : 'Prove'
+}
+
+/** The review table the build skill shows at its checkpoint: its header row. */
+const REVIEW_TABLE = /\|\s*State type\s*\|\s*State ID\s*\|\s*Rule\s*\|/
+
+/** Whether narration holds the design review the user is asked to accept. */
+export function isReviewTable(text: string): boolean {
+  return REVIEW_TABLE.test(text)
+}
+
+/** The card's header line for a task that just finished, by its kind. */
+export function finishedToast(kind: TaskKind): string {
+  return kind === 'build'
+    ? 'The prototype is built and tested'
+    : kind === 'feature'
+      ? 'The feature is built and tested'
+      : 'The fix is in'
+}
 const BACKEND = 3
 const SCREENS = 5
 const TESTS = 6

@@ -17,6 +17,7 @@ for (const surface of ['terminal', 'desktop'] as const) {
     // Stand in for the engine beneath: every tool call succeeds.
     on('tool.call', () => ({ result: {}, text: 'ok' }) as never)
     on('fs.exists', () => ({ value: false }) as never)
+    on('clock.now', () => ({ value: 1000 }) as never)
     // The engine's own band is empty.
     on('ui.render', { component: 'AbovePrompt' }, ($, e) => {
       const { Box } = $.ui.resolve(e)
@@ -30,6 +31,13 @@ for (const surface of ['terminal', 'desktop'] as const) {
 
     await $.tool.call({ tool: 'Skill', skill: 'reboot:build' })
     await $.tool.call({ tool: 'Write', file_path: '/w/app/api/app/v1/app.py', content: '' })
+
+    // The data model is Design; the Now line says so. (Matched as a string:
+    // a RegExp with a non-ASCII character does not survive the kit's transport.)
+    const designing = await $.ui.mount({ plugin: PLUGIN, surface, component: 'AbovePrompt', props: BAND as never })
+    expect((await designing.findAll({ type: 'Text', text: 'Design \u00b7 ' })).length).toBe(1)
+    await designing.unmount()
+
     await $.tool.call({
       tool: 'Write',
       file_path: '/w/app/backend/src/servicers/app.py',
@@ -37,10 +45,12 @@ for (const surface of ['terminal', 'desktop'] as const) {
     })
 
     const band = await $.ui.mount({ plugin: PLUGIN, surface, component: 'AbovePrompt', props: BAND as never })
-    // A static Status heading: neither the kind of work nor the stage.
+    // A static Status heading: neither the kind of work nor the step.
     expect((await band.findAll({ type: 'Text', text: HEADING(surface) })).length).toBe(1)
     expect(await band.findAll({ type: 'Text', text: /^(Building|Adding Feature|Fixing|Done)$/ })).toEqual([])
-    expect(await band.findAll({ type: 'Text', text: /access rules|backend|screens|·/ })).toEqual([])
+    expect(await band.findAll({ type: 'Text', text: /access rules|backend|screens/ })).toEqual([])
+    // The servicers are Prove.
+    expect((await band.findAll({ type: 'Text', text: 'Prove \u00b7 ' })).length).toBe(1)
     // No progress bar: the task's name alone.
     expect(await band.findAll({ type: 'Text', text: /█|░/ })).toEqual([])
 
@@ -165,6 +175,53 @@ for (const surface of ['terminal', 'desktop'] as const) {
 
     const band = await $.ui.mount({ plugin: PLUGIN, surface, component: 'AbovePrompt', props: BAND as never })
     expect(await band.findAll({ type: 'Text', text: /^Idle$/ })).toEqual([])
+  })
+}
+
+for (const surface of ['terminal', 'desktop'] as const) {
+  test(`the review table holds the band at the checkpoint until the person answers on ${surface}`, async ($, on) => {
+    const toasts: string[] = []
+    on('session.cwd', () => ({ value: '/w/app' }) as never)
+    on('fs.exists', ($, e) => ({ value: (e as { path: string }).path === '/w/app/.rbtrc' }) as never)
+    on('ui.render', { component: 'AbovePrompt' }, ($, e) => {
+      const { Box } = $.ui.resolve(e)
+
+      return h(Box, {}) as never
+    })
+    on('ui.toast', ($, e) => {
+      toasts.push((e as { text: string }).text)
+      return { value: undefined } as never
+    })
+    on('model.complete', () => ({ value: { isAnswered: false, reason: 'empty-reply' } }) as never)
+    on('prompt.submit', ($, e) => ({ text: e.text }) as never)
+    on('tool.call', () => ({ result: {}, text: 'ok' }) as never)
+    on('clock.now', () => ({ value: 1000 }) as never)
+
+    await $.tool.call({ tool: 'Skill', skill: 'reboot:build' })
+    await $.session.append({
+      message: {
+        type: 'assistant',
+        content: [
+          {
+            type: 'text',
+            text: 'Here is the design.\n\n| State type | State ID | Rule | Method | Kind | Who may call | Scenario |\n| --- | --- | --- | --- | --- | --- | --- |\n| `Room` | room number | booked once per night | `book` | Writer | the app | "A second guest" |\n',
+          },
+        ],
+      },
+      door: 'response',
+      origin: { kind: 'model', model: 'test' },
+      uuid: 'review-1',
+    } as never)
+
+    const waiting = await $.ui.mount({ plugin: PLUGIN, surface, component: 'AbovePrompt', props: BAND as never })
+    expect((await waiting.findAll({ type: 'Text', text: 'Design \u00b7 awaiting your acceptance' })).length).toBe(1)
+    expect(toasts).toEqual(['The design, for your review'])
+    await waiting.unmount()
+
+    // The person's answer, whatever it is, ends the wait.
+    await $.prompt.submit({ text: 'Looks right, go ahead.' } as never)
+    const answered = await $.ui.mount({ plugin: PLUGIN, surface, component: 'AbovePrompt', props: BAND as never })
+    expect(await answered.findAll({ type: 'Text', text: /awaiting your acceptance/ })).toEqual([])
   })
 }
 
