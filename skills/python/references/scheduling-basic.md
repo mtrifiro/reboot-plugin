@@ -101,6 +101,9 @@ while it runs.
   framework issue). Keep an actor's timers few and coarse; never hold a
   lock across a cross-actor round-trip.
 - An undeclared exception in a scheduled method is retried with backoff; a declared `<Method>Aborted` is not (marquee-control, 1.4.1).
+- Whether `schedule()` can target a `Transaction` method is
+  undocumented (team-memo, 1.4.1; not verified at 1.6.0): schedule a
+  writer, or a workflow that calls the guarded transaction.
 
 ## Scales as
 

@@ -12,8 +12,8 @@ names:
 tags: [operations, version-drift, index-gap]
 cluster: "F"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "run/references/stop-restart-reset.md § Reset dev state (expunge)"
 ---
 
 # Small CLI and skill frictions (expunge --yes, --api-directory, test warnings, docstrings as dashboard descriptions)
@@ -27,3 +27,5 @@ resolved_by: ""
 **Where in the skills.** `run/SKILL.md`, `dashboard/SKILL.md`, `python/references/api-methods.md`.
 
 **Checked at 1.6.0.** `--api-directory` is no longer in any skill (fixed). `--yes` for `expunge` is still unmentioned in `run/SKILL.md`, and `api-methods.md` has no note on docstrings feeding the dashboard.
+
+**Resolution (2026-10-10).** `stop-restart-reset.md` gives `rbt dev expunge --yes` and the shim refuses the form that would hang; the dashboard skill's Known issues row names `--api-directory` among the flags `rbt dashboard` rejects; the templates' `pytest.ini` filters the `websockets` deprecation warnings; `api-methods.md` says `description=` is what the dashboard shows.

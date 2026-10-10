@@ -11,8 +11,8 @@ names:
 tags: [scaffold, frontend]
 cluster: ""
 still_applies: unknown
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "mcp-ui/references/api-method-types.md § Do this"
 ---
 # `UI(request=<Model>)` fields don't arrive as props in the template's wiring
 
@@ -23,3 +23,5 @@ resolved_by: ""
 **Repro.** `Catalog.show_findings=UI(request=FindingsView, …)` with the template's `main.tsx`.
 
 **Where in the skills.** `mcp-ui/references/api-method-types.md` § "Where a `UI()` goes"; `mcp-ui/references/react-app-tsx.md`.
+
+**Resolution (2026-10-10).** `api-method-types.md` says a `UI(request=<Model>)`'s fields reach the view through `useMcpToolData()`, not as props, and its example reads them that way.

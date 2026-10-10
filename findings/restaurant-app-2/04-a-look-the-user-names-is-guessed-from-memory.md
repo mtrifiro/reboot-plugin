@@ -10,8 +10,8 @@ names:
 tags: [negative-space, frontend]
 cluster: ""
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "web-app/references/ui-design.md § Do this"
 ---
 # A look the user names is guessed from memory, not read
 
@@ -22,3 +22,5 @@ resolved_by: ""
 **Repro.** On a scaffolded app say "model Resy"; check whether resy.com is opened before `styles.css` changes.
 
 **Where in the skills.** `web-app/references/ui-design.md` 01, 13.
+
+**Resolution (2026-10-10).** `ui-design.md` 01 treats a product the user names as a source like their own brand: open it, read, show the table, then apply, never from memory; `ui-restyle.md` begins the same way.

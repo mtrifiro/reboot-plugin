@@ -104,7 +104,8 @@ method types mean regenerating a dozen or more files.
      (`python/references/state-collections.md`, Scales as).
    - Demo data: a believable dev dataset (a dozen rooms on three floors,
      not one), seeded only under `rbt dev`, so every view has something
-     to show the first time it opens
+     to show the first time it opens; a spatial domain seeds its
+     geometry (footprints) and checks non-overlap in code
      (`python/references/lifecycle-seeding.md`, "Demo data").
    - Ready for both front doors, whichever is built first: a `User`
      type, and a `description=` on every method written for the AI. A
@@ -297,7 +298,10 @@ files by path, and point at the dashboard's Models and Features pages.
 Under the table, **Beyond the brief**: one line per interaction, rule or
 status the design adds to or changes from what the user asked, with its
 reason, so they accept those too; `design/review.md` records their
-answer to each. Then ask the user to accept, or to say what to change.
+answer to each. Beside it, the five-line visual brief (Design Phase,
+"The look") and, with no brand supplied, the offer: the Reboot default,
+or a brand or a site to read. Then ask the user to accept, or to say
+what to change.
 
 **Stop and wait.** No answer is not acceptance. A change sends you back
 to the design (or the feature skill), then here again. Only when the
@@ -621,7 +625,9 @@ skill and make the project look like `templates/both/`.
   `web/index.html` into `frontend/web/`, import the client from
   `@api/…`, and point `.rbtrc`'s `generate --react=` at
   `frontend/api` (one output directory per project; two `node_modules`
-  would load React twice). Delete `web/`.
+  would load React twice). Delete `web/`. The SPA now serves under
+  `/__/frontend/web/`, where a deep link to a path route 404s: switch
+  the router to hash routes (`#/kind/id`; plugin-browser, 1.6.0).
 - To an MCP UI: copy `both/frontend/web/`, and fill `__Title__` and
   `__Initial__` in its `index.html`.
 Then switch the AI's methods to `mcp=Tool()`, add any `UI()` methods,

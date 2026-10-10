@@ -11,8 +11,8 @@ names:
 tags: [contradiction, builder-drift]
 cluster: ""
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "mcp-ui/references/api-state-shapes.md § Do this; python/references/state-actor-decomposition.md § Never"
 ---
 
 # The builder skill says to hydrate nested models in the parent's factory create Writer; the factory should be a Transaction
@@ -26,3 +26,5 @@ resolved_by: ""
 **Where in the skills.** `web-app/SKILL.md` (state shape), per the source.
 
 **Checked at 1.6.0.** `web-app/SKILL.md` no longer says it, but `mcp-ui/references/api-state-shapes.md` (impactDescription and § "Single nested sub-object: hydrate in factory `create`") still says nested models are "hydrated in the factory `create` Writer", while `state-actor-decomposition.md` § Never says to start such constructors as `Transaction(mode=Exclusive(), factory=True)`.
+
+**Resolution (2026-10-10).** `api-state-shapes.md` now declares the factory `create` a `Transaction(mode=Exclusive(), factory=True)` and says why, matching `state-actor-decomposition.md`.

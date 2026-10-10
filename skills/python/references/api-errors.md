@@ -92,6 +92,10 @@ class AccountServicer(Account.Servicer):
   [`api-schema-evolution.md`](api-schema-evolution.md)).
 - An error `Model` with no fields — breaks the generated React client
   at import; see `react-generated-client.md` § Errors you will see.
+- A rejection counter written inside the transaction that rejects —
+  the abort rolls it back with everything else, so the count stays at
+  zero (returns-desk, 1.4.0). The caller or workflow that catches the
+  `<Method>Aborted` records it, after the abort.
 
 ## Limits
 

@@ -11,8 +11,8 @@ names:
 tags: [cost, operations]
 cluster: "D"
 still_applies: unknown
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/patterns-load-and-benchmarking.md § Scales as"
 ---
 
 # Envoy's cost is per-request and load-proportional; a busy app pays a core
@@ -26,3 +26,5 @@ resolved_by: ""
 **Where in the skills.** Primarily framework; relevant to a 'Scales as' line.
 
 **Checked at 1.6.0.** Not checked against 1.6.0; `skills/` mention Envoy only in `testing-web-app.md` (CORS) and `dashboard/SKILL.md`.
+
+**Resolution (2026-10-10).** `patterns-load-and-benchmarking.md` § Scales as: Envoy's cost is per request and grows with load; proxy CPU is a load gauge. The proxy's cost itself is Reboot's.

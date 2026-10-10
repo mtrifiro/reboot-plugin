@@ -118,6 +118,7 @@ section. Add or change a trap in its owning reference, not here. -->
 - `raise OverdraftError(...)` or `raise Account.OverdraftErrorAborted(...)`
 - Raise an error `Model` the method did not list in its own `errors=[...]`
 - An error `Model` with no fields
+- A rejection counter written inside the transaction that rejects
 
 **`api-methods.md`**
 - `balance=BalanceResponse` (a bare `Model`) in `Methods(...)`
@@ -680,6 +681,12 @@ section. Add or change a trap in its owning reference, not here. -->
 - Page links in a row that scrolls with its scrollbar hidden: past the edge they are gone with no sign
 - A layout chosen from a measurement that the layout itself changes
 - Uppercase on identifiers or data (`text-transform` turns "A.14b" into "A.14B")
+
+**`web-app/references/ui-restyle.md`**
+- A new palette from a taste word alone, or a named product's colors from memory (restaurant-app-2, 1.6.0: four guesses, four rejections)
+- A look change in the same turn as a backend restart, expunge or reseed
+- A screenshot taken without opening it, or a change reported without saying where to look
+- Candidates kept as stacked blocks in `styles.css`
 <!-- generated:end -->
 
 ## Never

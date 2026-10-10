@@ -214,6 +214,7 @@ Apps" above):
 - `references/react-client.md` — An unset `VITE_REBOOT_URL` points at Vite's origin; copy `build/templates/web-app/web/`; own port, `strictPort`, sign-in, typed errors.
 - `python/references/react-generated-client.md` — Mutations resolve to `{ response, aborted }`, never throw; `rbt generate --react=` output: `use<Type>()` overloads, reader returns, naming.
 - `references/ui-design.md` — Brief, Reboot's brand by default (a user's brand replaces it), primary view by task, page anatomy, labeled controls, light/dark toggle, restyle by token values, screenshot review.
+- `references/ui-restyle.md` — only when the user asks to change the look of an app that already runs.
 <!-- generated:end -->
 
 **Before the tests:**

@@ -260,6 +260,7 @@ servicer before the first test):
 - `python/references/react-generated-client.md` — Mutations resolve to `{ response, aborted }`, never throw; `rbt generate --react=` output: `use<Type>()` overloads, reader returns, naming.
 - `references/ui-design.md` — The web app's principles inside a host: shared `frontend/mcp/styles.css`, `useHostTheme()` (the host owns light/dark), one focused view, skeletons.
 - `references/pop-out-to-web-app.md` — only when a widget needs a "pop out into the web app" button.
+- `web-app/references/ui-restyle.md` — only when the user asks to change the look of an app that already runs.
 <!-- generated:end -->
 
 **Before the tests:**

@@ -12,8 +12,8 @@ names:
 tags: [negative-space, frontend]
 cluster: ""
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "build/SKILL.md § Accept the Design"
 ---
 # The visual brief was skipped, and acceptance never shows the look
 
@@ -24,3 +24,5 @@ resolved_by: ""
 **Repro.** Ask for an app naming no brand; at acceptance, grep the card for an accent and its source.
 
 **Where in the skills.** `build/SKILL.md` (Design Phase, Accept the Design), `build/references/flywheel.md` (Stage cards), `web-app/references/ui-design.md` 01.
+
+**Resolution (2026-10-10).** The Accept the Design card carries the five-line visual brief beside the rule table and, with no brand supplied, the offer of the Reboot default or a brand or site to read. Rendering the brief before code and a grader on the card remain open (wave 5).

@@ -9,8 +9,8 @@ names: []
 tags: [negative-space]
 cluster: "8.4"
 still_applies: unknown
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/scheduling-basic.md § Limits"
 ---
 
 # Can schedule() target a transaction method?
@@ -22,3 +22,5 @@ resolved_by: ""
 **Repro.** Not recorded.
 
 **Where in the skills.** Not recorded.
+
+**Resolution (2026-10-10).** `scheduling-basic.md` § Limits states what is known: whether `schedule()` can target a `Transaction` is undocumented; schedule a writer, or a workflow that calls the guarded transaction. The answer itself is Reboot's.

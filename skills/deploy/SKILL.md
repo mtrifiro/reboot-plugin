@@ -13,7 +13,7 @@ allowed-tools: Bash, Read, Write, Glob, Grep, Edit, AskUserQuestion
 Put a working app on the internet: the backend on **Reboot Cloud**, the
 web frontend (a React SPA) on a **static host** (here Cloudflare Pages)
 at the user's **own domain**. They talk cross-origin: the SPA calls
-`https://<application-id>.<cell>.rbt.cloud:9991` directly, allowed by
+`https://<application-id>.<cell>.rbt.cloud` directly, allowed by
 `OAuth(allowed_origins=[...])`. This skill changes only production
 configuration; to build see the [`app` skill](../app/SKILL.md); to run
 locally, the [run skill](../run/SKILL.md).
@@ -129,9 +129,13 @@ application only. Commit `deploy/` and the scripts.
 
 ## Step 3 — Deploy the backend
 
-The first time, with no ledger: `scripts/deploy.sh --first --backend-only`.
-It prints the API address (`https://<application-id>.<cell>.rbt.cloud:9991`)
-and records it in the ledger; Step 5 bakes it in. Image:
+`scripts/deploy.sh` deploys both halves: an old bundle keeps calling
+methods a breaking backend change removed, so never ship such a change
+`--backend-only` (crm-kit, 1.6.0). The first time, with no ledger:
+`scripts/deploy.sh --first --backend-only`. It prints the API address
+(`https://<application-id>.<cell>.rbt.cloud`, on port 443; copy it as
+printed, an older `:9991` form fails) and records it in the ledger;
+Step 5 bakes it in. Image:
 `python/references/lifecycle-dockerfile.md` (the script stops without a
 `Dockerfile`); secrets: `python/references/lifecycle-secrets.md`. What
 commonly bites here:
@@ -207,7 +211,7 @@ Detect the layout (as the [run skill](../run/SKILL.md) does):
    it) — Vite's production build reads it; leave `.env` alone:
 
    ```sh
-   VITE_REBOOT_URL=https://<application-id>.<cell>.rbt.cloud:9991
+   VITE_REBOOT_URL=https://<application-id>.<cell>.rbt.cloud
    ```
 
    Dual-frontend: add the web app's own address in the same file. The
@@ -292,7 +296,7 @@ returns 503 for about thirty seconds after `rbt cloud up`; reboot-crm,
 2. **CORS:**
 
    ```sh
-   curl -sSI "https://<application-id>.<cell>.rbt.cloud:9991/__/oauth/whoami" \
+   curl -sSI "https://<application-id>.<cell>.rbt.cloud/__/oauth/whoami" \
        -H "Origin: https://app.example.com"
    ```
 

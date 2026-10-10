@@ -145,7 +145,9 @@ api = API(
 - **User-scoped** ("my dashboard", "browse all my Persons") → `UI()` on
   `User`.
 - **Free-form config the AI fills in** → `request=<Model>` on the UI's
-  Type; fields arrive as camelCased props:
+  Type; the view reads the fields with `useMcpToolData()` from
+  `@reboot-dev/reboot-react` (camelCased; the template's `main.tsx`
+  passes no props; plugin-browser, 1.6.0):
 
 ```python
 class DashboardConfig(Model):
@@ -163,7 +165,9 @@ show_dashboard=UI(
 ```
 
 ```tsx
-export const DashboardApp: FC<DashboardConfig> = ({ personalizedMessage }) => {
+export const DashboardApp: FC = () => {
+  // The tool call's arguments, as the AI filled them in.
+  const { personalizedMessage } = useMcpToolData() as DashboardConfig;
   // No `id`: resolved from the tool-call target; `undefined` until then.
   const { counter } = useCounter();
   return counter && (
@@ -199,6 +203,10 @@ entity's Readers, Writers and UIs go on its own `Type`.
   before every call, Readers included, "Always allow" is per tool, and
   there is no application-side workaround (reboot-crm, 1.6.0).
 - `UI()` has no `response=` and no servicer method.
+- Generated tools carry no annotations (`readOnlyHint`,
+  `idempotentHint`), and `Tool()` takes only `name` and `title`, so a
+  host like Claude asks permission on every call, plain reads included
+  (reboot-crm, 1.6.0).
 
 ## Scales as
 

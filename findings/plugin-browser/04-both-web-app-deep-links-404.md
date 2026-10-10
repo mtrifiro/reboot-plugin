@@ -11,8 +11,8 @@ names:
 tags: [negative-space, frontend]
 cluster: ""
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "build/SKILL.md § Update Flow"
 ---
 # A `both` web app can't use path routes: deep links 404 under `/__/frontend/web/`
 
@@ -23,3 +23,5 @@ resolved_by: ""
 **Repro.** A `both` app with a path-routed SPA; open `/__/frontend/web/<route>` directly.
 
 **Where in the skills.** `build/SKILL.md` § Update Flow, "Adding the other front door"; `web-app/references/react-client.md`.
+
+**Resolution (2026-10-10).** The build skill's "Adding the other front door" says the SPA now serves under `/__/frontend/web/`, where deep links to path routes 404, and to switch to hash routes.

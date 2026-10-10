@@ -12,8 +12,8 @@ names:
 tags: [operations, auth]
 cluster: ""
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "deploy/SKILL.md § Step 3 — Deploy the backend"
 ---
 
 # Use the printed Cloud URL as-is on port 443; the references still say :9991
@@ -27,3 +27,5 @@ resolved_by: ""
 **Where in the skills.** `lifecycle-reboot-cloud.md`, `deploy/SKILL.md` (§11).
 
 **Checked at 1.6.0.** Still `:9991` in `lifecycle-reboot-cloud.md` (lines ~70-72), `deploy/SKILL.md` (~80, ~121) and `inspect/SKILL.md` (~55, ~75). `/__/oauth/callback` is documented (`deploy/SKILL.md`, `web-app/SKILL.md`) and "Web application" in `mcp-ui/references/auth-oauth-providers.md`.
+
+**Resolution (2026-10-10).** Every Cloud URL in the deploy, Cloud and inspect references is the printed port-443 form; Step 3 says to copy the address as printed and that the `:9991` form fails.

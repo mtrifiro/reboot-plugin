@@ -152,8 +152,10 @@ or links. The models below are the hotel; write yours.
 > **The design, for your review.** Here is the design as I understood
 > it: `Room` owns "booked at most once per night", `Reservation.create`
 > books every room or none and is called only by the app, and each
-> rule has a scenario that will test it. This is the cheapest moment to
-> change any of it, before anything depends on it. Take your time; I'll
+> rule has a scenario that will test it. The look: navy on cream,
+> Reboot's default since you named no brand; name one, or a site, and
+> I'll read it. This is the cheapest moment to change any of it, before
+> anything depends on it. Take your time; I'll
 > wait for your go-ahead or your changes.
 
 > **The prototype is built and tested.** The app is running at

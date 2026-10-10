@@ -418,6 +418,20 @@ one kind no eval has: a judged rubric over the class page
 an artifact in the handoff (P4.35). The red-run rule (P3.192) cannot be an eval (runs are
 read-only); it is wave 1 item 10.
 
+**The tail, 2026-10-10.** The 25 items wave 3 left are done: the
+Cloud URLs on port 443, the frontend in the same deploy, the rejection
+counter, the claims sign-in step, hash routes for a `both` SPA, the MCP
+tool annotations, `useMcpToolData()`, the factory `Transaction` in the
+state-shapes reference, the dependency warnings filtered in
+`pytest.ini`, Envoy's per-request cost, and a Limits line for each
+framework question with no answer yet. The look cluster: a new
+conditional `ui-restyle.md` (the loop with the user), the spatial-hero
+row and the named-look sentence in `ui-design.md`, the brief on the
+Accept card and the design stage card. Two items proved already
+covered and one obsolete (the 1.4.0 client's `.items` shape). One open
+plugin item remains, the rendered rubric (P4.35, wave 5). The Web App
+path touched its ceiling and was cut back under it, as the rule says.
+
 **Wave 4 status, 2026-10-10.** The four graders are written
 (`email-verified` and `roster` on `design-roles`, `history-placement`
 on `design-ready-for-both`, `beyond-the-brief` on `design-accept-gate`)

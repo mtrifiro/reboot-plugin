@@ -171,6 +171,12 @@ A transaction is roughly 5-10x a writer.
   1-63 ms by call; with about 10% book-and-cancel writes, 8 users:
   150.6 rps, write p50 141 ms, p99 303 ms (reboot-air-141-load-04,
   1.4.1).
+- **Envoy's cost is per request and grows with load.** Under `rbt dev
+  run` its transcoding and Lua filter cost milliseconds of CPU per
+  request; ordinary boot traffic held about a core and slowed internal
+  RPCs, and a whole-room re-push multiplied it (theater-network, 1.4.0).
+  Treat proxy CPU as a load gauge; avoid readers that re-push large state
+  on every small change.
 
 ## Errors you will see
 

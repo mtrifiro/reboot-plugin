@@ -10,8 +10,8 @@ names:
 tags: [negative-space, frontend]
 cluster: "8.4"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "mcp-ui/references/api-method-types.md § Limits"
 ---
 
 # Generated MCP tools carry no annotations, so a host asks permission for every Reader call
@@ -25,3 +25,5 @@ resolved_by: ""
 **Where in the skills.** `mcp-ui/SKILL.md` and `mcp-ui/references/api-method-types.md` (no mention).
 
 **Checked at 1.6.0.** No mention of annotations or permission prompts in `mcp-ui/` (grep).
+
+**Resolution (2026-10-10).** `api-method-types.md` § Limits: generated tools carry no annotations and `Tool()` takes only `name` and `title`, so hosts ask permission on every call. The annotations themselves are Reboot's.

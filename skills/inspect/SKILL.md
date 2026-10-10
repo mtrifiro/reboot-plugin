@@ -85,7 +85,7 @@ Both match `rbt export` / `rbt import` (see
   - **Local dev:** what `rbt dev run` prints (e.g.
     `http://localhost:9991`).
   - **Reboot Cloud:** what `rbt cloud up` prints (e.g.
-    `https://<application-id>.prod1.rbt.cloud:9991`).
+    `https://<application-id>.prod1.rbt.cloud`, port 443 as printed).
 - `--admin-credential`: the app's admin secret
   (`SECRET_REBOOT_ADMIN_TOKEN`).
   - **Local dev:** defaults to `dev`; omit it.
@@ -105,7 +105,7 @@ rbt inspect state list \
 # Reboot Cloud (admin credential required)
 rbt inspect state get \
   --type=bank.v1.Account --id=alice \
-  --application-url=https://<application-id>.prod1.rbt.cloud:9991 \
+  --application-url=https://<application-id>.prod1.rbt.cloud \
   --admin-credential="$SECRET_REBOOT_ADMIN_TOKEN"
 ```
 

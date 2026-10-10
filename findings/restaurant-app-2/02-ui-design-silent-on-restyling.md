@@ -11,8 +11,8 @@ names:
 tags: [negative-space, frontend]
 cluster: ""
 still_applies: unknown
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "web-app/references/ui-design.md § Do this"
 ---
 # ui-design.md is silent on restyling an existing app
 
@@ -23,3 +23,5 @@ resolved_by: ""
 **Repro.** Ask for "a Linear look", then "friendlier", then "restyle in brand X" on a scaffolded web app; then grep `styles.css` for `:root` below the token blocks.
 
 **Where in the skills.** `web-app/references/ui-design.md` (05, 12, Never); `mcp-ui/references/ui-design.md` (shared stylesheet).
+
+**Resolution (2026-10-10).** `ui-design.md` 13 already restyles by token values in place, folds or deletes appended layers, and updates favicon, logo and fonts; 05 replaces the whole color family for a brand of several colors and keeps a brand's green off the accent. `ui-restyle.md` adds the loop with the user.

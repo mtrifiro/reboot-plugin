@@ -1,7 +1,7 @@
 ---
 title: API State Shapes — List and Nested Sub-Objects
 impact: HIGH
-impactDescription: Two recurring MCP UI state patterns. `list[Item]` of non-state Models is for **bounded sub-records** that have no identity of their own; entity collections (people, posts, messages, anything addressable on its own) must be promoted to their own state `Type`. Single nested `Model` sub-objects must be `Optional` with `default=None` and hydrated in the factory `create` Writer.
+impactDescription: Two recurring MCP UI state patterns. `list[Item]` of non-state Models is for **bounded sub-records** that have no identity of their own; entity collections (people, posts, messages, anything addressable on its own) must be promoted to their own state `Type`. Single nested `Model` sub-objects must be `Optional` with `default=None` and hydrated in the factory `create`, a `Transaction(mode=Exclusive(), factory=True)`.
 tags: state, list, nested, sub-object, optional, model, default, default_factory, decomposition, crud
 summary: "Never nest state Models; `list[Item]` only for bounded identity-less sub-records; a nested `Model` is `Optional`, hydrated in `create`."
 step: api
@@ -42,6 +42,11 @@ post) and items have no identity:
   `await myType.reorderItem({ fromIndex: 0, toIndex: 1 })`.
 
 ### Single nested sub-object: hydrate in factory `create`
+
+Declare `create` as `Transaction(mode=Exclusive(), factory=True)`, never
+`Writer(factory=True)`: a constructor's kind can never change, and a
+`Writer` factory cannot construct another actor later
+(`python/references/state-actor-decomposition.md` § Never; crm-kit, 1.6.0).
 
 ```python
 from reboot.api import Field, Model

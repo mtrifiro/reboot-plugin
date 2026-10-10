@@ -120,7 +120,11 @@ And "bob" is an unauthenticated user
 ```
 
 - `is an authenticated user` mints a token via the real sign-in path,
-  auto-constructing the app's `User`.
+  auto-constructing the app's `User`, with no claims. A token with claims
+  (an email, `email_verified`), for an app that keys a roster by email,
+  is a custom step over the harness's
+  `make_valid_oauth_access_token(user_id=..., claims={...})`; it runs the
+  real `set_claims` (`auth-roles.md`).
 - `has the bearer token`: a raw token the app's `TokenVerifier` accepts.
 - Calls start with the user; reads with `as "alice",`. A lone
   unauthenticated caller is `"anonymous"`.

@@ -222,6 +222,10 @@ or one transaction covering every actor involved.
 - Parallel harness runs (`pytest -n auto`/`-n4`) have hung silently at
   zero CPU (reboot-crm, 1.6.0, unexplained). Give each run a timeout;
   fall back to `-n0`.
+- Scenarios spend their time parked waiting for the application to
+  become ready, not on CPU, so parallel runs (`-n4`, concurrent files)
+  are no faster overall and hang or slow more (reboot-crm, 1.6.0). One
+  `Reboot()` per file, files in sequence.
 
 ## Scales as
 

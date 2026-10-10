@@ -10,8 +10,8 @@ names:
 tags: [frontend, negative-space]
 cluster: ""
 duplicate_of: returns-desk-04
-still_applies: yes
-status: Open
+still_applies: no
+status: Obsolete
 resolved_by: ""
 ---
 
@@ -26,3 +26,5 @@ resolved_by: ""
 **Where in the skills.** `python/references/react-generated-client.md`.
 
 **Checked at 1.6.0.** grep for `httpCall`, `protobuf-es`, `_pb` and `rbt_web` across `skills/` finds nothing relevant; `react-generated-client.md` mentions only `*_rbt_react.ts` and Zod-validated types. The surface still exists: 1.6.0 projects (reboot-crm, client-portal) generate `*_pb.ts` and `*_rbt_web.ts`. agentic-demo's learnings file repeats returns-desk's text for this section (it is the same file with §11 added); see returns-desk-04.
+
+**Obsolete (2026-10-10).** As returns-desk-04: the 1.6.0 client is zod-based.

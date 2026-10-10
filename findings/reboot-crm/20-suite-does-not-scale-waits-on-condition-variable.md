@@ -9,8 +9,8 @@ names: []
 tags: [testing, cost]
 cluster: "D"
 still_applies: unknown
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/testing-harness.md § Limits"
 ---
 
 # The suite does not scale across cores, because it is not waiting for a core
@@ -22,3 +22,5 @@ resolved_by: ""
 **Repro.** `time uv run pytest -m critical -n0` against `time uv run pytest -m critical -n4`, several times each, watching `ps -o stat=,%cpu=` on the python worker rather than the `timeout`/`uv` wrappers (both read 0.0% always).
 
 **Where in the skills.** Not applicable to a skill.
+
+**Resolution (2026-10-10).** `testing-harness.md` § Limits: scenarios wait on the application becoming ready, not on CPU, so parallel runs buy nothing; one `Reboot()` per file, in sequence; `pytest-timeout` in the templates fails a hang on its own.

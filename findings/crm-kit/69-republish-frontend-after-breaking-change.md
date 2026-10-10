@@ -10,8 +10,8 @@ names:
 tags: [frontend, operations]
 cluster: ""
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "deploy/SKILL.md § Step 3 — Deploy the backend"
 ---
 
 # After any breaking backend change, republish the frontend in the same deploy
@@ -25,3 +25,5 @@ resolved_by: ""
 **Where in the skills.** Not named by the source.
 
 **Checked at 1.6.0.** `deploy/SKILL.md` Step 5 uses `--branch=main` (after `pages project create --production-branch=main`); nothing says a breaking backend change requires republishing the frontend in the same deploy (grep `republish`, `old bundle`).
+
+**Resolution (2026-10-10).** Step 3 says `scripts/deploy.sh` deploys both halves and never to ship a breaking backend change `--backend-only`; the template's script builds and publishes the frontend on every full deploy.

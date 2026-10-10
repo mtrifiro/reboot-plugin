@@ -11,8 +11,8 @@ names:
 tags: [negative-space, frontend, seeding]
 cluster: ""
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "web-app/references/ui-design.md § Do this"
 ---
 # No guidance for a spatial primary view (a floor plan, a map)
 
@@ -23,3 +23,5 @@ resolved_by: ""
 **Repro.** Ask for any app whose main object is a room, a yard or a warehouse.
 
 **Where in the skills.** `web-app/references/ui-design.md` 02, `build/SKILL.md` Design Phase (demo data).
+
+**Resolution (2026-10-10).** `ui-design.md` 02's places row carries the spatial-hero rules (full width, compact lists beside it, geometry from data, status with a legend, solid strokes, legible from across a room, the expunge cycle for a geometry change); the build skill's demo-data item names spatial domains.

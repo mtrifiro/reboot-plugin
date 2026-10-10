@@ -10,8 +10,8 @@ names:
 tags: [negative-space, frontend]
 cluster: ""
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "web-app/references/ui-restyle.md § Do this"
 ---
 # Changing a look on a running app has no loop; each rejection got a new guess
 
@@ -22,3 +22,5 @@ resolved_by: ""
 **Repro.** On a running app say "I hate the colors" three times with no source; count the `:root` blocks appended to `styles.css`.
 
 **Where in the skills.** `web-app/references/ui-design.md` (12, 13); none for iteration.
+
+**Resolution (2026-10-10).** A new conditional reference, `ui-restyle.md` (when the user asks to change a running app's look): a source before the edit, one change per turn with no restart in it, a screenshot opened and a line on where to look, and after a second rejection with no source, rendered candidates as token sets or a site to read.

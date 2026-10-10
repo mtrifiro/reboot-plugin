@@ -10,8 +10,8 @@ names:
 tags: [negative-space, pattern]
 cluster: "E"
 still_applies: unknown
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/agent-pydantic-ai.md § Limits"
 ---
 
 # No incremental streaming path for chat UX
@@ -23,3 +23,5 @@ resolved_by: ""
 **Repro.** Not recorded.
 
 **Where in the skills.** `agent-pydantic-ai.md` states the limitation without an escape hatch.
+
+**Resolution (2026-10-10).** `agent-pydantic-ai.md` § Limits already says streaming is drained and memoized inside `at_least_once`, so a chat UI gets the whole response at once, with no sanctioned side channel at 1.6.0; the rest is Reboot's.

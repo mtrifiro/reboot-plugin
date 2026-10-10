@@ -10,8 +10,8 @@ names:
 tags: [pattern]
 cluster: ""
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/api-errors.md § Never"
 ---
 
 # A rejection counter cannot live inside the transaction that rejects; the loser records it after the abort
@@ -25,3 +25,5 @@ resolved_by: ""
 **Where in the skills.** `python/references/api-errors.md`.
 
 **Checked at 1.6.0.** `api-errors.md` § Do this and `patterns-error-handling.md` § Never say a raised `<Method>Aborted` rolls back every change the method made; neither draws the corollary that a count of rejections must be written by the catcher after the abort.
+
+**Resolution (2026-10-10).** `api-errors.md` § Never: a rejection counter inside the rejecting transaction rolls back with the abort; the catcher records it afterwards.

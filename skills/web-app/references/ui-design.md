@@ -46,7 +46,10 @@ read computed styles: the body's background and color; the font family
 and weight of `h1`, `h2`, body text, buttons and `code`; and the most
 frequent colors on the page. A brand usually gives more than an accent:
 a page color, an ink, a highlight, and up to three typefaces (display,
-text, mono). Record each in the brief, with the site as the source.
+text, mono). Record each in the brief, with the site as the source. A
+product the user names ("model Resy") is a source the same way: open
+it, read, show the table, then apply, never from memory; on a running
+app, [`ui-restyle.md`](ui-restyle.md).
 
 ### The default look: Reboot's brand
 
@@ -80,7 +83,7 @@ system fonts (`mcp-ui/references/ui-design.md`).
 | A few items moving through stages | Board | `board`, `board-col`, `card` |
 | Amounts over time | Chart | `chart` (an `<svg>`, `--series-1..4`) |
 | Events over time | Timeline | `feed` |
-| Places, dates | Map, calendar | none; build on the tokens |
+| Places, dates | A floor plan, a map, a calendar | none; build on the tokens. A spatial hero takes the width, lists beside it `density-compact`; geometry from data (footprints in the seed, non-overlap checked in code); status per 05, with a legend; solid strokes, no glow or gradient, legible across a room; a seed geometry change needs the expunge cycle (restaurant-app-2, 1.6.0) |
 
 One record's detail is a `kv` list in a `drawer` (`drawer-body` scrolls,
 `drawer-foot` holds the main action) or on its own route.

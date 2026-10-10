@@ -13,8 +13,8 @@ names:
 tags: [auth, operations, version-drift, negative-space]
 cluster: "F"
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/auth-claims.md § Never"
 ---
 
 # Small things: Development() identities, expunge --yes, dashboard flag and port, pydantic_settings warning, mypy **kwargs
@@ -28,3 +28,5 @@ resolved_by: ""
 **Where in the skills.** `web-app/SKILL.md`, `run/SKILL.md`, `dashboard/SKILL.md`, `python/references/rpc-calls.md`.
 
 **Checked at 1.6.0.** `--api-directory` is gone from all skills (fixed). `run/SKILL.md` still has no `--yes`; `rpc-calls.md` has no `TypedDict` note (grep found none); `web-app/SKILL.md` lines ~70-127 describe `Development()` but not the five-identity limit or the `claims=["email",...]` need; no dashboard-port-collision warning.
+
+**Resolution (2026-10-10).** `auth-claims.md` § Never names `Development()`'s five identities and the claims a role app needs; `stop-restart-reset.md` gives `expunge --yes`; every project now gets a dashboard port of its own (`copy.sh`); the templates' `pytest.ini` filters the `pydantic_settings` warning; `rpc-calls.md` § Never has the `**kwargs` typing note.

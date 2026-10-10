@@ -9,8 +9,8 @@ names: []
 tags: [negative-space]
 cluster: "E"
 still_applies: unknown
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/servicer-transaction.md § Limits"
 ---
 
 # Effect validation tolerated a transaction whose sub-call arguments are random
@@ -22,3 +22,5 @@ resolved_by: ""
 **Repro.** Not recorded.
 
 **Where in the skills.** Not recorded.
+
+**Resolution (2026-10-10).** `servicer-transaction.md` § Limits: effect validation compares the actor's own state changes, not a sub-call's arguments; seed randomness from request fields.

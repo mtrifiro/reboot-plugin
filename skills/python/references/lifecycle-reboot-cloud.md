@@ -67,9 +67,9 @@ rbt cloud up \
 Success prints three URLs:
 
 ```text
-  Your API is available at:      https://<application-id>.prod1.rbt.cloud:9991
-  MCP clients can connect at:    https://<application-id>.prod1.rbt.cloud:9991/mcp
-  You can inspect your state at: https://<application-id>.prod1.rbt.cloud:9991/__/inspect
+  Your API is available at:      https://<application-id>.prod1.rbt.cloud
+  MCP clients can connect at:    https://<application-id>.prod1.rbt.cloud/mcp
+  You can inspect your state at: https://<application-id>.prod1.rbt.cloud/__/inspect
 ```
 
 From the terminal, `rbt inspect` against the API URL

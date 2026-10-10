@@ -11,8 +11,8 @@ names:
 tags: [testing, auth, negative-space]
 cluster: ""
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/testing-features.md § Do this"
 ---
 # Signing in with claims needs a custom step; the built-in mints a token with no claims
 
@@ -23,3 +23,5 @@ resolved_by: ""
 **Repro.** Key a roster by the `email` claim; sign a scenario user in with the built-in step; the roster lookup finds nothing.
 
 **Where in the skills.** `python/references/testing-features.md` (built-in steps); `python/references/testing-harness.md`.
+
+**Resolution (2026-10-10).** `testing-features.md` says the built-in sign-in step mints a token with no claims and shows that a token with claims is a custom step over `make_valid_oauth_access_token`; `auth-roles.md` carries the step in a feature file. The built-in step is Reboot's.

@@ -157,6 +157,10 @@ Assert against seed constants (`LAB_SHOWINGS`), not literals (`48`).
 - A seed from `initialize` can't act as a user
   ([`lifecycle-initialize-hook.md`](lifecycle-initialize-hook.md)).
 - `rbt dev expunge` without `--yes` blocks forever with no terminal.
+- A long seed goes quiet: the effect-validation `Re-running` line
+  prints once per method, then is silenced for five minutes
+  (student-sor, 1.5.0). Measure progress from state (`rbt inspect`), not
+  the log.
 
 ## Scales as
 

@@ -9,8 +9,8 @@ names:
   - python/references/react-generated-client.md
 tags: [frontend, negative-space]
 cluster: ""
-still_applies: yes
-status: Open
+still_applies: no
+status: Obsolete
 resolved_by: ""
 ---
 
@@ -25,3 +25,5 @@ resolved_by: ""
 **Where in the skills.** `python/references/react-generated-client.md`.
 
 **Checked at 1.6.0.** grep for `httpCall`, `protobuf-es`, `_pb` and `rbt_web` across `skills/` finds nothing relevant; `react-generated-client.md` mentions only `*_rbt_react.ts` and Zod-validated types. The surface still exists: 1.6.0 projects (reboot-crm, client-portal) generate `*_pb.ts` and `*_rbt_web.ts`.
+
+**Obsolete (2026-10-10).** The 1.4.0 client's one-shot `httpCall` returned protobuf-es classes with repeated fields under `.items`; the 1.6.0 client is zod-based and its responses are plain objects (`react-generated-client.md`), so this no longer applies.
