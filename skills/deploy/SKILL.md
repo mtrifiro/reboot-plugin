@@ -51,7 +51,9 @@ Steps 1–7 below are the first deploy. After it, a deploy is
 `scripts/deploy.sh`. The dry run's output comes with the "Ready to
 deploy" card and Step 7's checks end with "Live"
 ([`build/references/flywheel.md`](../build/references/flywheel.md),
-"Stage cards"): in full the first time, one line after.
+"Stage cards"): in full the first time, one line after. The card's
+ask (deploy now, or not yet) is a decision box ("A box around the
+decision", there).
 
 ## When to Use
 

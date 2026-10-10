@@ -201,6 +201,23 @@ Tone, for these and any card written later:
   restated.
 - One clause of orientation; no stage labels in headers.
 
+**A box around the decision.** When a card stops for the user's call
+(the design, the deploy), the ask is drawn as a box in a fenced block,
+so it stands apart from the narrative above it in Claude Code and
+Codex alike. The box holds only the decision: one line of ask, then
+each answer and what it does, in the user's nouns; the reasons stay in
+the card. Under 60 columns, so it never wraps.
+
+```
+┌──────────────────────────────────────────────────────┐
+│ Your call: accept the design, or change it?          │
+│                                                      │
+│   accept       build on it as it stands              │
+│   change …     say what; I'll revise and come back   │
+│   build anyway go on without accepting (recorded)    │
+└──────────────────────────────────────────────────────┘
+```
+
 ## Never
 
 - Writing the implementation (Step 2 onward) before the design is

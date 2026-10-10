@@ -300,8 +300,8 @@ status the design adds to or changes from what the user asked, with its
 reason, so they accept those too; `design/review.md` records their
 answer to each. Beside it, the five-line visual brief (Design Phase,
 "The look") and, with no brand supplied, the offer: the Reboot default,
-or a brand or a site to read. Then ask the user to accept, or to say
-what to change.
+or a brand or a site to read. Then the decision box
+(`references/flywheel.md`, "A box around the decision").
 
 **Stop and wait.** No answer is not acceptance. A change sends you back
 to the design (or the feature skill), then here again. Only when the

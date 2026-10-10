@@ -18,7 +18,7 @@ skills front-load (which front door, the design) and before any code.
 | `design-look-triage` | Triage of a few hundred bug reports: a grouped list (not a chart) as the primary view, color on one dimension, stat tiles and labelled filters |
 | `design-look-board` | A dozen candidates through interview stages: still a board, so the principles add flexibility rather than a new house style |
 | `design-roles` | A hotel with front desk and housekeeping: the design names the roles and enforces in the backend which methods each may call; roles on one roster, a sign-in linked only on a verified email, the first admin named; dev-only demo data |
-| `design-accept-gate` | The accept checkpoint: the design maps each rule to its owner, method, kind and caller, lists what goes beyond the brief, and stops for the user's acceptance. `explains-the-stop` (the stage card's plain words for why it stops) is reported, not scored: a planning session never reaches the checkpoint with the artifacts in hand, and no run has produced the card yet |
+| `design-accept-gate` | The accept checkpoint: the design maps each rule to its owner, method, kind and caller, lists what goes beyond the brief, and stops for the user's acceptance with the ask drawn as a box. `explains-the-stop` (the stage card's plain words for why it stops) is reported, not scored: a planning session never reaches the checkpoint with the artifacts in hand, and no run has produced the card yet |
 | `design-skip-gate` | Told up front to build without stopping: the design is still shown, and nothing waits |
 
 Plain Claude also builds a web app without asking on the `route-*`
