@@ -1,0 +1,45 @@
+#!/usr/bin/env sh
+# Refuses a push to `main` of a tree the suite has not passed on in
+# full, so a project whose Workflow is `main` (AGENTS.md) gets the gate
+# a branch gets from .github/workflows/prove.yml. The record is
+# tests/.last-run.json (tests/last_run.py): the last run must have been
+# `scripts/test.sh full` (or a plain `pytest`), with no failure, on the
+# exact tree being pushed. A push to any other branch is not checked.
+#
+# Installed by `git config core.hooksPath .githooks`, which copy.sh runs
+# in a repository and a fresh clone runs itself.
+
+set -eu
+
+root="$(git rev-parse --show-toplevel)"
+record="$root/tests/.last-run.json"
+zero="0000000000000000000000000000000000000000"
+
+while read -r _local_ref local_sha remote_ref _remote_sha; do
+  case "$remote_ref" in
+    refs/heads/main|refs/heads/master) ;;
+    *) continue ;;
+  esac
+  [ "$local_sha" != "$zero" ] || continue  # a deletion
+  tree="$(git rev-parse "$local_sha^{tree}")"
+  if [ ! -f "$record" ]; then
+    echo "pre-push: no test run is recorded (tests/.last-run.json); run scripts/test.sh full before pushing to main" >&2
+    exit 1
+  fi
+  python3 - "$record" "$tree" <<'EOF'
+import json
+import sys
+
+record, tree = json.load(open(sys.argv[1])), sys.argv[2]
+why = None
+if not record.get("full"):
+    why = "the last run was partial"
+elif record.get("failed", 0):
+    why = f"the last run had {record['failed']} failing scenario(s)"
+elif record.get("tree") != tree:
+    why = "the tree being pushed is not the one the last full run passed on"
+if why:
+    print(f"pre-push: {why}; run scripts/test.sh full on this tree before pushing to main", file=sys.stderr)
+    sys.exit(1)
+EOF
+done

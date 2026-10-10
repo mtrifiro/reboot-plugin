@@ -9,8 +9,8 @@ names: []
 tags: [testing, cost]
 cluster: "D"
 still_applies: unknown
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "build/templates/README.md § Files"
 ---
 
 # P1.10 measured, 2026-09-24: -n4 is twice as fast and hangs one run in five
@@ -22,3 +22,5 @@ resolved_by: ""
 **Repro.** Not recorded beyond the measurement.
 
 **Where in the skills.** Not applicable to a skill.
+
+**Resolution (2026-10-10).** The templates' dev group has `pytest-timeout` and `pytest.ini` sets `timeout = 300`, setup included, so a hung run or a hung `Reboot().up()` fails on its own instead of sitting at zero CPU; `scripts/test.sh` runs the suite by area, and `full` once before a handoff.

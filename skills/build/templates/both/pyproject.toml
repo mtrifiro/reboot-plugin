@@ -11,5 +11,6 @@ dev = [
     "reboot[dev]==1.6.0",
     "mypy==1.18.1",
     "pytest==8.4.2",
+    "pytest-timeout==2.4.0",
     "types-protobuf==7.35.1.20260906",
 ]

@@ -9,8 +9,8 @@ names: []
 tags: [testing, operations]
 cluster: "F"
 still_applies: unknown
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "build/templates/README.md § Files"
 ---
 
 # -n0 can also hang outright, alive and at zero CPU
@@ -22,3 +22,5 @@ resolved_by: ""
 **Repro.** Not reliable: run `uv run pytest -n0 tests/crm_test.py` repeatedly on a machine with an `rbt dev run` alive and watch for a run whose CPU goes to zero.
 
 **Where in the skills.** Not applicable to a skill.
+
+**Resolution (2026-10-10).** The templates' dev group has `pytest-timeout` and `pytest.ini` sets `timeout = 300`, so a scenario that hangs fails on its own and the rest of the sweep runs; `scripts/test.sh` runs one area at a time.

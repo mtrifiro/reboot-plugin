@@ -14,8 +14,8 @@ names:
 tags: [testing, operations, pattern]
 cluster: ""
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "build/templates/README.md § Files"
 ---
 # Tests: no way to run only what a change touches, and no check that `main` got a full run
 
@@ -26,3 +26,5 @@ resolved_by: ""
 **Repro.** Any app past ~50 scenarios with `Workflow: main`: iterate on one page, then push.
 
 **Where in the skills.** `build/SKILL.md` § Step 6 — Tests; `feature/SKILL.md` (running scenarios while iterating); `python/references/testing-features.md` § Tags and § Limits (custom tags appear only as a dashboard limitation); `build/references/evidence.md` (`.last-run.json`); `build/templates/*/tests/last_run.py`, `pytest.ini`, `tests/conftest.py`; `build/references/flywheel.md` § Where the work happens (`Workflow: main` gets no `prove.yml`).
+
+**Resolution (2026-10-10).** `scripts/test.sh` in every template: `changed` (the feature files changed since a revision, through the modules that run them), `smoke`, `backend`, `<area>` (one `@<area>` tag per feature file, registered in `pytest.ini`) and `full`; `tests/last_run.py` records the hash of the tree a run passed on and `.githooks/pre-push` refuses a push to `main` of any other tree, so a `main` workflow has the gate `prove.yml` gives branches; `pytest-timeout` fails a hung scenario on its own.
