@@ -115,7 +115,7 @@ The template's tree (`../build/templates/web-app/`, each file in its
 README), plus pages under `web/src/pages/`, one
 `tests/<capability>.feature` per capability, and `tests/web_test.py` for
 the scenarios that open the app. `.rbtrc` points React codegen at
-`web/src/api` (`generate --react=` and `--web=`).
+`web/src/api` (`generate --react=`, nothing else).
 
 ## Which References to Read, and When
 

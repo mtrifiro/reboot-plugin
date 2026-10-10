@@ -6,20 +6,22 @@
 # is on by default), so 'api/' needs no `--watch` line.
 generate api/
 
-# Tell `rbt generate` where to put generated files.
+# Tell `rbt generate` where to put generated files: the Python
+# package the backend imports, and the React client the UIs import.
 generate --python=backend/api/
-
-# Generate React bindings for the UIs (into "frontend/api/").
 generate --react=frontend/api
 
-# Watch if any source files are modified.
-dev run --watch=backend/**/*.py
+# Restart when the backend changes. `backend/api/` is regenerated
+# from `api/`; `backend/src/` is what you write.
+dev run --watch=backend/api/**/*.py
+dev run --watch=backend/src/**/*.py
 
 # Tell `rbt` that this is a Python application.
 dev run --python
 
-# Save state between restarts.
+# Save state between `rbt dev run` restarts.
 dev run --application-name=__project__
+dev expunge --application-name=__project__
 
 # Load secrets from a git-ignored env file. Put one KEY=VALUE line
 # per secret in `.env`. See `python/references/lifecycle-secrets.md`.
@@ -42,9 +44,6 @@ dev run:hmr --frontend-host=http://localhost:4444
 # Usage: rbt dev run --config=dist
 # Requires: cd frontend && npm run build
 dev run:dist --frontend-dist-path=frontend/dist
-
-# When expunging, expunge that state we've saved.
-dev expunge --application-name=__project__
 
 # Production config used by `rbt serve run` (and so by Reboot Cloud,
 # whose containers run `CMD ["rbt", "serve", "run"]`). Mirrors the
