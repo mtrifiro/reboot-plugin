@@ -12,6 +12,7 @@ resolve to sections in at least two files.
 
 Usage:
     tools/findings.py               # summary; exit 1 on schema errors
+    tools/findings.py --check       # schema errors only, no summary (check-all.sh)
     tools/findings.py --open        # also list every open plugin item
     tools/findings.py --names X     # items that name skill/reference X
 """
@@ -126,6 +127,8 @@ def validate(item: dict, ids: set[str] | None = None,
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
+    parser.add_argument("--check", action="store_true",
+                        help="report schema errors only, without the summary")
     parser.add_argument("--open", action="store_true", help="list open plugin items")
     parser.add_argument("--names", help="list items naming this skill/reference")
     args = parser.parse_args()
@@ -153,6 +156,11 @@ def main() -> int:
         print(f"\n{title}")
         for key, n in counter.most_common():
             print(f"  {n:>4}  {key}")
+
+    if args.check:
+        if failures:
+            print(f"{failures} schema error(s)", file=sys.stderr)
+        return 1 if failures else 0
 
     print(f"{len(items)} items across {len({i.get('project') for i in items})} projects")
     table("by target", Counter(i.get("target") for i in items))
