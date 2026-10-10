@@ -21,19 +21,29 @@ change it here in the same commit.
 | The design and why each choice was made (read before changing it) | `design/design.md`, `design/decisions.md` (one entry per acceptance, appended) |
 | The accepted design, what a change did to it (Design or Prove), the last test run, each deploy's release record | `design/accepted.json` and `design/review.md`, `scripts/model_diff.py`, `tests/.last-run.json`, `deploy/ledger.jsonl` |
 | `rbt` config | `.rbtrc` (line-based, not YAML) |
+| Ports (backend, dashboard, Vite), chosen at scaffold so projects on one machine don't meet | `.rbtrc` (`dev run --port`, `--dashboard-port`, `dashboard --port`), `web/vite.config.ts`, `web/.env.development`; `scripts/doctor.sh` says who answers on them |
 | Surprises about Reboot or its skills | `FINDINGS.md` |
 
 ## Run, test, deploy
 
-- **Generate:** `uv run rbt generate` after every change under `api/`.
+- **Generate:** `python3 scripts/api_lint.py && uv run rbt generate` after
+  every change under `api/`; the lint refuses, with the fix, what
+  `rbt generate` or the deploy would refuse later.
 - **Run:** with the plugin's `run` skill, never bare `rbt dev run` or
   `npm run dev`.
-- **Test:** `uv run pytest`, then `uv run mypy backend/ tests/`. The
-  suite takes minutes: run it in the foreground and wait for it.
+- **Test:** `scripts/test.sh changed` while iterating (`smoke`,
+  `backend`, `<area>`), `scripts/test.sh full` before a handoff or a
+  push to `main`; then `uv run mypy backend/ tests/`. A full run takes
+  minutes: run it in the foreground and wait for it. A scenario that
+  hangs fails on its own after 300 s. When something fails for no
+  reason you can see, `scripts/doctor.sh` first.
 - **Deploy:** `scripts/deploy.sh`, with the plugin's `deploy` skill.
 - **Workflow:** not chosen yet. At the first change after the first
   build the agent asks whether changes go straight onto `main` or onto
-  a branch each, and writes the answer here.
+  a branch each, and writes the answer here. A push to `main` is
+  refused unless the last full run passed on that exact tree
+  (`.githooks/pre-push`; a clone runs `git config core.hooksPath
+  .githooks` once).
 
 ## Rules that cost the most when broken
 
