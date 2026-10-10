@@ -24,4 +24,6 @@ resolved_by: "python/references/api-schema-evolution.md § Do this"
 
 **Where in the skills.** `python/references/api-schema-evolution.md` compatibility table and migration example.
 
+**Upstream.** Reboot intends to push an upstream fix that lets a method's description change after it is created (noted 2026-10-10). When it ships, drop the rule from the skills and the method-description check from `hooks/schema-guard/schema.ts`.
+
 **Checked at 1.6.0.** `api-schema-evolution.md` has no row for descriptions, and the example at lines ~123-131 still changes `description=` strings with no warning.

@@ -129,6 +129,9 @@ export function incompatibilities(before: string, after: string): string[] {
           problems.push(`method \`${type}.${name}\` changes kind on a \`factory=True\` constructor, ${m.kind} → ${n.kind}`)
         }
       }
+      // Reboot intends to push an upstream fix that lets a method's
+      // description change after it is created; drop this check for the
+      // Reboot release that ships it.
       if (n.description !== m.description) {
         problems.push(
           m.description === null

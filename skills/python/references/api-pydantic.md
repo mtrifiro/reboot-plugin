@@ -94,8 +94,11 @@ Rules, enforced at import or generate time:
 
 The developer reads every `description=` in the dashboard, and the AI
 reads a method's as its tool description under `mcp=Tool()`. Write for
-someone who knows the business but not the code. A description can't
-be reworded once state persists, so write it well the first time.
+someone who knows the business but not the code. A field's or a
+type's description can be edited later. A method's can't be reworded
+once state persists, so write it well the first time. Reboot intends
+to push an upstream fix that lifts this; until a release says so,
+treat a method's description as fixed.
 
 - **Say what the code can't.** A field: what the value means, its
   unit, what is always true of it. A method: what it does for the

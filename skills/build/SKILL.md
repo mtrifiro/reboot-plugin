@@ -98,8 +98,8 @@ method types mean regenerating a dozen or more files.
      (`python/references/lifecycle-seeding.md`, "Demo data").
    - Ready for both front doors, whichever is built first: a `User`
      type, and a `description=` on every method written for the AI. A
-     description can't be edited once deployed; switching `mcp=` later
-     can (`python/references/api-schema-evolution.md`).
+     method's description can't be edited once deployed (Reboot
+     intends an upstream fix); switching `mcp=` later can (`python/references/api-schema-evolution.md`).
    - The look: a five-line visual brief (who and on what screen, the
      task, the one question the primary view answers, the accent and its
      real source (the user's or organization's brand) or "Reboot

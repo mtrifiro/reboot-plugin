@@ -125,6 +125,7 @@ right before state first persists.
 
 - Rewording a method's `description=` after state exists — boot is
   refused. Put evolving rules in the servicer method's docstring.
+  Reboot intends to push an upstream fix that lets a method's description change after it is created; until a release says so, the rule holds.
 - Iterating on a state shape while `rbt dev run` watches
   (`lifecycle-dev-loop.md` § Never).
 - Allocating a new ID field only in the `factory=True` constructor of

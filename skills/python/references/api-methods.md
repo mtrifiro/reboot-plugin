@@ -83,7 +83,8 @@ BankMethods = Methods(
   sentences ([`api-pydantic.md`](api-pydantic.md), "Writing a
   description"). Get it right
   before state persists: it is a frozen option, and rewording it later
-  refuses boot ([`api-schema-evolution.md`](api-schema-evolution.md)).
+  refuses boot (Reboot intends an upstream fix that allows it; until a
+  release says so, it holds) ([`api-schema-evolution.md`](api-schema-evolution.md)).
 - `factory=True` on a `Writer` or `Transaction` makes it the explicit
   creation path; the servicer branches on `context.constructor`
   ([`servicer-constructor.md`](servicer-constructor.md)). Without one,
