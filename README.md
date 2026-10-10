@@ -180,9 +180,13 @@ differ because of Codex limitations:
   and the app, and how far a test run or a deploy is;
   `reboot-schema-guard` refuses API edits that an app with
   persisted dev state couldn't boot over. See
-  [`mods/README.md`](mods/README.md). Codex has no
-  equivalent, and its own catalog doesn't list them. The skills carry
-  the same rules for both.
+  [`mods/README.md`](mods/README.md). Codex's catalog doesn't list
+  them. The schema guard runs in Codex anyway as a command hook
+  ([`hooks/schema-guard.sh`](hooks/schema-guard.sh)): it refuses the
+  same `apply_patch` edits and shell rewrites, and waits for the same
+  rules to be read. Codex skips a new or changed hook until you trust
+  it, so approve the plugin's hooks when Codex asks. The band has no
+  Codex equivalent. The skills carry the same rules for both.
 
 ## Usage
 
@@ -265,7 +269,10 @@ plugin/
 │                             # (who started each dev process)
 ├── hooks/
 │   ├── hooks.json            # hook registrations (Claude Code + Codex)
-│   └── auto-approve.sh       # Claude Code PreToolUse auto-approval
+│   ├── auto-approve.sh       # Claude Code PreToolUse auto-approval
+│   └── schema-guard.sh       # the schema guard for Codex (logic in
+│                             # schema-guard/, schema.ts copied from
+│                             # the mod)
 ├── hooks-handlers/           # SessionStart PATH prepend (Claude Code),
 │                             # the skill reminder (both CLIs) and
 │                             # the leftover-process report

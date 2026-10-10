@@ -117,6 +117,8 @@ What the branch looks like without findings/ and mods/: about 378 files, +28.7k/
 
 Also in the "Leftover dev processes" work (aa961a4): the hook tests move to `tests/reboot/plugin/hooks/` with a `py_test` target, and `lib/own.sh` needs a filegroup.
 
+The schema guard for Codex (`hooks/schema-guard.sh`, `hooks/schema-guard/`, `tests/hooks/schema_guard_test.py`) can go up with the hook tests, with a filegroup beside `auto_approve_sh`. Upstream has no mod, so the guard there would serve Codex only; making it guard Claude Code too means dropping its `turn_id` check and reading Edit and Write payloads.
+
 Not submitted: findings/, mods/ (including the band's `run_progress.py`), BACKLOG.md (4aa5306).
 
 ## Critical files

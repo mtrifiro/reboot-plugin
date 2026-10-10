@@ -10,7 +10,10 @@ them too.
 rejects its `modules` key, so a mod never goes there, and Codex's
 catalog (`.agents/plugins/marketplace.json`) doesn't list the mods.
 Anything a mod enforces is also written into the skills, which Codex
-reads.
+reads. The schema guard also runs in Codex as a command hook,
+`hooks/schema-guard.sh`, whose `schema-guard/schema.ts` is a copy of
+this mod's: change both together (`tests/hooks/schema_guard_test.py`
+fails when they differ).
 
 | Mod | What it does |
 | --- | --- |

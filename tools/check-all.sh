@@ -18,6 +18,7 @@ python3 tools/templates-drift.py
 python3 tools/check-manifests.py
 python3 tests/hooks/auto_approve_test.py -q
 python3 tests/hooks/orphans_test.py -q
+python3 tests/hooks/schema_guard_test.py -q   # skips itself without a cached Node
 python3 tests/templates/copy_test.py -q
 if command -v shellcheck >/dev/null 2>&1; then
     shellcheck install.sh hooks/*.sh hooks-handlers/*.sh lib/*.sh bin/* tools/*.sh \
@@ -28,6 +29,7 @@ fi
 if [ "${1:-}" = "--full" ]; then
     python3 tools/check-cli.py
     python3 tools/check-symbols.py
+    REBOOT_FETCH_NODE=1 python3 tests/hooks/schema_guard_test.py -q
     SMOKE_FULL=1 tools/templates-smoke.sh
     bin/uv run --no-project --with playwright sh -c \
         'python -m playwright install --with-deps chromium >/dev/null && python tools/style-check.py --browser'
