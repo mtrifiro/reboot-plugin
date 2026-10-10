@@ -43,7 +43,7 @@ import {
   isReviewTable,
   observe,
   skillKind,
-  stageOf,
+  lineStage,
   taskAfterPrompt,
   stepOf,
   storeKey,
@@ -659,11 +659,13 @@ export const register: Register = on => {
           : act?.now && status
             ? `${act.now} (tests ${status})`
             : (act?.now ?? WAITING)
-    // The Flywheel stage in front of the sentence: Design or Prove from
-    // the task's step, Promote while a deploy runs, and the checkpoint's
-    // wait while the design review is on screen.
+    // The Flywheel stage in front of the sentence (`lineStage`): Design or
+    // Prove from the task's step, Prove while the sentence is a test run,
+    // Promote while a deploy runs, and the checkpoint's wait while the
+    // design review is on screen.
     const isDeploying = isShown(d, now)
-    const stage = isDeploying ? 'Promote' : b !== null && !b.isDone ? stageOf(b.step) : null
+    const isTestLine = isAwaiting && (view !== null || run !== null)
+    const stage = lineStage(b, { isDeploying, isTestLine })
     const isAwaitingAcceptance = !isDeploying && (await read($, awaitingAcceptance))
     const line = isAwaitingAcceptance
       ? 'Design · awaiting your acceptance'

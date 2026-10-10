@@ -23,6 +23,22 @@ export function stageOf(step: number): 'Design' | 'Prove' {
   return step <= 1 ? 'Design' : 'Prove'
 }
 
+/**
+ * The stage in front of the band's sentence: Promote while a deploy runs;
+ * none without a task under way; Prove while the sentence is a test run,
+ * which is Prove whatever step the task's evidence has reached (a task
+ * that changed only config, or a prompt read as new work, is still at
+ * Planning); else the task's own stage.
+ */
+export function lineStage(
+  t: { step: number; isDone: boolean } | null,
+  o: { isDeploying: boolean; isTestLine: boolean },
+): 'Design' | 'Prove' | 'Promote' | null {
+  if (o.isDeploying) return 'Promote'
+  if (t === null || t.isDone) return null
+  return o.isTestLine ? 'Prove' : stageOf(t.step)
+}
+
 /** The review table the build skill shows at its checkpoint: its header row. */
 const REVIEW_TABLE = /\|\s*State type\s*\|\s*State ID\s*\|\s*Rule\s*\|/
 

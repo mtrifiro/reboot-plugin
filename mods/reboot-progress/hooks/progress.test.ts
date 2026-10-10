@@ -10,6 +10,7 @@ import {
   commandKind,
   describeTask,
   finishTurn,
+  lineStage,
   listeningPorts,
   vitePortOf,
   observe,
@@ -32,6 +33,31 @@ const at = (kind: TaskKind, step: number, extra: Partial<Task> = {}): Task => ({
 const P = '/work/todo-list'
 const write = (path: string, text = '') => stepOf({ tool: 'Write', file_path: `${P}/${path}`, text })
 const bash = (command: string) => stepOf({ tool: 'Bash', command })
+
+describe('lineStage', () => {
+  const planning = { step: 0, isDone: false }
+  const backend = { step: 3, isDone: false }
+
+  test("a test run is Prove, even while the task is still at Planning", () => {
+    expect(lineStage(planning, { isDeploying: false, isTestLine: true })).toBe('Prove')
+  })
+
+  test('without a task under way, a test run has no stage', () => {
+    expect(lineStage(null, { isDeploying: false, isTestLine: true })).toBe(null)
+    expect(lineStage({ step: 0, isDone: true }, { isDeploying: false, isTestLine: true })).toBe(null)
+  })
+
+  test("otherwise the task's own stage, and none without a task under way", () => {
+    expect(lineStage(planning, { isDeploying: false, isTestLine: false })).toBe('Design')
+    expect(lineStage(backend, { isDeploying: false, isTestLine: false })).toBe('Prove')
+    expect(lineStage({ step: 3, isDone: true }, { isDeploying: false, isTestLine: false })).toBe(null)
+    expect(lineStage(null, { isDeploying: false, isTestLine: false })).toBe(null)
+  })
+
+  test('a deploy is Promote, over everything else', () => {
+    expect(lineStage(planning, { isDeploying: true, isTestLine: true })).toBe('Promote')
+  })
+})
 
 describe('stepOf', () => {
   test('build skills open the Design step', () => {
