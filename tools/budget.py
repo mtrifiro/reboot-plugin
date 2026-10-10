@@ -4,25 +4,22 @@
 An agent that follows the skills exactly reads a fixed set of SKILL.md
 files plus every reference the builder's reading list names, before
 it writes application code. Everything it reads is re-sent on every
-later turn, so this number is a release metric, printed on every run
-against a target of 30,000 words per front door. It is reported, not
-enforced.
+later turn, so this number is a release metric: reported against a
+target of 30,000 words per front door, and held under a ceiling that
+only moves down (`--check` fails when a path grows past its ceiling;
+a cut lowers the ceiling).
 
-Two sources for the reading list, picked automatically:
-
-* frontmatter: once every reference carries `step:` / `applies:` / `always:`
-  frontmatter (see skills/_template.md), the list is every reference
-  with `always: true` plus every reference whose `step` is a build
-  step and whose `applies` includes the front door.
-* legacy: otherwise, the list is parsed from the builder SKILL.md's
-  "Which References to Read, and When" section, grouped by its
-  "**Before the …**" headings. A mention whose sentence says "only
-  when", "whenever", "for custom steps" and the like counts as
-  conditional; the "minimal" column excludes those.
+The reading list comes from the references' frontmatter (`step:`,
+`applies:`, `always:`, `when:`; see skills/_template.md): every
+reference with `always: true`, plus every reference whose `step` is a
+build step and whose `applies` includes the front door. The "minimal"
+column leaves out the ones with a `when:` condition for that front
+door.
 
 Usage:
     tools/budget.py                    # table for every front door
     tools/budget.py --json
+    tools/budget.py --check            # README table current; every path under its ceiling
     tools/budget.py --readme write     # refresh the README's budget table
 """
 
@@ -35,82 +32,37 @@ import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 
+import reflib
+
 ROOT = Path(__file__).resolve().parent.parent
 SKILLS = ROOT / "skills"
 
 FRONT_DOORS = ("mcp-ui", "web-app", "backend-only")
 
 # SKILL.md files every build of a front door reads in full, in order:
-# the router, the builder, the foundation, the feature workflow and run.
-FIXED_SKILLS = {
-    "mcp-ui": ["app", "mcp-ui", "python", "feature", "run"],
-    "web-app": ["app", "web-app", "python", "feature", "run"],
+# the router, the build spine, the dashboard it starts before Step 1,
+# the front door's delta, the feature workflow and run. Backend-only
+# work starts from the python skill.
+SKILLS_READ = {
+    "mcp-ui": ["app", "build", "dashboard", "mcp-ui", "feature", "run"],
+    "web-app": ["app", "build", "dashboard", "web-app", "feature", "run"],
     "backend-only": ["python", "feature", "run"],
 }
-# Once the shared build spine exists, MCP UI and Web App builds read it
-# and their front-door delta instead of the python skill.
-SPINE_SKILLS = {
-    "mcp-ui": ["app", "build", "mcp-ui", "feature", "run"],
-    "web-app": ["app", "build", "web-app", "feature", "run"],
-}
 
-LEGACY_FRONT_DOORS = ("mcp-ui", "web-app")
+# Words on each front door's minimal path to aim for.
+TARGET = 30000
 
-BUILD_STEPS = ("shell", "api", "servicer", "auth", "frontend", "tests")
+# The most words each front door's minimal path may hold: `--check`
+# fails above it. Lower one when a cut lands. Raise one only with the
+# reason in the commit, since this is the line every later edit is
+# held to.
+CEILINGS = {"mcp-ui": 39000, "web-app": 38500, "backend-only": 26000}
 
-READING_LIST_HEADING = "## Which References to Read, and When"
-
-CONDITIONAL = re.compile(
-    r"\bonly when\b|\bwhenever\b|\bfor custom steps\b|\bwhen you pick\b"
-    r"|\bwhen the API declares\b|\bwhen a widget\b|\bwhen none of\b"
-    r"|\bacting on the user's behalf\b|\bcalling an external\b"
-    r"|\bwriting your own\b",
-    re.IGNORECASE,
-)
-
-REF = re.compile(
-    r"(?:\.\./)?(?:(?P<skill>[a-z-]+)/)?references/"
-    r"(?P<name>[A-Za-z0-9_-]*(?:\{[^}]+\})?[A-Za-z0-9_-]*)\.md"
-)
-BARE_REF = re.compile(r"`(?P<name>[a-z]+-[a-z0-9-]+)\.md`")
+README_LABELS = {"mcp-ui": "MCP UI", "web-app": "Web App", "backend-only": "Backend only"}
 
 
 def words(path: Path) -> int:
     return len(path.read_text(encoding="utf-8").split())
-
-
-def expand(name: str) -> list[str]:
-    m = re.search(r"\{([^}]+)\}", name)
-    if not m:
-        return [name]
-    head, tail = name[: m.start()], name[m.end() :]
-    return [head + part.strip() + tail for part in m.group(1).split(",")]
-
-
-def frontmatter(path: Path) -> dict:
-    text = path.read_text(encoding="utf-8")
-    if not text.startswith("---\n"):
-        return {}
-    end = text.find("\n---", 4)
-    if end < 0:
-        return {}
-    out: dict = {}
-    for line in text[4:end].splitlines():
-        if ":" not in line or line.startswith(" "):
-            continue
-        key, value = line.split(":", 1)
-        value = value.split("#", 1)[0].strip()
-        if value.startswith("[") and value.endswith("]"):
-            out[key.strip()] = [v.strip() for v in value[1:-1].split(",") if v.strip()]
-        elif value in ("true", "false"):
-            out[key.strip()] = value == "true"
-        else:
-            out[key.strip()] = value
-    return out
-
-
-def all_references() -> list[Path]:
-    return sorted(p for p in SKILLS.glob("*/references/*.md") if not p.name.startswith("_"))
 
 
 @dataclass
@@ -127,10 +79,8 @@ class Item:
 @dataclass
 class Report:
     front_door: str
-    source: str
     fixed: list[tuple[str, int]] = field(default_factory=list)
     items: list[Item] = field(default_factory=list)
-    unresolved: list[str] = field(default_factory=list)
 
     def by_step(self) -> dict[str, list[Item]]:
         out: dict[str, list[Item]] = {}
@@ -146,94 +96,10 @@ class Report:
         return fixed + refs
 
 
-def resolve(skill: str | None, name: str, builder: str) -> Path | None:
-    candidates = []
-    if skill:
-        candidates.append(SKILLS / skill / "references" / f"{name}.md")
-    else:
-        candidates.append(SKILLS / builder / "references" / f"{name}.md")
-        candidates.append(SKILLS / "python" / "references" / f"{name}.md")
-    for c in candidates:
-        if c.exists():
-            return c
-    return None
-
-
-def chunks(section: str) -> list[tuple[str, str]]:
-    """Split a reading-list section into (step, chunk) pairs.
-
-    A chunk is one bullet (with its continuation lines) or one
-    sentence of a prose paragraph.
-    """
-    step = "preamble"
-    out: list[tuple[str, str]] = []
-    bullet: list[str] = []
-    prose: list[str] = []
-
-    def flush() -> None:
-        if bullet:
-            out.append((step, " ".join(bullet)))
-            bullet.clear()
-        if prose:
-            for sentence in re.split(r"(?<=[.;])\s+", " ".join(prose)):
-                out.append((step, sentence))
-            prose.clear()
-
-    for line in section.splitlines():
-        heading = re.match(r"\*\*Before (?:the |running )?([^*:(]+)", line)
-        if heading:
-            flush()
-            step = heading.group(1).strip().rstrip(":").lower()
-            prose.append(line[heading.end() :])
-        elif line.startswith("- "):
-            flush()
-            bullet.append(line[2:])
-        elif line.startswith("  ") and bullet:
-            bullet.append(line.strip())
-        elif line.startswith(">"):
-            flush()  # callouts name references to avoid, not to read
-        elif line.strip():
-            if bullet:
-                flush()
-            if step != "preamble":
-                prose.append(line.strip())
-        else:
-            flush()
-    flush()
-    return out
-
-
-def legacy(front_door: str) -> Report:
-    report = Report(front_door, "legacy")
-    text = (SKILLS / front_door / "SKILL.md").read_text(encoding="utf-8")
-    start = text.find(READING_LIST_HEADING)
-    end = text.find("\n## ", start + len(READING_LIST_HEADING))
-    section = text[start:end]
-    seen: set[Path] = set()
-    for step, chunk in chunks(section):
-        if step == "preamble":
-            continue
-        conditional = bool(CONDITIONAL.search(chunk))
-        names = [(m.group("skill"), m.group("name")) for m in REF.finditer(chunk)]
-        names += [(None, m.group("name")) for m in BARE_REF.finditer(chunk)]
-        for skill, raw in names:
-            for name in expand(raw):
-                path = resolve(skill, name, front_door)
-                if path is None:
-                    report.unresolved.append(f"{skill or '?'}/references/{name}.md")
-                    continue
-                if path in seen:
-                    continue
-                seen.add(path)
-                report.items.append(Item(path, step, conditional))
-    return report
-
-
-def from_frontmatter(front_door: str) -> Report:
-    import reflib
-
-    report = Report(front_door, "frontmatter")
-    refs = reflib.load_refs()
+def measure(front_door: str, refs: list) -> Report:
+    report = Report(front_door)
+    report.fixed = [(f"{s}/SKILL.md", words(SKILLS / s / "SKILL.md"))
+                    for s in SKILLS_READ[front_door]]
     for r in reflib.always_list(refs, front_door):
         report.items.append(Item(r.path, "always", False))
     for step in reflib.BUILD_STEPS:
@@ -242,23 +108,8 @@ def from_frontmatter(front_door: str) -> Report:
     return report
 
 
-def measure(front_door: str) -> Report:
-    # Switch only once every reference is converted; a partial switch
-    # would silently drop the unconverted files from the count.
-    uses_frontmatter = all("step" in frontmatter(p) for p in all_references())
-    if not uses_frontmatter and front_door not in LEGACY_FRONT_DOORS:
-        report = Report(front_door, "legacy (no list)")
-    else:
-        report = from_frontmatter(front_door) if uses_frontmatter else legacy(front_door)
-    skills = FIXED_SKILLS[front_door]
-    if (SKILLS / "build" / "SKILL.md").exists() and front_door in SPINE_SKILLS:
-        skills = SPINE_SKILLS[front_door]
-    report.fixed = [(f"{s}/SKILL.md", words(SKILLS / s / "SKILL.md")) for s in skills]
-    return report
-
-
 def print_table(report: Report) -> None:
-    print(f"## {report.front_door}  (reading list: {report.source})\n")
+    print(f"## {report.front_door}\n")
     print(f"{'step':<14}{'files':>6}{'words':>9}{'minimal':>9}")
     fixed = sum(n for _, n in report.fixed)
     print(f"{'SKILL.md':<14}{len(report.fixed):>6}{fixed:>9}{fixed:>9}")
@@ -268,57 +119,67 @@ def print_table(report: Report) -> None:
         print(f"{step:<14}{len(items):>6}{all_words:>9}{minimal:>9}")
     total, minimal = report.total(False), report.total(True)
     print(f"{'total':<14}{len(report.fixed) + len(report.items):>6}{total:>9}{minimal:>9}")
-    print(f"\n~{round(minimal * 4 / 3):,} tokens on the minimal path\n")
-    if report.unresolved:
-        print("unresolved references: " + ", ".join(sorted(set(report.unresolved))) + "\n")
+    print(f"\n~{round(minimal * 4 / 3):,} tokens on the minimal path; "
+          f"ceiling {CEILINGS[report.front_door]:,}, target {TARGET:,}\n")
 
 
-# Words on each front door's minimal reading path to aim for.
-TARGET = 30000
-
-README_LABELS = {"mcp-ui": "MCP UI", "web-app": "Web App", "backend-only": "Backend only"}
-
-
-def readme(reports: list[Report], mode: str) -> int:
-    rows = ["| Front door | Words on the minimal path | Target |",
-            "| --- | ---: | ---: |"]
+def readme_text(reports: list[Report]) -> tuple[Path, str, str]:
+    """The README, as it is and as the budget table should make it."""
+    rows = ["| Front door | Words on the minimal path | Ceiling | Target |",
+            "| --- | ---: | ---: | ---: |"]
     for r in reports:
-        rows.append(f"| {README_LABELS[r.front_door]} | {r.total(True):,} | {TARGET:,} |")
+        rows.append(f"| {README_LABELS[r.front_door]} | {r.total(True):,} "
+                    f"| {CEILINGS[r.front_door]:,} | {TARGET:,} |")
     path = ROOT / "README.md"
     text = path.read_text(encoding="utf-8")
     m = re.search(r"(<!-- budget:start[^>]*-->\n)(.*?)(<!-- budget:end -->)", text, re.S)
     if not m:
         print("README.md has no budget:start/budget:end region", file=sys.stderr)
-        return 1
-    new = text[: m.start(2)] + "\n".join(rows) + "\n" + text[m.end(2):]
-    if mode == "check":
-        if new != text:
-            print("drift: README.md budget table is stale (run tools/budget.py --readme write)",
-                  file=sys.stderr)
-            return 1
-        return 0
-    path.write_text(new, encoding="utf-8")
-    return 0
+        sys.exit(1)
+    return path, text, text[: m.start(2)] + "\n".join(rows) + "\n" + text[m.end(2):]
+
+
+def check(reports: list[Report]) -> int:
+    problems = []
+    _, current, wanted = readme_text(reports)
+    if current != wanted:
+        problems.append("README.md budget table is stale (run tools/budget.py --readme write)")
+    for r in reports:
+        if r.total(True) > CEILINGS[r.front_door]:
+            problems.append(f"{README_LABELS[r.front_door]}: {r.total(True):,} words on the "
+                            f"minimal path, over its ceiling of {CEILINGS[r.front_door]:,}; "
+                            "cut, or raise CEILINGS in tools/budget.py with the reason")
+    for p in problems:
+        print(f"budget: {p}", file=sys.stderr)
+    if not problems:
+        print("budget: " + ", ".join(
+            f"{README_LABELS[r.front_door]} {r.total(True):,}/{CEILINGS[r.front_door]:,}"
+            for r in reports))
+    return 1 if problems else 0
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("--json", action="store_true")
     parser.add_argument("--verbose", "-v", action="store_true", help="list every file")
-    parser.add_argument("--readme", choices=("write", "check"),
-                        help="rewrite (or check) the README's budget table")
+    parser.add_argument("--check", action="store_true",
+                        help="the README table is current and every path is under its ceiling")
+    parser.add_argument("--readme", choices=("write",), help="rewrite the README's budget table")
     args = parser.parse_args()
 
-    reports = [measure(fd) for fd in FRONT_DOORS]
+    refs = reflib.load_refs()
+    reports = [measure(fd, refs) for fd in FRONT_DOORS]
 
+    if args.check:
+        return check(reports)
     if args.readme:
-        return readme(reports, args.readme)
-
+        path, _, wanted = readme_text(reports)
+        path.write_text(wanted, encoding="utf-8")
+        return 0
     if args.json:
         print(json.dumps(
             {
                 r.front_door: {
-                    "source": r.source,
                     "fixed": dict(r.fixed),
                     "references": [
                         {"path": i.rel, "step": i.step, "conditional": i.conditional,
@@ -327,21 +188,20 @@ def main() -> int:
                     ],
                     "total_words": r.total(False),
                     "minimal_words": r.total(True),
-                    "unresolved": sorted(set(r.unresolved)),
+                    "ceiling": CEILINGS[r.front_door],
                 }
                 for r in reports
             },
             indent=2,
         ))
-    else:
-        for r in reports:
-            print_table(r)
-            if args.verbose:
-                for i in r.items:
-                    flag = " (conditional)" if i.conditional else ""
-                    print(f"  {i.step:<12}{words(i.path):>6}  {i.rel}{flag}")
-                print()
-
+        return 0
+    for r in reports:
+        print_table(r)
+        if args.verbose:
+            for i in r.items:
+                flag = " (conditional)" if i.conditional else ""
+                print(f"  {i.step:<10} {words(i.path):>6}  {i.rel}{flag}")
+            print()
     return 0
 
 

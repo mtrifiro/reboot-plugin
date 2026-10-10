@@ -12,7 +12,7 @@ python3 tools/gen-index.py --check --quiet
 python3 tools/lint-references.py
 python3 tools/lint-frontmatter.py
 python3 tools/findings.py --check
-python3 tools/budget.py --readme check
+python3 tools/budget.py --check
 python3 tools/style-check.py
 python3 tools/templates-drift.py
 python3 tools/check-manifests.py
