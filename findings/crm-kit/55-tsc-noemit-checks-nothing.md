@@ -10,8 +10,8 @@ names:
 tags: [frontend, scaffold, negative-space]
 cluster: ""
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "build/templates/README.md § `web-app/` adds"
 ---
 
 # tsc --noEmit checks zero files under the Vite references tsconfig; type-check with npx tsc -b
@@ -25,3 +25,5 @@ resolved_by: ""
 **Where in the skills.** Not named by the source.
 
 **Checked at 1.6.0.** `build/templates/README.md` says the web `build` script is `tsc -b && vite build`, but no reference warns that `tsc --noEmit` checks nothing with project references or says to run `tsc -b` after an API rename (grep `noEmit`).
+
+**Resolution (2026-10-10).** The web templates' `package.json` has a `typecheck` script running `tsc -b`, and the README row says `tsc --noEmit` checks nothing under the references `tsconfig`.
