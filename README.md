@@ -63,7 +63,14 @@ the default) and the installer writes the opt-out into
 `~/.codex/config.toml`. See [Differences in Codex vs. Claude Code](#differences-in-codex-vs-claude-code)
 for the full rationale. For non-interactive installs (CI/CD), set
 `REBOOT_PLUGIN_DISABLE_CODEX_SANDBOX=yes` (or `no`) to pre-answer
-the prompt.
+the prompt; with no terminal and no variable the installer answers
+no and skips Codex, since the opt-out is global and needs an explicit
+yes.
+
+The pinned tools (`uv`, Node, Envoy, `cloudflared`) are downloaded on
+first use from their official releases and checked against SHA-256
+sums kept in `lib/`; a download that does not match, or a machine
+with no way to hash it, installs nothing.
 
 ### Claude Code (manual)
 
