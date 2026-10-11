@@ -28,13 +28,19 @@ domain and fail only a question about which kind of app; `no-question`
 survives only on `design-skip-gate`, the bypass): `route-both`,
 `route-just-website` and `route-mcp` score the same in both arms.
 `mcp-ready` and the design cases are where the plugin's effect shows
-(no plugin: 0–3 of 3 on `mcp-ready` across runs, so it is noisy; 0 of 3
-on the design cases). The gate cases, three runs per arm on 2026-10-10:
-`design-accept-gate` 1.00 with the plugin, 0.50 without, and
-`design-skip-gate` 1.00 with, 0.56 without. On the accept gate the
-plugin's gain is the rule mapping: plain Claude also asks before it
-builds in a planning session, so `waits-for-acceptance` guards against
-a regression more than it shows a gain. An earlier wording of that
+(no plugin: 0–3 of 3 on `mcp-ready` across runs, so it is noisy; near
+zero on the design cases). The design cases, three runs per arm on
+2026-10-11, after the design conversation and one feature first landed:
+`design-accept-gate` 0.81 with the plugin, 0.10 without;
+`design-skip-gate` 1.00 and 0.33; `design-look-triage` 0.87 and 0.33;
+`design-look-board` 0.78 and 0.44; `design-ready-for-both` 0.71 and
+0.00; `design-roles` 0.60 and 0.33. On the accept gate the plugin's
+gain is the rule mapping, the first prototype and the backlog, in every
+run; `asks-first` and `slices` pass in one run of three with the plugin
+and none without, a tendency the prose has not yet made a rule. Plain
+Claude also asks before it builds in a planning session, so
+`waits-for-acceptance` guards against a regression more than it shows
+a gain. An earlier wording of that
 grader asked for a stop after the API and feature files, a moment a
 planning session never reaches, and failed runs that had stopped at the
 features; it scored 0.53 with the plugin before the rewording.

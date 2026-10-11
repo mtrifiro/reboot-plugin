@@ -2,4 +2,4 @@
 type: llm
 weight: 1
 ---
-PASS if the design is presented feature by feature: after each feature (booking, cancellation, and so on) is described in plain English, the response shows the state types, methods or review-table rows that feature adds before moving to the next, or asks whether there is another feature, so the model grows a slice at a time. FAIL if the whole domain model appears in one block with no feature-by-feature build-up. A final table that repeats every row is fine when the slices came before it. Quote what you relied on.
+PASS if the domain model is shown as the slice the first feature needs and said to be that slice, with later features' state marked as later or left to a backlog of features to come one at a time; or if the model is shown feature by feature, each feature's state types, methods or rows before the next. FAIL if the whole domain model for every feature appears in one block as the design, with no first feature singled out and no slices. Quote what you relied on.
