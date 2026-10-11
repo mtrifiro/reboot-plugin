@@ -10,20 +10,22 @@ skills front-load (which front door, the design) and before any code.
 
 | Case | Checks |
 | --- | --- |
-| `route-default-todo`, `route-default-crm` | No front door named: web app first, no question, backend ready for MCP |
+| `route-default-todo`, `route-default-crm` | No front door named: web app first, no question about which, backend ready for MCP |
 | `route-mcp` | Claude named as the runtime: MCP UI first, backend ready for a web app |
 | `route-just-website` | "just a website": one front door, no MCP offer |
 | `route-both` | Both named: both front doors on one backend |
-| `design-ready-for-both` | The design has a `User` type, each method's AI role, AI-facing descriptions, a visual brief with a primary view, light/dark modes with a toggle, dev-only demo data, and no growing history list on an app-lifetime actor |
-| `design-look-triage` | Triage of a few hundred bug reports: a grouped list (not a chart) as the primary view, color on one dimension, stat tiles and labelled filters |
-| `design-look-board` | A dozen candidates through interview stages: still a board, so the principles add flexibility rather than a new house style |
-| `design-roles` | A hotel with front desk and housekeeping: the design names the roles and enforces in the backend which methods each may call; roles on one roster, a sign-in linked only on a verified email, the first admin named; dev-only demo data |
-| `design-accept-gate` | The accept checkpoint: the design maps each rule to its owner, method, kind and caller, lists what goes beyond the brief, and stops for the user's acceptance with the ask drawn as a box. `explains-the-stop` (the stage card's plain words for why it stops) is reported, not scored: a planning session never reaches the checkpoint with the artifacts in hand, and no run has produced the card yet |
+| `design-ready-for-both` | Asks what the brief leaves open before the design; the design has a `User` type, each method's AI role, AI-facing descriptions, a visual brief with a primary view, light/dark modes with a toggle, dev-only demo data, and no growing history list on an app-lifetime actor |
+| `design-look-triage` | Asks first; triage of a few hundred bug reports: a grouped list (not a chart) as the primary view, color on one dimension, stat tiles and labelled filters |
+| `design-look-board` | Asks first; a dozen candidates through interview stages: still a board, so the principles add flexibility rather than a new house style |
+| `design-roles` | Asks first; a hotel with front desk and housekeeping: the design names the roles and enforces in the backend which methods each may call; roles on one roster, a sign-in linked only on a verified email, the first admin named; dev-only demo data |
+| `design-accept-gate` | The accept checkpoint: the agent asks what the brief leaves open first, shows each feature's slice of the model before the next, maps each rule to its owner, method, kind and caller, lists what goes beyond the brief, and stops for the user's acceptance with the ask drawn as a box. `explains-the-stop` (the stage card's plain words for why it stops) is reported, not scored: a planning session never reaches the checkpoint with the artifacts in hand, and no run has produced the card yet |
 | `design-skip-gate` | Told up front to build without stopping: the design is still shown, and nothing waits |
 
 Plain Claude also builds a web app without asking on the `route-*`
-prompts, so those cases (and every `no-question` grader) guard against
-regressions more than they show a gain over no plugin: `route-both`,
+prompts, so those cases guard against regressions more than they show a
+gain over no plugin (their front-door graders allow questions about the
+domain and fail only a question about which kind of app; `no-question`
+survives only on `design-skip-gate`, the bypass): `route-both`,
 `route-just-website` and `route-mcp` score the same in both arms.
 `mcp-ready` and the design cases are where the plugin's effect shows
 (no plugin: 0–3 of 3 on `mcp-ready` across runs, so it is noisy; 0 of 3
