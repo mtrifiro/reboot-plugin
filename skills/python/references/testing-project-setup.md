@@ -139,7 +139,7 @@ it alone; the format is in `mods/README.md`, "The test-run file".
 
 | Error text (stable prefix) | Meaning | Fix |
 | --- | --- | --- |
-| `` `OAuth` requires `allowed_origins=[...]` to be set explicitly in production `` | The fixture's `OAuth(...)` has no `allowed_origins`; the harness counts as production | `allowed_origins=[]`, or `[frontend.origin]` for browser scenarios |
+| `` `OAuth` requires `allowed_origins=[...]` to be set explicitly in production `` in a test's `Application` | The fixture's `OAuth(...)` has no `allowed_origins`; the harness counts as production | `allowed_origins=[]`, or `[frontend.origin]` for browser scenarios |
 | `ModuleNotFoundError: No module named '<pkg>.v1.<name>'` | `api` missing from `pytest.ini`'s `pythonpath` | Copy the template's `pytest.ini` |
 
 ## See also

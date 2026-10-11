@@ -182,7 +182,7 @@ async def main():
 | `` Range requires a non-zero `limit` value. `` | `range(limit=0)` or no `limit` (`InvalidRangeError`) | Pass `limit=` |
 | `"type[OrderedMap]" has no attribute "create"` | Called `create` on the class | `OrderedMap.ref(id).create(context)` |
 | `` `degree` must be >= 2 `` | Bad construction option (`InvalidArgument`) | `degree >= 2` |
-| `StateAlreadyConstructed` | `create` / first-`insert` options differ from the existing map | Drop the options or match them |
+| `StateAlreadyConstructed` from an `OrderedMap` `create` or first `insert` | `create` / first-`insert` options differ from the existing map | Drop the options or match them |
 | `acquire_shared` … `CancelledError` (traceback through `ordered_map_servicer.py` `_Insert`) | Overlapping transactions waiting on node locks | Run the transactions sequentially |
 
 ## See also

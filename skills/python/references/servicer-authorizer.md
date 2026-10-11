@@ -143,7 +143,7 @@ class CounterServicer(Counter.Servicer):
 | Error text (stable prefix) | Meaning | Fix |
 | --- | --- | --- |
 | `aborted with 'PermissionDenied': You are not authorized to call` | No rule allowed the caller (or a `deny()` matched); in harness/prod often a servicer with no `authorizer()` | Write a real `allow_if(...)` rule; add `is_app_internal` for internal paths |
-| `aborted with 'Unauthenticated': You are not authorized to call` | A rule needed identity and the call had none, typically servicer-to-servicer | Add `is_app_internal`; pass identity in the request |
+| `aborted with 'Unauthenticated': You are not authorized to call` | A rule or custom predicate needed identity on a call that had none, typically servicer-to-servicer or from `initialize` | Add `is_app_internal` to the rule (a custom predicate returns `Ok` for `context.app_internal` first); or pass identity in the request |
 | `IS MISSING AUTHORIZATION` | `rbt dev` allowed a call to a servicer with no `authorizer()` | Write the rule before testing |
 
 ## See also

@@ -5,7 +5,7 @@ impactDescription: Without it the SPA ships unstyled controls, no visual hierarc
 tags: web-app, ui, design, css, dark-mode, skeleton, layout, review
 summary: "Brief, Reboot's brand by default (a user's brand replaces it), primary view by task, page anatomy, labeled controls, light/dark toggle, restyle by token values, screenshot review."
 step: frontend
-applies: [web-app]
+applies: [mcp-ui, web-app]
 always: false
 verified: 1.6.0
 docs: ""

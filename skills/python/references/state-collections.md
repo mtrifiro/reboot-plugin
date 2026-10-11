@@ -192,7 +192,7 @@ constructor marks the moment of ownership.
 
 | Error text (stable prefix) | Meaning | Fix |
 | --- | --- | --- |
-| `aborted with 'StateNotConstructed'` | A read hit an `OrderedMap` (or factory-constructed actor) that was never constructed | Construct it first, or catch `<Method>Aborted` and treat as empty |
+| `aborted with 'StateNotConstructed'` on a read of a collection actor | A read hit an `OrderedMap` (or factory-constructed actor) that was never constructed | Construct it first, or catch `<Method>Aborted` and treat as empty |
 
 ## See also
 

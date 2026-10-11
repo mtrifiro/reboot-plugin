@@ -112,10 +112,12 @@ authorizer. A negative auth test uses a second context with another
 `user_id` and asserts the abort
 ([`testing-external-context.md`](testing-external-context.md)).
 
-**Identity wiring.** Leave `oauth=` out of a test's `Application(...)`,
-whatever the app type: `up()` installs a test OAuth provider, so
-`create_external_context_as` works unwired. That provider rejects the
-browser sign-in flow; tests impersonate instead.
+**Identity wiring.** Pass `oauth=` as the templates' `tests/<app>_test.py`
+does: `OAuth(provider=OAuthProviderByEnvironment(dev=development,
+prod=development), allowed_origins=[])`, so a browser scenario's
+Development sign-in picker works (`testing-web-app.md`). Without
+`oauth=`, `up()` installs a test provider that supports impersonation
+only; `create_external_context_as` works either way.
 
 - Keep a production `token_verifier=`: impersonation tokens verify
   first, and a hand-built bearer flows through the app's verifier.
@@ -241,7 +243,7 @@ or one transaction covering every actor involved.
 | Error text (stable prefix) | Meaning | Fix |
 | --- | --- | --- |
 | `StateNotConstructed { requires_constructor: true }` | The test reached an actor that production's `initialize` constructs | Pass `initialize=`, or construct it in the fixture |
-| `aborted with 'PermissionDenied': You are not authorized to call` | The harness enforces real authorizers, or a user context called an internal method | Impersonate with `create_external_context_as`, or use `app_internal=True` for internal calls |
+| `aborted with 'PermissionDenied': You are not authorized to call` in the test harness | The harness enforces real authorizers, or a user context called an internal method | Impersonate with `create_external_context_as`, or use `app_internal=True` for internal calls |
 | `StatusCode.UNIMPLEMENTED details = "Method not found!"` | The type's servicer is missing from this harness's `servicers=`; or a watcher restart mid-suite, or (observed, unexplained) a start-up race | Register it, ideally from a shared registry; stop the watcher; rerun the file alone |
 | `IdempotencyUncertainError: Because we don't know if the mutation` | The context was reused after a denied or failed mutation | Use a fresh context for each expected failure |
 | `has previously been used by a different` (`MixedContextsError`) | One `ref()` was used with two contexts | `Type.ref(id)` per call |

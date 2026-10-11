@@ -144,7 +144,7 @@ only `fetch` (`auth-external-api-calls.md`, Path A).
 
 | Error text (stable prefix) | Meaning | Fix |
 | --- | --- | --- |
-| `ModuleNotFoundError: No module named 'reboot.std.oauth'` | The 1.6.0 wheel does not ship the `oauth` library; also raised at startup by any provider with `store_tokens=True` (the library check imports it) | Install the vendored `reboot-std-oauth` package (Do this) |
+| `ModuleNotFoundError: No module named 'reboot.std.oauth'` | The 1.6.0 wheel does not ship the `oauth` library; also raised at startup by any provider with `store_tokens=True` (the library check imports it) | Install the vendored `reboot-std-oauth` package (`stdlib-oauth-tokens.md`, Do this) |
 | `FetchAborted` | Nothing has ever been stored for this service | Treat as "not connected" |
 
 ## See also

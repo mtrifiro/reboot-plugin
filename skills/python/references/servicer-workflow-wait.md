@@ -181,9 +181,9 @@ await until("Job done", context, is_done)
 
 | Error text (stable prefix) | Meaning | Fix |
 | --- | --- | --- |
-| `InvalidStateRefError: the 'state_id' option must be at least 1 character(s) long` | An `until` returned `""` and resolved; the empty id was used as a ref | Return `False` while waiting |
+| `InvalidStateRefError: The 'state_id' option must be at least 1 character(s) long` after an `until` resolved | An `until` returned `""` and resolved; the empty id was used as a ref | Return `False` while waiting |
 | `TypeError: Stored result of type` | Callable's return type changed after this alias memoized a value | New alias (or expunge) |
-| `more than once using the same context an idempotency alias or key must be specified` | A re-run callable repeated a mutating call | Call it only when it will succeed |
+| `more than once using the same context an idempotency alias or key must be specified` from a re-run callable | A re-run callable repeated a mutating call | Call it only when it will succeed |
 | `Waiting for changes must be done _within_ a control loop` | `until_changes` outside `context.loop` | Move it inside the loop |
 
 ## See also

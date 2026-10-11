@@ -366,8 +366,11 @@ generated client). Then:
 
 ### Step 2a — Run the scenarios red
 
-Before any servicer body: declare every servicer class with each
-method raising `NotImplementedError`, register them in
+Before any servicer body: read "Before the authorizers" (Step 4's
+list), then declare every servicer class with each method raising
+`NotImplementedError` and its real `authorizer()` (the test harness
+denies every call to a servicer without one, so a run without them
+fails on `PermissionDenied` and proves nothing), register them in
 `servicers/registry.py`, and run the design's scenarios
 (`scripts/test.sh full`). Each must fail for the reason its own
 words name, the [`feature` skill](../feature/SKILL.md)'s Step 2a; a
@@ -389,8 +392,9 @@ mcp-ui: `UserServicer` and `<X>.create(context)` in
 
 ### Step 4 — Authorizers
 
-Read "Before the authorizers". **Write a real `authorizer()` on every
-servicer now, before any test**: `rbt dev` only logs
+Read "Before the authorizers" (done at Step 2a). **Every servicer has
+carried a real `authorizer()` since its stub; review each against the
+rules below**: `rbt dev` only logs
 `*** <Type>.<Method> IS MISSING AUTHORIZATION ***`, but the `Reboot()`
 test harness, `rbt serve` and Reboot Cloud deny with `PermissionDenied`
 (modes: `python/references/servicer-authorizer.md`).

@@ -299,7 +299,7 @@ CI without a browser or `node_modules` passes
 
 | Error text (stable prefix) | Meaning | Fix |
 | --- | --- | --- |
-| `Almost: each clause goes in backticks` | Web text containing ` has ` / ` with ` hit the catch-all | Change the label |
+| `Almost: each clause goes in backticks` from a web step | Web text containing ` has ` / ` with ` hit the catch-all | Change the label |
 | `"alice" has not opened the web app;` | A web step before `opens the web app` | Open it first |
 | `AssertionError: already serving` | `frontend` fixture shared across scenarios | Keep it function-scoped |
 | Playwright timeout with a `get_by_label` call log | The label's text differs from what the step says (often a hidden glyph) | Match the full label text, or drop the glyph from the label |

@@ -137,6 +137,8 @@ def never_items(ref: Ref) -> list[str]:
 ERROR_SECTION = re.compile(
     r"^## (?:Errors you will see|Known issues)\s*$(.*?)(?=^## |\Z)", re.S | re.M)
 DUPLICATE_ERRORS: list[str] = []  # error text found under more than one file
+# Error texts two tables explain differently: the merged row would keep one.
+CONFLICTING_ERRORS: list[str] = []
 
 
 def table_rows(section: str) -> list[list[str]]:
@@ -179,7 +181,9 @@ def error_index(refs: list[Ref], host_skill: str) -> str:
                 if key in merged:
                     if shown not in merged[key]["read"]:
                         merged[key]["read"].append(shown)
-                        DUPLICATE_ERRORS.append(cells[0])
+                        fix = cells[2] if len(cells) > 2 else ""
+                        same = (merged[key]["meaning"], merged[key]["fix"]) == (cells[1], fix)
+                        (DUPLICATE_ERRORS if same else CONFLICTING_ERRORS).append(cells[0])
                     continue
                 merged[key] = {"error": cells[0], "meaning": cells[1],
                                "fix": cells[2] if len(cells) > 2 else "",
@@ -343,6 +347,10 @@ def main() -> int:
                           f"'always front-door={fd}' region to list them")
     for e in sorted(set(DUPLICATE_ERRORS)):
         warnings.append(f"error text in more than one file's table: {e[:80]}")
+    for e in sorted(set(CONFLICTING_ERRORS)):
+        errors.append("error text in more than one file's table with a different meaning or "
+                      f"fix (the merged row keeps the first; make the rows identical, or add the "
+                      f"situation to one's text): {e[:80]}")
     for e in errors:
         print(f"error: {e}")
     if not args.quiet:

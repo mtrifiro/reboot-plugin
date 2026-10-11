@@ -2,8 +2,9 @@
 """Measure the reading cost of a build, per front door.
 
 An agent that follows the skills exactly reads a fixed set of SKILL.md
-files plus every reference the builder's reading list names, before
-it writes application code. Everything it reads is re-sent on every
+files, the files those name outside the lists (`FIXED_READS`), plus
+every reference the builder's reading list names, before it writes
+application code. Everything it reads is re-sent on every
 later turn, so this number is a release metric: reported against a
 target of 30,000 words per front door, and held under a ceiling
 (`--check` fails when a path grows past it). A cut lowers the ceiling.
@@ -54,6 +55,16 @@ SKILLS_READ = {
     "backend-only": ["python", "feature", "run"],
 }
 
+# Files outside the reading lists that the build SKILL.md tells every
+# build to read in full: the flywheel reference ("Accept the Design",
+# the decisions log, the stage cards) and the templates' README (Step 2).
+# Counted with the SKILL.md files.
+FIXED_READS = {
+    "mcp-ui": ["build/references/flywheel.md", "build/templates/README.md"],
+    "web-app": ["build/references/flywheel.md", "build/templates/README.md"],
+    "backend-only": [],
+}
+
 # Words on each front door's minimal path to aim for.
 TARGET = 30000
 
@@ -94,17 +105,28 @@ _WAVE_3_PYTHON = (
 )
 _WAVE_3_BUILD = "P2.48, P3.194, P3.186 (build/SKILL.md)"
 _WAVE_3_REACT = "P2.43, P3.38, P3.141, P3.151, P3.158, P4.34 (react-generated-client.md)"
+# The second raise of 2026-10-10 is a correction, not new words: the
+# build SKILL.md already sent every build to flywheel.md and the
+# templates' README, and an MCP UI to web-app's ui-design.md, and the
+# budget counted none of them (the adversarial pass of 2026-10-10,
+# item 5). The words were on the path; now the number says so.
+_COUNTED = (
+    "build/references/flywheel.md and build/templates/README.md, read by every "
+    "build (Accept the Design, Step 2), counted at last"
+)
 CEILINGS = {
     "mcp-ui": Ceiling(
-        40500, was=39000, since="2026-10-10",
-        closes=f"P1.23, P4.26 (mcp-ui/SKILL.md); P4.25, P4.27, P4.32 "
+        47500, was=40500, since="2026-10-10",
+        closes=f"{_COUNTED}, and web-app/references/ui-design.md, which mcp-ui/SKILL.md "
+               f"names as the principles every front door follows; before that: "
+               f"P1.23, P4.26 (mcp-ui/SKILL.md); P4.25, P4.27, P4.32 "
                f"(api-method-types.md); P3.175 (api-state-shapes.md); "
                f"{_WAVE_3_BUILD}; {_WAVE_3_REACT}; {_WAVE_3_PYTHON}",
         signal=_WAVE_3_SIGNAL),
     "web-app": Ceiling(
-        40000, was=38500, since="2026-10-10",
-        closes=f"{_WAVE_3_BUILD}; {_WAVE_3_REACT}; P3.94 (react-client.md); "
-               f"{_WAVE_3_PYTHON}",
+        45000, was=40000, since="2026-10-10",
+        closes=f"{_COUNTED}; before that: {_WAVE_3_BUILD}; {_WAVE_3_REACT}; "
+               f"P3.94 (react-client.md); {_WAVE_3_PYTHON}",
         signal=_WAVE_3_SIGNAL),
     "backend-only": Ceiling(
         27000, was=26000, since="2026-10-10",
@@ -155,6 +177,7 @@ def measure(front_door: str, refs: list) -> Report:
     report = Report(front_door)
     report.fixed = [(f"{s}/SKILL.md", words(SKILLS / s / "SKILL.md"))
                     for s in SKILLS_READ[front_door]]
+    report.fixed += [(f, words(SKILLS / f)) for f in FIXED_READS[front_door]]
     for r in reflib.always_list(refs, front_door):
         report.items.append(Item(r.path, "always", False))
     for step in reflib.BUILD_STEPS:
