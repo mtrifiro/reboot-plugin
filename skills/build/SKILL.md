@@ -24,8 +24,30 @@ the build as it happens, so each step gets two or three sentences on
 their objects, rules and roles and the decisions between them (what a
 stay holds, why a suite is its own object, which rule a night enforces,
 who may cancel), never on which reference or step is in hand; a bare
-line between tool calls is too little (`references/flywheel.md`, Tone,
-and its model paragraph).
+line between tool calls is too little (`references/flywheel.md`, Tone).
+
+**How the build talks**, the model to imitate, a hotel; write yours in
+the user's nouns, this shape, this length, at every step:
+
+> **Suites and stays.** The 23 suites are a fixed list on the hotel,
+> one object each: a suite is the thing that is occupied, so it owns
+> the rule that it hosts one stay per night, and its `hold` is a
+> writer, called only by the app when a stay is booked. A stay is the
+> guest's visit, its nights, its suite and its services, and is its own
+> object because it grows through the visit and is what the butler
+> reads: `book` is a transaction, because it holds every night or none;
+> `request` is a writer the guest calls on their own stay; the butler's
+> `requests` is a reader over every stay. The spa has capacity, so it
+> owns the rule that a slot takes one guest; dinner seatings the same.
+> Set aside: a calendar on each suite, which would grow without bound,
+> and a single hotel object holding every stay, which would serialize
+> every booking behind every other.
+>
+> The staff are one roster with roles, so the butler and the concierge
+> see different things, and the first manager is named by a setting,
+> never whoever signs in first. Assumed, open to change at the review:
+> guests sign in with the development picker, the data is disposable,
+> and a stay is paid at booking.
 
 The flow is the **Reboot Flywheel**'s first two stages
 ([`references/flywheel.md`](references/flywheel.md)): **Design** runs
