@@ -291,11 +291,15 @@ class SchemaGuardTest(unittest.TestCase):
         self.assertEqual(self.patch(ADD_FIELD), "")
 
     def test_compaction_forgets_the_rules(self) -> None:
+        # PreCompact is what hooks.json registers (the Claude app's schema
+        # has no PostCompact); the guard takes either.
         self.with_dev_state()
-        self.ran(f"cat {RULES}")
-        self.assertEqual(self.patch(ADD_FIELD), "")
-        self.run_hook({"hook_event_name": "PostCompact", "trigger": "auto"})
-        self.assertIn("Read all of", self.patch(ADD_FIELD))
+        for event in ("PreCompact", "PostCompact"):
+            with self.subTest(event=event):
+                self.ran(f"cat {RULES}")
+                self.assertEqual(self.patch(ADD_FIELD), "")
+                self.run_hook({"hook_event_name": event, "trigger": "auto"})
+                self.assertIn("Read all of", self.patch(ADD_FIELD))
 
     def test_another_session_has_not_read_them(self) -> None:
         self.with_dev_state()

@@ -17,7 +17,8 @@
 //     file were shown (a Read, `cat`, `sed -n 'a,bp'`, `head`, `tail`),
 //     so the rules count as read once every line has been, over one
 //     call or several.
-//   - PostCompact: the rules are out of the model's context again.
+//   - PreCompact (or PostCompact): the rules are about to leave, or have
+//     left, the model's context; the session reads them again.
 //
 // The comparison itself is `schema.ts` beside this file. Every failure
 // is silent: a guard that breaks must not stop the build.
@@ -362,7 +363,7 @@ export function handle(e) {
   const command = typeof input.command === 'string' ? input.command : ''
   const editTools = codex ? 'apply_patch' : 'the Edit or Write tool'
 
-  if (e.hook_event_name === 'PostCompact') {
+  if (e.hook_event_name === 'PreCompact' || e.hook_event_name === 'PostCompact') {
     rmSync(stateFile(e.session_id), { force: true })
     return null
   }

@@ -3,7 +3,8 @@
 # Reboot app with persisted state couldn't boot over.
 # `schema-guard/guard.mjs` holds the logic and says what it refuses;
 # `hooks.json` registers this for PreToolUse (the edit tools and Bash),
-# PostToolUse (Read and Bash) and PostCompact.
+# PostToolUse (Read and Bash) and PreCompact (the Claude app's hook
+# schema lists PreCompact and not PostCompact; the guard takes both).
 #
 # A payload that names neither an API definition file
 # (`api/<pkg>/v1/<name>.py`) nor the rules file, and isn't a
@@ -18,7 +19,7 @@ root="${root%/}"
 
 input=$(cat)
 case "$input" in
-    *api/*/v1/*.py* | *api-schema-evolution.md* | *'"PostCompact"'*) ;;
+    *api/*/v1/*.py* | *api-schema-evolution.md* | *'"PreCompact"'* | *'"PostCompact"'*) ;;
     *) exit 0 ;;
 esac
 
