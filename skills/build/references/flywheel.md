@@ -155,7 +155,9 @@ or links. The models below are the hotel; write yours.
 > architecture, the rules and the feature set on: `Room` owns "booked
 > at most once per night", `Reservation.create` books every room or
 > none and is called only by the app, guests sign in with the
-> development picker, and the data is disposable. Cancellations and
+> development picker, and the data is disposable. Reboot keeps each
+> room as its own actor and runs its methods one at a time, which is
+> what makes the first rule hold. Cancellations and
 > the housekeeping view are next, one at a time. The look: violet on
 > paper, the house default since you named no brand; name one, or a
 > site, and I'll read it. Try the screens the way a guest would: this

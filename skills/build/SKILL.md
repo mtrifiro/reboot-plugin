@@ -285,6 +285,19 @@ taking the time and what it proposes to cut. Until the app has a
 second feature there is no screenshot pass and no page timing (Step
 5), and the suite is the feature's scenarios.
 
+**Teach as you build.** The first build is the user's first look at
+Reboot: at each step, one or two sentences in their nouns on the idea
+the step rests on and what it buys their app, where the idea shows up,
+never a lecture. Step 1: a state type is an actor, its state kept by
+Reboot and its methods run one at a time, so two guests cannot book the
+same night; a reader, writer, transaction or workflow is what a method
+may touch. Step 2a and 6: a scenario is the rule in English that the
+suite runs. Step 4: an authorizer is who may call each method, enforced
+in production. Step 7: the dev loop restarts on every edit, the
+dashboard shows the model and the features, and `rbt inspect` reads
+what is stored. A term the user asks about gets the reference's
+answer, in their words.
+
 **Once the first feature file exists (Design Phase, item 1), start the
 developer dashboard** with the [`dashboard` skill](../dashboard/SKILL.md):
 its Features page shows the rules and scenarios as they are written,

@@ -130,21 +130,26 @@ _SLICES_SIGNAL = (
     "stay green with the plugin, and no build is reported as having skipped "
     "the questions or built past its first feature before handing it off"
 )
+# 2026-10-11: the first build teaches Reboot as it goes, a sentence per
+# step in the user's nouns (build, "Teach as you build"), after the user
+# asked for it; about a hundred and thirty words on each front door.
+_TEACH = "teaching Reboot as the first prototype builds (build, Teach as you build)"
+_TEACH_SIGNAL = "the teaches-reboot grader on the skip and accept gates stays green with the plugin"
 CEILINGS = {
     "mcp-ui": Ceiling(
-        48000, was=47500, since="2026-10-10",
-        closes=f"{_SLICES}; before that: {_COUNTED}, and "
+        48300, was=48000, since="2026-10-11",
+        closes=f"{_TEACH}; before that: {_SLICES}; {_COUNTED}, and "
                f"web-app/references/ui-design.md, which mcp-ui/SKILL.md names as "
                f"the principles every front door follows; P1.23, P4.26 "
                f"(mcp-ui/SKILL.md); P4.25, P4.27, P4.32 (api-method-types.md); "
                f"P3.175 (api-state-shapes.md); {_WAVE_3_BUILD}; {_WAVE_3_REACT}; "
                f"{_WAVE_3_PYTHON}",
-        signal=f"{_SLICES_SIGNAL}; {_WAVE_3_SIGNAL}"),
+        signal=f"{_TEACH_SIGNAL}; {_SLICES_SIGNAL}; {_WAVE_3_SIGNAL}"),
     "web-app": Ceiling(
-        45500, was=45000, since="2026-10-10",
-        closes=f"{_SLICES}; before that: {_COUNTED}; {_WAVE_3_BUILD}; "
+        45800, was=45500, since="2026-10-11",
+        closes=f"{_TEACH}; before that: {_SLICES}; {_COUNTED}; {_WAVE_3_BUILD}; "
                f"{_WAVE_3_REACT}; P3.94 (react-client.md); {_WAVE_3_PYTHON}",
-        signal=f"{_SLICES_SIGNAL}; {_WAVE_3_SIGNAL}"),
+        signal=f"{_TEACH_SIGNAL}; {_SLICES_SIGNAL}; {_WAVE_3_SIGNAL}"),
     "backend-only": Ceiling(
         27000, was=26000, since="2026-10-10",
         closes=_WAVE_3_PYTHON,

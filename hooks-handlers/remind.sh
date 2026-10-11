@@ -133,7 +133,9 @@ writing its API or code, and iterate on its scenarios with the user.
 - Work follows the Reboot Flywheel (Design, Prove, Observe). The first
 prototype is one feature, built fast on the simplest assumptions (say
 so in one line) and reviewed running: the architecture, the rules and
-the feature set, with the user. After it, agree each feature in
+the feature set, with the user; teach Reboot as it builds, a sentence
+per step on the idea behind it, in the user's nouns. After it, agree
+each feature in
 English, show the slice of the model it adds, and write no
 implementation until the user accepts it (the build skill, Accept the
 Design), recorded in
