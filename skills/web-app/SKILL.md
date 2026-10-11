@@ -1,6 +1,6 @@
 ---
 name: web-app
-description: Build complete Reboot Web Apps, a Reboot backend behind a standalone browser-facing React frontend, served at a normal URL (not embedded in an MCP host). Use when the prompt names a URL, a page or a website, or names no front door (the default). Layers on the build skill's shared design-and-build flow; holds what is specific to Web Apps, the web/ Vite shell, VITE_REBOOT_URL, browser sign-in and allowed_origins, and each build step's reading list. The backend stays ready for an MCP UI.
+description: Build complete Reboot Web Apps, a Reboot backend behind a standalone browser-facing React frontend, served at a normal URL (not embedded in an MCP host). Use when the prompt names a URL, a page or a website, or names no front door (the default). Layers on the build skill's shared design-and-build flow; holds what is specific to Web Apps, the web/ Vite shell, VITE_REBOOT_URL, browser sign-in and allowed_origins, and each build step's Reboot guides. The backend stays ready for an MCP UI.
 argument-hint: [<app-description>]
 allowed-tools: Bash, Read, Write, Glob, Grep, Edit
 ---
@@ -18,7 +18,7 @@ browser.
 model assessment, build steps, update flow). This skill holds the Web
 App differences: a plain React SPA in a top-level `web/` Vite shell at a
 normal URL, `VITE_REBOOT_URL`, `<RebootClientProvider>`, browser
-sign-in, `allowed_origins`, and each step's reading list. A
+sign-in, `allowed_origins`, and each step's Reboot guides. A
 dual-frontend app (browser SPA plus MCP front door, one backend) also
 loads the [`mcp-ui` skill](../mcp-ui/SKILL.md) for `mcp=Tool()`, `UI()`
 and MCPJam; see the [`app` skill](../app/SKILL.md) for what they share.
@@ -125,20 +125,15 @@ one when its situation comes up (catalog in the `python` skill).
 <!-- The lists below are generated from each reference's frontmatter
 by tools/gen-index.py. Edit the frontmatter, not the lists. -->
 
-> **Never read `mcp-ui/references/*` for a web app.** They cover the MCP
-> frontend (`UI()` artifacts, MCPJam, nested `frontend/mcp/<name>/`
-> Vite output, `mcp=Tool()` markers, popping a widget out into a web
-> app) and produce MCP-UI-shaped code. Use
-> [`references/react-client.md`](references/react-client.md) and the
-> `python` references below. Sole exception:
-> [mcp-ui/references/auth-oauth-providers.md](../mcp-ui/references/auth-oauth-providers.md)
-> is frontend-neutral. Read it only when you pick a real (production)
-> provider.
+> **Never read `mcp-ui/references/*` for a web app:** they produce
+> MCP-UI-shaped code. The one exception is
+> [auth-oauth-providers.md](../mcp-ui/references/auth-oauth-providers.md),
+> read only when you pick a real (production) provider.
 
 _Design_: until the user accepts the domain model and feature files
 (build skill, "Accept the Design"):
 
-**Before the API definition:**
+**How Reboot defines objects and methods:**
 
 <!-- generated:start reading-list front-door=web-app step=api -->
 - `python/references/api-methods.md`: The factory fixes the servicer's context type, and `mcp=` is required; `Reader`/`Writer`/`Transaction`/`Workflow`, `factory=True`, `errors=`, `description=`.
@@ -154,7 +149,7 @@ _Design_: until the user accepts the domain model and feature files
 
 _Prove_: building to the accepted design:
 
-**Before the project shell** (`.rbtrc`, `pyproject.toml`,
+**How a Reboot project is set up** (`.rbtrc`, `pyproject.toml`,
 `.mypy.ini`, `main.py`):
 
 <!-- generated:start reading-list front-door=web-app step=shell -->
@@ -165,7 +160,7 @@ _Prove_: building to the accepted design:
 - `python/references/lifecycle-dev-loop.md`: only when the dev loop misses an edit, restarts in a loop, or runs beside the test suite.
 <!-- generated:end -->
 
-**Before the servicer:**
+**How Reboot runs each method:**
 
 <!-- generated:start reading-list front-door=web-app step=servicer -->
 - `python/references/lifecycle-initialize-hook.md`: Each `initialize` call runs once per app lifetime, not per boot; migrations need new aliases; failures retry forever.
@@ -196,7 +191,7 @@ _Prove_: building to the accepted design:
 - `python/references/stdlib-item.md`: only when using the stdlib `Item` value envelope.
 <!-- generated:end -->
 
-**Before the authorizers** (build Step 4: real rules on every
+**How Reboot decides who may call** (build Step 4: real rules on every
 servicer before the first test; browser specifics in "Auth in Web
 Apps" above):
 
@@ -213,7 +208,7 @@ Apps" above):
 - `python/references/auth-claims.md`: only when you use claims or `set_claims`.
 <!-- generated:end -->
 
-**Before the frontend:**
+**How the screens talk to Reboot:**
 
 <!-- generated:start reading-list front-door=web-app step=frontend -->
 - `references/react-client.md`: An unset `VITE_REBOOT_URL` points at Vite's origin; copy `build/templates/web-app/web/`; own port, `strictPort`, sign-in, typed errors.
@@ -223,7 +218,7 @@ Apps" above):
 - `references/ui-restyle.md`: only when the user asks to change the look of an app that already runs.
 <!-- generated:end -->
 
-**Before the tests:**
+**How Reboot runs the scenarios:**
 
 <!-- generated:start reading-list front-door=web-app step=tests -->
 - `python/references/testing-project-setup.md`: Missing `pytest.ini` paths break `_rbt` imports; no `pytest-asyncio`; `tests/` layout, fixture with `allowed_origins=[]`, `reboot[dev]`.
@@ -237,7 +232,7 @@ Apps" above):
 Order of work around feature files (agree in English, tag `@wip`,
 iterate on scenarios): the [`feature` skill](../feature/SKILL.md).
 
-**Before running the app:** the [`run` skill](../run/SKILL.md).
+**How a Reboot app is started:** the [`run` skill](../run/SKILL.md).
 
 Grepping installed framework source or a generated file? Stop: see
 build's "Never Read Generated or Installed Source in the Main Thread".

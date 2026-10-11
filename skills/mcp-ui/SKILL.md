@@ -1,6 +1,6 @@
 ---
 name: mcp-ui
-description: Build complete Reboot MCP UIs for ChatGPT, Claude, VSCode, Goose, and other MCP hosts. Use when the prompt names an MCP host or runtime (MCP, ChatGPT, Claude, VSCode, Goose, a tool for an LLM or agent). Layers on the build skill's shared design-and-build flow; holds what is specific to MCP UIs, the User-type front door, MCP tool exposure, the UI() method type, the nested frontend/mcp/<name>/ bundles and the setup wizard, and each build step's reading list.
+description: Build complete Reboot MCP UIs for ChatGPT, Claude, VSCode, Goose, and other MCP hosts. Use when the prompt names an MCP host or runtime (MCP, ChatGPT, Claude, VSCode, Goose, a tool for an LLM or agent). Layers on the build skill's shared design-and-build flow; holds what is specific to MCP UIs, the User-type front door, MCP tool exposure, the UI() method type, the nested frontend/mcp/<name>/ bundles and the setup wizard, and each build step's Reboot guides.
 argument-hint: [<app-description>]
 allowed-tools: Bash, Read, Write, Glob, Grep, Edit
 ---
@@ -18,7 +18,7 @@ inside an AI chat app such as Claude or ChatGPT.
 model assessment, build steps, update flow). This skill holds the MCP UI
 differences: the `User`-type front door, `mcp=`, `UI()`, `oauth=`
 provider selection, example prompts, nested `frontend/mcp/<name>/`
-bundles, the setup wizard and MCPJam, and each step's reading list.
+bundles, the setup wizard and MCPJam, and each step's Reboot guides.
 A dual-frontend app (MCP plus a browser SPA, one backend) also loads the
 [`web-app` skill](../web-app/SKILL.md); see the
 [`app` skill](../app/SKILL.md) for what they share.
@@ -179,7 +179,7 @@ by tools/gen-index.py. Edit the frontmatter, not the lists. -->
 _Design_: until the user accepts the domain model and feature files
 (build skill, "Accept the Design"):
 
-**Before the API definition:**
+**How Reboot defines objects and methods:**
 
 <!-- generated:start reading-list front-door=mcp-ui step=api -->
 - `references/api-method-types.md`: Every method needs `mcp=Tool()` or `mcp=None`; an entity's `UI()` goes on its Type, not `User`; `factory=True` `create`.
@@ -197,7 +197,7 @@ _Design_: until the user accepts the domain model and feature files
 
 _Prove_: building to the accepted design:
 
-**Before the project shell** (`.python-version`, `pyproject.toml`,
+**How a Reboot project is set up** (`.python-version`, `pyproject.toml`,
 `.rbtrc`, `.mypy.ini`, `main.py`):
 
 <!-- generated:start reading-list front-door=mcp-ui step=shell -->
@@ -209,7 +209,7 @@ _Prove_: building to the accepted design:
 - `python/references/lifecycle-dev-loop.md`: only when the dev loop misses an edit, restarts in a loop, or runs beside the test suite.
 <!-- generated:end -->
 
-**Before the servicer:**
+**How Reboot runs each method:**
 
 <!-- generated:start reading-list front-door=mcp-ui step=servicer -->
 - `references/servicer-patterns.md`: Never await a workflow from `UserServicer.create_<X>`, `.schedule()` it; the Transaction calls `<X>.create(context)`, returns `state_id`; workflow-body idioms.
@@ -241,7 +241,7 @@ _Prove_: building to the accepted design:
 - `python/references/stdlib-item.md`: only when using the stdlib `Item` value envelope.
 <!-- generated:end -->
 
-**Before the authorizers** (build Step 4: real rules on every
+**How Reboot decides who may call** (build Step 4: real rules on every
 servicer before the first test):
 
 <!-- generated:start reading-list front-door=mcp-ui step=auth -->
@@ -259,7 +259,7 @@ servicer before the first test):
 - `references/auth-custom-oauth-provider.md`: only when none of the shipped OAuth providers fits.
 <!-- generated:end -->
 
-**Before the frontend:**
+**How the screens talk to Reboot:**
 
 <!-- generated:start reading-list front-door=mcp-ui step=frontend -->
 - `references/react-scaffolding.md`: Flattening `vite.config.ts` output breaks UI discovery at `frontend/dist/mcp/<name>/index.html`; copy `build/templates/mcp-ui/frontend/`; `npm install` before second `rbt generate`.
@@ -272,7 +272,7 @@ servicer before the first test):
 - `web-app/references/ui-restyle.md`: only when the user asks to change the look of an app that already runs.
 <!-- generated:end -->
 
-**Before the tests:**
+**How Reboot runs the scenarios:**
 
 <!-- generated:start reading-list front-door=mcp-ui step=tests -->
 - `python/references/testing-project-setup.md`: Missing `pytest.ini` paths break `_rbt` imports; no `pytest-asyncio`; `tests/` layout, fixture with `allowed_origins=[]`, `reboot[dev]`.
@@ -285,7 +285,7 @@ servicer before the first test):
 Order of work around feature files (agree in English, tag `@wip`,
 iterate on scenarios): the [`feature` skill](../feature/SKILL.md).
 
-**Before running the app:** the [`run` skill](../run/SKILL.md).
+**How a Reboot app is started:** the [`run` skill](../run/SKILL.md).
 
 Grepping installed framework source or a generated file? Stop: see
 build's "Never Read Generated or Installed Source in the Main Thread".

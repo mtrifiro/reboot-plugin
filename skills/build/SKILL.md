@@ -14,7 +14,7 @@ The build flow for every Reboot app with a frontend, reached from a
 **front-door skill**: [`mcp-ui`](../mcp-ui/SKILL.md) (an MCP host such
 as ChatGPT or Claude), [`web-app`](../web-app/SKILL.md) (a standalone
 browser SPA), or both. Keep the front-door skill open: it holds that
-front door's concepts, the project layout, and each step's reading list
+front door's concepts, the project layout, and each step's Reboot guides
 under **"Which References to Read, and When"**. Differences are marked
 inline (`mcp-ui: … / web-app: …`); a dual-frontend app does both.
 Backend-only work starts from the [`python` skill](../python/SKILL.md).
@@ -30,7 +30,8 @@ the styles the timeline needs" or "The app shell is in place. The gate
 board comes next". A step line goes to the progress band instead, as
 a command: `reboot-now Reading how Reboot defines objects and
 methods`. It says what the work is for in the user's terms, never the
-plugin's: no step, reference or reading list. Plain words, no quotes,
+plugin's: no step, reference or reading list. The guides' group names
+make good lines. Plain words, no quotes,
 an apostrophe always the typographic ’. The only lines between reports:
 the scope questions, the brief after them (Design Phase, item 0), a question only the user can answer, and one sentence when a
 step runs past ten minutes, saying what takes the time. Never the
@@ -431,7 +432,7 @@ web-app: `python/references/patterns-cross-actor-reads.md`.
 ## Step-by-Step Build Flow
 
 **Run all commands from the application directory**; before each step,
-read its front-door reading list. The design, the feature files and the
+read its front-door Reboot guides. The design, the feature files and the
 API file are written into the bare folder; the template arrives at Step
 2, after them. Step 1 closes the first prototype's
 design; its acceptance comes with the running prototype (Step 7), and
@@ -468,7 +469,7 @@ sentence and keep building.
 
 ### Step 1: API definition
 
-Read "Before the API definition". Name the project
+Read "How Reboot defines objects and methods". Name the project
 once, in the design: kebab-case `<project>` (`todo-list`) and snake_case
 `<app>` (`todo_list`), the API package and module; `<app>` also names
 the `.mypy.ini` ignore stanza (`[mypy-<app>.v1.<app>_rbt]`), imports and
@@ -528,7 +529,7 @@ from.
 
 ### Step 2: Project shell
 
-Read "Before the project shell". Copy `templates/<front-door>/` with
+Read "How a Reboot project is set up". Copy `templates/<front-door>/` with
 its `copy.sh --merge` (see [`templates/README.md`](templates/README.md));
 never retype a scaffold file from memory. `--merge` fills the
 placeholders, renames paths, keeps every file the project already has
@@ -572,7 +573,7 @@ copies `templates/both/`. Then:
 
 ### Step 2a: Run the scenarios red
 
-Before any servicer body: read "Before the authorizers" (Step 4's
+Before any servicer body: read "How Reboot decides who may call" (Step 4's
 list), then declare every servicer class with each method raising
 `NotImplementedError` and its real `authorizer()` (the test harness
 denies every call to a servicer without one, so a run without them
@@ -587,7 +588,7 @@ time, each scenario going green.
 
 ### Step 3: Servicer
 
-Read "Before the servicer". Write one module per state type,
+Read "How Reboot runs each method". Write one module per state type,
 `backend/src/servicers/<type>.py`, each servicer registered once in
 `servicers/registry.py`, the one list `main.py` and every test module
 take. An `async def` per method, context type matching the factory.
@@ -599,7 +600,7 @@ mcp-ui: `UserServicer` and `<X>.create(context)` in
 
 ### Step 4: Authorizers
 
-Read "Before the authorizers" (done at Step 2a). **Every servicer has
+Read "How Reboot decides who may call" (done at Step 2a). **Every servicer has
 carried a real `authorizer()` since its stub; review each against the
 rules below**: `rbt dev` only logs
 `*** <Type>.<Method> IS MISSING AUTHORIZATION ***`, but the `Reboot()`
@@ -650,7 +651,7 @@ test harness, `rbt serve` and Reboot Cloud deny with `PermissionDenied`
 
 ### Step 5: Frontend
 
-Read "Before the frontend".
+Read "How the screens talk to Reboot".
 1. The template brought the shell: mcp-ui: `frontend/`, one bundle per
    UI under `frontend/mcp/<name>/`; web-app: `web/`. Versions are pinned
    to what the plugin ships; don't regenerate with
@@ -712,7 +713,7 @@ Read "Before the frontend".
 
 ### Step 6: Tests
 
-Read "Before the tests". **Write and run every feature's scenarios
+Read "How Reboot runs the scenarios". **Write and run every feature's scenarios
 before handoff** (the first prototype's all; later, each feature's as
 it is built), in the built-in steps of
 `python/references/testing-features.md`:

@@ -127,6 +127,6 @@ front door".
 On every route, `build` writes each capability as a `@wip` feature file
 from the scope round, before its API exists ([`feature`
 skill](../feature/SKILL.md)). Don't invoke `python` for an MCP UI or
-Web App: the front-door skills' reading lists name the `python`
+Web App: the front-door skills' Reboot guides name the `python`
 references each step needs. A dual-frontend app reads both lists, each
 reference once.
