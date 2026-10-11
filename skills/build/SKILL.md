@@ -76,10 +76,10 @@ round, once the API file is written and at the handoff, the build shows
 the app at a glance, a table with one row per object, in the user's
 nouns:
 
-| Object | What it is | Rules it owns | Called by |
-| --- | --- | --- | --- |
-| `Suite` | one of the 23 suites | one stay per night | the app, when a stay is booked |
-| `Stay` | a guest's visit | every night or none | the guest; the butler reads it |
+| Object, and the rules it owns | What it can do | Who may call it |
+| --- | --- | --- |
+| `Suite`, one of the 23: one stay per night | `hold`, a writer | only the app, when a stay is booked |
+| `Stay`, a guest's visit: every night or none | `book`, a transaction; `request`, a writer | the guest; the butler reads |
 
 Every other sentence names the row it changed and how. What leaves the
 map unchanged goes unsaid: a typo fixed, a predicate's order, a lock
@@ -330,9 +330,16 @@ or group of calls; a step past ten minutes says what takes the time
 and what it would cut. The first prototype skips the screenshot pass
 and page timing (Step 5); they come with the first update.
 
-**Teach as you build.** The first build is the user's first look at
-Reboot: at each step, one or two sentences in their nouns on the idea
-the step rests on and what it buys their app, never a lecture. Step 1:
+**Teach as you build, design first.** The first build is the user's
+first look at Reboot, and the design is what it teaches most. Each
+design decision says which of the welcome's three questions it answers
+and the principle behind the answer, in the user's nouns: "A
+reservation is its own object, because it lives and changes apart from
+the room" (what are the objects); "`book` is a transaction, because it
+holds every night or none" (what can it do); "only the app calls
+`hold`, so no guest can claim a night directly" (who may call it). The
+first map says its columns are those three questions. Later steps add
+one or two sentences on the idea each rests on, never a lecture. Step 1:
 a state type is an actor, its state kept by Reboot and its methods run
 one at a time, so two guests cannot book the same night; a reader,
 writer, transaction or workflow is what a method may touch. Steps 2a
@@ -345,8 +352,12 @@ user asks about gets the reference's answer, in their words.
 **Once Step 1 has written the API file, start the developer
 dashboard** ([`dashboard` skill](../dashboard/SKILL.md)): it opens on
 its Models page with the model to show, and its Features page has the
-feature files. Started earlier, it opens on "Waiting for your API". If
-it fails, say so in a sentence and keep building.
+feature files. Started earlier, it opens on "Waiting for your API".
+When it opens, say what the user is looking at: the Models page shows
+each object, its state and its methods, the map's first two questions.
+The Call Graph, which method calls which, stays empty until Step 3
+writes the methods' code, then fills in. If it fails, say so in a
+sentence and keep building.
 
 ### Step 1 — API definition
 

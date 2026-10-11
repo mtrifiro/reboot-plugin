@@ -17,6 +17,16 @@ or the scope round. An existing project skips it.
 > one request at a time, so the rules you describe hold without a
 > database to manage.
 >
+> Designing a Reboot app answers three questions, and this build
+> answers them out loud:
+> - **What are the objects?** Each thing with its own life, a room or a
+>   reservation, is one object, and each rule lives on the object whose
+>   data it protects.
+> - **What can each object do?** Its methods: one reads, one changes
+>   the object, one changes several objects all or nothing, one runs
+>   over time or calls the outside world.
+> - **Who may call each method?** A guest, a manager, or only the app.
+>
 > How this build proceeds:
 > 1. A few questions about scope.
 > 2. Features before code: each capability written as rules and

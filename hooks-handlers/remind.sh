@@ -146,7 +146,8 @@ or "The shell is in place; the API comes next"; write what they settled:
 "Each room is its own actor, so two guests cannot hold the same night".
 The goal is the app's structure: after the scope round, once the API
 is written and at the handoff, show the app at a glance, a table with a
-row per object, what it is, the rules it owns, who calls it. The first sentence about an
+row per object: the object and the rules it owns, what it can do (its
+methods and their kinds), who may call it. The first sentence about an
 object says why it exists, with the object as its subject. Sentences
 under about twenty words, one idea each, no em or en dashes, no
 semicolons, no parentheses, no closing sentence that sums up.
