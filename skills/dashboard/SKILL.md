@@ -1,6 +1,6 @@
 ---
 name: dashboard
-description: Start the Reboot developer dashboard (`rbt dashboard`) for a project and open it once in the browser. Use while building, once the API file is written (the build's Step 1), so the first page the developer sees has the model on it, and whenever the user asks for the dashboard; not for running an app (the run skill). `rbt dev run` only finds a dashboard already serving on `--dashboard-port` (default 9871), so start it here, before or after the app runs.
+description: Start the Reboot developer dashboard (`rbt dashboard`) for a project and open it once in the browser. Use while building, once every method has its code, so the first page the developer sees has a complete Call Graph, and whenever the user asks for the dashboard; not for running an app (the run skill). `rbt dev run` only finds a dashboard already serving on `--dashboard-port` (default 9871), so start it here, before or after the app runs.
 argument-hint: [<project-directory>]
 allowed-tools: Bash, Read, Write, Glob, Grep, Edit
 ---
@@ -14,12 +14,14 @@ allowed-tools: Bash, Read, Write, Glob, Grep, Edit
 page), its features from the `.feature` files under `tests/` (Features
 page: rules, scenarios, methods used, `@wip` and `@blocked` marks,
 browser-scenario recordings), and an API changelog. It reads the API and
-feature **files**, not a running app, so start it once the API file is
-written: it opens on its Models page, and before the API that page says
-only "Waiting for your API".
+feature **files**, not a running app; before the API its Models page
+says only "Waiting for your API", and before the methods have code its
+Call Graph is empty.
 
-Come here when the [`build` skill](../build/SKILL.md) directs you (at
-the end of its Step 1, the API) or the user asks for the dashboard.
+Come here when the [`build` skill](../build/SKILL.md) directs you
+(once every method has its code, before its built report) or the user
+asks for the dashboard. Opened before the code, its Call Graph is
+empty.
 
 > This skill only **starts the dashboard**; running the app is the
 > [run skill](../run/SKILL.md). `rbt dev run` doesn't start a
@@ -141,7 +143,7 @@ Once, for good: the page tracks its viewers (`Presence`) and the
 developer's reopen preference, which `rbt dev run` consults. Never
 re-open it on reloads or restarts. During a build, say nothing in the
 chat: `reboot-now Starting the Reboot developer dashboard` for the band,
-and the domain-model report names it and what it shows. Asked for it
+and the built report names it and what it shows. Asked for it
 directly, tell the user where it is and what it shows now: "The Reboot
 developer dashboard is at http://127.0.0.1:<port>/. Its Models page
 shows each domain object, its state and its methods. The Call Graph

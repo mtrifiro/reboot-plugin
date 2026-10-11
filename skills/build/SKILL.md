@@ -64,9 +64,10 @@ fact with its count or date and the file that holds it: "6 feature
 files, 42 scenarios, in `tests/`. None has run yet." The review
 gathers every report's evidence, each line linked to its report. Sections
 inside take `###`, so the title stands well above them. The note
-says what the report is and where it is kept: "*This is the domain-model
-report. It is saved as `design/reports/2-domain-model.md`, with every
-report from this build, in order.*" The build sends it in the chat
+says what the report is, where it is kept and where the whole design
+is: "*This is the domain-model report, saved as
+`design/reports/2-domain-model.md`. The whole design, kept current, is
+`design/design.md`.*" The build sends it in the chat
 first, as visible text, then saves the same text, without the rules, to
 that file, the feature spec with every scenario. A report only saved
 has not been given. Each title names
@@ -84,7 +85,7 @@ its running prototype. A later feature's reports continue the numbering,
 plain sentence.
 
 **1. The app has a domain model**, once Step 1 has written the API
-file and the dashboard is open. It opens "The app has a proposed domain
+file. It opens "The app has a proposed domain
 model." and holds, under `###` headings:
 
 1. **The map**, a table with one row per object, in the user's nouns.
@@ -118,9 +119,8 @@ model." and holds, under `###` headings:
 3. **Roles**: who signs in and what each role may do.
 4. **Set aside**: each alternative not taken, with its reason.
 5. **Assumed**, open to change at the review.
-6. **The Reboot developer dashboard**, by that name and at its address:
-   its Models page shows each object's state and methods. The Call Graph, which method calls which, fills in once the
-   methods have code.
+6. **Pages and the look**, a line each: the primary view and what it
+   lets someone do, the accent and its source. The design has the rest.
 
 **2. The app has a feature spec**, right after the domain-model report,
 once every feature file is written and matches the model, before the
@@ -142,8 +142,9 @@ says every scenario ran red before the code (Step 2a), marks the
 build's biggest transition, from proposal to running code, and opens
 "The app has been built." It holds what changed (each method
 has its body, the callers are enforced, the app serves its pages at its
-address), what to open (the app, and the dashboard, whose Call Graph
-now shows which method calls which), and anything not yet working and
+address), what to open (the app, and **the Reboot developer dashboard**, by
+that name and at its address: its Call Graph shows which method calls
+which, its Models page each object's state and methods), and anything not yet working and
 why.
 
 **4. The app is being tested with the full feature suite**, as Step 6
@@ -317,10 +318,12 @@ waits.
      `UI()`, the AI's tool surface, about three example prompts, most
      ending on a turn that renders a `UI()`.
    - web-app: the pages and the methods each calls.
-5. Write the design to `design/design.md` as it is stated, in the same
-   words the user reads: every choice with its why, the deviations
-   from the brief, the alternatives set aside. Keep it current until
-   accepted; it outlives the conversation.
+5. Write **the design**, `design/design.md`, the one document the
+   user reads for the whole app, kept current. In order: purpose and
+   scope; the map and each object with its why; the rules by feature;
+   the pages and the look; assumed, left for later, set aside; status,
+   proposed or accepted on a date. Each section links its detail
+   (`api/`, `tests/*.feature`, `design/review.md`, `decisions.md`).
 6. **Following naming decisions.** When the user picks an option, that
    pick is final. A later side-question ("should it be X?") is a
    question to answer, not a new decision. Keep the pick unless the
@@ -463,11 +466,10 @@ who may call it; a scenario is a rule in English the suite runs. The
 review adds the dev loop, the dashboard and `rbt inspect`. A term the
 user asks about gets the reference's answer, in their words.
 
-**Once Step 1 has written the API file, start the developer
-dashboard** ([`dashboard` skill](../dashboard/SKILL.md)): it opens on
-its Models page with the model to show, and its Features page has the
-feature files. Started earlier, it opens on "Waiting for your API".
-The domain-model report says what it shows. If it fails, say so in a
+**Once every method has its code, start the developer dashboard**
+([`dashboard` skill](../dashboard/SKILL.md)), before the built report:
+its Call Graph is then complete. Opened earlier, the Call Graph is
+empty. The built report says what it shows. If it fails, say so in a
 sentence and keep building.
 
 ### Step 1: API definition
@@ -532,8 +534,7 @@ Read "How a Reboot project is set up". Copy `templates/<front-door>/` with
 its `copy.sh --merge` (see [`templates/README.md`](templates/README.md));
 never retype a scaffold file from memory. `--merge` fills the
 placeholders, renames paths, keeps every file the project already has
-(step 1's API file, a `CLAUDE.md`) and replaces the dashboard's three
-stubs (the dashboard keeps running). The sample servicer, feature, test
+(step 1's API file, a `CLAUDE.md`). The sample servicer, feature, test
 module and UI are replaced in steps 3, 5 and 6; a dual-frontend app
 copies `templates/both/`. Then:
 
@@ -768,6 +769,8 @@ tree). The first time, this is the review ("Accept the Design"). Open with the p
 card ([`references/flywheel.md`](references/flywheel.md), "Stage
 cards"), then:
 
+0. The design, `design/design.md`, first: the one place to read the
+   whole app, marked accepted once the user accepts.
 1. The app's URL (mcp-ui: the setup wizard's; web-app: the page's).
 2. The result: scenarios passed, anything `@blocked` and why, mypy
    clean, each route's load against the thresholds (Step 5) with any
