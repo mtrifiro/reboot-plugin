@@ -45,7 +45,7 @@ essential, vital, key, robust, seamless, leverage, delve, empower,
 comprehensive, pivotal.
 
 A new build whose first words to the user were not the `app` skill's
-welcome says it now, word for word, before anything else.
+welcome says it now, with its examples from the brief, before anything else.
 
 **How the build talks**, the model to imitate, a hotel; write yours in
 the user's nouns, this shape, this length, at every step:

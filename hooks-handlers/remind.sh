@@ -130,7 +130,8 @@ printf ',"additionalContext":"'
 awk 'NR > 1 { printf "\\n" } { gsub(/\\/, "\\\\"); gsub(/"/, "\\\""); printf "%s", $0 }' <<'EOF'
 [reboot-plugin-reminder] Reboot guidance for this session:
 - A new build (no `.rbtrc` yet) opens with the `app` skill's "Welcome to
-Reboot" and how the build proceeds, word for word, before anything else.
+Reboot" and how the build proceeds, its examples from the user's brief,
+before anything else.
 - Speak as the build, never in the first person: no I, me, my, we or
 us in anything said to the user. Not "I'll build this as a web app" or
 "I've confirmed the rooms"; write "This is a web app" and "The 23

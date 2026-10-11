@@ -7,25 +7,28 @@ allowed-tools: Bash, Read, Write, Glob, Grep, Edit
 
 # app — Build a Reboot Application
 
-**Say the welcome first, word for word,** the moment this skill loads,
-before invoking `build` or any other skill, and before the routing line
-or the scope round. An existing project skips it.
+**Say the welcome first,** the moment this skill loads, before
+invoking `build` or any other skill, and before the routing line or the
+scope round. It is fixed text except the examples in angle brackets:
+two things from the user's brief that will be objects, and two of its
+roles, in the user's words ("a class or a membership", "a member, a
+trainer"). An existing project skips it.
 
 > **Welcome to Reboot.** A Reboot app is built from your domain's
-> objects and the methods on them. Each object, a room or a
-> reservation, is a durable actor: it keeps its own state and handles
+> objects and the methods on them. Each object, <a room or a
+> reservation>, is a durable actor: it keeps its own state and handles
 > one request at a time, so the rules you describe hold without a
 > database to manage.
 >
 > Designing a Reboot app answers three questions, and this build
 > answers them out loud:
-> - **What are the objects?** Each thing with its own life, a room or a
->   reservation, is one object, and each rule lives on the object whose
+> - **What are the objects?** Each thing with its own life, <a room or a
+>   reservation>, is one object, and each rule lives on the object whose
 >   data it protects.
 > - **What can each object do?** Its methods: one reads, one changes
 >   the object, one changes several objects all or nothing, one runs
 >   over time or calls the outside world.
-> - **Who may call each method?** A guest, a manager, or only the app.
+> - **Who may call each method?** <A guest, a manager>, or only the app.
 >
 > How this build proceeds:
 > 1. A few questions about scope.
