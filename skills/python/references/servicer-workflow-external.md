@@ -10,7 +10,7 @@ always: false
 when: "you declared a `Workflow`"
 via: servicer-workflow.md
 verified: 1.6.0
-docs: "https://docs.reboot.dev/develop/side_effects"
+docs: "https://docs.reboot.dev/learn_more/side_effects/"
 ---
 
 # Calling External Systems from a Workflow
@@ -80,8 +80,8 @@ async def charge(
   where `async def _now_ms() -> int` returns `int(time.time() * 1000)`.
 
 - **Annotate every callable's return type** (also for `until`); it
-  checks and pickles the memo, and unannotated means `None`, so any
-  other return raises. `type=` only for a lambda
+  checks and pickles the memo, and unannotated means `None` (`bool`
+  for `until`), so any other return raises. `type=` only for a lambda
   or dynamic type:
   `await at_least_once("Fetch embeddings", context, fetch, type=list[Vector])`.
 - Failures retry forever by **replaying the workflow from the top**, by

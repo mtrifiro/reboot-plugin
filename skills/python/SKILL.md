@@ -217,6 +217,7 @@ first.
 - `references/auth-external-api-calls.md` — only when calling an external service's API as the user.
 - `references/auth-roles.md` — only when staff sign in with roles (a manager, a host, a server; editors and readers).
 - `references/stdlib-oauth-tokens.md` — only when storing a user's OAuth tokens for an external service.
+- `references/auth-claims.md` — only when you use claims or `set_claims`.
 <!-- generated:end -->
 
 ### Testing
@@ -230,7 +231,7 @@ work (agree in English, tag `@wip`, iterate on scenarios) is the
 - `references/testing-project-setup.md` — Missing `pytest.ini` paths break `_rbt` imports; no `pytest-asyncio`; `tests/` layout, fixture with `allowed_origins=[]`, `reboot[dev]`.
 - `references/testing-external-context.md` — only when writing custom steps or harness tests.
 - `references/testing-failure-recovery.md` — only when the app has a spawned task, a `Workflow`, or scheduled work.
-- `references/testing-harness.md` — only when writing custom steps.
+- `references/testing-harness.md` — only when a `unittest` test boots the harness directly, for what a scenario cannot say.
 <!-- generated:end -->
 
 ### Type-checking (do this after every change)

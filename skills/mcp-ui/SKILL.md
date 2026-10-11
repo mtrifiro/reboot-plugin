@@ -271,7 +271,7 @@ servicer before the first test):
 - `python/references/testing-project-setup.md` — Missing `pytest.ini` paths break `_rbt` imports; no `pytest-asyncio`; `tests/` layout, fixture with `allowed_origins=[]`, `reboot[dev]`.
 - `python/references/testing-external-context.md` — only when writing custom steps or harness tests.
 - `python/references/testing-failure-recovery.md` — only when the app has a spawned task, a `Workflow`, or scheduled work.
-- `python/references/testing-harness.md` — only when writing custom steps.
+- `python/references/testing-harness.md` — only when a `unittest` test boots the harness directly, for what a scenario cannot say.
 <!-- generated:end -->
 
 Order of work around feature files (agree in English, tag `@wip`,

@@ -7,7 +7,7 @@ summary: "Disabling authorizers or calling servicers directly tests nothing; reg
 step: tests
 applies: [mcp-ui, web-app, backend-only]
 always: false
-when: "writing custom steps"
+when: "a `unittest` test boots the harness directly, for what a scenario cannot say"
 verified: 1.6.0
 docs: ""
 ---

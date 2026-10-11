@@ -5,7 +5,7 @@ impactDescription: Without `claims=` the app sees only an opaque user ID and `se
 tags: auth, claims, set_claims, User, oauth, Development, Google, email, name, identity
 summary: "Merging claims or keying roles on `Development()` IDs breaks; request `claims=`, override `User.set_claims` correctly, replace per delivery."
 step: auth
-applies: [mcp-ui, web-app]
+applies: [mcp-ui, web-app, backend-only]
 always: false
 when: "you use claims or `set_claims`"
 verified: 1.6.0

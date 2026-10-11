@@ -8,7 +8,7 @@ step: servicer
 applies: [mcp-ui, web-app, backend-only]
 always: false
 verified: 1.6.0
-docs: "https://docs.reboot.dev/develop/side_effects"
+docs: "https://docs.reboot.dev/learn_more/side_effects/"
 ---
 
 # Implement Writer Methods

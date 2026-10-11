@@ -225,7 +225,7 @@ Apps" above):
 - `python/references/testing-web-app.md` — Pages need accessible markup (labels, named buttons) to be driven; the `frontend` fixture, web steps, clicked-through sign-in, recordings.
 - `python/references/testing-external-context.md` — only when writing custom steps or harness tests.
 - `python/references/testing-failure-recovery.md` — only when the app has a spawned task, a `Workflow`, or scheduled work.
-- `python/references/testing-harness.md` — only when writing custom steps.
+- `python/references/testing-harness.md` — only when a `unittest` test boots the harness directly, for what a scenario cannot say.
 <!-- generated:end -->
 
 Order of work around feature files (agree in English, tag `@wip`,
