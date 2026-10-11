@@ -207,7 +207,9 @@ export function fallback(text: string): string {
   return clip(sentence.replace(/[.!?]$/, ''), NOW_MAX)
 }
 
-const clip = (s: string, max: number) => (s.length <= max ? s : `${s.slice(0, max - 1).trimEnd()}…`)
+// A cut never ends in half a surrogate pair (an emoji split in two).
+const clip = (s: string, max: number) =>
+  s.length <= max ? s : `${s.slice(0, max - 1).replace(/[\uD800-\uDBFF]$/, '').trimEnd()}…`
 
 /**
  * A new text while working: Now follows it, and Just completed changes

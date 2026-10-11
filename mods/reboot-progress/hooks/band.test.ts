@@ -1,4 +1,4 @@
-import { expect, test } from 'claude-code/testing'
+import { expect, mock, test } from 'claude-code/testing'
 
 const PLUGIN = 'reboot-progress'
 
@@ -596,4 +596,182 @@ test('a deploy address that never answers shows no button, and is forgotten', as
   await $.tool.call({ tool: 'Bash', command: 'uv run rbt cloud up --organization=acme' })
   const band = await $.ui.mount({ plugin: PLUGIN, surface: 'terminal', component: 'AbovePrompt', props: BAND as never })
   expect(await band.findAll({ type: 'Button', text: /Cloud|Site/ })).toEqual([])
+})
+
+test("a Read of a Reboot skill's SKILL.md starts the task as the Skill call would, in a Reboot project only", async ($, on) => {
+  let cwd = '/w/other'
+  on('ui.render', { component: 'AbovePrompt' }, ($, e) => {
+    const { Box } = $.ui.resolve(e)
+
+    return h(Box, {}) as never
+  })
+  on('tool.call', () => ({ result: {}, text: 'ok' }) as never)
+  on('session.cwd', () => ({ value: cwd }) as never)
+  on('fs.exists', ($, e) => ({ value: (e as { path: string }).path === '/w/app/.rbtrc' }) as never)
+  on('fs.list', () => ({ value: [] }) as never)
+  on('clock.now', () => ({ value: 1000 }) as never)
+  const SKILL = '/u/.claude/plugins/cache/reboot-plugin/reboot/0.4.1/skills/build/SKILL.md'
+
+  // The plugin's own repository, say: no project, so nothing starts.
+  await $.tool.call({ tool: 'Read', file_path: SKILL })
+  const outside = await $.ui.mount({ plugin: PLUGIN, surface: 'terminal', component: 'AbovePrompt', props: BAND as never })
+  expect(await outside.findAll({ text: /Reboot/ })).toEqual([])
+  await outside.unmount()
+
+  cwd = '/w/app'
+  await $.tool.call({ tool: 'Read', file_path: SKILL })
+  await $.tool.call({ tool: 'Write', file_path: '/w/app/api/app/v1/app.py', content: '' })
+  const band = await $.ui.mount({ plugin: PLUGIN, surface: 'terminal', component: 'AbovePrompt', props: BAND as never })
+  expect((await band.findAll({ type: 'Text', text: 'Design \u00b7 ' })).length).toBe(1)
+})
+
+test("the band lets a project go once its .rbtrc is gone, and follows the session to another", async ($, on) => {
+  let cwd = '/w/a'
+  let projects = ['/w/a/.rbtrc', '/w/b/.rbtrc']
+  on('ui.render', { component: 'AbovePrompt' }, ($, e) => {
+    const { Box } = $.ui.resolve(e)
+
+    return h(Box, {}) as never
+  })
+  on('tool.call', () => ({ result: {}, text: 'ok' }) as never)
+  on('session.cwd', () => ({ value: cwd }) as never)
+  on('fs.exists', ($, e) => ({ value: projects.includes((e as { path: string }).path) }) as never)
+  on('fs.list', () => ({ value: [] }) as never)
+  on('fs.read', () => ({ value: '' }) as never)
+  on('process.run', () => ({ value: { exitCode: 0, stdout: '', stderr: '' } }) as never)
+  on('clock.now', () => ({ value: 1000 }) as never)
+  const mount = () => $.ui.mount({ plugin: PLUGIN, surface: 'terminal', component: 'AbovePrompt', props: BAND as never })
+
+  await $.tool.call({ tool: 'Skill', skill: 'reboot:build' })
+  await $.tool.call({ tool: 'Write', file_path: '/w/a/api/app/v1/app.py', content: '' })
+  const inA = await mount()
+  expect((await inA.findAll({ type: 'Text', text: 'Design \u00b7 ' })).length).toBe(1)
+  await inA.unmount()
+
+  // The session moves to another project: A's task is not B's.
+  cwd = '/w/b'
+  await $.tool.call({ tool: 'Bash', command: 'ls' })
+  await $.tool.call({ tool: 'Bash', command: 'uv run rbt dev run' })
+  await wait(50)
+  const inB = await mount()
+  expect(await inB.findAll({ type: 'Text', text: 'Design \u00b7 ' })).toEqual([])
+  expect(await inB.findAll({ type: 'Text', text: 'Prove \u00b7 ' })).toEqual([])
+  expect((await inB.findAll({ type: 'Text', text: /^Reboot Status$/ })).length).toBe(1)
+  await inB.unmount()
+
+  // B's .rbtrc goes: no project, and the band draws nothing.
+  projects = []
+  await $.tool.call({ tool: 'Bash', command: 'uv run rbt dev run' })
+  await wait(50)
+  await $.tool.call({ tool: 'Bash', command: 'uv run rbt dev run' })
+  await wait(50)
+  const none = await mount()
+  expect(await none.findAll({ text: /Reboot/ })).toEqual([])
+})
+
+test('the poll runs on one interval, and stops when the session ends', async ($, on) => {
+  const clock = mock.clock(on)
+  // The engine beneath: the session starts and ends, the command registers.
+  on('command.register', () => ({ value: { command: 'reboot-progress' } }) as never)
+  on('session.start', ($, e) => ({ cwd: (e as { cwd: string }).cwd }) as never)
+  on('session.end', ($, e) => ({ sessionId: (e as { sessionId: string }).sessionId }) as never)
+  let polls = 0
+  on('session.cwd', () => ({ value: '/w/app' }) as never)
+  on('fs.exists', ($, e) => ({ value: (e as { path: string }).path === '/w/app/.rbtrc' }) as never)
+  on('fs.read', () => ({ value: '' }) as never)
+  on('process.run', ($, e) => {
+    if ((e as { argv: string[] }).argv[0] === 'ps') polls++
+    return { value: { exitCode: 0, stdout: '', stderr: '' } } as never
+  })
+  const start = { cwd: '/w/app', surface: 'terminal', isInteractive: true } as never
+
+  await $.session.start(start)
+  await clock.advance(2500)
+  // A second start (a reload, say) replaces the first interval.
+  await $.session.start(start)
+  await clock.settle()
+  const started = polls
+  await clock.advance(3000) // the first interval's time: it no longer polls
+  expect(polls).toBe(started)
+  await clock.advance(2000) // the second's
+  expect(polls).toBe(started + 1)
+
+  await $.session.end({ reason: 'other', sessionId: 's1', resume: {} } as never)
+  const ended = polls
+  await clock.advance(20_000)
+  expect(polls).toBe(ended)
+})
+
+test("a store that rejects the build's read once is asked again at the next poll", async ($, on) => {
+  const clock = mock.clock(on)
+  // The engine beneath: the session starts and ends, the command registers.
+  on('command.register', () => ({ value: { command: 'reboot-progress' } }) as never)
+  on('session.start', ($, e) => ({ cwd: (e as { cwd: string }).cwd }) as never)
+  on('session.end', ($, e) => ({ sessionId: (e as { sessionId: string }).sessionId }) as never)
+  let rejected = 0
+  on('ui.render', { component: 'AbovePrompt' }, ($, e) => {
+    const { Box } = $.ui.resolve(e)
+
+    return h(Box, {}) as never
+  })
+  on('session.cwd', () => ({ value: '/w/app' }) as never)
+  on('fs.exists', ($, e) => ({ value: (e as { path: string }).path === '/w/app/.rbtrc' }) as never)
+  on('fs.read', () => ({ value: '' }) as never)
+  on('process.run', () => ({ value: { exitCode: 0, stdout: '', stderr: '' } }) as never)
+  on('store.get', ($, e, next) => {
+    const key = (e as { key: string }).key
+    if (key === 'build:/w/app' && rejected === 0) {
+      rejected++
+      return next(e) // beneath the test's hooks the bottom one rejects
+    }
+    return { value: key === 'build:/w/app' ? { kind: 'build', step: 1, isDone: false } : null } as never
+  })
+  const mount = () => $.ui.mount({ plugin: PLUGIN, surface: 'terminal', component: 'AbovePrompt', props: BAND as never })
+
+  await $.session.start({ cwd: '/w/app', surface: 'terminal', isInteractive: true } as never)
+  await clock.settle()
+  expect(rejected).toBe(1)
+  const first = await mount()
+  expect(await first.findAll({ type: 'Text', text: 'Design \u00b7 ' })).toEqual([])
+  await first.unmount()
+
+  await clock.advance(5000)
+  const band = await mount()
+  expect((await band.findAll({ type: 'Text', text: 'Design \u00b7 ' })).length).toBe(1)
+})
+
+test("a background test run's output over 4 MiB still says how far it is", async ($, on) => {
+  on('ui.render', { component: 'AbovePrompt' }, ($, e) => {
+    const { Box } = $.ui.resolve(e)
+
+    return h(Box, {}) as never
+  })
+  on('clock.now', () => ({ value: 1000 }) as never)
+  on('session.cwd', () => ({ value: '/w/app' }) as never)
+  on('fs.exists', ($, e) => ({ value: (e as { path: string }).path === '/w/app/.rbtrc' }) as never)
+  // The output file is too big to read whole: the read rejects.
+  on('fs.read', ($, e, next) => ((e as { path: string }).path === '/tmp/t1.output' ? next(e) : ({ value: '' } as never)))
+  on('ui.status', () => ({ value: undefined }) as never)
+  on('process.run', ($, e) => {
+    const argv = (e as { argv: string[] }).argv
+    const stdout =
+      argv[0] === 'tail' && argv.at(-1) === '/tmp/t1.output'
+        ? 'tests/web_test.py ..........  [ 42%]\n'
+        : argv[0] === 'ps'
+          ? '  9 /w/app/.venv/bin/python /w/app/.venv/bin/pytest -q'
+          : ''
+    return { value: { exitCode: 0, stdout, stderr: '' } } as never
+  })
+  on('tool.call', ($, e) => {
+    const isTests = /pytest/.test(String((e as { command?: string }).command))
+    return { result: {}, text: isTests ? 'Command running in background with ID: t1\nOutput is being written to: /tmp/t1.output' : 'ok' } as never
+  })
+
+  await $.tool.call({ tool: 'Bash', command: 'uv run pytest -q', run_in_background: true } as never)
+  // Starting the app polls, which finds the run in ps and reads its output.
+  await $.tool.call({ tool: 'Bash', command: 'uv run rbt dev run' })
+  await wait(50)
+
+  const band = await $.ui.mount({ plugin: PLUGIN, surface: 'terminal', component: 'AbovePrompt', props: BAND as never })
+  expect((await band.findAll({ type: 'Text', text: 'Waiting for the tests to finish: 42% done' })).length).toBe(1)
 })

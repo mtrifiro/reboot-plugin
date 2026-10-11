@@ -17,7 +17,7 @@
     },
     {
       "name": "reboot-progress",
-      "version": "0.3.4",
+      "version": "0.3.5",
       "description": "Claude Code only: a band above the prompt with what Claude is working on, the Reboot build's progress, buttons for the dashboard and the app, how far a test run or a deploy is, and toasts when the app or the dashboard starts or stops.",
       "author": {
         "name": "Reboot",

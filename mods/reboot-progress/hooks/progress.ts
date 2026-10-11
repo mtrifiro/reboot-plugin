@@ -75,6 +75,15 @@ export function skillKind(skill: string): TaskKind | null {
 }
 
 /**
+ * The skill a Read of a Reboot skill's SKILL.md loads, by its name
+ * (`build`), or null for any other file. A host with no Skill tool loads a
+ * skill by reading its file, which counts as the Skill call would.
+ */
+export function skillRead(path: string): string | null {
+  return path.match(/\/reboot[^/]*\/(?:.*\/)?skills\/([\w-]+)\/SKILL\.md$/)?.[1] ?? null
+}
+
+/**
  * The kind of task a prompt the person typed starts by its slash command
  * (`/reboot:app build a todo app`). Namespaced only: a bare `/app` may be
  * another plugin's.

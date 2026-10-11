@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'claude-code/testing'
 
-import { advanceDeploy, afterOutput, afterProbe, beginDeploy, deployLine, elapsed, FAILED_MS, deployProgram, isDead, isDeployCommand, isProbeDue, isRunning, isShown, ledgerUrls, LINK_CHECK_MS, outcomeOf, probeTarget, psProgram, SCRIPT_MS, seenIn, STARTING_MS } from './deploy'
+import { advanceDeploy, afterOutput, afterProbe, beginDeploy, cwdsIn, deployLine, elapsed, FAILED_MS, deployProgram, isDead, isDeployCommand, isProbeDue, isProjectProcess, isRunning, isShown, ledgerUrls, LINK_CHECK_MS, outcomeOf, probeTarget, psProgram, SCRIPT_MS, seenIn, STARTING_MS, unplacedDeployPids } from './deploy'
 
 const PS_UP = '/usr/bin/python3 /w/app/.venv/bin/rbt cloud up --organization=acme --name=app'
 const PS_BUILD = `${PS_UP}\ndocker build --file=Dockerfile --tag=reg/app:1 .`
@@ -227,5 +227,29 @@ describe('which deploy a command starts', () => {
     // Cloud" on the band of a session that deployed nothing (2026-10-08).
     expect(deployProgram("python3 - <<'EOF'\nexpect(isDeployCommand('uv run rbt cloud up'))\nEOF")).toBe(null)
     expect(deployProgram('grep -rn "rbt cloud up" skills/')).toBe(null)
+  })
+})
+
+describe("only the project's own deploy counts", () => {
+  const OTHER = '5001 /usr/bin/python3 /w/other/.venv/bin/rbt cloud up --name=other\n5002 docker build --file=Dockerfile --tag=reg/other:1 .'
+  const none = { isUp: false, isBuild: false, isPush: false, isPublish: false }
+
+  test("another project's deploy on the same machine is not this one's", () => {
+    expect(seenIn(OTHER).isUp).toBe(true)
+    expect(seenIn(OTHER, '/w/app')).toEqual(none)
+    expect(seenIn(`4245 ${PS_UP}`, '/w/app').isUp).toBe(true)
+    // A prefix of the path is not the project: /w/app2 is not /w/app.
+    expect(seenIn('4246 /w/app2/.venv/bin/rbt cloud up', '/w/app')).toEqual(none)
+  })
+
+  test('a deploy whose command names no path is placed by its working directory', () => {
+    const ps = '4246 /usr/local/bin/rbt cloud up --name=app\n4247 docker build --file=Dockerfile --tag=reg/app:1 .\n4250 rbt dev run'
+    expect(unplacedDeployPids(ps, '/w/app')).toEqual([4246, 4247])
+    expect(unplacedDeployPids(`4245 ${PS_UP}`, '/w/app')).toEqual([])
+    const cwds = cwdsIn('p4246\nfcwd\nn/w/app\np4247\nfcwd\nn/w/app/backend\n')
+    expect(cwds.get(4246)).toBe('/w/app')
+    expect(seenIn(ps, '/w/app', cwds)).toEqual({ isUp: true, isBuild: true, isPush: false, isPublish: false })
+    expect(seenIn(ps, '/w/other', cwds)).toEqual(none)
+    expect(isProjectProcess('4248 wrangler pages deploy --cwd=/w/app/web', '/w/app', new Map())).toBe(true)
   })
 })

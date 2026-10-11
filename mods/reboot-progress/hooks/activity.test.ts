@@ -47,6 +47,13 @@ describe('activity', () => {
     expect(fallback('**Now** writing the servicers. Then the tests.')).toBe('Now writing the servicers')
   })
 
+  test('a clipped fallback never ends in half an emoji', () => {
+    // The cut at 199 falls between the two halves of the emoji.
+    const clipped = fallback(`${'a'.repeat(198)}\u{1F680} launching the app`)
+    expect(clipped).toBe(`${'a'.repeat(198)}\u2026`)
+    expect(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])/.test(clipped)).toBe(false)
+  })
+
   test('Just completed changes only when a text says something finished', () => {
     const start = { justCompleted: null, now: WAITING }
     const writing = startTask({ now: 'Writing the React dashboard', done: 'Finished the backend', decision: null }, start)

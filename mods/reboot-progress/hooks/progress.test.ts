@@ -15,6 +15,7 @@ import {
   vitePortOf,
   observe,
   skillKind,
+  skillRead,
   stepOf,
   taskAfterPrompt,
   STOP_POLLS,
@@ -162,6 +163,16 @@ describe('what starts a task', () => {
     expect(commandKind('/reboot:run')).toBe(null)
     expect(commandKind('/app build it')).toBe(null)
     expect(commandKind('please /reboot:app')).toBe(null)
+  })
+
+  test("a Reboot skill's SKILL.md, read, names the skill", () => {
+    expect(skillRead('/u/.claude/plugins/cache/reboot-plugin/reboot/0.4.1/skills/build/SKILL.md')).toBe('build')
+    expect(skillRead('/u/projects/reboot-plugin/skills/web-app/SKILL.md')).toBe('web-app')
+    expect(skillKind(skillRead('/u/projects/reboot-plugin/skills/feature/SKILL.md')!)).toBe('feature')
+    // Another plugin's skill, a reference beside a skill, or a skill's other file: none.
+    expect(skillRead('/u/.claude/plugins/cache/other/skills/build/SKILL.md')).toBe(null)
+    expect(skillRead('/u/projects/reboot-plugin/skills/build/references/flywheel.md')).toBe(null)
+    expect(skillRead('/u/projects/reboot-plugin/skills/build/SKILL.md.bak')).toBe(null)
   })
 
   test('a skill starts a task unless one is under way in this session', () => {

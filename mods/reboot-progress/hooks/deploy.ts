@@ -38,10 +38,12 @@ export type Seen = { isUp: boolean; isBuild: boolean; isPush: boolean; isPublish
  * A deploy's processes in `ps -axo pid=,command=` output. Only a process
  * that runs the deploy counts: `rbt cloud up` or `wrangler pages deploy`
  * as its own program (or a script an interpreter runs), never a `grep`,
- * a test or a shell whose arguments merely contain those words.
+ * a test or a shell whose arguments merely contain those words. With
+ * `dir`, only the project's own processes count (`isProjectProcess`):
+ * another project's deploy on the same machine is not this one's.
  */
-export function seenIn(ps: string): Seen {
-  const lines = ps.split('\n')
+export function seenIn(ps: string, dir: string | null = null, cwds: ReadonlyMap<number, string> = new Map()): Seen {
+  const lines = ps.split('\n').filter(l => dir === null || isProjectProcess(l, dir, cwds))
   const has = (re: RegExp) => lines.some(l => re.test(l))
   const runs = (program: 'up' | 'publish') => lines.some(l => psProgram(l) === program)
 
@@ -65,6 +67,54 @@ export function psProgram(line: string): 'up' | 'publish' | 'script' | null {
     while ((words[0] ?? '').startsWith('-')) words.shift()
   }
   return deployProgram(words.join(' '))
+}
+
+/** A process-list line's pid, or null when it starts with none. */
+function pidOf(line: string): number | null {
+  const m = line.match(/^\s*(\d+)\s/)
+  return m ? Number(m[1]) : null
+}
+
+/** Whether `path` is `dir` or under it. */
+const isWithin = (path: string, dir: string): boolean => path === dir || path.startsWith(`${dir}/`)
+
+/** Whether a line is a deploy's process: `rbt cloud up`, wrangler, or a Docker build or push. */
+const isDeployProcess = (line: string): boolean =>
+  psProgram(line) !== null || /\bdocker\b.*\s(build|buildx\s+build|push)\s/.test(line)
+
+/**
+ * Whether a process-list line is the project's own: its command names a
+ * path in `dir` (`/w/app/.venv/bin/rbt cloud up`), or the process runs in
+ * `dir` or under it (its working directory, from `cwds` by pid).
+ */
+export function isProjectProcess(line: string, dir: string, cwds: ReadonlyMap<number, string>): boolean {
+  // A word that is a path, or a flag's value (`--directory=/w/app`), quotes dropped.
+  const paths = line.split(/\s+/).map(word => word.replace(/^[^/=]*=/, '').replace(/^['"]|['"]$/g, ''))
+  if (paths.some(path => isWithin(path, dir))) return true
+  const pid = pidOf(line)
+  const cwd = pid === null ? undefined : cwds.get(pid)
+  return cwd !== undefined && isWithin(cwd, dir)
+}
+
+/** The pids of deploy processes whose command names no path in `dir`: their working directory says whose they are. */
+export function unplacedDeployPids(ps: string, dir: string): number[] {
+  const pids: number[] = []
+  for (const line of ps.split('\n')) {
+    const pid = pidOf(line)
+    if (pid !== null && isDeployProcess(line) && !isProjectProcess(line, dir, new Map())) pids.push(pid)
+  }
+  return pids
+}
+
+/** Each process's working directory, by pid, from `lsof -a -d cwd -p <pids> -Fn` output. */
+export function cwdsIn(lsof: string): Map<number, string> {
+  const cwds = new Map<number, string>()
+  let pid: number | null = null
+  for (const line of lsof.split('\n')) {
+    if (/^p\d+$/.test(line)) pid = Number(line.slice(1))
+    else if (line.startsWith('n') && pid !== null) cwds.set(pid, line.slice(1))
+  }
+  return cwds
 }
 
 /** A new deploy at `stage`, keeping the URLs of the one before. */

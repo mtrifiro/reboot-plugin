@@ -1,5 +1,5 @@
 import { atom, read, update } from 'claude-code'
-import type { EngineInterface, Register } from 'claude-code'
+import type { EngineInterface, Register, Timer } from 'claude-code'
 
 import type { Build, Deploy } from '../types'
 import {
@@ -7,6 +7,7 @@ import {
   afterOutput,
   afterProbe,
   beginDeploy,
+  cwdsIn,
   deployKey,
   deployLine,
   deployProgram,
@@ -20,6 +21,7 @@ import {
   outcomeOf,
   probeTarget,
   seenIn,
+  unplacedDeployPids,
 } from './deploy'
 import type { LinkProbe } from './deploy'
 import { REBOOT_LOGO } from './logo'
@@ -43,6 +45,7 @@ import {
   isReviewTable,
   observe,
   skillKind,
+  skillRead,
   lineStage,
   taskAfterPrompt,
   stepOf,
@@ -128,6 +131,22 @@ async function readText($: EngineInterface, path: string): Promise<string> {
   }
 }
 
+/** How much of a command's output the band reads when the whole is too big to: its end, where progress is. */
+const OUTPUT_TAIL_BYTES = 256 * 1024
+
+/**
+ * A command's output file. A read over 4 MiB rejects, so a long test run's
+ * output is read from its end instead, which says how far the run is.
+ */
+async function readOutput($: EngineInterface, path: string): Promise<string> {
+  try {
+    return await $.fs.read(path)
+  } catch {
+    const tail = await $.process.run(['tail', '-c', String(OUTPUT_TAIL_BYTES), path], { timeoutMs: 5000 }).catch(() => null)
+    return tail !== null && tail.exitCode === 0 ? tail.stdout : ''
+  }
+}
+
 async function health($: EngineInterface, dir: string): Promise<Health & { links: Links; ps: string; isMcp: boolean }> {
   const [lsof, ps, rbtrc] = await Promise.all([
     $.process.run(['lsof', '-nP', '-iTCP', '-sTCP:LISTEN'], { timeoutMs: 5000 }).catch(() => null),
@@ -160,6 +179,9 @@ async function health($: EngineInterface, dir: string): Promise<Health & { links
 /** The call's fields the classifier reads, or null for other tools. */
 function callOf(e: { tool: string } & Record<string, unknown>): Call | null {
   if (e.tool === 'Skill' && typeof e.skill === 'string') return { tool: 'Skill', skill: e.skill }
+  // A Reboot skill's SKILL.md, read, loads it as the Skill call would.
+  const loaded = e.tool === 'Read' && typeof e.file_path === 'string' ? skillRead(e.file_path) : null
+  if (loaded !== null) return { tool: 'Skill', skill: loaded }
   if (e.tool === 'Bash' && typeof e.command === 'string') return { tool: 'Bash', command: e.command }
   if ((e.tool === 'Write' || e.tool === 'Edit') && typeof e.file_path === 'string') {
     const text = e.tool === 'Write' ? e.content : e.new_string
@@ -175,9 +197,12 @@ let appWatch: Watch = UNWATCHED
 let dashboardWatch: Watch = UNWATCHED
 let isPolling = false
 let restoredRoot: string | null = null
+let restoreFailures = 0 // rejected store reads while restoring the project's build
 let deployOutput: string | null = null // where a deploy sent to the background writes its output
 let latestSummary = 0 // the newest summary asked for; older replies are dropped
 let lastReply = '' // the model's latest main-thread text, which the next prompt answers
+let ticking: Timer | null = null // the poll's interval, cancelled when the session ends or starts again
+let adoptedCwd: string | null = null // the working directory when the band took its project
 
 /** A summary while the turn runs moves Now; a late one (the turn's report) only Just completed. */
 async function showTask($: EngineInterface, task: Summary) {
@@ -280,17 +305,28 @@ async function saveBuild($: EngineInterface, b: Build | null) {
   }
 }
 
-/** Once per project: a session that finds one picks up its stored build. */
+/**
+ * Once per project: a session that finds one picks up its stored build. A
+ * store that rejects the reads is asked once more, at the next poll.
+ */
 async function restoreBuild($: EngineInterface, dir: string) {
   if (restoredRoot === dir) return
+  let urls: Partial<Deploy> | null
+  let kept: unknown
+  try {
+    urls = (await $.store.get(deployKey(dir))) as Partial<Deploy> | null
+    kept = await $.store.get(storeKey(dir))
+  } catch {
+    if (++restoreFailures > 1) restoredRoot = dir
+    return
+  }
   restoredRoot = dir
-  const urls = (await $.store.get(deployKey(dir)).catch(() => null)) as Partial<Deploy> | null
   if ((await read($, deploy)) === null && urls && (urls.apiUrl || urls.siteUrl)) {
     const was = { ...beginDeploy('deployed', 0, null), apiUrl: urls.apiUrl ?? null, siteUrl: urls.siteUrl ?? null }
     await update($, deploy, () => was)
   }
   if ((await read($, build)) !== null) return
-  const stored = asTask(await $.store.get(storeKey(dir)))
+  const stored = asTask(kept)
   // A finished task comes back as it was: Done until new work starts.
   if (stored) await update($, build, () => (stored.isDone ? stored : { ...stored, isRestored: true }))
 }
@@ -349,8 +385,12 @@ async function checkLinks($: EngineInterface, dir: string | null) {
   }
 }
 
-/** Moves the deploy on by what the process list shows, and the deployed app's answer. */
-async function followDeploy($: EngineInterface, ps: string) {
+/**
+ * Moves the deploy on by what the process list shows of the project's own
+ * deploy, and the deployed app's answer. A deploy process whose command
+ * names no path of the project is placed by its working directory.
+ */
+async function followDeploy($: EngineInterface, dir: string, ps: string) {
   const d = await read($, deploy)
   const now = await $.clock.now()
   let isServing = false
@@ -362,7 +402,12 @@ async function followDeploy($: EngineInterface, ps: string) {
     ]).catch(() => null)
     isServing = res?.ok === true
   }
-  const after = advanceDeploy(d, seenIn(ps), now, isServing)
+  const pids = unplacedDeployPids(ps, dir)
+  const lsof =
+    pids.length === 0
+      ? null
+      : await $.process.run(['lsof', '-a', '-d', 'cwd', '-p', pids.join(','), '-Fn'], { timeoutMs: 5000 }).catch(() => null)
+  const after = advanceDeploy(d, seenIn(ps, dir, cwdsIn(lsof?.stdout ?? '')), now, isServing)
   if (after !== d) await saveDeploy($, after)
   if (after?.stage === 'live' && d?.stage === 'starting') $.ui.toast('Reboot Cloud app is live')
   // Ticks while the band shows the deploy, and once more to take it away.
@@ -386,7 +431,7 @@ async function followTests($: EngineInterface, dir: string, ps: string) {
     return
   }
   const isSame = run !== null && (run.command === command || run.command === '')
-  const output = isSame && run.outputPath ? await readText($, run.outputPath) : ''
+  const output = isSame && run.outputPath ? await readOutput($, run.outputPath) : ''
   await update($, testRun, () => ({
     command,
     startedAt: isSame ? run.startedAt : now,
@@ -445,13 +490,56 @@ function announce($: EngineInterface, server: 'app' | 'dashboard', isUp: boolean
   if (change) $.ui.toast(`Reboot ${server} ${change}`)
 }
 
+/**
+ * Makes `dir` the band's project (null: none). Another project's task,
+ * deploy, runs and links are not this one's: they are dropped, and its own
+ * come back from the store.
+ */
+async function switchProject($: EngineInterface, dir: string | null) {
+  const was = await read($, root)
+  if (was !== null && was !== dir) {
+    await update($, build, () => null)
+    await update($, deploy, () => null)
+    await update($, testRun, () => null)
+    await update($, suite, () => null)
+    await update($, links, () => ({ dashboard: null, app: null }))
+    await update($, deployedLinks, () => ({ cloud: null, site: null }))
+    probes.clear()
+    appWatch = UNWATCHED
+    dashboardWatch = UNWATCHED
+    restoredRoot = null
+    restoreFailures = 0
+    deployOutput = null
+  }
+  adoptedCwd = await $.session.cwd().catch(() => null)
+  if (was !== dir) await update($, root, () => dir)
+}
+
+/**
+ * The band's project at a poll. It stays while its `.rbtrc` does and the
+ * session stays where it took it (or moves inside it); otherwise the
+ * project is found again from the working directory, or there is none.
+ */
+async function currentProject($: EngineInterface): Promise<string | null> {
+  const was = await read($, root)
+  const cwd = await $.session.cwd().catch(() => null)
+  if (was !== null && (await $.fs.exists(`${was}/.rbtrc`).catch(() => true))) {
+    const isInside = cwd !== null && (cwd === was || cwd.startsWith(`${was}/`))
+    if (adoptedCwd === null) adoptedCwd = cwd // a reload keeps the project it had
+    if (cwd === null || cwd === adoptedCwd || isInside) return was
+  }
+  const dir = await findProject($).catch(() => was)
+  if (dir !== was) await switchProject($, dir)
+  else adoptedCwd = cwd // the same project from where the session is now
+  return dir
+}
+
 async function poll($: EngineInterface) {
   if (isPolling) return
   isPolling = true
   try {
-    const dir = (await read($, root)) ?? (await findProject($))
+    const dir = await currentProject($)
     if (!dir) return
-    if ((await read($, root)) === null) await update($, root, () => dir)
     // Each part on its own: a failed restore must not cost the rest.
     await restoreBuild($, dir).catch(() => undefined)
     const h = await health($, dir).catch(() => null)
@@ -460,7 +548,7 @@ async function poll($: EngineInterface) {
     const was = await read($, links)
     if (was.dashboard !== h.links.dashboard || was.app !== h.links.app) await update($, links, () => h.links)
     if (h.isMcp !== (await read($, mcp))) await update($, mcp, () => h.isMcp)
-    await followDeploy($, h.ps).catch(() => undefined)
+    await followDeploy($, dir, h.ps).catch(() => undefined)
     await checkLinks($, dir).catch(() => undefined)
     await followTests($, dir, h.ps).catch(() => undefined)
     await followSuite($, dir, h.ps).catch(() => undefined)
@@ -479,7 +567,16 @@ export const register: Register = on => {
       argumentHint: '[show|hide|reset]',
     })
     void poll($)
-    $.clock.every(POLL_MS, () => void poll($))
+    // One interval at a time: a second start replaces the first.
+    ticking?.cancel()
+    ticking = $.clock.every(POLL_MS, () => void poll($))
+
+    return next(e)
+  })
+
+  on('session.end', async ($, e, next) => {
+    ticking?.cancel()
+    ticking = null
 
     return next(e)
   })
@@ -563,6 +660,9 @@ export const register: Register = on => {
 
     const call = callOf(e)
     if (call === null || ran.isError === true || ran.deny !== undefined) return ran
+    // A skill's file read outside a Reboot project (the plugin's own
+    // repository, say) is not the skill at work: it starts nothing.
+    if (e.tool === 'Read' && ((await read($, root)) ?? (await findProject($).catch(() => null))) === null) return ran
 
     if (call.tool === 'Write' || call.tool === 'Edit') {
       // A finished run's result stays until code changes after it.
@@ -570,19 +670,7 @@ export const register: Register = on => {
       await update($, lastEdit, () => editedAt)
       // Remembering the project is a nicety; never let it cost the band.
       const dir = await projectOf($, call.file_path).catch(() => null)
-      if (dir) {
-        const was = await read($, root)
-        if (was !== null && was !== dir) {
-          // Another project: its own task, deploy and runs come back from the store.
-          await update($, build, () => null)
-          await update($, deploy, () => null)
-          await update($, testRun, () => null)
-          await update($, suite, () => null)
-          restoredRoot = null
-          deployOutput = null
-        }
-        await update($, root, () => dir)
-      }
+      if (dir) await switchProject($, dir)
     }
 
     const step = stepOf(call)
