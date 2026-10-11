@@ -48,7 +48,7 @@ WELCOME='"type":"text","text":"(\\n|[[:space:]])*(> )?\*\*Welcome to Reboot\.'
 case "$(field hook_event_name)" in
 PreToolUse)
     if grep -Eq "$WELCOME" "$transcript"; then
-        mkdir -p "$dir" 2>/dev/null && : > "${dir}/${session}" 2>/dev/null || true
+        if mkdir -p "$dir" 2>/dev/null; then : > "${dir}/${session}" 2>/dev/null || true; fi
         exit 0
     fi
     # shellcheck disable=SC1112  # the ’ is meant
