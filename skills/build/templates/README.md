@@ -28,7 +28,10 @@ the project a backend, dashboard and Vite port of its own, from a hash
 of the project name and the next free set when one is held (a merge
 keeps the ports the stub `.rbtrc` names), written into `.rbtrc`, the
 Vite config, `.env.development` and `scripts/screenshots.py`;
-`copy.sh --ports <project>` prints the set, for the dashboard skill. In
+`copy.sh --ports <project>` prints the set, for the dashboard skill.
+It picks the project's accent from `palettes.json` by the same name
+(`REBOOT_ACCENT=<name>` picks one) and writes it with the project's
+`scripts/accent.py`. A merge keeps a stylesheet already there. In
 a repository of its own it points `core.hooksPath` at `.githooks/`; in
 no repository it starts one on `main` first. Then:
 
@@ -58,6 +61,10 @@ heap its pyright needs.
 | `__app__` | snake_case API package and module | `todo_list` | `api/__app__/v1/__app__.py`, `servicers/__app__.py`, `tests/__app___test.py`, imports (`__app__.v1.__app___rbt`), the `.mypy.ini` ignore stanza, the React import path |
 | `__Title__` | human-readable title | `Todo List` | `Application(title=...)`, `<title>`, docstrings |
 | `__Initial__` | the title's first letter, capitalized | `T` | the placeholder favicon in the web app's `index.html` |
+
+| Beside the templates | What it is |
+| --- | --- |
+| `palettes.json` | The house palette: eight accents (teal, cyan, blue, indigo, violet, purple, plum, rose), each with every accent token for light and dark, held to WCAG contrast and off green, amber and red by `tests/templates/palettes_test.py`. The templates ship violet, `copy.sh` picks one per project, and each template's `scripts/accent.py` carries the same values |
 
 A second API module needs its own `[mypy-<pkg>.v1.<name>_rbt]` stanza
 in `.mypy.ini`.
@@ -93,6 +100,7 @@ Both front doors share the Python shell:
 | `tests/harness_hygiene.py` | Settings a harness run needs on a developer's machine: test servers on `127.0.0.1`, the database on `[::1]`, a placeholder `ANTHROPIC_API_KEY` when `pydantic_ai` is installed | Never |
 | `scripts/api_lint.py` | Before `rbt generate`: refuses, with the fix, what generate or the deploy would refuse later (reserved names, syntax past 3.10, quoted forward references, a Model from another package, `bytes` fields, field-less error Models); `prove.yml` runs it | Never |
 | `scripts/placeholder.py` | While the app is down, a 503 page on the port the user visits (Vite's for a web app, else the backend's) naming the command that starts it; `rbt dev run` and `npm run dev` stop it, the `rbt` shim's watcher and the SessionStart hook start it; off under `REBOOT_NO_PLACEHOLDER=1` or `CI` | Never |
+| `scripts/accent.py` | Lists the house palette with the current accent marked. `accent.py <name>` rewrites the accent tokens in `:root` and both dark blocks, the favicon and the placeholder page (stdlib, Python 3.9) | Never. Run it to change the accent (a marina gets teal). A brand edits the tokens instead |
 | `scripts/doctor.sh` | Rules out the local causes that look like a framework flake: orphans, the state lock's holder, a run in progress, the allowlist variables, who serves each port | Never |
 | `.githooks/pre-push` | Refuses a push to `main` of a tree the last full run did not pass on; `copy.sh` sets `core.hooksPath`, a clone runs `git config core.hooksPath .githooks` | Never |
 | `tests/step_order.py` | Fails a scenario before its first step when it takes an action after a `Then`, naming the line and the fix (`feature` skill, Step 2) | Never |

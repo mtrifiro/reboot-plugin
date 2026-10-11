@@ -5,6 +5,7 @@
     python3 tools/style-check.py --write          # rewrite the copies from the source
     python3 tools/style-check.py --browser        # also render tools/style-check.html
     python3 tools/style-check.py --browser --screenshots DIR
+    python3 tools/style-check.py --browser --palette teal   # in a house palette's accent
 
 The web-app stylesheet is the source. `both/frontend/styles.css` is an
 exact copy, which both of that template's front doors `@import`; the
@@ -12,13 +13,17 @@ exact copy, which both of that template's front doors `@import`; the
 added.
 `--browser` renders the class page with Playwright at 320, 375 and 1280 px
 in light and dark, and fails on horizontal page overflow or a cut-off
-short label (the template look steps' rule). It needs Playwright; run it
+short label (the template look steps' rule). `--palette NAME` renders it
+with that palette (skills/build/templates/palettes.json) applied, as
+`scripts/accent.py` applies it in a project. It needs Playwright; run it
 through the plugin's uv:
 
     bin/uv run --no-project --with playwright python tools/style-check.py --browser
 """
 
 import argparse
+import importlib.util
+import json
 import shutil
 import sys
 import tempfile
@@ -35,6 +40,8 @@ IMPORTS = {
     T / "both/frontend/mcp/styles.css": '@import "../styles.css";',
 }
 PAGE = ROOT / "tools/style-check.html"
+PALETTES = T / "palettes.json"
+ACCENT = T / "web-app/scripts/accent.py"
 
 # The MCP-only lines, added after the web body's `main > *` rule.
 MCP_ONLY = (".ui {", ".ui > *")
@@ -103,13 +110,23 @@ def check_copies(write: bool) -> list[str]:
     return problems
 
 
-def check_browser(screenshots: Path | None) -> list[str]:
+def with_palette(css: str, name: str) -> str:
+    """`css` with palette `name` applied the way a project's accent.py does."""
+    spec = importlib.util.spec_from_file_location("accent", ACCENT)
+    accent = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(accent)
+    palette = next(p for p in json.loads(PALETTES.read_text())["palettes"] if p["name"] == name)
+    return accent.apply_tokens(css, palette)
+
+
+def check_browser(screenshots: Path | None, palette: str | None = None) -> list[str]:
     from playwright.sync_api import sync_playwright
 
     problems = []
     with tempfile.TemporaryDirectory() as tmp:
         shutil.copy(PAGE, Path(tmp) / "index.html")
-        shutil.copy(WEB, Path(tmp) / "styles.css")
+        css = WEB.read_text()
+        (Path(tmp) / "styles.css").write_text(with_palette(css, palette) if palette else css)
         url = (Path(tmp) / "index.html").as_uri()
         with sync_playwright() as p:
             browser = p.chromium.launch()
@@ -145,11 +162,13 @@ def main() -> int:
     parser.add_argument("--write", action="store_true", help="rewrite the copies from the source")
     parser.add_argument("--browser", action="store_true", help="render the class page")
     parser.add_argument("--screenshots", type=Path, help="save PNGs here (with --browser)")
+    names = [p["name"] for p in json.loads(PALETTES.read_text())["palettes"]]
+    parser.add_argument("--palette", choices=names, help="render in this palette (with --browser)")
     args = parser.parse_args()
 
     problems = check_copies(args.write)
     if args.browser:
-        problems += check_browser(args.screenshots)
+        problems += check_browser(args.screenshots, args.palette)
     for problem in problems:
         print(f"style-check: {problem}", file=sys.stderr)
     if not problems:

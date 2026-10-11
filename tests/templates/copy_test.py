@@ -3,11 +3,13 @@
 and `--merge` (the build flow's Step 2: keep the project's files,
 replace the dashboard's stubs); a plain copy keeps the destination's
 own .venv and node_modules; a project in no repository gets one, with
-the hooks path set.
+the hooks path set; each project gets an accent from the house palette
+by its name, or REBOOT_ACCENT's, in every scheme block and the favicon.
 
     python3 tests/templates/copy_test.py
 """
 
+import json
 import os
 import subprocess
 import tempfile
@@ -16,10 +18,23 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent.parent
 COPY = ROOT / "skills" / "build" / "templates" / "copy.sh"
+PALETTES = {p["name"]: p for p in json.loads(
+    (COPY.parent / "palettes.json").read_text())["palettes"]}
+# The violet values no other palette shares (white and the neutrals aside).
+VIOLET = {v for scheme in ("light", "dark") for k, v in PALETTES["violet"][scheme].items()
+          if k not in ("on-accent", "on-deep", "bg-glow")}
+STYLESHEETS = {"web-app": ["web/src/styles.css"], "both": ["frontend/styles.css"],
+               "mcp-ui": ["frontend/mcp/styles.css"]}
 
 
-def run(*args: str) -> subprocess.CompletedProcess:
-    return subprocess.run(["sh", str(COPY), *args], capture_output=True, text=True)
+def run(*args: str, env: dict | None = None) -> subprocess.CompletedProcess:
+    clean = {k: v for k, v in os.environ.items() if k != "REBOOT_ACCENT"}
+    return subprocess.run(["sh", str(COPY), *args], capture_output=True, text=True,
+                          env={**clean, **(env or {})})
+
+
+def accent_of(output: str) -> str:
+    return next(line for line in output.splitlines() if line.startswith("Accent: "))[8:]
 
 
 class CopyTest(unittest.TestCase):
@@ -109,6 +124,69 @@ class CopyTest(unittest.TestCase):
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertFalse((self.dest / ".git").exists())
         self.assertEqual(self.git("config", "--local", "core.hooksPath"), "")
+
+    # The accent.
+
+    def copy(self, front_door: str, project: str, **env: str) -> str:
+        dest = Path(self.tmp.name) / str(len(list(Path(self.tmp.name).iterdir())))
+        r = run(front_door, str(dest), project, "todo_list", "Todo List", env=env)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.dest = dest
+        return accent_of(r.stdout)
+
+    def test_the_project_name_picks_the_accent(self) -> None:
+        first = self.copy("web-app", "shop-1")
+        self.assertIn(first, PALETTES)
+        self.assertEqual(self.copy("web-app", "shop-1"), first, "the same name, the same accent")
+        self.assertNotEqual(self.copy("web-app", "shop-2"), first, "numbered siblings differ")
+        self.assertNotEqual(self.copy("web-app", "todo-list"), self.copy("web-app", "inventory"))
+
+    def test_reboot_accent_wins(self) -> None:
+        name = next(n for n in ("teal", "rose") if n != self.copy("web-app", "shop-1"))
+        self.assertEqual(self.copy("web-app", "shop-1", REBOOT_ACCENT=name), name)
+        css = (self.dest / "web/src/styles.css").read_text()
+        self.assertIn(f"--accent: {PALETTES[name]['light']['accent']};", css)
+        r = run("web-app", str(Path(self.tmp.name) / "x"), "shop-1", "todo_list", "Todo List",
+                env={"REBOOT_ACCENT": "green"})
+        self.assertEqual(r.returncode, 2)
+        self.assertIn("names no palette", r.stderr)
+        self.assertFalse((Path(self.tmp.name) / "x").exists(), "nothing was written")
+
+    def test_every_accent_token_in_every_scheme_block_is_replaced(self) -> None:
+        for front_door, sheets in STYLESHEETS.items():
+            with self.subTest(front_door):
+                self.assertEqual(self.copy(front_door, "shop-1", REBOOT_ACCENT="cyan"), "cyan")
+                cyan = PALETTES["cyan"]
+                for rel in sheets:
+                    css = (self.dest / rel).read_text()
+                    for name, value in cyan["light"].items():
+                        self.assertEqual(css.count(f"--{name}: {value}"), 1, f"{rel} light --{name}")
+                    for name, value in cyan["dark"].items():
+                        self.assertEqual(css.count(f"--{name}: {value}"), 2, f"{rel} dark --{name}")
+                leftovers = subprocess.run(
+                    ["grep", "-rlE", "--exclude=accent.py", "|".join(v[1:] for v in VIOLET),
+                     str(self.dest)], capture_output=True, text=True).stdout
+                self.assertEqual(leftovers, "", "no violet left (but in the palette script)")
+                for index in ("web/index.html", "frontend/web/index.html"):
+                    if (self.dest / index).is_file():
+                        self.assertIn(f"fill='%23{cyan['light']['accent'][1:]}'",
+                                      (self.dest / index).read_text())
+
+    def test_violet_leaves_the_template_as_it_is(self) -> None:
+        self.copy("web-app", "shop-1", REBOOT_ACCENT="violet")
+        template = COPY.parent / "web-app" / "web" / "src" / "styles.css"
+        self.assertEqual((self.dest / "web/src/styles.css").read_text(), template.read_text())
+
+    def test_a_merge_keeps_the_projects_stylesheet(self) -> None:
+        sheet = self.dest / "web" / "src" / "styles.css"
+        sheet.parent.mkdir(parents=True)
+        sheet.write_text(":root { --accent: #123456; color-scheme: light; }\n")
+        (self.dest / ".rbtrc").write_text("generate api/\n")
+        r = run("--merge", "web-app", str(self.dest), "todo-list", "todo_list", "Todo List",
+                env={"REBOOT_ACCENT": "teal"})
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("#123456", sheet.read_text())
+        self.assertIn("Accent: unchanged", r.stdout)
 
 
 if __name__ == "__main__":

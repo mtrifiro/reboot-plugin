@@ -28,6 +28,14 @@
 # it). `--ports <project>` prints the set the dashboard skill should
 # start on, before the scaffold exists. `REBOOT_PORTS="<backend>
 # <dashboard> <vite>"` overrides the choice.
+#
+# Accent: every project gets one of the house palette's colors
+# (palettes.json), picked from the project name too, so a name keeps
+# its color and numbered siblings (shop-1, shop-2) step through the
+# palette. The project's `scripts/accent.py` writes it into the
+# stylesheet, the favicon and the placeholder page, and switches it
+# later. `REBOOT_ACCENT=<name>` picks one. A merge into a project that
+# already has a stylesheet keeps it, accent included.
 
 set -eu
 
@@ -82,6 +90,33 @@ else:
 EOF
 }
 
+# The project's accent: a palette name from palettes.json. Violet (the
+# templates' own) without python3.
+choose_accent() {
+  if ! command -v python3 >/dev/null 2>&1; then
+    echo "${REBOOT_ACCENT:-violet}"
+    return 0
+  fi
+  python3 - "$TEMPLATES/palettes.json" "$1" "${REBOOT_ACCENT:-}" <<'EOF'
+import json
+import re
+import sys
+import zlib
+
+path, name, wanted = sys.argv[1:4]
+with open(path) as f:
+    names = [p["name"] for p in json.load(f)["palettes"]]
+if wanted:
+    if wanted not in names:
+        sys.exit(f"REBOOT_ACCENT={wanted} names no palette; one of: {', '.join(names)}")
+    print(wanted)
+else:
+    # The stem by hash, a trailing number as a step: shop-1 and shop-2 differ.
+    stem, number = re.match(r"^(.*?)(\d*)$", name).groups()
+    print(names[(zlib.crc32(stem.encode()) + int(number or 0)) % len(names)])
+EOF
+}
+
 if [ "${1:-}" = "--ports" ]; then
   if [ "$#" -ne 2 ]; then
     echo "usage: $0 --ports <project>" >&2
@@ -128,6 +163,12 @@ if [ -e "$DEST/.rbtrc" ] && [ "$MERGE" = 0 ]; then
   echo "$DEST already has an .rbtrc; not overwriting (--merge keeps what is there)" >&2
   exit 1
 fi
+ACCENT="$(choose_accent "$PROJECT")" || exit 2
+# A merge into a project with a stylesheet of its own keeps its look.
+KEEP_LOOK=0
+for file in web/src/styles.css frontend/styles.css frontend/mcp/styles.css; do
+  if [ -f "$DEST/$file" ]; then KEEP_LOOK=1; fi
+done
 
 # Ports the project already chose (a merge: the dashboard skill's stub
 # may name where its dashboard runs), kept; the rest chosen now.
@@ -218,6 +259,13 @@ for file in .rbtrc web/vite.config.ts frontend/vite.config.ts web/.env.developme
     s/"4444"/"$ENV{T_V}"/' "$DEST/$file"
 done
 
+# The accent, in place of the templates' violet.
+if [ "$KEEP_LOOK" = 1 ]; then
+  ACCENT="unchanged (the project's stylesheet is kept)"
+elif [ "$ACCENT" != violet ]; then
+  python3 "$DEST/scripts/accent.py" "$ACCENT" >/dev/null
+fi
+
 # A repository runs the hooks in .githooks/ (the pre-push gate for a
 # `main` workflow); a clone sets this itself (AGENTS.md). A project in
 # no repository gets its own, on `main`, so the gate holds from the
@@ -242,3 +290,4 @@ else
   echo "Copied $FRONT_DOOR template to $DEST"
 fi
 echo "Ports: backend $BACKEND_PORT, dashboard $DASHBOARD_PORT, Vite $VITE_PORT"
+echo "Accent: $ACCENT"

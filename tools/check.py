@@ -121,7 +121,9 @@ CHECKS = [
     unit("tests/hooks/remind_test.py", 0.3),
     unit("tests/shims/rbt_test.py", 5.0),
     unit("tests/shims/uv_test.py", 4.8),
-    unit("tests/templates/copy_test.py", 1.9),
+    unit("tests/templates/copy_test.py", 7.0),
+    unit("tests/templates/palettes_test.py", 0.05),
+    unit("tests/templates/accent_test.py", 1.9),
     unit("tests/templates/run_progress_test.py", 0.04),   # skips itself without pytest
     unit("tests/templates/step_order_test.py", 0.04),     # skips itself without pytest-bdd
     unit("tests/templates/ports_test.py", 4.9, serial=True),        # binds a port copy.sh probes

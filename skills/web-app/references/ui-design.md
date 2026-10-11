@@ -36,7 +36,7 @@ so; never name a source nobody gave. For example:
 Who: support leads, on a laptop, between calls
 Task: triage incoming bug reports by severity and status
 Question: what needs someone today?
-Accent: violet #5b3fd6 on paper: house default, no brand supplied
+Accent: indigo #3351df on paper: house palette, no brand supplied
         (or: teal #0f8a8a: from the team's logo)
 Type: house default: Bricolage Grotesque, Instrument Sans, JetBrains Mono (or the brand's)
 ```
@@ -55,8 +55,9 @@ app, [`ui-restyle.md`](ui-restyle.md).
 
 The template's `styles.css` ships it: the skills' own look, no one's
 brand. Its `:root` and dark blocks name every token: paper page,
-near-black ink, a violet accent with a deep shade for the top bar and
-a pale tint for selection, `--good`/`--warn`/`--bad`. Type is Bricolage
+near-black ink, an accent from the house palette (picked per project at
+scaffold, swapped with `scripts/accent.py <name>`) with a deep shade
+for the top bar and a pale tint for selection, `--good`/`--warn`/`--bad`. Type is Bricolage
 Grotesque 500 for headings and big numbers, Instrument Sans for text,
 JetBrains Mono for code and ids, bundled from `@fontsource` in
 `main.tsx`, no CDN; headings weight 500, slightly tight, never bold.
@@ -114,8 +115,8 @@ head; the page, tint and glow (`--bg`, `--accent-tint`, `--bg-glow`)
 carry surfaces. A brand replaces the whole family: accent, deep, tint,
 page, ink, muted and line, in light and both dark blocks. A brand of one
 color can derive the rest with `color-mix()` from `--accent`. The
-accent may differ by scheme (the violet needs a lighter lilac on a dark
-page); it keeps its role, and stays off green, amber and red in
+accent may differ by scheme (each palette color takes a lighter shade
+on a dark page); it keeps its role, and stays off green, amber and red in
 both. A brand's green becomes `--accent-tint`, never an accent. Keep
 contrast high: body text 7:1 or better, secondary text 4.5:1,
 panels set apart from a tinted page. Saturated color (`--good`, `--warn`,
