@@ -97,9 +97,8 @@ said up front, skips the reviews' waits too.
    prototype's review, each later feature follows the feature skill's
    Step 1: agree on it in plain English, show the slice of the domain
    model it adds, as rows of the review table under the rows so far,
-   build it, hand it off, and ask what comes next. A brief that implies
-   more than three or four features gets told so, with the order
-   proposed.
+   build it, hand it off, and ask what comes next. More than three or
+   four features: say so and propose the order.
 2. **Implement the brief literally** — the interactions the user
    described, not a pattern "common on sites like this". List any
    deviation (extra confirm step, staging area, batching) with its
@@ -284,8 +283,7 @@ types, its methods, its page or tool, its scenarios. Note the time at
 the start; a step that runs past ten minutes stops and says what is
 taking the time and what it proposes to cut. Until the app has a
 second feature there is no screenshot pass and no page timing (Step
-5), and the suite is the feature's scenarios. Each later feature
-arrives the same way through the Update Flow.
+5), and the suite is the feature's scenarios.
 
 **Once the first feature file exists (Design Phase, item 1), start the
 developer dashboard** with the [`dashboard` skill](../dashboard/SKILL.md):
@@ -504,7 +502,6 @@ Read "Before the frontend".
    route at desktop and phone width, light and dark; open and check each
    against `ui-design.md` principles 03–09 and its Never list, fix
    what fails in one pass, then pin it with a look scenario per page.
-   Name any deviation from the plan's own specs in the handoff.
 6. **Responsive to the person, by Google's "good" thresholds**
    (Core Web Vitals, and RAIL for input):
    - **Loads:** a page's content, the data and not its skeleton, on
@@ -514,8 +511,6 @@ Read "Before the frontend".
      next frame ideally (RAIL; INP's threshold is 200 ms): the button
      shows its pending state at once, the result follows. Never block
      a handler on work the person didn't ask to wait for.
-     (`page_timing.py` doesn't measure input; hold to this by
-     construction.)
 
    From the second feature on, time the loads on every route, cold and warm, against the local
    backend with the demo data. web-app: with the app running, on the
@@ -610,9 +605,9 @@ cards"), then:
 4. The state types and methods as built, one line each (Step 1), when
    they changed after the design; and whether the design was accepted
    ("Accept the Design"), as `python3 scripts/model_diff.py` says. A
-   pull request, only when the developer wants one, has the body in
-   [`references/evidence.md`](references/evidence.md); the template's
-   `prove.yml` workflow posts the evidence on the pull request itself.
+   pull request, when the developer wants one, has the body in
+   [`references/evidence.md`](references/evidence.md); `prove.yml`
+   posts the evidence on it.
 5. `AGENTS.md` current (Step 2.4), and the `FINDINGS.md` items added;
    when there are any, offer the [`report` skill](../report/SKILL.md).
 6. Unless the user asked for only one front door, the one-line offer of
