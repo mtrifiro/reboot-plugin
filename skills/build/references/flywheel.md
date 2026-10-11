@@ -154,8 +154,8 @@ or links. The models below are the hotel; write yours.
 > books every room or none and is called only by the app, and each
 > rule has a scenario that will test it. The first prototype is
 > booking a room; cancellations and the housekeeping view follow one at
-> a time once it runs. The look: navy on cream,
-> Reboot's default since you named no brand; name one, or a site, and
+> a time once it runs. The look: violet on paper,
+> the house default since you named no brand; name one, or a site, and
 > I'll read it. This is the cheapest moment to change any of it, before
 > anything depends on it. Take your time; I'll
 > wait for your go-ahead or your changes.

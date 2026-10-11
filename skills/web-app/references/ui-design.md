@@ -29,16 +29,16 @@ accessible markup: [`react-client.md`](react-client.md).
 the task; the one question the primary view answers; the accent and its
 source; the type choice. Look for a brand before settling the look: the
 user's words, a tokens file, the product's site, then the brand of the
-organization the app serves. With none, keep the Reboot default and say
+organization the app serves. With none, keep the house default and say
 so; never name a source nobody gave. For example:
 
 ```
 Who: support leads, on a laptop, between calls
 Task: triage incoming bug reports by severity and status
 Question: what needs someone today?
-Accent: navy #103761 on cream — Reboot default, no brand supplied
+Accent: violet #5b3fd6 on paper — house default, no brand supplied
         (or: teal #0f8a8a — from the team's logo)
-Type: Reboot's — Space Grotesk, DM Sans, DM Mono (or the brand's)
+Type: house default — Bricolage Grotesque, Instrument Sans, JetBrains Mono (or the brand's)
 ```
 
 **Read a brand from its site, don't guess.** Open it in the browser and
@@ -51,29 +51,29 @@ product the user names ("model Resy") is a source the same way: open
 it, read, show the table, then apply, never from memory; on a running
 app, [`ui-restyle.md`](ui-restyle.md).
 
-### The default look: Reboot's brand
+### The default look: the house default
 
-The template ships in it (values from reboot.dev). Keep it when the user
-names no brand; replace it whole when they do.
+The template ships in it: the skills' own look, no one's brand. Keep it
+when the user names no brand; replace it whole when they do.
 
 | Token | Light | Dark |
 | --- | --- | --- |
-| `--bg` page | cream `#f7f5ed` | navy `#0b1f36` |
-| `--panel`, `--bg-2` | white `#ffffff` | `#112a47` |
-| `--ink` | navy `#103761` | cream `#f7f5ed` |
-| `--muted` | slate `#506a85` | `#9aabbf` |
-| `--accent` / `--on-accent` | navy `#103761` / white | sky `#9cc4f2` / `#0b1f36` |
-| `--accent-deep` (top bar, page band) | `#13294a` | `#07182b` |
-| `--accent-tint` (selection, highlight) | sage `#e6f3dc` | `#1f3d3a` |
+| `--bg` page | paper `#f4f4f7` | `#14151c` |
+| `--panel`, `--bg-2` | white `#ffffff` | `#1d1f29` |
+| `--ink` | near-black `#1b1d26` | `#ecebf4` |
+| `--muted` | `#5c6070` | `#a0a3b3` |
+| `--accent` / `--on-accent` | violet `#5b3fd6` / white | lilac `#b4a1ff` / `#1b1340` |
+| `--accent-deep` (top bar, page band) | `#2b1a6b` | `#0f0b2a` |
+| `--accent-tint` (selection, highlight) | `#ebe6fb` | `#2a2448` |
 | `--good` / `--warn` / `--bad` | `#3f7a2e` / `#a8660f` / `#b42318` | `#8ccb6b` / `#f2c784` / `#f07a6e` |
 
-Type: Space Grotesk 500 for headings and big numbers (`--font-display`),
-DM Sans for text (`--font-text`), DM Mono for code and ids
-(`--font-mono`), bundled from `@fontsource` in `main.tsx`; no font CDN.
-Headings are weight 500 with slightly tight tracking, not bold. Reboot's
-sage `#aedc91` is a highlight, never the accent: as an accent in dark it
-would sit next to a green `--good`. MCP UIs keep the colors and use the
-system fonts (`mcp-ui/references/ui-design.md`).
+Type: Bricolage Grotesque 500 for headings and big numbers
+(`--font-display`), Instrument Sans for text (`--font-text`), JetBrains
+Mono for code and ids (`--font-mono`), bundled from `@fontsource` in
+`main.tsx`; no font CDN. Headings are weight 500 with slightly tight
+tracking, not bold. The tint is the accent's own pale shade, never a
+second hue. MCP UIs keep the colors and use the system fonts
+(`mcp-ui/references/ui-design.md`).
 
 **02 Primary view by task.**
 
@@ -118,8 +118,8 @@ head; the page, tint and glow (`--bg`, `--accent-tint`, `--bg-glow`)
 carry surfaces. A brand replaces the whole family: accent, deep, tint,
 page, ink, muted and line, in light and both dark blocks. A brand of one
 color can derive the rest with `color-mix()` from `--accent`. The
-accent may differ by scheme (navy on cream needs a light accent on a
-navy page); it keeps its role, and stays off green, amber and red in
+accent may differ by scheme (the violet needs a lighter lilac on a dark
+page); it keeps its role, and stays off green, amber and red in
 both. A brand's green becomes `--accent-tint`, never an accent. Keep
 contrast high: body text 7:1 or better, secondary text 4.5:1,
 panels set apart from a tinted page. Saturated color (`--good`, `--warn`,
@@ -204,8 +204,8 @@ textures); for a working tool, default to colors and type.
 - Saturated color on two data dimensions at once.
 - A summary label that is cut off or overlaps.
 - Keeping a plan's number after the screenshots show it hurts.
-- A brand source nobody gave, or the Reboot default kept while the
-  user named another brand. With no brand, the brief says "Reboot
+- A brand source nobody gave, or the house default kept while the
+  user named another brand. With no brand, the brief says "house
   default, no brand supplied".
 - A restyle that appends an override layer instead of changing the
   token values.
@@ -230,7 +230,7 @@ textures); for a working tool, default to colors and type.
 ## Limits
 
 Principles, not pixels: an existing design system or the user's own
-direction overrides any of them, the Reboot default included.
+direction overrides any of them, the house default included.
 
 ## Scales as
 

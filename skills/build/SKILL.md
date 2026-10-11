@@ -134,7 +134,7 @@ take item 0's defaults and say so at the handoff.
      intends an upstream fix); switching `mcp=` later can (`python/references/api-schema-evolution.md`).
    - The look: a five-line visual brief (who and on what screen, the
      task, the one question the primary view answers, the accent and its
-     real source (the user's or organization's brand) or "Reboot
+     real source (the user's or organization's brand) or "house
      default, no brand supplied", the type choice) and the primary view chosen for
      the task: a list for triage and lookup, a board for a few items
      through stages, a chart or timeline over time
@@ -333,7 +333,7 @@ Under the table, **Beyond the brief**: one line per interaction, rule or
 status the design adds to or changes from what the user asked, with its
 reason, so they accept those too; `design/review.md` records their
 answer to each. Beside it, the five-line visual brief (Design Phase,
-"The look") and, with no brand supplied, the offer: the Reboot default,
+"The look") and, with no brand supplied, the offer: the house default,
 or a brand or a site to read. Then the decision box
 (`references/flywheel.md`, "A box around the decision").
 

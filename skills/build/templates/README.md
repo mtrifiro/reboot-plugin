@@ -110,7 +110,7 @@ Both front doors share the Python shell:
 | `frontend/tsconfig.json`, `tsconfig.app.json`, `tsconfig.node.json` | Split app / Vite-config projects; `@api/*` path alias |
 | `frontend/vite-env.d.ts` | Vite client types (CSS modules, `import.meta.env`) |
 | `frontend/mcp/clicker/` | One UI: `index.html`, `main.tsx`, `App.tsx`, `App.module.css`, `index.css`. Its directory is the `UI(path="frontend/mcp/clicker")` of `Counter.show`; rename both together |
-| `frontend/mcp/styles.css` | The web app's tokens and classes (Reboot's brand by default) with system fonts (the `.ui` rule resets `--font-*`), shared by every UI (`mcp-ui/references/ui-design.md`) |
+| `frontend/mcp/styles.css` | The web app's tokens and classes (the house default) with system fonts (the `.ui` rule resets `--font-*`), shared by every UI (`mcp-ui/references/ui-design.md`) |
 | `frontend/mcp/host-theme.ts` | `useHostTheme()`: applies the host's light/dark theme and follows changes |
 
 ### `web-app/` adds
@@ -122,7 +122,7 @@ Both front doors share the Python shell:
 | `web/tsconfig.json`, `tsconfig.app.json`, `tsconfig.node.json` | Split app / Vite-config projects (React 18 / TypeScript 5); `tsconfig.node.json` has `"types": ["node"]`; the app half includes `src/`, generated client and all, and type-checks cleanly at 1.6.0 |
 | `web/.env.development` | `VITE_REBOOT_URL=http://localhost:<port>`, the backend port `.rbtrc` names (`copy.sh` writes both; 9991 in the template) |
 | `web/index.html`, `web/src/main.tsx` | Entry; a placeholder favicon in `index.html` (the title's initial on the accent; swap in the brand's mark); `RebootClientProvider url={REBOOT_URL}`; imports Reboot's typefaces from `@fontsource` (Space Grotesk, DM Sans, DM Mono; no font CDN), then `styles.css` |
-| `web/src/styles.css` | Design tokens in Reboot's brand by default (cream page, navy ink and accent, sage tint, `--good`/`--warn`/`--bad` for one data dimension; light and dark; `web-app/references/ui-design.md`, "The default look"), base elements, and classes for the page anatomy (`topbar`, `page-head`, `stats`), each primary view (`filter-panel`/`list-card`/`row`, `board`, `chart`, `feed`), detail (`drawer`, `kv`) and actions (`confirm-bar`, `notice`), listed at its top (`web-app/references/ui-design.md`) |
+| `web/src/styles.css` | Design tokens in the house default (paper page, near-black ink, violet accent and its tint, `--good`/`--warn`/`--bad` for one data dimension; light and dark; `web-app/references/ui-design.md`, "The default look"), base elements, and classes for the page anatomy (`topbar`, `page-head`, `stats`), each primary view (`filter-panel`/`list-card`/`row`, `board`, `chart`, `feed`), detail (`drawer`, `kv`) and actions (`confirm-bar`, `notice`), listed at its top (`web-app/references/ui-design.md`) |
 | `web/src/App.tsx` | Sign-in gate on `useUser()`, one reader and one mutation, laid out in the page anatomy (title block with a lede, then a stat tile) |
 | `web/src/nav.tsx` | `SiteNav`, the top bar's page links once there are two or more pages: beside the title, else a second line of their own, else that line tighter, else a ☰ menu left of the title; measured, never scrolled out of sight. `useBarHeight`, used in `App.tsx`, keeps `--topbar-h` at the bar's real height (`web-app/references/ui-design.md`, 03) |
 | `web/src/theme.tsx` | `ThemeToggle` (light/dark, saved in `localStorage`, OS setting until chosen) and `applySavedTheme()`, called in `main.tsx` before render |

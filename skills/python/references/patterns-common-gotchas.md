@@ -654,7 +654,7 @@ section. Add or change a trap in its owning reference, not here. -->
 - Assuming a stop worked
 
 **`mcp-ui/references/ui-design.md`**
-- Web fonts in an MCP UI, the Reboot default's included: a host may block loading them in its frame
+- Web fonts in an MCP UI, the house default's included: a host may block loading them in its frame
 - A light/dark toggle, or a theme that ignores the host's
 - "loading..." or a bare spinner
 - A whole app in one UI (tabs of tables): one view per `UI()`
@@ -673,7 +673,7 @@ section. Add or change a trap in its owning reference, not here. -->
 - Saturated color on two data dimensions at once
 - A summary label that is cut off or overlaps
 - Keeping a plan's number after the screenshots show it hurts
-- A brand source nobody gave, or the Reboot default kept while the user named another brand
+- A brand source nobody gave, or the house default kept while the user named another brand
 - A restyle that appends an override layer instead of changing the token values
 - A logo or favicon with a hard-coded color
 - A green, amber or red accent in either scheme, including a brand's green highlight promoted to the dark accent

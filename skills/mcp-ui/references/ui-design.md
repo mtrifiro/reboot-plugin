@@ -66,7 +66,7 @@ AI next.
 
 ## Never
 
-- Web fonts in an MCP UI, the Reboot default's included: a host may
+- Web fonts in an MCP UI, the house default's included: a host may
   block loading them in its frame; keep the `.ui` rule's system stack.
 - A light/dark toggle, or a theme that ignores the host's.
 - "loading..." or a bare spinner; use `skeleton`.
