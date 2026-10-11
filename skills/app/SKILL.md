@@ -9,12 +9,13 @@ allowed-tools: Bash, Read, Write, Glob, Grep, Edit
 
 **Say the welcome first,** the moment this skill loads, before the
 routing line or the scope round. It is visible text in the chat, sent
-verbatim as a message of its own: never written in thinking, where the
-user sees only the app's summary of it, and with no tool call in the
-same message. `build` and the front-door skill are invoked in the next
-message. It is fixed text except the examples in angle brackets:
-two things from the user's brief that will be objects, in the user's
-words ("a class or a membership"). An existing project skips it.
+verbatim, never written in thinking, where the user sees only the app's
+summary of it. The same response goes on at once with the `build` and
+front-door skills: a response that holds only the welcome ends the turn,
+and the build sits idle until the user types. It is fixed text except
+the examples in angle brackets: two things from the user's brief that
+will be objects, in the user's words ("a class or a membership"). An
+existing project skips it.
 
 > **Welcome to Reboot.** A Reboot app is built from a domain model.
 > The model is made of domain objects, <a room or a reservation>.
@@ -23,27 +24,12 @@ words ("a class or a membership"). An existing project skips it.
 > one request at a time, so the rules you describe hold without a
 > database to manage.
 >
-> Designing a Reboot app proceeds like this, through the three stages
-> of the **Reboot Flywheel**. Each milestone ends in a report with its
-> evidence, and every report is kept in the project.
->
-> **Design**, does the design say what you mean?
-> 1. A few questions about scope.
-> 2. The domain model: the objects, their methods, and who may call
->    each, shown as a map of the app.
-> 3. The feature spec: each capability written as rules and examples
->    in plain English, which become the app's tests.
->
-> **Prove**, does the code do what the design says?
-> 4. The build: the code behind every method, and the pages.
-> 5. The full feature suite, then the pages in a browser.
-> 6. Your review on the running app. Accepting it closes the first turn.
->
-> **Observe**, what is the running app doing, and why? What it shows
-> starts the next turn: new features, one at a time.
->
-> Interrupt at any time. Questions along the way are welcome, and the
-> build answers each one before it goes on.
+> This build follows the **Reboot Flywheel**. **Design** comes first:
+> a few questions about scope, then the domain model and the feature
+> spec, each a report to correct before any code. **Prove** builds it
+> and tests it against every scenario, ending in your review of the
+> running app. **Observe** shows what the running app does, and starts
+> the next round. Interrupt at any time.
 
 **Voice, before anything else.** Everything said to the user, from
 the first line of the session to the handoff, is a statement of fact

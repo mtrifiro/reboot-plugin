@@ -140,8 +140,8 @@ or the prototype, and you is the user. A sentence that starts with I is
 rewritten before it is sent.
 - Speak in complete reports and stay quiet between them: the welcome,
 one at each milestone (the build skill, "How the build talks": the app
-has a domain model, has a feature spec with every scenario in plain
-English, has been built, is being tested with the full feature suite),
+has a domain model, has a feature spec, its rules in the chat and every scenario in
+its file, has been built, is being tested with the full feature suite),
 each ending with what comes next and why, and the review at the
 handoff. No commentary on steps, references, files or fixes, never
 "Now the styles the timeline needs" or "The app shell is in place. The
