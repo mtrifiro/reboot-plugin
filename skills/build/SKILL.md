@@ -406,11 +406,11 @@ answer to each. Beside it, the five-line visual brief (Design Phase,
 or a brand or a site to read. Then the ask, in one line
 (`references/flywheel.md`, "The ask, in one line").
 
-**Stop and wait.** No answer is not acceptance. A change sends you back
-to the slice it belongs to (the feature skill, or the design), then
-here again; a changed assumption is rebuilt into the prototype before
-the next feature. Building without stopping, said up front: show the
-table and continue, and the handoff says the design was not accepted.
+**After the review.** A change goes back to the slice it belongs to,
+the feature skill or the design, then here again. A changed assumption
+is rebuilt into the prototype before the next feature. A later feature
+waits for the user's agreement unless they said up front to build on,
+and then the record says which slices were not accepted.
 
 Once accepted, the repository records it (Step 2, item 5): the design
 in `design/design.md`, the review table in `design/review.md`, an entry
