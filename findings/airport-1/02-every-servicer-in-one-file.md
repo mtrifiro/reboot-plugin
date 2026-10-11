@@ -1,7 +1,7 @@
 ---
 id: airport-1-02
 project: airport-1
-source: "airport-1/FINDINGS.md § Plugin skills, item 2"
+source: "airport-1/FINDINGS.md § Plugin skills, item 3"
 reboot_version: 1.6.0
 severity: yellow
 target: plugin
