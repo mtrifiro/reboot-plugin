@@ -73,7 +73,9 @@ no and skips Codex, since the opt-out is global and needs an explicit
 yes.
 
 The pinned tools (`uv`, Node, Envoy, `cloudflared`) are downloaded on
-first use from their official releases and checked against SHA-256
+first use from their official releases (Envoy's macOS build from
+Tetrate's archive, Apple silicon only; on an Intel Mac, run Envoy in
+Docker with `REBOOT_LOCAL_ENVOY_MODE=docker`) and checked against SHA-256
 sums kept in `lib/`; a download that does not match, or a machine
 with no way to hash it, installs nothing.
 

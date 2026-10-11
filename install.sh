@@ -233,17 +233,26 @@ config_path, path_value, disable_sandbox = sys.argv[1:4]
 # its settings are re-added below.
 BEGIN = "# >>> reboot-plugin (managed) >>>"
 END = "# <<< reboot-plugin (managed) <<<"
+with open(config_path) as config:
+    lines = config.readlines()
 kept = []
 skip = False
-with open(config_path) as config:
-    for line in config:
-        stripped = line.rstrip("\n")
-        if stripped == BEGIN:
-            skip = True
-        elif skip and stripped == END:
-            skip = False
-        elif not skip:
-            kept.append(line)
+for line in lines:
+    stripped = line.rstrip("\n")
+    if stripped == BEGIN:
+        skip = True
+    elif skip and stripped == END:
+        skip = False
+    elif not skip:
+        kept.append(line)
+if skip:
+    # A BEGIN marker with no END (the region was edited by hand): keep
+    # every line rather than drop the rest of the file. The keys below
+    # are set in place, and the stray marker stays as a comment.
+    print(f"[reboot-plugin] {config_path}: '{BEGIN}' has no closing "
+          f"'{END}'; keeping the file as is and setting the keys in place",
+          file=sys.stderr)
+    kept = lines
 
 document = tomlkit.parse("".join(kept))
 

@@ -70,8 +70,12 @@ case "$os_name-$arch_name" in
         EXPECTED_SHA256="$SHA256_DARWIN_ARM64"
         ;;
     *)
-        printf '\033[1;31m[reboot-plugin]\033[0m unsupported platform for Envoy: %s-%s\n' \
-            "$os_name" "$arch_name" >&2
+        # Tetrate publishes no Intel macOS build. With this shim on PATH,
+        # `rbt dev run` picks the executable and never falls back to
+        # Docker on its own; the variable makes it.
+        printf '\033[1;31m[reboot-plugin]\033[0m unsupported platform for Envoy: %s-%s (no %s build is published for it)\n' \
+            "$os_name" "$arch_name" "$ENVOY_VERSION" >&2
+        printf '\033[1;31m[reboot-plugin]\033[0m run Envoy in Docker instead: start Docker and `export REBOOT_LOCAL_ENVOY_MODE=docker` before `rbt dev run`\n' >&2
         exit 1
         ;;
 esac

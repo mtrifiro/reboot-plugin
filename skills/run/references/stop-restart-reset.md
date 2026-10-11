@@ -137,6 +137,7 @@ uv run rbt dev expunge --yes
 
 | Error / symptom | Meaning | Fix |
 | --- | --- | --- |
+| `unsupported platform for Envoy` | The plugin pins no Envoy build for this OS and CPU (an Intel Mac); with its `envoy` shim on PATH, `rbt dev run` never falls back to Docker on its own | Start Docker and `export REBOOT_LOCAL_ENVOY_MODE=docker` before `rbt dev run` |
 | `cannot bind '0.0.0.0:9991': Address already in use`, then "This is a bug in the Envoy configuration Reboot generated ... report this bug" | Port already held, usually by an orphaned Envoy; not a Reboot bug | Stop completely, or set `dev run --port=<port>` in `.rbtrc` |
 | `Failed to open rocksdb ... LOCK: Resource temporarily unavailable`, then `waiting for modification` | An orphaned `main.py` holds the state lock; no retry until a watched file changes | `lsof .rbt/dev/<application-name>/p000000/LOCK` names it; stop completely, start |
 | `StatusCode.UNIMPLEMENTED ... Method not found!` from `validate_schema_backwards_compatibility` at boot | An older, incompatible process is alive (1.4.1) | Stop completely, start |

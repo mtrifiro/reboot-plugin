@@ -7,8 +7,8 @@
 # Sourced indirectly by the `bin/cloudflared` shim.
 #
 # Source: official `cloudflare/cloudflared` GitHub releases. Linux
-# builds publish bare binaries; macOS arm64 ships as a `.tgz`
-# tarball containing the binary. SHA-256 digests are taken from
+# builds publish bare binaries; macOS (arm64 and Intel) ships as a
+# `.tgz` tarball containing the binary. SHA-256 digests are taken from
 # the per-release notes body (cloudflared does not publish a
 # sidecar checksum file).
 
@@ -29,6 +29,9 @@ CLOUDFLARED_VERSION="2026.5.0"
 # tarball — not of the `.tgz` artifact GitHub serves. The Linux
 # entries are correct because those artifacts are bare binaries.
 SHA256_DARWIN_ARM64="116ef11a59fc4f31e7f1bcc4378070cd7ca053fa37b4484b1432bb150b358219"
+# Of the `.tgz` as fetched on 2026-10-10 (the notes' digest is of the
+# binary inside, as for arm64).
+SHA256_DARWIN_AMD64="7f2c4c8c86e787226804694112682aefacd4cfb98f54508f1a5a841a78bbbef9"
 SHA256_LINUX_AMD64="0095e46fdc88855d801c4d304cb1f5dd4bd656116c47ab94c2ad0ae7cda1c7ec"
 SHA256_LINUX_ARM64="2dc0945345677d27de3ae390a31c3b168866b48766da5f4cfd3fc473ce572303"
 
@@ -66,6 +69,11 @@ case "$os_name-$arch_name" in
     Darwin-arm64)
         ASSET="cloudflared-darwin-arm64.tgz"
         EXPECTED_SHA256="$SHA256_DARWIN_ARM64"
+        ASSET_KIND=tarball
+        ;;
+    Darwin-x86_64)
+        ASSET="cloudflared-darwin-amd64.tgz"
+        EXPECTED_SHA256="$SHA256_DARWIN_AMD64"
         ASSET_KIND=tarball
         ;;
     *)
