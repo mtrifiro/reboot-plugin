@@ -1,5 +1,5 @@
 #!/usr/bin/env sh
-# PreToolUse and Stop: the app skill's welcome reaches the user as
+# PostToolUse, PreToolUse and Stop: the app skill's welcome reaches the user as
 # visible text, and the build goes on after it.
 #
 # Told only in words, the agent either wrote the welcome in thinking and
@@ -8,6 +8,9 @@
 # build idle. So, in a new build (the app skill launched, no `.rbtrc` in
 # the working directory or an ancestor):
 #
+# - PostToolUse, the moment the app skill loads, says the next output is
+#   the welcome as visible text: said there, beside the skill, before the
+#   agent has drafted anything in thinking.
 # - PreToolUse refuses every tool call until a message opens with the
 #   welcome, saying to send it now, as a message of its own.
 # - Stop, when the turn's last message is that welcome, sends the agent
@@ -30,18 +33,31 @@ case "$session" in '' | *[!A-Za-z0-9_-]*) exit 0 ;; esac
 dir="${TMPDIR:-/tmp}/reboot-welcome"
 [ -f "${dir}/${session}" ] && exit 0
 
+in_new_build() {
+    d=$(field cwd)
+    [ -n "$d" ] || d=$PWD
+    case "$d" in /*) ;; *) d="${PWD}/${d}" ;; esac
+    while [ -n "$d" ] && [ "$d" != "/" ]; do
+        [ -f "${d}/.rbtrc" ] && return 1
+        [ -f "${d}/skills/app/SKILL.md" ] && [ -d "${d}/hooks-handlers" ] && return 1
+        d="${d%/*}"
+    done
+}
+
+if [ "$(field hook_event_name)" = PostToolUse ]; then
+    [ "$(field skill)" = reboot:app ] || exit 0
+    in_new_build || exit 0
+    # shellcheck disable=SC1112  # the ’ is meant
+    printf '%s' '{"hookSpecificOutput":{"hookEventName":"PostToolUse","additionalContext":"[reboot-plugin-welcome] Your next output is the app skill’s welcome, as visible text: its two paragraphs verbatim, each on one line, no quote marks, its examples from the user’s brief. Do not draft it or summarize it in thinking first. Send it as a message of its own, with no tool call. The build goes on after it."}}'
+    exit 0
+fi
+
 transcript=$(field transcript_path)
-[ -n "$transcript" ] && [ -r "$transcript" ] || exit 0
+[ -n "$transcript" ] || exit 0
+[ -r "$transcript" ] || exit 0
 grep -Fq -e '"content":"Launching skill: reboot:app"' -e '"content":"<command-message>reboot:app</command-message>' "$transcript" || exit 0
 
-d=$(field cwd)
-[ -n "$d" ] || d=$PWD
-case "$d" in /*) ;; *) d="${PWD}/${d}" ;; esac
-while [ -n "$d" ] && [ "$d" != "/" ]; do
-    [ -f "${d}/.rbtrc" ] && exit 0
-    [ -f "${d}/skills/app/SKILL.md" ] && [ -d "${d}/hooks-handlers" ] && exit 0
-    d="${d%/*}"
-done
+in_new_build || exit 0
 
 WELCOME='"type":"text","text":"(\\n|[[:space:]])*(> )?\*\*Welcome to Reboot\.'
 

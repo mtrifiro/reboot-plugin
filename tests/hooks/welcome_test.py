@@ -50,6 +50,11 @@ class WelcomeTest(unittest.TestCase):
         self.assertIsNone(self.run_hook("Stop", LAUNCHED, WELCOME, stop_hook_active=True))
         self.assertIsNone(self.run_hook("Stop", LAUNCHED, WELCOME, TOOL))
 
+    def test_the_app_skill_loading_names_the_next_output(self):
+        out = self.run_hook("PostToolUse", tool_name="Skill", tool_input={"skill": "reboot:app"})
+        self.assertIn("next output is the app skill", out["hookSpecificOutput"]["additionalContext"])
+        self.assertIsNone(self.run_hook("PostToolUse", tool_name="Skill", tool_input={"skill": "reboot:build"}))
+
     def test_silent_elsewhere(self):
         self.assertIsNone(self.run_hook("PreToolUse", THOUGHT))
         self.assertIsNone(self.run_hook("Stop", WELCOME))
@@ -62,6 +67,7 @@ class WelcomeTest(unittest.TestCase):
         os.makedirs(os.path.join(plugin, "hooks-handlers"))
         open(os.path.join(plugin, "skills/app/SKILL.md"), "w").close()
         self.assertIsNone(self.run_hook("PreToolUse", LAUNCHED, cwd=plugin))
+        self.assertIsNone(self.run_hook("PostToolUse", cwd=project, tool_name="Skill", tool_input={"skill": "reboot:app"}))
 
 
 if __name__ == "__main__":
