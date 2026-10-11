@@ -23,8 +23,9 @@ Backend-only work starts from the [`python` skill](../python/SKILL.md).
 the build in three complete reports, each written for a reader who saw
 nothing else: the welcome (`app` skill), the proposed model (below)
 and the review at the handoff (Step 7). Between them the build is
-quiet: no commentary on steps, references, files or fixes, since the
-progress band shows where it stands. The only lines between reports:
+quiet: no commentary on steps, references, files or fixes, never "Now
+the styles the timeline needs" or "The app shell is in place. The gate
+board comes next", since the progress band shows where it stands. The only lines between reports:
 the scope questions, one line after them ("A proposed model is being
 built. Objects include flights, gates, and the assignments between
 them."), a question only the user can answer, and one sentence when a

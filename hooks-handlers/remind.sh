@@ -143,8 +143,10 @@ welcome, the proposed model once the API and feature files are written
 (the build skill, "How the build talks": the map, the objects, roles,
 what was set aside, the features, the assumptions, the dashboard and
 the build ahead with the reason for each step), and the review at the
-handoff. No commentary on steps, references, files or fixes; the
-progress band shows where the build stands. The model is proposed
+handoff. No commentary on steps, references, files or fixes, never
+"Now the styles the timeline needs" or "The app shell is in place. The
+gate board comes next"; the progress band shows where the build
+stands. The model is proposed
 until the user accepts it, never "settled". The first sentence about an
 object says why it exists, with the object as its subject. Sentences
 under about twenty words, one idea each, no em or en dashes, no
