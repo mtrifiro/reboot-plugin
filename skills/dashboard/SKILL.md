@@ -141,7 +141,7 @@ uv run rbt dashboard
 Once, for good: the page tracks its viewers (`Presence`) and the
 developer's reopen preference, which `rbt dev run` consults. Never
 re-open it on reloads or restarts. Tell the user, e.g. "Developer
-dashboard (watch the API as I build it) at http://127.0.0.1:<port>/", and
+dashboard (watch the API take shape) at http://127.0.0.1:<port>/", and
 continue the build.
 
 ## Known issues

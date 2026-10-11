@@ -150,8 +150,8 @@ a clause that says what it is for, never as a label; no chapter numbers
 or links. The models below are the hotel; write yours.
 
 > **The first prototype is running, for your review.** Booking a room
-> is up at http://localhost:9991; all 4 scenarios pass. I built it on
-> the simplest assumptions, to give us something real to review the
+> is up at http://localhost:9991; all 4 scenarios pass. It is built on
+> the simplest assumptions, so there is something real to review the
 > architecture, the rules and the feature set on: `Room` owns "booked
 > at most once per night", `Reservation.create` books every room or
 > none and is called only by the app, guests sign in with the
@@ -160,9 +160,9 @@ or links. The models below are the hotel; write yours.
 > what makes the first rule hold. Cancellations and
 > the housekeeping view are next, one at a time. The look: violet on
 > paper, the house default since you named no brand; name one, or a
-> site, and I'll read it. Try the screens the way a guest would: this
-> is the cheapest moment to change any of it. Take your time; I'll
-> wait for your go-ahead or your changes.
+> site, and it gets read. Try the screens the way a guest would: this
+> is the cheapest moment to change any of it. Take your time; the
+> build waits for your go-ahead or your changes.
 
 > **The feature is built and tested.** The full suite ran at this
 > commit: 11 of 12 scenarios pass; the one that doesn't is "A guest
@@ -190,9 +190,13 @@ Tone, for these and any card written later:
 
 - Say what the user gains, not what the agent withholds: "the cheapest
   moment to change it", never "nothing is built until you accept".
-- The wait is the agent's choice, not a condition on the user: "I'll
-  wait for your go-ahead", never "silence does not count". The rule
-  itself is for the agent (Never, below), not for the user to hear.
+- The wait is the agent's choice, not a condition on the user: "the
+  build waits for your go-ahead", never "silence does not count". The
+  rule itself is for the agent (Never, below), not for the user to hear.
+- Never the first person: no I, me, my, we or us, in a card or in any
+  line to the user. The subject is the app, the design, the build or
+  the prototype ("the prototype is running", "the next feature
+  follows"), and "you" is the user.
 - The next stage is described when it happens, in the model diff's own
   words, not announced as a gate.
 - Their nouns, two or three of their own rules, never the table
@@ -211,7 +215,7 @@ the card. Under 60 columns, so it never wraps.
 │ Your call: accept the design, or change it?          │
 │                                                      │
 │   accept       build on it as it stands              │
-│   change …     say what; I'll revise and come back   │
+│   change …     say what; it comes back revised       │
 │   build anyway go on without accepting (recorded)    │
 └──────────────────────────────────────────────────────┘
 ```

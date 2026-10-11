@@ -84,8 +84,9 @@ said up front, skips the reviews' waits too.
    take the simplest assumption and write each into `design/design.md`
    under "Assumed". Defaults: the web app, the `Development()` sign-in,
    disposable data, no invariant beyond the brief. Ask nothing yet:
-   tell the user, in one line, that you are building something simple
-   and fast first, to review the architecture, the business rules and
+   tell the user, in one line and never in the first person
+   (`references/flywheel.md`, Tone), that something simple and fast is
+   going up first, to review the architecture, the business rules and
    the feature set on. "Keep the data", said at any point, writes
    `keep since <date>` on the `Data:` line, committed.
 1. **One feature first, then a slice per feature.** Name, in the
@@ -174,8 +175,8 @@ The reader hasn't read the skill files; make the design stand alone:
   `Field(tag=N)` and raw pydantic spellings only when the spelling is
   the decision.
 - **Every choice gets what + why**: the structure, method type or
-  route, plus a one-clause domain reason ("grows without bound, so we
-  paginate"; "logged-in users only, because the document is
+  route, plus a one-clause domain reason ("grows without bound, so it
+  paginates"; "logged-in users only, because the document is
   per-account"). A precise type name is fine when paired with that
   reason; the rule is no bare jargon.
 
