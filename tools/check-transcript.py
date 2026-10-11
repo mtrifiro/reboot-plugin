@@ -113,7 +113,7 @@ def check(session: Path) -> dict:
         "reports_in_order": reports,
         "unframed": [k for m, k in zip(messages, kinds)
                      if k in ("brief", "review") or k in dict(MILESTONES)
-                     if not all(rx.search(m) for rx in FRAMED)],
+                     if not all(rx.search(m) for rx in (FRAMED[:2] if k == "brief" else FRAMED))],
         "between": [m.strip().splitlines()[0][:100] for m, k in zip(messages, kinds) if k == "other"],
         "first_person": len(first_person),
         "first_person_lines": lines(FIRST_PERSON)[:8],

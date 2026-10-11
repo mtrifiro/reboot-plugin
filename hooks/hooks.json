@@ -1,5 +1,5 @@
 {
-  "description": "SessionStart prepends the plugin's bin/ to the agent's PATH so our shims take precedence over system-installed binaries, reports Reboot dev processes (apps, dashboards, dev servers, tunnels) that earlier sessions left running so the agent can offer to stop them, and injects a reminder to consult the plugin's skills instead of guessing Reboot behavior. UserPromptSubmit re-injects that reminder once it has scrolled out of the transcript's recent tail. PostToolUse, PreToolUse and Stop hold a new build to its welcome: the moment the app skill loads, the next output is the welcome; no tool call until the app skill's welcome has gone out as visible text, and a turn that ends on it goes on to the build (hooks-handlers/welcome.sh). PreToolUse auto-approves this plugin's own skills, read-only calls on its files, and the run skill's Reboot dev commands when they run inside a Reboot project. PostToolUse repeats, every dozen tool calls of a Reboot build, that the chat hears only reports and step lines go to `reboot-now` (hooks-handlers/quiet.sh). PreToolUse, PostToolUse and PreCompact run the schema guard (hooks/schema-guard.sh) in both agents: API edits an app with persisted state couldn't boot over are refused, and other API edits wait until the session has read api-schema-evolution.md; dev state counts only when the project's AGENTS.md says `Data: keep`, a deploy always does. The same PreToolUse matcher runs the suite guard (hooks/suite-guard.sh): while a project's test suite runs (tests/.suite-running), regenerating, restarting, expunging and code edits are refused.",
+  "description": "SessionStart prepends the plugin's bin/ to the agent's PATH so our shims take precedence over system-installed binaries, reports Reboot dev processes (apps, dashboards, dev servers, tunnels) that earlier sessions left running so the agent can offer to stop them, and injects a reminder to consult the plugin's skills instead of guessing Reboot behavior. UserPromptSubmit re-injects that reminder once it has scrolled out of the transcript's recent tail. PostToolUse, PreToolUse and Stop hold a new build to its welcome: the moment the app skill loads, the next output is the welcome; no tool call until the app skill's welcome has gone out as visible text, and a turn that ends on it goes on to the build (hooks-handlers/welcome.sh). PreToolUse auto-approves this plugin's own skills, read-only calls on its files, and the run skill's Reboot dev commands when they run inside a Reboot project. PostToolUse sends a build report saved under design/reports/ but not yet shown in the chat (hooks-handlers/reports.sh), and repeats, every dozen tool calls of a Reboot build, that the chat hears only reports and step lines go to `reboot-now` (hooks-handlers/quiet.sh). PreToolUse, PostToolUse and PreCompact run the schema guard (hooks/schema-guard.sh) in both agents: API edits an app with persisted state couldn't boot over are refused, and other API edits wait until the session has read api-schema-evolution.md; dev state counts only when the project's AGENTS.md says `Data: keep`, a deploy always does. The same PreToolUse matcher runs the suite guard (hooks/suite-guard.sh): while a project's test suite runs (tests/.suite-running), regenerating, restarting, expunging and code edits are refused.",
   "hooks": {
     "SessionStart": [
       {
@@ -116,6 +116,16 @@
           {
             "type": "command",
             "command": "sh \"${CLAUDE_PLUGIN_ROOT}/hooks-handlers/welcome.sh\"",
+            "timeout": 5
+          }
+        ]
+      },
+      {
+        "matcher": "^(Write|Bash)$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/hooks-handlers/reports.sh\"",
             "timeout": 5
           }
         ]

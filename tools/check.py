@@ -121,6 +121,7 @@ CHECKS = [
     unit("tests/hooks/remind_test.py", 0.3),
     unit("tests/hooks/quiet_test.py", 0.2),
     unit("tests/hooks/welcome_test.py", 0.2),
+    unit("tests/hooks/reports_test.py", 0.2),
     unit("tests/shims/rbt_test.py", 5.0),
     unit("tests/shims/uv_test.py", 4.8),
     unit("tests/templates/copy_test.py", 7.0),

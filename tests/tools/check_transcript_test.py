@@ -42,7 +42,7 @@ class CheckTranscriptTest(unittest.TestCase):
     def test_a_framed_report(self):
         r = ct.check(session(
             "---\n# Reboot Design · The Brief\nThis brief restates the first version. A proposed model is being built. "
-            "Objects include rooms.\n\n**Evidence so far:** your scope answers.\n\n*This is the brief. It is saved as `design/reports/1-brief.md`.*\n---",
+            "Objects include rooms.\n---",
         ))
         self.assertEqual((r["reports_in_order"], r["unframed"]), (["brief"], []))
 

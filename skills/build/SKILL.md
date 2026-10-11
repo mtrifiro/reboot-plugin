@@ -55,8 +55,8 @@ comprehensive, pivotal.
 A new build whose first words to the user were not the `app` skill's
 welcome says it now, with its examples from the brief, before anything else.
 
-**The reports' frame.** The brief, each milestone report and the
-review stand apart from the work around them: a horizontal rule
+**The reports' frame.** Each milestone report and the review, and
+the brief in part (Design Phase, item 0), stand apart from the work around them: a horizontal rule
 (`---`), a `#` title in title case, the largest heading, an intro of one or two sentences saying what
 the report is and what the user does with it, the body, what comes
 next and why, **Evidence so far**, a closing note in italics, and a
@@ -67,8 +67,10 @@ gathers every report's evidence, each line linked to its report. Sections
 inside take `###`, so the title stands well above them. The note
 says what the report is and where it is kept: "*This is the domain-model
 report. It is saved as `design/reports/2-domain-model.md`, with every
-report from this build, in order.*" The build writes the same text,
-without the rules, to that file before sending it, the feature spec with every scenario. Each title names
+report from this build, in order.*" The build sends it in the chat
+first, as visible text, then saves the same text, without the rules, to
+that file, the feature spec with every scenario. A report only saved
+has not been given. Each title names
 the Reboot Flywheel stage it belongs to, the words the progress band
 uses. Titles and files: Reboot Design · The Brief (`1-brief.md`),
 Reboot Design · Proposed Domain Model (`2-domain-model.md`), Reboot
@@ -218,8 +220,8 @@ waits.
    with two to four options, the simplest first and marked
    Recommended: which parts of the domain the first version covers
    (multi-select, in the user's nouns: reservations, housekeeping,
-   rates); who uses it and in which roles; the one thing it must never
-   get wrong; and how people move things, asked only when the primary
+   rates); who uses it and in which roles; what it must never get wrong
+   (multi-select, each option a rule); and how people move things, asked only when the primary
    view is positional (a board, a timeline, a floor plan), its main
    action changes an item's position, and that action is frequent:
    drag recommended, with the panel kept for the keyboard. Not asked
@@ -236,29 +238,26 @@ waits.
    > # Reboot Design · The Brief
    > This brief restates what the first version will hold, so a wrong
    > guess is caught before the model is drawn. A proposed model is
-   > being built. Objects include rooms, stays, the nights each room is
-   > held, and guest requests.
-   > - **Covers:** reservations, check-in and check-out, housekeeping,
-   >   guest requests.
-   > - **Who uses it:** guests book and make requests. Staff sign in
-   >   with one role and see every room.
-   > - **Never wrong:** a room is never booked twice for one night.
+   > being built from it. Its objects include rooms, stays, the nights
+   > each room is held, and guest requests.
+   > - **Covers:** reservations, from booking to check-out.
+   >   Housekeeping, as each room moves from dirty to inspected. Guest
+   >   requests, from asked to done.
+   > - **Who uses it:** guests book a stay and ask for things during
+   >   it. Staff sign in with one role, see every room and stay, and
+   >   work the requests.
+   > - **Never wrong:** a room is never booked twice for one night. A
+   >   request is handled by one person at a time.
    > - **Assumed:** a web app, development sign-in, sample data that
    >   resets when the model changes.
    > - **Left for later:** rates, payments, more staff roles.
-   >
-   > The domain-model report comes next, with the dashboard open on
-   > the model.
-   >
-   > **Evidence so far:** your scope answers and what was assumed, in
-   > `design/design.md`.
-   >
-   > *This is the brief. It is saved as `design/reports/1-brief.md`,
-   > where every report from this build is kept, in order.*
    > ---
 
-   A line the user did not answer says it was assumed. Nothing is said
-   between the brief and that report.
+   Each line says what the user will see and do, a sentence or two,
+   not a list of nouns. The brief is the frame's rules, title, intro
+   and body only, with no next steps, Evidence or note. A line the user
+   did not answer says it was assumed. Nothing is said between the
+   brief and the domain-model report.
 1. **The whole app, in one report.** Write every capability's `@wip`
    feature file from the scope ([`feature`
    skill](../feature/SKILL.md), Step 2; its Step 2a is this flow's).
