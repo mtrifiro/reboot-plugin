@@ -44,6 +44,12 @@ change it here in the same commit.
   refused unless the last full run passed on that exact tree
   (`.githooks/pre-push`; a clone runs `git config core.hooksPath
   .githooks` once).
+- **Data:** disposable. Dev state is seed data: an API change that is
+  not additive expunges it (`uv run rbt dev expunge --yes`, after a
+  complete stop) and reruns, said in one line. Say "keep the data" and
+  the agent writes `keep since <date>` here and commits it; from then
+  on, and from the first deploy, API changes stay additive, and the
+  plugin's schema guard holds them to that.
 
 ## Rules that cost the most when broken
 

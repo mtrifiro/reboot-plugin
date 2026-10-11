@@ -252,6 +252,24 @@ class SchemaGuardTest(unittest.TestCase):
         # Incompatible stays refused after reading.
         self.assertIn("changes type", self.patch(CHANGE_TYPE))
 
+    def with_data(self, line: str) -> None:
+        self.write("AGENTS.md", f"# hello\n\n- **Workflow:** main\n- **Data:** {line}\n")
+
+    def test_disposable_data_leaves_dev_state_unguarded(self) -> None:
+        self.with_dev_state()
+        self.with_data("disposable. Dev state is seed data.")
+        self.assertEqual(self.patch(CHANGE_TYPE), "")
+        self.assertEqual(self.bash("sed -i 's/int/str/' api/hello/v1/hello.py"), "")
+        # A deploy guards whatever the line says.
+        os.makedirs(os.path.join(self.project, "deploy"))
+        self.write("deploy/ledger.jsonl", "{}\n")
+        self.assertIn("a production deploy", self.patch(CHANGE_TYPE))
+
+    def test_kept_data_guards_dev_state(self) -> None:
+        self.with_dev_state()
+        self.with_data("keep since 2026-10-12 (the first deploy)")
+        self.assertIn("changes type", self.patch(CHANGE_TYPE))
+
     def test_a_production_deploy_counts_as_state(self) -> None:
         os.makedirs(os.path.join(self.project, "deploy"))
         self.write("deploy/ledger.jsonl", "{}\n")

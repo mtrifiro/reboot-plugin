@@ -4,8 +4,9 @@
 //
 //   - PreToolUse on an edit (Claude Code's Edit, MultiEdit and Write;
 //     Codex's apply_patch): in a project with persisted state (dev state
-//     under `.rbt/dev/`, or a production deploy in
-//     `deploy/ledger.jsonl`), builds each changed API definition file in
+//     under `.rbt/dev/`, unless AGENTS.md says `Data: disposable`; or a
+//     production deploy in `deploy/ledger.jsonl`), builds each changed
+//     API definition file in
 //     memory and refuses the edit when the runtime couldn't boot over the
 //     change; an edit that is fine still waits until the session has
 //     read all of `api-schema-evolution.md`.
@@ -26,7 +27,7 @@ import { homedir, tmpdir } from 'node:os'
 import { dirname, isAbsolute, join, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 
-import { applicationName, bashEditsApi, incompatibilities, isApiFile, isApiPath } from './schema.ts'
+import { applicationName, bashEditsApi, dataPolicy, incompatibilities, isApiFile, isApiPath } from './schema.ts'
 
 const NAME = 'reboot schema guard'
 const RULES = 'api-schema-evolution.md'
@@ -50,7 +51,11 @@ export function projectOf(path) {
 /** Where the project holds state the API must boot over, else null. */
 export function stateOf(root) {
   const dev = join(root, '.rbt/dev')
-  if (existsSync(dev)) {
+  // Under AGENTS.md's `Data: disposable` (the templates' default until
+  // the first deploy, or until the user says to keep the data) dev
+  // state is seed data the build expunges freely, so it doesn't guard.
+  const disposable = dataPolicy(readOr(join(root, 'AGENTS.md')) ?? '') === 'disposable'
+  if (!disposable && existsSync(dev)) {
     const name = applicationName(readOr(join(root, '.rbtrc')) ?? '')
     const has = name
       ? existsSync(join(dev, name))

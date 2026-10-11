@@ -188,12 +188,14 @@ differ because of Codex limitations:
   catalog doesn't list it, and the band has no Codex equivalent.
 
 The schema guard is a plain command hook, so it runs in both
-([`hooks/schema-guard.sh`](hooks/schema-guard.sh)): in an app with
-persisted dev state or a production deploy, it refuses API edits the
-runtime couldn't boot over (an Edit or Write in Claude Code, an
-`apply_patch` in Codex, or a shell command that rewrites an API file),
-and holds other API edits until the session has read
-`api-schema-evolution.md`. Codex skips a new or changed hook until you
+([`hooks/schema-guard.sh`](hooks/schema-guard.sh)): in an app with a
+production deploy, or with persisted dev state once its `AGENTS.md`
+says `Data: keep` (the first deploy writes that, or you say "keep the
+data"; until then the data is disposable and the build expunges it
+freely), it refuses API edits the runtime couldn't boot over (an Edit
+or Write in Claude Code, an `apply_patch` in Codex, or a shell command
+that rewrites an API file), and holds other API edits until the
+session has read `api-schema-evolution.md`. Codex skips a new or changed hook until you
 trust it, so approve the plugin's hooks when Codex asks.
 
 ## Usage

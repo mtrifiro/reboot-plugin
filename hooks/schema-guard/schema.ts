@@ -211,6 +211,18 @@ export function bashEditsApi(command: string): boolean {
   return writes.some(w => new RegExp(w).test(command))
 }
 
+/**
+ * AGENTS.md's `Data:` line: `disposable` while the project is a
+ * prototype (dev state is seed data the build expunges freely), `keep`
+ * once the data matters (the user said so, or the first deploy), null
+ * when the project predates the line.
+ */
+export const dataPolicy = (agentsMd: string): 'keep' | 'disposable' | null => {
+  const m = agentsMd.match(/^\s*-\s*\*\*Data:\*\*\s*(keep|disposable)\b/im)
+
+  return m ? (m[1]!.toLowerCase() as 'keep' | 'disposable') : null
+}
+
 /** The application name `.rbtrc` gives `dev run`, else null. */
 export const applicationName = (rbtrc: string): string | null =>
   rbtrc.match(/^\s*dev run\s+--application-name[= ](\S+)/m)?.[1] ?? null

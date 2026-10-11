@@ -78,7 +78,9 @@ transaction, a failed workflow attempt. Find the quiet failure:
   the corrected code is refused as incompatible
   (`has switched type from ... waiting`) until you expunge. Write the API edit once in final
   form, or stop the watcher (theater-network, 1.4.0; the gate:
-  [`api-schema-evolution.md`](api-schema-evolution.md)).
+  [`api-schema-evolution.md`](api-schema-evolution.md)). Under
+  `AGENTS.md`'s `Data: disposable` the fix is an expunge, said in one
+  line; under `keep`, restore the persisted type.
 - **Counting log lines to measure progress** — effect-validation lines
   are rate-limited (Limits), so a long seed looks hung. Read actor state
   with `rbt inspect`.

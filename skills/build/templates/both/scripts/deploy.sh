@@ -309,6 +309,24 @@ row["release"] = release
 open(ledger, "a").write(json.dumps(row) + "\n")
 PY
 git add "$LEDGER"
+# The first deploy ends the prototype: the data is real from here, so
+# AGENTS.md's Data line says so (the schema guard already holds API
+# changes to additive ones from the ledger; the line is for people and
+# the skills).
+if [ -z "$last_backend" ] && [ -f AGENTS.md ]; then
+  python3 - AGENTS.md <<'PY'
+import datetime, re, sys
+path = sys.argv[1]
+text = open(path).read()
+kept = re.sub(r"^([ \t]*-[ \t]*\*\*Data:\*\*[ \t]*)disposable\b.*(?:\n[ \t]+\S.*)*",
+              lambda m: f"{m.group(1)}keep since {datetime.date.today().isoformat()} (the first deploy): "
+                        "API changes stay additive; the plugin's schema guard holds them to that.",
+              text, count=1, flags=re.M)
+if kept != text:
+    open(path, "w").write(kept)
+PY
+  git add AGENTS.md
+fi
 git commit -q -m "Deploy log: $sha${revision:+, backend revision $revision}${bundle:+, frontend $bundle}" \
   || die "could not commit $LEDGER; commit it before the next deploy."
 git push -q origin "$BRANCH" || die "could not push $LEDGER; push it before the next deploy (it refuses an unpushed $BRANCH)."

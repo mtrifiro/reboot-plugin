@@ -4,7 +4,7 @@
 import assert from 'node:assert/strict'
 import { describe, test } from 'node:test'
 
-import { applicationName, bashEditsApi, incompatibilities, isApiFile, isApiPath, normalizeType } from './schema.ts'
+import { applicationName, bashEditsApi, dataPolicy, incompatibilities, isApiFile, isApiPath, normalizeType } from './schema.ts'
 
 const expect = (actual: unknown) => ({
   toEqual: (expected: unknown) => assert.deepStrictEqual(actual, expected),
@@ -204,5 +204,13 @@ describe('paths, commands and .rbtrc', () => {
   test('the application name', () => {
     expect(applicationName('dev run --python\ndev run --application-name=todo-list\n')).toBe('todo-list')
     expect(applicationName('dev run --python\n')).toBe(null)
+  })
+})
+
+describe('dataPolicy', () => {
+  test("reads AGENTS.md's Data line", () => {
+    expect(dataPolicy('- **Workflow:** main\n- **Data:** disposable. Dev state is seed data.\n')).toBe('disposable')
+    expect(dataPolicy('- **Data:** keep since 2026-10-12 (the first deploy)\n')).toBe('keep')
+    expect(dataPolicy('- **Workflow:** main\n')).toBe(null)
   })
 })
