@@ -142,8 +142,8 @@ a clause that says what it is for, never as a label; no chapter numbers
 or links. The models below are the hotel; write yours.
 
 > **The first prototype is running, for your review.** The app is up
-> at http://localhost:9991; all 12 scenarios pass. It is built on
-> the simplest assumptions, so there is something real to review the
+> at http://localhost:9991; all 12 scenarios pass. It covers the scope
+> you picked, so there is something real to review the
 > architecture, the rules and the feature set on: `Room` owns "booked
 > at most once per night", `Reservation.create` books every room or
 > none and is called only by the app, guests sign in with the
@@ -206,8 +206,8 @@ box, no menu.
 
 ## Never
 
-- Asking the brief's open questions before the first prototype runs:
-  assume, say so, build, and review on the running app.
+- More than one round of questions before the first prototype: the
+  scope round, then build and review on the running app.
 - Writing a feature's implementation, after the first prototype, before
   its slice of the design is accepted, unless the user said up front to
   build on. "No answer is not acceptance."

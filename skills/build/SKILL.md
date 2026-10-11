@@ -44,6 +44,9 @@ narration, no closing sentence that sums up, and none of: crucial,
 essential, vital, key, robust, seamless, leverage, delve, empower,
 comprehensive, pivotal.
 
+A new build whose first words to the user were not the `app` skill's
+welcome says it now, word for word, before anything else.
+
 **How the build talks**, the model to imitate, a hotel; write yours in
 the user's nouns, this shape, this length, at every step:
 
@@ -66,6 +69,21 @@ the user's nouns, this shape, this length, at every step:
 > never whoever signs in first. Assumed, open to change at the review:
 > guests sign in with the development picker, the data is disposable,
 > and a stay is paid at booking.
+
+**The map, then the details.** Everything said serves one goal: the
+user understands the app's structure. Three times, after the scope
+round, once the API file is written and at the handoff, the build shows
+the app at a glance, a table with one row per object, in the user's
+nouns:
+
+| Object | What it is | Rules it owns | Called by |
+| --- | --- | --- | --- |
+| `Suite` | one of the 23 suites | one stay per night | the app, when a stay is booked |
+| `Stay` | a guest's visit | every night or none | the guest; the butler reads it |
+
+Every other sentence names the row it changed and how. What leaves the
+map unchanged goes unsaid: a typo fixed, a predicate's order, a lock
+mode.
 
 The flow is the **Reboot Flywheel**'s first two stages
 ([`references/flywheel.md`](references/flywheel.md)): **Design** runs
@@ -124,26 +142,32 @@ method types mean regenerating a dozen or more files.
 
 ### Design Phase
 
-The first prototype comes before the questions: take the simplest
-assumption for each open point, design the whole app, build it
-complete, saying each object and decision as it is made, and review it
-running. From there design is a conversation in slices: agree one
+One round of scope questions comes first, then the first prototype:
+design the whole app within that scope, build it complete, saying each
+object and decision as it is made, and review it running. From there design is a conversation in slices: agree one
 feature, show the slice of the model it adds, build it, hand it off.
-"Just build it", said up front, skips the reviews' waits too.
+"Just build it", said up front, skips the questions and the reviews'
+waits.
 
-0. **Assumptions first.** For each open point (who uses it and how
-   they sign in, the one question the primary view answers, what must
-   never happen, what is out of scope, whether the data stays
-   disposable while prototyping, `AGENTS.md`'s `Data:` line), take the
-   simplest assumption and write it into `design/design.md` under
-   "Assumed". Defaults: the web app, the `Development()` sign-in,
-   disposable data, no invariant beyond the brief. Ask nothing. One
-   line tells the user something simple and fast goes up first, to
-   review the architecture, the rules and the features on. "Keep the
+0. **Scope first, in one round.** Before any design, ask what the
+   brief leaves open with AskUserQuestion, at most four questions, each
+   with two to four options, the simplest first and marked
+   Recommended: which parts of the domain the first version covers
+   (multi-select, in the user's nouns: reservations, housekeeping,
+   rates); who uses it and in which roles; the one thing it must never
+   get wrong; whether the data is kept or disposable while
+   prototyping (`AGENTS.md`'s `Data:` line). A question the brief
+   already answers is skipped. Nothing is asked after this round. With
+   no one to answer, take the recommended options and say so. The
+   answers go into `design/design.md` under "Scope", the rest under
+   "Assumed" (defaults: the web app, the `Development()` sign-in,
+   disposable data). Then one line: a simple, fast prototype of that
+   scope goes up first, to review the architecture, the rules and the
+   features on. "Keep the
    data", said at any point, writes `keep since <date>` on the `Data:`
    line, committed.
 1. **The whole app, said object by object.** Write every capability's
-   `@wip` feature file from the assumptions ([`feature`
+   `@wip` feature file from the scope ([`feature`
    skill](../feature/SKILL.md), Step 2; its Step 2a is this flow's).
    As the model takes shape (items 3 and 4), say each object as it is
    created, in the user's nouns: what it is, why it is its own object,

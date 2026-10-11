@@ -7,6 +7,25 @@ allowed-tools: Bash, Read, Write, Glob, Grep, Edit
 
 # app — Build a Reboot Application
 
+**Say the welcome first, word for word,** the moment this skill loads,
+before invoking `build` or any other skill, and before the routing line
+or the scope round. An existing project skips it.
+
+> **Welcome to Reboot.** A Reboot app is built from your domain's
+> objects and the methods on them. Each object, a room or a
+> reservation, is a durable actor: it keeps its own state and handles
+> one request at a time, so the rules you describe hold without a
+> database to manage.
+>
+> How this build proceeds:
+> 1. A few questions about scope.
+> 2. Features before code: each capability written as rules and
+>    examples in plain English, which become the app's tests.
+> 3. The domain model: the objects, their methods, and who may call
+>    each, shown as a map of the app.
+> 4. A working prototype of the whole scope, built to those features.
+> 5. Your review on the running app, then new features one at a time.
+
 **Voice, before anything else.** Everything said to the user, from
 the first line of the session to the handoff, is a statement of fact
 about the app, never the first person: no I, me, my, we or us. Not
@@ -76,16 +95,16 @@ is used.
 
 ### Decision flow
 
-1. **Both named** ("expose it to Claude and host it on the web") → say
-   "This is a Reboot app with an MCP UI and a web app on one backend.",
+1. **Both named** ("expose it to Claude and host it on the web") → after the
+   welcome, say "This is a Reboot app with an MCP UI and a web app on one backend.",
    invoke [`build`](../build/SKILL.md), [`mcp-ui`](../mcp-ui/SKILL.md)
    and [`web-app`](../web-app/SKILL.md) as skills, and follow `build`
    taking both branches at each step. One `Application(oauth=...)`
    serves both with one `User` per upstream identity.
-2. **Only an MCP trigger** → say "This is an MCP UI on a Reboot
+2. **Only an MCP trigger** → after the welcome, say "This is an MCP UI on a Reboot
    backend. The backend can also serve a web app.", invoke `build` and
    `mcp-ui`, and follow the `mcp-ui:` branches.
-3. **Only a web-app trigger, or none (the default)** → say "This is a
+3. **Only a web-app trigger, or none (the default)** → after the welcome, say "This is a
    web app on a Reboot backend. The backend can also serve an MCP UI.",
    invoke `build` and `web-app`, and follow the `web-app:` branches.
    Never ask.
@@ -111,7 +130,7 @@ front door".
 ## Note
 
 On every route, `build` writes each capability as a `@wip` feature file
-from the assumptions, before its API exists ([`feature`
+from the scope round, before its API exists ([`feature`
 skill](../feature/SKILL.md)). Don't invoke `python` for an MCP UI or
 Web App: the front-door skills' reading lists name the `python`
 references each step needs. A dual-frontend app reads both lists, each

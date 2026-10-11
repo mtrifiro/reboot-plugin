@@ -62,7 +62,7 @@ an API:
 
 Ask whether that is the feature; iterate on the English until they
 agree — the file follows the words. In a build, the first prototype's
-features are written from the build's assumptions and reviewed
+features are written from the build's scope round and reviewed
 running. Each later feature after that is one slice of the design
 conversation: agreed here, its
 slice of the domain model shown, then "Accept the Design", where the
