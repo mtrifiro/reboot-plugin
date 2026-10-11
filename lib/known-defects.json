@@ -1,0 +1,29 @@
+{
+  "comment": "Known defects in released reboot wheels that lib/patch_reboot.py patches in a project's .venv after uv sync, add, remove and lock (bin/uv) and before rbt runs (bin/rbt). Each entry applies only to the reboot versions in `versions` (comma-separated ==, !=, <, <=, >, >= clauses) and, when `platforms` is set, only there. `find` must occur exactly once in `file` (relative to site-packages); it becomes `replace`. `marker` in the file means the fix is already there. Set `fixed_in` to the release that ships the fix and narrow `versions` to match. REBOOT_SKIP_PATCHES=1 turns the patcher off.",
+  "defects": [
+    {
+      "id": "P1.2",
+      "description": "protoc-gen-es output overflows execSync's default 1 MB buffer on a large API and `rbt generate` dies with ENOBUFS; maxBuffer raised to 256 MB.",
+      "versions": "==1.6.0",
+      "fixed_in": null,
+      "platforms": null,
+      "file": "reboot/protoc_gen_es_with_deps.cjs",
+      "find": "execSync(\"protoc-gen-es\", {",
+      "replace": "execSync(\"protoc-gen-es\", { maxBuffer: 256 * 1024 * 1024,",
+      "marker": "maxBuffer",
+      "after": "restart rbt dev run"
+    },
+    {
+      "id": "P1.1",
+      "description": "LuaJIT in Envoy on macOS arm64 pins Envoy for about ten minutes after every restart and fan-outs die with `ping timeout`; the routing filters now turn the JIT off.",
+      "versions": "==1.6.0",
+      "fixed_in": null,
+      "platforms": ["darwin-arm64"],
+      "file": "reboot/routing/envoy_config.py",
+      "find": "def _lua_any(source_code: str) -> any_pb2.Any:\n",
+      "replace": "def _lua_any(source_code: str) -> any_pb2.Any:\n    source_code = \"if jit then jit.off() end\\n\" + source_code\n",
+      "marker": "jit.off()",
+      "after": "stop rbt dev run and any orphaned envoy processes before starting it again"
+    }
+  ]
+}

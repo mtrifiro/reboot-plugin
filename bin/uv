@@ -38,8 +38,74 @@ done
 
 UV_DIR="$("$PLUGIN_ROOT/lib/install_uv.sh")"
 
+# `uv run rbt ...`: hand the command to the rbt shim so its guards
+# (the state lock, the expunge terminal check, the dashboard heap)
+# see it; the shim gives it back to this uv with REBOOT_UV_RUN set.
+if [ "${1:-}" = run ] && [ "${2:-}" = rbt ] && [ -z "${REBOOT_UV_RUN:-}" ]; then
+    shift 2
+    REBOOT_UV_RUN="$UV_DIR/uv" exec "$PLUGIN_ROOT/bin/rbt" "$@"
+fi
+
+# Patch the known defects of the installed reboot wheel in the
+# project's .venv (findings P1.1 and P1.2, see lib/known-defects.json)
+# and check that an app storing OAuth tokens has reboot.std.oauth
+# (P1.22). A sync, add, remove, lock or pip install puts the wheel's
+# own files back, so the patcher runs after each; `uv run` patches
+# quietly first, unless the rbt shim, which patches too, sent it here
+# (REBOOT_UV_RUN). REBOOT_SKIP_PATCHES=1 turns it off. The command and
+# the project directory (--project or --directory, else here) come
+# from the arguments before the subcommand's own.
+uv_cmd=""
+subcommand=""
+project_dir="$PWD"
+expect=""
+for arg in "$@"; do
+    case "$expect" in
+        project) project_dir="$arg"; expect=""; continue ;;
+        value) expect=""; continue ;;
+    esac
+    case "$arg" in
+        --project|--directory) expect=project ;;
+        --project=*|--directory=*) project_dir="${arg#*=}" ;;
+        --config-file|--cache-dir|--color|--python-preference|--python-fetch|--allow-insecure-host|--python|-p) expect=value ;;
+        -*) ;;
+        *)
+            if [ -z "$uv_cmd" ]; then
+                uv_cmd="$arg"
+            elif [ -z "$subcommand" ]; then
+                subcommand="$arg"
+                # `uv run <program> ...`: the rest is the program's.
+                if [ "$uv_cmd" = run ]; then break; fi
+            fi
+            ;;
+    esac
+done
+patch_after=""
+case "$uv_cmd" in
+    sync|add|remove|lock) patch_after=1 ;;
+    pip)
+        case "$subcommand" in
+            install|sync|uninstall) patch_after=1 ;;
+        esac
+        ;;
+esac
+if [ -n "${REBOOT_SKIP_PATCHES:-}" ]; then
+    patch_after=""
+elif [ "$uv_cmd" = run ] && [ -z "${REBOOT_UV_RUN:-}" ] && command -v python3 >/dev/null 2>&1; then
+    python3 "$PLUGIN_ROOT/lib/patch_reboot.py" --quiet "$project_dir" || true
+fi
+
 # Record which agent session owns a long-running dev command; see
 # `lib/own.sh`. Never fails this shim.
 "$PLUGIN_ROOT/lib/own.sh" $$ uv "$@" || true
+
+if [ -n "$patch_after" ]; then
+    "$UV_DIR/uv" "$@" || exit $?
+    if ! command -v python3 >/dev/null 2>&1; then
+        echo "uv: no python3 on PATH, so the reboot venv patches (lib/patch_reboot.py) did not run." >&2
+        exit 0
+    fi
+    exec python3 "$PLUGIN_ROOT/lib/patch_reboot.py" "$project_dir"
+fi
 
 exec "$UV_DIR/uv" "$@"
