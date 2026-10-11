@@ -72,9 +72,8 @@ method types mean regenerating a dozen or more files.
 
 Design is a conversation in slices: ask what the brief leaves open,
 agree one feature, show the slice of the model it adds, ask again;
-"Accept the Design" closes the conversation. Said up front, "just
-build it" or "don't check with me" skips the questions and the waits:
-take item 0's defaults and say so at the handoff.
+"Accept the Design" closes it. "Just build it", said up front, skips
+the questions and the waits: item 0's defaults, said so at the handoff.
 
 0. **Questions first.** Before any file, ask what the brief leaves
    open, up to five (`AskUserQuestion` where the host has it, prose
@@ -607,14 +606,12 @@ prototype card ([`references/flywheel.md`](references/flywheel.md),
    when there are any, offer the [`report` skill](../report/SKILL.md).
 6. Unless the user asked for only one front door, the one-line offer of
    the other (`app` skill, "At handoff").
-7. The backlog's next feature, proposed: the Update Flow builds it and
-   hands it off running before the one after; the user picks.
+7. The backlog's next feature, proposed; the user picks.
 
 ## Update Flow
 
-A feature from the backlog comes here one at a time: agreed, sliced,
-built, run and handed off, about ten minutes each, before the next; the
-user picks what comes next at every handoff.
+A backlog feature comes here one at a time: agreed, sliced, built, run
+and handed off, about ten minutes each, before the next.
 
 1. Read `.rbtrc`, `design/design.md` and `design/decisions.md`, the
    API definition, servicer, `main.py` and the frontend entry (mcp-ui:
