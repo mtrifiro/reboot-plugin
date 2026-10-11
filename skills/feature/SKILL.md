@@ -73,13 +73,12 @@ before any implementation.
 
 Create `tests/<capability>.feature`, named for the activity
 (`transfers.feature`, not `bank.feature`), with the agreed name,
-description and rules (with descriptions), `@wip` on the whole
-feature. Then write one scenario for each example situation from
-Step 1, under the rule it illustrates (else at the feature's top
-level), in the built-in steps (Step 4's bullets say how; the
-transfer scenario in `testing-features.md` is a whole one). Each is
-set-up, actions, then checks; an action that must follow a check
-starts its own scenario. The feature, before its scenarios:
+description and rules, `@wip` on the whole feature. Write one scenario
+per example situation from Step 1, under the rule it illustrates, else
+at the top level, in the built-in steps (Step 4 says how; the transfer
+scenario in `testing-features.md` is a whole one). Each is set-up,
+actions, then checks; an action that must follow a check starts its
+own scenario. The feature, before its scenarios:
 
 ```gherkin
 @wip
@@ -100,24 +99,17 @@ Feature: Customers can transfer money between accounts
     too, so money is never created by a failed transfer.
 ```
 
-- Add the file to the `scenarios(...)` call of the test module for its
-  application, or create the module (minimal one in
-  `testing-features.md`).
-- No test suite yet: set one up per `testing-project-setup.md`
-  (`reboot[dev]` in dev dependencies, `*.recordings/` in `.gitignore`).
-- Scenarios needing data: seed the minimum each needs, per test, not the
-  production catalog — call the seed function `initialize` calls with
-  less data, through an app-internal context, constructing what
-  production's `initialize` constructs
-  ([`lifecycle-seeding.md`](../python/references/lifecycle-seeding.md)).
-- If the dashboard is running (the `dashboard` skill), the feature
-  appears on its Features page at once as work in progress; tell the
-  user.
-- The work has a ticket: name it in the feature's description
-  (`Ticket: ABC-123`), and a fix's reproducing scenario carries it in
-  its name. The model diff and the pull request body pick it up from
-  there; a link from the ticket into the repository is not yet
-  something Reboot keeps.
+- Add the file to the `scenarios(...)` call of its application's test
+  module, or create the module (minimal one in `testing-features.md`);
+  no suite yet: `testing-project-setup.md`.
+- Scenarios needing data seed the minimum each needs, per test, through
+  an app-internal context, with the function production's `initialize`
+  calls ([`lifecycle-seeding.md`](../python/references/lifecycle-seeding.md)).
+- With the dashboard running, the feature appears on its Features page
+  at once as work in progress; tell the user.
+- A ticket is named in the feature's description (`Ticket: ABC-123`)
+  and in a fix's reproducing scenario's name; the model diff and the
+  pull request body pick it up from there.
 
 ## Step 2a — See each scenario fail before writing the code
 
@@ -196,40 +188,35 @@ Two rules matter most:
 
 ## Step 4 — Iterate on the scenarios with the user
 
-Scenarios are written before the code (Steps 2 and 2a); this step is
-the loop that follows. After each change, run them; then loop with the
-user: show each scenario, ask what else the feature must do, write it,
-see it fail, then make it pass.
+Scenarios come before the code (Steps 2 and 2a); this is the loop that
+follows. After each change run them, then show each scenario, ask what
+else the feature must do, write it, see it fail, make it pass.
 
-- **Write scenarios in the built-in steps** (`testing-features.md`),
-  named for the situation, under the rule it illustrates, else at the
-  feature's top level.
-- **Ids and saved values** as `testing-features.md` says: let a factory
-  make the id up (`the resulting state id is saved as "account id"`),
-  give one only when it means something to the application, and recall
-  a saved value bare (`<account id>`, never quoted).
-- **Give every rule at least one scenario**: a `Rule:` with no
-  `Scenario:` is checked by nothing, so it stays green while false.
-- **Move `@wip` down as scenarios land**: put `@wip` on each written
-  rule or scenario and take it off the feature, so the dashboard shows
-  exactly what is in progress.
-- **Tag `@blocked` what cannot pass yet**: a declared error the app
-  does not raise yet, or a scenario needing a person to act first (a
-  credential, a decision, an external system). The paragraph under the
-  `Scenario:` line says why; it is the skip reason the dashboard shows.
-  Never delete or weaken a scenario to make the suite green.
-- **Suggest a web app scenario** when the feature is something a person
-  does in the app: the clicks and what they see, plus backend
-  assertions on the resulting state (`testing-web-app.md`). Running it
-  records a video and screenshots viewable on the Features page.
-- **Suggest a rule only for a real invariant** worth formal
-  verification; a scenario that only shows what an operation does stays
-  at the top level.
-- **Run the suite** (`uv run pytest`, or `-m wip` for in-progress) and
-  `uv run mypy backend/ tests/`; fix what fails.
-- **Suggest a dashboard review** after each round: the feature's card,
-  its rules, the methods it uses and those no feature uses, the
-  recordings.
+- **Built-in steps** (`testing-features.md`), each scenario named for
+  its situation, under the rule it illustrates, else at the top level.
+- **Ids and saved values** as `testing-features.md` says: a factory
+  makes the id up (`the resulting state id is saved as "account id"`),
+  given only when it means something to the app, recalled bare
+  (`<account id>`, never quoted).
+- **Every rule has a scenario**: a `Rule:` with none is checked by
+  nothing and stays green while false.
+- **`@wip` moves down as scenarios land**: on each written rule or
+  scenario, off the feature, so the dashboard shows exactly what is in
+  progress.
+- **`@blocked` on what cannot pass yet**: a declared error the app does
+  not raise yet, or a scenario needing a person to act first. The
+  paragraph under `Scenario:` says why; the dashboard shows it. Never
+  delete or weaken a scenario to make the suite green.
+- **A web app scenario** when a person does the feature in the app: the
+  clicks, what they see, and backend assertions on the state
+  (`testing-web-app.md`); its run records a video and screenshots for
+  the Features page.
+- **A rule only for a real invariant**; a scenario that only shows what
+  an operation does stays at the top level.
+- **Run the suite** (`uv run pytest`, or `-m wip`) and `uv run mypy
+  backend/ tests/`; fix what fails.
+- **A dashboard review after each round**: the feature's card, its
+  rules, the methods it uses and those no feature uses, the recordings.
 
 ## Step 5 — Ask before taking `@wip` off
 

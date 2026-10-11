@@ -59,49 +59,38 @@ ends at the build skill's "Accept the Design"
 
 ### Triggers (verbatim in the prompt)
 
-**`mcp-ui`** if the prompt contains any of:
+**`mcp-ui`**: `MCP` in any form (`MCP host`, `MCP server`, `mcp=Tool`,
+`UI()` as a method type); `ChatGPT`, `Claude`, `VSCode`, `Goose`,
+`Cursor`, Anthropic or OpenAI named as the runtime ("use this from
+Claude"), not as a comparison ("like ChatGPT"); "AI tool", "tool for an
+LLM or agent", "expose to an agent".
 
-- `MCP`, `MCP host`, `MCP server`, `MCP app`, `MCP tool`, `mcp=Tool`,
-  `UI()` (as a Reboot method type).
-- `ChatGPT`, `Claude`, `VSCode`, `Goose`, `Cursor`, or
-  "Anthropic / OpenAI" **named as the runtime** ("I want to use this
-  from Claude", "expose it as a tool to ChatGPT"). Mentioning the
-  company ("like ChatGPT") doesn't count.
-- "MCP UI", "AI tool", "tool for an LLM/agent", "expose to an
-  LLM/agent".
+**`web-app`**: a URL or scheme (`https://…`, `localhost:`,
+`example.com`); a route literal (`/login`, `/dashboard`, `/admin`);
+"website", "web app", "SPA", "single-page app", "in the browser",
+"served at".
 
-**`web-app`** if the prompt contains any of:
-
-- A URL or scheme: `https://…`, `localhost:`, `example.com`.
-- A route/page literal: `/login`, `/dashboard`, `/home`, `/admin`, etc.
-- "website", "web app", "web site", "SPA", "single-page app", "in
-  the browser", "served at <url>".
-
-Domain words (CRM, todo, dashboard, chat room, …), "app", "UI",
-"login" or "users" are not triggers: they say what the app does, not
-where it is used.
+Domain words (CRM, todo, dashboard, chat room), "app", "UI", "login"
+or "users" are not triggers: they say what the app does, not where it
+is used.
 
 ### Decision flow
 
-1. **Both front doors named** ("expose it to Claude **and** host it on
-   the web", "MCP server plus a dashboard at crm.example.com") → say
+1. **Both named** ("expose it to Claude and host it on the web") → say
    "This is a Reboot app with an MCP UI and a web app on one backend.",
    invoke [`build`](../build/SKILL.md), [`mcp-ui`](../mcp-ui/SKILL.md)
-   _and_ [`web-app`](../web-app/SKILL.md) as skills, and follow `build`
-   taking both branches at each step. One backend `Application(oauth=...)` serves
-   both with one `User` per upstream identity; signing in on one signs
-   in on both.
+   and [`web-app`](../web-app/SKILL.md) as skills, and follow `build`
+   taking both branches at each step. One `Application(oauth=...)`
+   serves both with one `User` per upstream identity.
 2. **Only an MCP trigger** → say "This is an MCP UI on a Reboot
-   backend. The backend can also serve a web app.", invoke the `build`
-   and `mcp-ui` skills, and follow `build` taking the `mcp-ui:` branches.
-3. **Only a web-app trigger, or no trigger (default)** → say "This is a
+   backend. The backend can also serve a web app.", invoke `build` and
+   `mcp-ui`, and follow the `mcp-ui:` branches.
+3. **Only a web-app trigger, or none (the default)** → say "This is a
    web app on a Reboot backend. The backend can also serve an MCP UI.",
-   invoke the `build` and `web-app` skills, and follow `build`
-   taking the `web-app:` branches. Don't ask: the web app is the default
-   first front door.
-4. **"Only" / "just" / "no …"** ("just a website", "only an MCP tool",
-   "no web UI") → build that one and skip the handoff offer for the
-   other.
+   invoke `build` and `web-app`, and follow the `web-app:` branches.
+   Never ask.
+4. **"Only", "just", "no …"** ("just a website", "no web UI") → build
+   that one and skip the handoff offer for the other.
 
 **At handoff** (build Step 7), unless step 4 applied, offer the other
 front door in one line: "Want this in Claude and ChatGPT too? The
@@ -111,20 +100,19 @@ front door".
 
 ### Worked examples
 
-| Prompt fragment | Decision | Why |
-| --- | --- | --- |
-| "a CRM for my personal relationships, with notes and a timeline" | `web-app`, offer MCP | No trigger: the default. |
-| "a todo list app" | `web-app`, offer MCP | "app" alone is not a trigger. |
-| "a dashboard for our team's metrics, served at metrics.example.com" | `web-app`, offer MCP | Explicit URL. |
-| "a tool I can use from Claude to track my reading list" | `mcp-ui`, offer web | "from Claude" names the runtime. |
-| "just a simple website for signups" | `web-app`, no offer | "just" scopes it to one. |
-| "expose a CRM as an MCP server, and also a dashboard at crm.example.com" | Both | Both named. |
+| Prompt fragment | Decision |
+| --- | --- |
+| "a CRM for my personal relationships", "a todo list app" | `web-app`, offer MCP: no trigger |
+| "a dashboard for our metrics, served at metrics.example.com" | `web-app`, offer MCP: a URL |
+| "a tool I can use from Claude to track my reading list" | `mcp-ui`, offer web: the runtime |
+| "just a simple website for signups" | `web-app`, no offer |
+| "a CRM as an MCP server, and also a dashboard at crm.example.com" | both |
 
 ## Note
 
-On every route, `build` starts by agreeing each capability in plain
-English and writing it as a `@wip` feature file before its API exists
-([`feature` skill](../feature/SKILL.md)). Don't invoke `python` for an
-MCP UI or Web App: the front-door skills' reading lists name the
-`python` references each step needs. A dual-frontend app reads both
-lists, each reference once.
+On every route, `build` writes each capability as a `@wip` feature file
+from the assumptions, before its API exists ([`feature`
+skill](../feature/SKILL.md)). Don't invoke `python` for an MCP UI or
+Web App: the front-door skills' reading lists name the `python`
+references each step needs. A dual-frontend app reads both lists, each
+reference once.

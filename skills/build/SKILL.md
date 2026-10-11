@@ -122,96 +122,83 @@ method types mean regenerating a dozen or more files.
 ### Design Phase
 
 The first prototype comes before the questions: take the simplest
-assumption for what the brief leaves open, design the whole app's
-objects and methods, build the initial prototype complete, saying each
-object and each decision as it is made, and hold the review on the
-running prototype. From there, design is a conversation in slices:
-agree one feature, show the slice of the model it adds, build it, hand
-it off. "Just build it", said up front, skips the reviews' waits too.
+assumption for each open point, design the whole app, build it
+complete, saying each object and decision as it is made, and review it
+running. From there design is a conversation in slices: agree one
+feature, show the slice of the model it adds, build it, hand it off.
+"Just build it", said up front, skips the reviews' waits too.
 
-0. **Assumptions first.** For what the brief leaves open (who uses it
-   and how they sign in; the one thing the primary view answers; what
-   must never happen; what is out of scope for now; whether the data
-   stays disposable while prototyping, `AGENTS.md`'s `Data:` line),
-   take the simplest assumption and write each into `design/design.md`
-   under "Assumed". Defaults: the web app, the `Development()` sign-in,
-   disposable data, no invariant beyond the brief. Ask nothing yet:
-   tell the user, in one line and never in the first person
-   (`references/flywheel.md`, Tone), that something simple and fast is
-   going up first, to review the architecture, the business rules and
-   the feature set on. "Keep the data", said at any point, writes
-   `keep since <date>` on the `Data:` line, committed.
+0. **Assumptions first.** For each open point (who uses it and how
+   they sign in, the one question the primary view answers, what must
+   never happen, what is out of scope, whether the data stays
+   disposable while prototyping, `AGENTS.md`'s `Data:` line), take the
+   simplest assumption and write it into `design/design.md` under
+   "Assumed". Defaults: the web app, the `Development()` sign-in,
+   disposable data, no invariant beyond the brief. Ask nothing. One
+   line tells the user something simple and fast goes up first, to
+   review the architecture, the rules and the features on. "Keep the
+   data", said at any point, writes `keep since <date>` on the `Data:`
+   line, committed.
 1. **The whole app, said object by object.** Write every capability's
-   `@wip` feature file from the assumptions (the [`feature`
-   skill](../feature/SKILL.md)'s Step 2; its Step 2a is this flow's
-   Step 2a). Then, as the domain model takes shape (items 3 and 4), say
-   each object as it is created, in the user's nouns: what it is, why it
-   is its own object, its methods with their kinds and who may call
-   each, and the choice set aside ("`Night` rather than a calendar on
-   `Room`: a room's calendar grows without bound"). Say each decision
-   the moment it is made, with what it buys or costs; the decisions log
-   keeps them (Step 2, item 5). After the prototype's review, each later
-   feature follows the feature skill's Step 1: agree on it in plain
-   English, show the slice of the domain model it adds, as rows of the
-   review table under the rows so far, build it, hand it off, and ask
-   what comes next.
-2. **Implement the brief literally** — the interactions the user
-   described, not a pattern "common on sites like this". List any
-   deviation (extra confirm step, staging area, batching) with its
-   reason and ask first (select-then-confirm where the brief said
-   "click to hold" is rework).
+   `@wip` feature file from the assumptions ([`feature`
+   skill](../feature/SKILL.md), Step 2; its Step 2a is this flow's).
+   As the model takes shape (items 3 and 4), say each object as it is
+   created, in the user's nouns: what it is, why it is its own object,
+   its methods with their kinds and callers, and the choice set aside
+   ("`Night` rather than a calendar on `Room`: a room's calendar grows
+   without bound"). Say each decision as it is made, with what it buys
+   or costs; the decisions log keeps them (Step 2, item 5). After the
+   review, each later feature follows the feature skill's Step 1:
+   agree it in plain English, show its slice of the model as rows
+   under the review table, build it, hand it off, ask what comes next.
+2. **Implement the brief literally**: the interactions the user
+   described, not a pattern common on sites like this. A deviation
+   (an extra confirm step, a staging area, batching) is listed with
+   its reason and asked first.
 3. Run the State Model Assessment below.
 4. State the design:
    - Application types: state shape (fields, types, tags).
-   - Method map, one line per method: its method type
-     (Reader/Writer/Transaction/Workflow) and its AI role (a tool the
-     AI calls, a `UI()` view, or human-only), even when the MCP UI
-     comes later.
+   - Method map, one line per method: its kind (Reader, Writer,
+     Transaction, Workflow) and its AI role (a tool, a `UI()` view, or
+     human-only), even when the MCP UI comes later.
    - Auth per method: anonymous, signed-in, owner only, app-internal,
-     or by role. Where the domain has roles (front desk and
-     housekeeping, editors and readers), name them and the methods each
-     may call; roles live on one roster actor, checked by a custom
-     predicate (`python/references/auth-custom-predicates.md`); when
-     staff sign in with roles, the roster, its invitations and the first
-     admin follow `python/references/auth-roles.md`.
+     or by role. Roles (front desk and housekeeping, editors and
+     readers) are named with the methods each may call, live on one
+     roster actor and are checked by a custom predicate
+     (`python/references/auth-custom-predicates.md`); staff who sign
+     in with roles follow `python/references/auth-roles.md`.
    - History: for each rule someone will later have to explain (an
-     approval, a refund, anything that waits on a person or a provider),
-     the events the owning state records: who, when, which step, the
-     provider's reference. The runtime keeps no history the design
-     doesn't name. Events go on the short-lived entity they explain or
-     in an `OrderedMap` or per-day actor, never on a singleton that
-     lives as long as the app: every write re-serializes the whole list
+     approval, a refund, anything that waits on a person or a
+     provider), the events the owning state records: who, when, which
+     step, the provider's reference. The runtime keeps no history the
+     design doesn't name. Events go on the short-lived entity they
+     explain, or in an `OrderedMap` or per-day actor, never on a
+     singleton that lives as long as the app, since every write
+     re-serializes the whole list
      (`python/references/state-collections.md`, Scales as).
-   - Demo data: a believable dev dataset (a dozen rooms on three floors,
-     not one), seeded only under `rbt dev`, so every view has something
-     to show the first time it opens; a spatial domain seeds its
-     geometry (footprints) and checks non-overlap in code
-     (`python/references/lifecycle-seeding.md`, "Demo data").
-   - Ready for both front doors, whichever is built first: a `User`
-     type, and a `description=` on every method written for the AI. A
-     method's description can't be edited once deployed (Reboot
-     intends an upstream fix); switching `mcp=` later can (`python/references/api-schema-evolution.md`).
-   - The look: a five-line visual brief (who and on what screen, the
-     task, the one question the primary view answers, the accent and its
-     real source (the user's or organization's brand) or "house
-     default, no brand supplied", the type choice) and the primary view chosen for
-     the task: a list for triage and lookup, a board for a few items
-     through stages, a chart or timeline over time
-     (`web-app/references/ui-design.md`, principles 01–02). Light and
-     dark both designed; web-app: a toggle between them in the first
-     build, named in the design; mcp-ui: the host's theme, followed
-     (`mcp-ui/references/ui-design.md`).
-   - mcp-ui: the `User` type and its methods (the front door that
-     creates and locates application-type instances); which methods get
-     `UI()`; the AI's tool surface; ~3 example prompts, most ending on a
-     turn that renders a `UI()`.
-   - web-app: the SPA's pages and the methods each calls; the visual
-     brief per `web-app/references/ui-design.md`.
-5. Write the design, as you state it, to `design/design.md` in the
-   project, as it takes shape: the same words the user reads, every
-   choice with its why, the deviations from the brief and the
-   alternatives set aside. Keep it current until accepted; it outlives
-   the conversation.
+   - Demo data: a believable dev dataset (a dozen rooms on three
+     floors, not one), seeded only under `rbt dev`, so every view has
+     something to show; a spatial domain seeds its geometry and checks
+     non-overlap in code (`python/references/lifecycle-seeding.md`,
+     "Demo data").
+   - Ready for both front doors: a `User` type, and a `description=`
+     on every method, written for the AI. A description can't be
+     edited once deployed; `mcp=` can
+     (`python/references/api-schema-evolution.md`).
+   - The look: the five-line brief (who and on what screen, the task,
+     the primary view's question, the accent and its real source or
+     "house default, no brand supplied", the type) and the primary
+     view for the task (`web-app/references/ui-design.md`, 01–02).
+     Light and dark both designed; web-app: a toggle in the first
+     build; mcp-ui: the host's theme (`mcp-ui/references/ui-design.md`).
+   - mcp-ui: the `User` type and its methods, which methods get
+     `UI()`, the AI's tool surface, about three example prompts, most
+     ending on a turn that renders a `UI()`.
+   - web-app: the pages and the methods each calls.
+5. Write the design to `design/design.md` as it is stated, in the same
+   words the user reads: every choice with its why, the deviations
+   from the brief, the alternatives set aside. Keep it current until
+   accepted; it outlives the conversation.
 Updates start with the design too (Update Flow).
 
 ### Writing the Design for a Human Reader
@@ -309,33 +296,30 @@ implementation.
 
 **The first prototype is the whole design, built straight through and
 said as it goes.** Steps 1 to 7 build every feature file's model,
-methods, pages or tools and scenarios. Each step's narration names the
-object, method or file being written and the decision behind it, in
-the user's nouns, as it happens, in two or three sentences before each
-tool call or group of calls; a step that runs past ten minutes
-says what is taking the time and what it would cut. The first
-prototype skips the screenshot pass and page timing (Step 5); they
-come with the first update after the review.
+methods, pages or tools and scenarios. Each step's narration names
+the object, method or file being written and the decision behind it,
+in the user's nouns, in two or three sentences before each tool call
+or group of calls; a step past ten minutes says what takes the time
+and what it would cut. The first prototype skips the screenshot pass
+and page timing (Step 5); they come with the first update.
 
 **Teach as you build.** The first build is the user's first look at
 Reboot: at each step, one or two sentences in their nouns on the idea
-the step rests on and what it buys their app, where the idea shows up,
-never a lecture. Step 1: a state type is an actor, its state kept by
-Reboot and its methods run one at a time, so two guests cannot book the
-same night; a reader, writer, transaction or workflow is what a method
-may touch. Step 2a and 6: a scenario is the rule in English that the
-suite runs. Step 4: an authorizer is who may call each method, enforced
-in production. Step 7: the dev loop restarts on every edit, the
-dashboard shows the model and the features, and `rbt inspect` reads
-what is stored. A term the user asks about gets the reference's
-answer, in their words.
+the step rests on and what it buys their app, never a lecture. Step 1:
+a state type is an actor, its state kept by Reboot and its methods run
+one at a time, so two guests cannot book the same night; a reader,
+writer, transaction or workflow is what a method may touch. Steps 2a
+and 6: a scenario is the rule in English that the suite runs. Step 4:
+an authorizer is who may call each method, enforced in production.
+Step 7: the dev loop restarts on every edit, the dashboard shows the
+model and the features, `rbt inspect` reads what is stored. A term the
+user asks about gets the reference's answer, in their words.
 
 **Once Step 1 has written the API file, start the developer
-dashboard** with the [`dashboard` skill](../dashboard/SKILL.md): it
-opens on its Models page, which has the model to show from then on,
-and its Features page has the feature files (it stubs `pyproject.toml`
-/ `.rbtrc` if absent). Started earlier, it opens on "Waiting for your
-API". If it fails, say so in a sentence and keep building.
+dashboard** ([`dashboard` skill](../dashboard/SKILL.md)): it opens on
+its Models page with the model to show, and its Features page has the
+feature files. Started earlier, it opens on "Waiting for your API". If
+it fails, say so in a sentence and keep building.
 
 ### Step 1 — API definition
 
@@ -366,9 +350,8 @@ For the first prototype this is the handoff (Step 7): the user reviews
 the architecture, the rules and the feature set on the running app,
 the assumptions beside it. For every later feature it comes before the
 implementation, once the feature's slice is on screen. The first time,
-open with the card ([`references/flywheel.md`](references/flywheel.md),
-"Stage cards"); show the **review table**, one row per rule, in the
-design's words:
+open with the card (`references/flywheel.md`, "Stage cards") and the
+**review table**, one row per rule, in the design's words:
 
 | State type | State ID | Rule | Method | Kind | Who may call | Scenario |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -377,27 +360,26 @@ design's words:
 Every rule in a feature file gets a row; a rule with no owner, method
 or scenario is a gap to name, not to fill silently. List the feature
 files by path and the assumptions as made, and point at the
-dashboard's Models and Features pages.
-Under the table, **Beyond the brief**: one line per interaction, rule or
-status the design adds to or changes from what the user asked, with its
-reason, so they accept those too; `design/review.md` records their
-answer to each. Beside it, the five-line visual brief (Design Phase,
-"The look") and, with no brand supplied, the offer: the house default,
-or a brand or a site to read. Then the ask, in one line
-(`references/flywheel.md`, "The ask, in one line").
+dashboard's Models and Features pages. Under the table, **Beyond the
+brief**: one line per interaction, rule or status the design adds to
+or changes from the brief, with its reason; `design/review.md` records
+the answer to each. Beside it, the five-line brief and, with no brand
+supplied, the offer of the house default or a brand or site to read.
+Then the ask, in one line (`references/flywheel.md`, "The ask, in one
+line").
 
-**After the review.** A change goes back to the slice it belongs to,
-the feature skill or the design, then here again. A changed assumption
-is rebuilt into the prototype before the next feature. A later feature
-waits for the user's agreement unless they said up front to build on,
-and then the record says which slices were not accepted.
+**After the review.** A change goes back to its slice, the feature
+skill or the design, then here again; a changed assumption is rebuilt
+into the prototype before the next feature. A later feature waits for
+the user's agreement unless they said up front to build on, and then
+the record says which slices were not accepted.
 
 Once accepted, the repository records it (Step 2, item 5): the design
 in `design/design.md`, the review table in `design/review.md`, an entry
 in `design/decisions.md`, the record `scripts/model_diff.py --accept`
 writes in `design/accepted.json`, and one commit holding them with
-`api/` and the feature files. Every later model diff measures from
-that commit.
+`api/` and the feature files, the base every later model diff measures
+from.
 
 ### Step 2 — Project shell
 
