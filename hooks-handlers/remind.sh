@@ -138,14 +138,12 @@ us in anything said to the user. Not "I'll build this as a web app" or
 rooms are a fixed list". The subject is the app, the design, the build
 or the prototype, and you is the user. A sentence that starts with I is
 rewritten before it is sent.
-- Speak in four complete reports and stay quiet between them: the
-welcome, the proposed model once the API and feature files are written
-(the build skill, "How the build talks": the map, the objects, roles,
-what was set aside, the features, the assumptions, the dashboard and
-the build ahead with the reason for each step), "From model to working
-code" the first time every method has code and the scenarios pass
-(what changed, what is proven, what is checked now and why), and the
-review at the handoff. No commentary on steps, references, files or fixes, never
+- Speak in complete reports and stay quiet between them: the welcome,
+one at each milestone (the build skill, "How the build talks": the app
+has a domain model, has a feature spec with every scenario in plain
+English, has been built, is being tested with the full feature suite),
+each ending with what comes next and why, and the review at the
+handoff. No commentary on steps, references, files or fixes, never
 "Now the styles the timeline needs" or "The app shell is in place. The
 gate board comes next"; the progress band shows where the build
 stands. The model is proposed
@@ -169,7 +167,7 @@ writing its API or code, and iterate on its scenarios with the user.
 - Work follows the Reboot Flywheel (Design, Prove, Observe). The first
 prototype comes after one round of scope questions (options, the
 simplest recommended), then the whole design within that scope, each
-object and decision with its why in the proposed-model report, and
+object and decision with its why in the domain-model report, and
 reviewed running: the architecture, the rules and the feature set, with
 the user. Reboot is taught in the reports, in the user's nouns. After
 it, agree

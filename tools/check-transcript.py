@@ -5,14 +5,15 @@
     tools/check-transcript.py <project dir>     # its newest session
     tools/check-transcript.py <...> --json
 
-A build speaks in four reports and is quiet between them (the build
-skill, "How the build talks"): the welcome, the proposed model, "From
-model to working code", and the review at the handoff. The planning-only evals squeeze a build into one
+A build speaks in reports and is quiet between them (the build skill,
+"How the build talks"): the welcome, one at each milestone (the app has
+a domain model, a feature spec, has been built, is being tested with the
+full feature suite), and the review at the handoff. The planning-only evals squeeze a build into one
 message, so they cannot see that rhythm; a real session can. This reads
 every message the build showed the user and reports:
 
 - whether the first message is the welcome;
-- whether a proposed-model report and a review appear, and in order;
+- which milestone reports and the review appear, and in order;
 - the messages between reports that are none of the allowed lines (the
   scope questions, one line naming the objects, a question only the user
   can answer, a long-step notice), with their opening words;
@@ -30,8 +31,13 @@ import sys
 from pathlib import Path
 
 WELCOME = re.compile(r"\bWelcome to Reboot\b")
-PROPOSED = re.compile(r"\bA proposed model is being built\b")
-WORKING = re.compile(r"\bThe model is now working code\b")
+MILESTONES = [
+    ("domain-model", re.compile(r"\bThe app has a (proposed )?domain model\b")),
+    ("feature-spec", re.compile(r"\bThe app has a feature spec\b")),
+    ("built", re.compile(r"\bThe app has been built\b")),
+    ("full-suite", re.compile(r"\bThe app is being tested with the full feature suite\b")),
+]
+SCOPE_LINE = re.compile(r"\bA proposed model is being built\. Objects include\b")
 REVIEW = re.compile(r"\b(first prototype is running|for your review)\b", re.I)
 SCOPE_LINE = re.compile(r"\bA proposed model is being built\. Objects include\b")
 FIRST_PERSON = re.compile(r"(?:^|[.!?]\s+|\n)\s*(I|I'll|I'm|I've|I'd|We|We'll|We're|Let me|Let's)\b")
@@ -76,10 +82,9 @@ def shown_messages(session: Path) -> list[str]:
 def kind(text: str) -> str:
     if WELCOME.search(text):
         return "welcome"
-    if PROPOSED.search(text) and not SCOPE_LINE.search(text.strip()[:200]) or "| Object" in text and PROPOSED.search(text):
-        return "proposed-model"
-    if WORKING.search(text):
-        return "working-code"
+    for name, rx in MILESTONES:
+        if rx.search(text):
+            return name
     if SCOPE_LINE.search(text) and len(text) < 400:
         return "scope-line"
     if REVIEW.search(text):
@@ -96,7 +101,7 @@ def check(session: Path) -> dict:
     first_person = [m for p in prose for m in FIRST_PERSON.findall(p)]
     def lines(rx):
         return [l.strip()[:100] for p in prose for l in p.splitlines() if rx.search(l)]
-    reports = [k for k in kinds if k in ("welcome", "proposed-model", "working-code", "review")]
+    reports = [k for k in kinds if k in ("welcome", "review") or k in dict(MILESTONES)]
     return {
         "session": str(session),
         "messages": len(messages),

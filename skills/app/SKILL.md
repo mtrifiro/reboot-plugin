@@ -30,14 +30,15 @@ trainer"). An existing project skips it.
 >   over time or calls the outside world.
 > - **Who may call each method?** <A guest, a manager>, or only the app.
 >
-> How this build proceeds:
+> How this build proceeds, with a report at each milestone:
 > 1. A few questions about scope.
-> 2. Features before code: each capability written as rules and
->    examples in plain English, which become the app's tests.
-> 3. The domain model: the objects, their methods, and who may call
+> 2. The domain model: the objects, their methods, and who may call
 >    each, shown as a map of the app.
-> 4. A working prototype of the whole scope, built to those features.
-> 5. Your review on the running app, then new features one at a time.
+> 3. The feature spec: each capability written as rules and examples
+>    in plain English, which become the app's tests.
+> 4. The build: the code behind every method, and the pages.
+> 5. The full feature suite, then the pages in a browser.
+> 6. Your review on the running app, then new features one at a time.
 >
 > Interrupt at any time. Questions along the way are welcome, and the
 > build answers each one before it goes on.
@@ -49,9 +50,9 @@ about the app, never the first person: no I, me, my, we or us. Not
 actor"; not "I'll build a quick prototype first" but "A quick prototype
 of the whole hotel comes first". The subject is the app, the design,
 the build or the prototype, and "you" is the user. The user reads the
-build in four complete reports, this welcome, the proposed model, "From
-model to working code" and the review (the `build` skill, "How the
-build talks"), and the build is quiet between them. A sentence that starts with I is rewritten before
+build in complete reports, this welcome, one at each milestone and the
+review (the `build` skill, "How the build talks"), and the build is
+quiet between them. A sentence that starts with I is rewritten before
 it is sent. The first sentence about an object says
 why it exists, with the object as its subject. Sentences under about
 twenty words, one idea each; no em or en dashes, no semicolons, no

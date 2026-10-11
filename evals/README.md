@@ -126,6 +126,6 @@ https://code.claude.com/docs/en/plugin-evals.md
 The planning-only cases squeeze a build into one final message, so they
 judge the proposed model's content, not the rhythm of a real session.
 `welcome` reads the whole session (`target: trace`); an `llm` judge
-sees only the first and last 12 messages. The rhythm, three reports and
+sees only the first and last 12 messages. The rhythm, a report at each milestone and
 quiet between them, is read from a real session's transcript with
 `tools/check-transcript.py <project dir or session.jsonl>`.

@@ -19,11 +19,12 @@ under **"Which References to Read, and When"**. Differences are marked
 inline (`mcp-ui: … / web-app: …`); a dual-frontend app does both.
 Backend-only work starts from the [`python` skill](../python/SKILL.md).
 
-**How the build talks: four reports, quiet between.** The user reads
-the build in four complete reports, each written for a reader who saw
-nothing else: the welcome (`app` skill), the proposed model (below),
-"From model to working code" (below) and the review at the handoff
-(Step 7). Between them the build is
+**How the build talks: a report at each milestone, quiet between.**
+The user reads the build in complete reports, each written for a reader
+who saw nothing else: the welcome (`app` skill), one at each milestone
+below (the app has a domain model, a feature spec, has been built, is
+being tested with the full feature suite) and the review at the
+handoff (Step 7). Between them the build is
 quiet: no commentary on steps, references, files or fixes, never "Now
 the styles the timeline needs" or "The app shell is in place. The gate
 board comes next", since the progress band shows where it stands. The only lines between reports:
@@ -51,10 +52,12 @@ comprehensive, pivotal.
 A new build whose first words to the user were not the `app` skill's
 welcome says it now, with its examples from the brief, before anything else.
 
-**The proposed model**, the second report, comes once Step 1 has
-written the API file and every feature file and the dashboard is open.
-It opens "A proposed model is being built." and holds, under short
-headings, in this order:
+**The milestone reports.** Each opens with its milestone in one plain
+sentence, and ends with what comes next and why, one line each.
+
+**1. The app has a domain model**, once Step 1 has written the API
+file and the dashboard is open. It opens "The app has a proposed domain
+model." and holds, under short headings:
 
 1. **The map**, a table with one row per object, in the user's nouns.
    Its columns are the welcome's three questions:
@@ -91,42 +94,37 @@ headings, in this order:
 
 3. **Roles**: who signs in and what each role may do.
 4. **Set aside**: each alternative not taken, with its reason.
-5. **The features and their scenarios**: each feature by name, then
-   each rule and, under it, each scenario in plain English, its name
-   and what it shows ("A second guest asks for a booked room: refused,
-   the first stay unchanged"). These are the app's tests and the rules
-   it promises, so the user corrects them here, before any code; the
-   dashboard's Features page shows the same.
-6. **Assumed**, open to change at the review.
-7. **The dashboard**: its Models page shows each object's state and
-   methods now. The Call Graph, which method calls which, fills in once
-   Step 3 writes the methods' code.
-8. **The build ahead**: the steps still to come, one line each with
-   its reason. The red run: every scenario runs before any method has
-   code, so each is proven able to fail; one that passes then would
-   check nothing. Then the methods' code, who may call each, the pages,
-   and the full suite before the review.
+5. **Assumed**, open to change at the review.
+6. **The dashboard**: its Models page shows each object's state and
+   methods. The Call Graph, which method calls which, fills in once the
+   methods have code.
 
-**From model to working code**, the third report, comes the first time
-every method has its code and the scenarios run green, before the
-browser checks. It marks the build's biggest transition, the way the
-welcome marks its start, and opens "The model is now working code." It
-holds, under short headings:
+**2. The app has a feature spec**, once every feature file matches the
+model and has run red (Step 2a). It opens "The app has a feature spec."
+and holds each feature by name, then each rule and, under it, each
+scenario in plain English, its name and what it shows ("A second guest
+asks for a booked room: refused, the first stay unchanged"). These are
+the app's tests and the rules it promises, so the user corrects them
+here, before any code; the dashboard's Features page shows the same.
+It says why every scenario ran red first: each is proven able to fail,
+and one that passed before the code existed would check nothing.
 
-1. **What changed**: the proposal is running code. Each method has its
-   body, the authorizers enforce who may call each, and the app serves
-   its pages at its address.
-2. **What is proven, and how**: every scenario passes, so each rule the
-   features state holds in code, said in a line per rule. Anything
-   `@blocked` and why.
-3. **What is checked now, and why**: the pages in a browser, as each
-   role would use them, because a passing scenario proves a rule, not
-   that a person can reach it. Then the look, light and dark, desktop
-   and phone.
-4. **What to open**: the app's address, and the dashboard, whose Call
-   Graph now shows which method calls which.
-5. **What comes before the review**: the browser checks and the full
-   suite, with the reason for each.
+**3. The app has been built**, the first time every method has its
+code, the authorizers say who may call each, and the pages render. It
+marks the build's biggest transition, from proposal to running code,
+and opens "The app has been built." It holds what changed (each method
+has its body, the callers are enforced, the app serves its pages at its
+address), what to open (the app, and the dashboard, whose Call Graph
+now shows which method calls which), and anything not yet working and
+why.
+
+**4. The app is being tested with the full feature suite**, as Step 6
+starts. It opens "The app is being tested with the full feature suite."
+and says what runs and why: every scenario of every feature, so each
+rule is proven in code, a count per feature; then the pages in a
+browser as each role would use them, because a passing scenario proves
+a rule, not that a person can reach it; then the look, light and dark,
+desktop and phone. The results come in the review.
 
 The flow is the **Reboot Flywheel**'s first two stages
 ([`references/flywheel.md`](references/flywheel.md)): **Design** runs
@@ -150,8 +148,8 @@ Everything read is re-sent every later turn:
   in a single turn as parallel calls. `cat`-ing several into one call
   can exceed the output limit and be cut off unseen.
 - Skip a reading-list line ending *only when …* unless it holds.
-- **A reference is read silently.** What it decides shows in the
-  proposed model or the handoff, never as a line after reading it.
+- **A reference is read silently.** What it decides shows in a
+  milestone report or the handoff, never as a line after reading it.
 
 ### Never Read Generated or Installed Source in the Main Thread
 
@@ -206,7 +204,7 @@ waits.
    skill](../feature/SKILL.md), Step 2; its Step 2a is this flow's).
    Each object and decision, with what it buys or costs and the choice
    set aside ("`Night` rather than a calendar on `Room`: a room's
-   calendar grows without bound"), goes into the proposed-model report,
+   calendar grows without bound"), goes into the domain-model report,
    not into lines as it is made; the decisions log keeps them (Step 2,
    item 5). After the
    review, each later feature follows the feature skill's Step 1:
@@ -247,8 +245,8 @@ waits.
      edited once deployed; `mcp=` can
      (`python/references/api-schema-evolution.md`).
    - The look: the five-line brief (who and on what screen, the task,
-     the primary view's question, the accent and its real source or
-     "house default, no brand supplied", the type) and the primary
+     the primary view's question, the accent from the house palette,
+     or the user's brand, with its real source, the type) and the primary
      view for the task (`web-app/references/ui-design.md`, 01 to 02).
      Light and dark both designed; web-app: a toggle in the first
      build; mcp-ui: the host's theme (`mcp-ui/references/ui-design.md`).
@@ -382,15 +380,16 @@ from then on "Accept the Design" sits before each feature's
 implementation.
 
 **The first prototype is the whole design, built straight through and
-reported at both ends.** Steps 1 to 7 build every feature file's
-model, methods, pages or tools and scenarios. The proposed-model report
-comes after Step 1, the review after Step 7, and the steps between are
-quiet. The first prototype skips the screenshot pass
+reported at each milestone.** Steps 1 to 7 build every feature file's
+model, methods, pages or tools and scenarios. The milestone reports
+come after Step 1 (domain model), Step 2a (feature spec), the first
+complete build (built) and as Step 6 starts (the full suite), the
+review after Step 7, and the steps between are quiet. The first prototype skips the screenshot pass
 and page timing (Step 5); they come with the first update.
 
 **Teach in the reports, design first.** The first build is the user's
 first look at Reboot, and the design is what it teaches most. In the
-proposed-model report, each object's paragraph names the welcome's
+domain-model report, each object's paragraph names the welcome's
 question its choices answer and the principle behind them: "A
 reservation is its own object, because it lives and changes apart from
 the room"; "`book` is a transaction, because it holds every night or
@@ -406,7 +405,7 @@ user asks about gets the reference's answer, in their words.
 dashboard** ([`dashboard` skill](../dashboard/SKILL.md)): it opens on
 its Models page with the model to show, and its Features page has the
 feature files. Started earlier, it opens on "Waiting for your API".
-The proposed-model report says what it shows. If it fails, say so in a
+The domain-model report says what it shows. If it fails, say so in a
 sentence and keep building.
 
 ### Step 1: API definition
