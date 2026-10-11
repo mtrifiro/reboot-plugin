@@ -30,14 +30,16 @@ survives only on `design-skip-gate`, the bypass): `route-both`,
 `mcp-ready` and the design cases are where the plugin's effect shows
 (no plugin: 0–3 of 3 on `mcp-ready` across runs, so it is noisy; near
 zero on the design cases). The design cases, three runs per arm on
-2026-10-11, after the design conversation and one feature first landed:
-`design-accept-gate` 0.81 with the plugin, 0.10 without;
-`design-skip-gate` 1.00 and 0.33; `design-look-triage` 0.87 and 0.33;
-`design-look-board` 0.78 and 0.44; `design-ready-for-both` 0.71 and
-0.00; `design-roles` 0.60 and 0.33. On the accept gate the plugin's
-gain is the rule mapping, the first prototype and the backlog, in every
-run; `slices` passes in one run of three with the plugin and none
-without, a tendency the prose has not yet made a rule. Plain
+2026-10-11: `design-accept-gate` 0.90 with the plugin, 0.00 without,
+under the prototype-first flow (assumptions, one feature built and
+reviewed running); the rest under the flow an hour earlier, which asked
+first: `design-skip-gate` 1.00 and 0.33; `design-look-triage` 0.87 and
+0.33; `design-look-board` 0.78 and 0.44; `design-ready-for-both` 0.71
+and 0.00; `design-roles` 0.60 and 0.33. On the accept gate the plugin's
+gain is the assumptions said up front, the first prototype, the rule
+mapping and the review placed on the running app, in every run;
+`slices` passes in one run of three with the plugin and none without,
+a tendency the prose has not yet made a rule. Plain
 Claude also asks before it builds in a planning session, so
 `waits-for-acceptance` guards against a regression more than it shows
 a gain. An earlier wording of that
