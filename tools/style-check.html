@@ -142,6 +142,23 @@
     <section class="panel"><div class="empty"><h3>No reports match</h3><p>Try clearing the owner filter.</p><div class="actions"><button>Clear filters</button></div></div></section>
     <section class="panel"><h2>Form</h2><div class="field-row"><div class="field"><label for="d1">Due</label><input id="d1" type="date"/></div><div class="field"><label for="d2">Estimate</label><input id="d2" type="number" value="3"/></div></div><p class="error small">Owner is required.</p></section>
   </div>
+  <div class="with-contents">
+    <aside class="toc" aria-label="Contents">
+      <details open>
+        <summary>Contents</summary>
+        <ol>
+          <li class="toc-depth-2"><a href="#triage-rules" class="active" aria-current="location">How triage decides severity</a></li>
+          <li class="toc-depth-3"><a href="#triage-owners">Who owns a report once it is assigned</a></li>
+          <li class="toc-depth-2"><a href="#triage-history">History</a></li>
+        </ol>
+      </details>
+    </aside>
+    <div class="contents-body">
+      <section class="panel"><h2 id="triage-rules">How triage decides severity</h2><p>A report is severe when it blocks a release.</p></section>
+      <section class="panel"><h3 id="triage-owners">Who owns a report once it is assigned</h3><p>The assignee, until it is closed.</p></section>
+      <section class="panel"><h2 id="triage-history">History</h2><p>Every change to a report is kept.</p></section>
+    </div>
+  </div>
 </main>
 
 <div class="notice toast" role="status">Assigned to Ravi. <button class="ghost small">Undo</button></div>

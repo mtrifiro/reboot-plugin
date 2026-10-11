@@ -1,6 +1,6 @@
 /* The app's one stylesheet: tokens, base elements, and the classes the
    page anatomy is built from (web-app/references/ui-design.md). It ships
-   in Reboot's brand. To rebrand, change the token VALUES in :root and both
+   in the house default. To rebrand, change the token VALUES in :root and both
    dark blocks; never append a later block that re-pins them. Keep the
    names. Components never carry raw hex.
 
@@ -13,7 +13,8 @@
    Other primary views: board / board-col (board-col-head, .count) of
    cards; feed (a dated timeline of li with <time>); chart (an <svg>
    with .axis / .grid, a .legend; series colors --series-1..4). Detail:
-   kv (a <dl> of label and value). Actions: confirm-bar (.message), the
+   kv (a <dl> of label and value). A long page: with-contents, a toc
+   sidebar beside a contents-body (contents.tsx). Actions: confirm-bar (.message), the
    in-page confirm; notice (.toast to float it) after an action. Also:
    panel / panel-head, card, cards, field / field-row (forms), spacer;
    buttons .primary / .ghost / .danger; pill; dot, tally; tabs / tab;
@@ -298,4 +299,32 @@ tr:hover td { background: var(--bg-glow); }
   .stat { padding: var(--space-2) var(--space-3); }
   .stat .value { font-size: 22px; } .stat .label { font-size: 12px; }
   .filter-panel .filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* Contents: a long scrolling page's sections in a sidebar that stays in
+   view under the top bar, the one being read marked (contents.tsx,
+   ui-design.md 03). A column from 640 px up, narrower below 960 px; a
+   "Contents" panel at the top below 640 px. */
+.with-contents { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: var(--space-8); align-items: start; }
+.contents-body { min-width: 0; display: grid; gap: var(--space-4); }
+.contents-body :is(h2, h3)[id] { scroll-margin-top: calc(var(--topbar-h) + var(--space-4)); }
+.toc { position: sticky; top: calc(var(--topbar-h) + var(--space-4)); max-height: calc(100vh - var(--topbar-h) - var(--space-8)); overflow-y: auto; padding-right: var(--space-2); }
+.toc summary { font: 500 13px var(--font-text); color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: var(--space-2); cursor: pointer; list-style: none; }
+.toc summary::-webkit-details-marker { display: none; }
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.toc a { display: block; padding: 4px 10px; border-left: 2px solid var(--line); color: var(--muted); font-size: 14px; line-height: 1.35; text-decoration: none; }
+.toc a:hover { color: var(--ink); border-left-color: var(--muted); }
+.toc a.active { color: var(--ink); border-left-color: var(--accent); background: var(--accent-tint); font-weight: 500; }
+.toc .toc-depth-3 a { padding-left: 22px; font-size: 13px; }
+@media (min-width: 640px) { .toc summary { pointer-events: none; } }
+@media (min-width: 640px) and (max-width: 959px) {
+  .with-contents { grid-template-columns: 180px minmax(0, 1fr); gap: var(--space-4); }
+  .toc a { padding: 4px 8px; font-size: 13px; }
+  .toc .toc-depth-3 a { padding-left: 18px; font-size: 12px; }
+}
+@media (max-width: 639px) {
+  .with-contents { grid-template-columns: minmax(0, 1fr); gap: var(--space-4); }
+  .toc { position: static; max-height: none; overflow: visible; padding: var(--space-3) var(--space-4); border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); }
+  .toc summary { margin: 0; }
+  .toc details[open] summary { margin-bottom: var(--space-2); }
 }

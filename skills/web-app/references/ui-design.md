@@ -95,6 +95,12 @@ line tighter, then behind a ☰ menu left of the name, each step taken
 only when the last would cut a link off. Anything placed below the bar
 uses `--topbar-h`, which `useBarHeight` keeps at the bar's real height.
 
+A page that scrolls past about two screens, with three or more
+sections, wraps them in the template's `WithContents`
+(`web/src/contents.tsx`): a sidebar of the page's own `h2` and `h3`
+headings, the one being read marked, sticky under the bar from 640 px
+up and folded into a Contents panel below.
+
 **04 Summary first, simplest form.** Counts: `stats` tiles (label, big
 number, optional `meter`); a tile that filters is a `button.stat`, marked
 `selected` when active. Proportions: a bar only when every segment

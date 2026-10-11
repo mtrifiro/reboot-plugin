@@ -128,6 +128,7 @@ Both front doors share the Python shell:
 | `web/src/styles.css` | The house default's tokens, light and dark, and the classes for the page anatomy, each primary view, detail and actions, listed at its top (`web-app/references/ui-design.md`)
 | `web/src/App.tsx` | Sign-in gate on `useUser()`, one reader and one mutation, laid out in the page anatomy (title block with a lede, then a stat tile) |
 | `web/src/nav.tsx` | `SiteNav`, the top bar's page links once there are two or more pages, stepping down to a ☰ menu as the width shrinks; `useBarHeight` keeps `--topbar-h` at the bar's real height (`ui-design.md`, 03)
+| `web/src/contents.tsx` | `WithContents`, a long page's sections as a sidebar that stays in view, the one being read marked; a Contents panel below 640 px (`web-app/references/ui-design.md`, 03) |
 | `web/src/theme.tsx` | `ThemeToggle` (light/dark, saved in `localStorage`, OS setting until chosen) and `applySavedTheme()`, called in `main.tsx` before render |
 | `web/src/vite-env.d.ts` | Vite client types for `import.meta.env` |
 | `tests/conftest.py` | The look steps, defined only when Playwright is installed (`python/references/testing-web-app.md`, "Look steps")
@@ -144,7 +145,7 @@ web app can find the user's counters) and the SPA beside the MCP UIs:
 | `frontend/web/index.html`, `src/main.tsx`, `frontend/web/.env.development` | The SPA entry, with the placeholder favicon; served by the backend at `/__/frontend/web/`; `.env.development` names the backend's port so the address Vite prints can sign in too (plugin-browser, 1.6.0) |
 | `frontend/web/src/App.tsx` | Sign-in gate, the user's counters as cards, `useCounter({ id })` per card; imports the one generated client via `@api/…` |
 | `frontend/styles.css` | The one shared stylesheet (the same tokens and classes as `web-app/`); `web/src/styles.css` and `mcp/styles.css` `@import` it and add only their own rules, so the front doors can't drift |
-| `frontend/web/src/styles.css`, `theme.tsx`, `nav.tsx` | The web app's import of the shared sheet, the light/dark toggle and the page links as in `web-app/` |
+| `frontend/web/src/styles.css`, `theme.tsx`, `nav.tsx`, `contents.tsx` | The web app's import of the shared sheet, the light/dark toggle and the page links as in `web-app/` |
 | `frontend/mcp/web-app-url.ts` | `webAppUrl(path)`: the web app's address for an MCP UI's "Open in web app": `VITE_WEB_APP_URL` in production, the backend's `/__/frontend/web/` in dev |
 | `scripts/screenshots.py`, `scripts/page_timing.py` | As in `web-app/`, pointed at the backend's `/__/frontend/web` |
 
