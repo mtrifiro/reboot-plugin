@@ -4,7 +4,7 @@ impact: MEDIUM
 impactDescription: Feature files are the application's specification and its test suite at once; a suite written any other way is neither reviewable by the developer nor shown by the dashboard
 tags: testing, bdd, gherkin, feature, scenario, rule, pytest-bdd, reboot.bdd, wip, blocked, custom-steps, world, race, red-first
 summary: "Built-in steps match their exact spelling; who calls, `creates` / `does`, saved values, `eventually`, aborts, `@wip`, custom steps."
-step: tests
+step: api
 applies: [mcp-ui, web-app, backend-only]
 always: false
 verified: 1.6.0

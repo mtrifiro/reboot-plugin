@@ -625,8 +625,9 @@ never bare `rbt dev run` / `npm run dev`.
 - web-app: check the page at the URL a person would type
   (`localhost`).
 
-**Hand off** only after the final test run has finished. The first
-time, this is the review ("Accept the Design"). Open with the prototype
+**Hand off** only after the final test run has finished, with the
+prototype committed as `Prototype: <title>` (a deploy refuses a dirty
+tree). The first time, this is the review ("Accept the Design"). Open with the prototype
 card ([`references/flywheel.md`](references/flywheel.md), "Stage
 cards"), then:
 

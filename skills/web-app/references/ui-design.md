@@ -3,7 +3,7 @@ title: Design the UI
 impact: HIGH
 impactDescription: Without it the SPA ships unstyled controls, no visual hierarchy, or a view that doesn't fit its task
 tags: web-app, ui, design, css, dark-mode, skeleton, layout, review
-summary: "Brief, Reboot's brand by default (a user's brand replaces it), primary view by task, page anatomy, labeled controls, light/dark toggle, restyle by token values, screenshot review."
+summary: "Brief, the house default look (a user's brand replaces it), primary view by task, page anatomy, labeled controls, light/dark toggle, restyle by token values, screenshot review."
 step: frontend
 applies: [mcp-ui, web-app]
 always: false

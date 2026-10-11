@@ -163,8 +163,8 @@ set, with the user; teach Reboot as it builds, a sentence per step on
 the idea behind it, in the user's nouns. After it, agree
 each feature in
 English, show the slice of the model it adds, and write no
-implementation until the user accepts it (the build skill, Accept the
-Design), recorded in
+implementation until the user accepts it or said up front to build on
+(the build skill, Accept the Design), recorded in
 `design/accepted.json`. A change to a rule, to `api/` or to an
 authorizer goes back there; `scripts/model_diff.py` sorts each change
 from that record.

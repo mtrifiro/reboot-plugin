@@ -77,7 +77,8 @@ a branch each. The skills follow that choice, never make it.
    (`CONTRIBUTING.md`, a rule in `AGENTS.md` or `CLAUDE.md`, merged
    pull requests in `git log`). Say in one line which applies.
 2. **Otherwise ask once,** at the first change after the first build,
-   which stays on `main` and ends in its "Design accepted" commit:
+   which stays on `main`: `Design assumed`, `Prototype`, then
+   `Design accepted` once the user accepts:
    > Where should changes go from now on? Straight onto `main`, or a
    > branch for each change that you merge when you're happy with it?
    > With a branch, a pull request on GitHub runs the app's tests and
@@ -200,7 +201,7 @@ Tone, for these and any card written later:
 **The ask, in one line.** When a card stops for the user's call (the
 design, the deploy), the ask is the card's last line, plain prose in
 the user's nouns with the answers it takes: "Accept the design as it
-stands, change it (say what), or build anyway without accepting." No
+stands, change it (say what), or build on without accepting." No
 box, no menu.
 
 ## Never
@@ -209,7 +210,7 @@ box, no menu.
   assume, say so, build, and review on the running app.
 - Writing a feature's implementation, after the first prototype, before
   its slice of the design is accepted, unless the user said up front to
-  build without stopping. "No answer is not acceptance."
+  build on. "No answer is not acceptance."
 - Creating an object or choosing a method kind without saying so:
   every object and every decision is said as it is made, in the user's
   nouns, with its why.

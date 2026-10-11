@@ -107,23 +107,20 @@ the dev server (and its `Development()` sign-in) on a public URL —
 start one only if the user asks for a shareable preview.
 
 For an MCP UI, a client on this machine (Claude Code, Claude Desktop,
-VSCode, Goose, MCPJam) reaches the backend at `http://localhost:9991`
+VSCode, Goose, MCPJam) reaches the backend at `http://localhost:<port>`
 directly: skip the tunnel too. Start one only when the client runs
 elsewhere (ChatGPT, or a Claude on another machine) or the user asks,
 and say in the handoff that its URL is public and exposes the
 `Development()` sign-in. Then, before the backend, run the bundled
 `cloudflared` shim in its own background shell:
 
-- `--url http://localhost:<BACKEND_PORT>` — `9991` or the
-  `dev run --port=` value.
+- `--url http://localhost:<port>`, the `dev run --port=` value in `.rbtrc`.
 - `--metrics localhost:<METRICS_PORT>` — a free port (default `4040`).
   Once up, `http://localhost:<METRICS_PORT>/quicktunnel` returns the
   `*.trycloudflare.com` URL.
 
 ```sh
-cloudflared tunnel \
-    --metrics localhost:4040 \
-    --url http://localhost:9991
+cloudflared tunnel --metrics localhost:4040 --url http://localhost:<port>
 ```
 
 ### Backend — every app type
@@ -146,18 +143,18 @@ cd web && npm run dev        # standalone Web App
 ### Setup wizard — MCP branch only
 
 An MCP UI's backend serves a **setup wizard** at its root
-(`http://localhost:9991`) that walks the user through connecting an MCP
+(`http://localhost:<port>`) that walks the user through connecting an MCP
 client (picking one, copying the `/mcp` endpoint, the OAuth handshake);
 MCPJam is launched from it. Once the backend logs show it serving
 traffic:
 
 1. **Tell the user**, e.g. "Setup wizard (connect an MCP client) at
-   http://localhost:9991".
+   http://localhost:<port>".
 2. **Open it once**, best-effort:
 
    ```sh
-   "$BROWSER" http://localhost:9991 || xdg-open http://localhost:9991 || \
-     python3 -m webbrowser http://localhost:9991
+   "$BROWSER" http://localhost:<port> || xdg-open http://localhost:<port> || \
+     python3 -m webbrowser http://localhost:<port>
    ```
 
 Open it **exactly once, at first startup — never on reloads**: under
@@ -175,7 +172,7 @@ clients (with Claude and ChatGPT); when the user picks it, the wizard
 shows the launch command for their own terminal:
 
 ```sh
-npx @mcpjam/inspector@2.23.3 --url http://localhost:9991/mcp --oauth
+npx @mcpjam/inspector@2.23.3 --url http://localhost:<port>/mcp --oauth
 ```
 
 Run it yourself only if the user asks, via the plugin's
@@ -184,7 +181,7 @@ trail the wizard's; `--no-open` so you surface the URL instead of
 popping a tab):
 
 ```sh
-mcpjam-inspector --url http://localhost:9991/mcp --oauth
+mcpjam-inspector --url http://localhost:<port>/mcp --oauth
 ```
 
 Either way it binds the fixed port 6274.
@@ -195,7 +192,7 @@ Confirm every process is up from its logs, then give the user:
 
 - the app's inspect-page URL (`rbt inspect` reads the same state from
   the CLI — see the [inspect skill](../inspect/SKILL.md));
-- MCP UI: the setup-wizard URL (`http://localhost:9991`, already open)
+- MCP UI: the setup-wizard URL (`http://localhost:<port>`, already open)
   and a first prompt (e.g. "Create a new todo list and show it to me").
   No MCPJam URL — it isn't running until picked in the wizard;
 - Web App: the frontend dev-server URL and a first page to open;

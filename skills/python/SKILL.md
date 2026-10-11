@@ -135,6 +135,7 @@ _Design_ — until the user accepts the domain model and feature files
 - `references/api-pydantic.md` — A non-zero `Field` default is rejected at import; tags, zero defaults, `API(...)` wiring, Request/Response naming.
 - `references/state-actor-decomposition.md` — A Type with unrelated field clusters serializes writers and grows a God `User`; split it into separate Types.
 - `references/state-collections.md` — Never `list[Entity]` on parents; decide if each item is its own Type, then `list[Sub]`, ID list or `OrderedMap`.
+- `references/testing-features.md` — Built-in steps match their exact spelling; who calls, `creates` / `does`, saved values, `eventually`, aborts, `@wip`, custom steps.
 - `references/api-schema-evolution.md` — only when changing an API that is deployed or has persisted state.
 - `references/api-errors.md` — only when the API declares typed errors.
 - `references/state-nested-models.md` — only when a state type has groups of fields that belong together.
@@ -232,7 +233,6 @@ work (agree in English, tag `@wip`, iterate on scenarios) is the
 [`feature` skill](../feature/SKILL.md).
 
 <!-- generated:start reading-list front-door=backend-only step=tests -->
-- `references/testing-features.md` — Built-in steps match their exact spelling; who calls, `creates` / `does`, saved values, `eventually`, aborts, `@wip`, custom steps.
 - `references/testing-project-setup.md` — Missing `pytest.ini` paths break `_rbt` imports; no `pytest-asyncio`; `tests/` layout, fixture with `allowed_origins=[]`, `reboot[dev]`.
 - `references/patterns-load-and-benchmarking.md` — only when you measure load, or a page or method is slow.
 - `references/testing-external-context.md` — only when writing custom steps or harness tests.

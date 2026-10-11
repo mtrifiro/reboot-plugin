@@ -145,6 +145,7 @@ _Design_ — until the user accepts the domain model and feature files
 - `python/references/api-pydantic.md` — A non-zero `Field` default is rejected at import; tags, zero defaults, `API(...)` wiring, Request/Response naming.
 - `python/references/state-actor-decomposition.md` — A Type with unrelated field clusters serializes writers and grows a God `User`; split it into separate Types.
 - `python/references/state-collections.md` — Never `list[Entity]` on parents; decide if each item is its own Type, then `list[Sub]`, ID list or `OrderedMap`.
+- `python/references/testing-features.md` — Built-in steps match their exact spelling; who calls, `creates` / `does`, saved values, `eventually`, aborts, `@wip`, custom steps.
 - `python/references/api-schema-evolution.md` — only when changing an API that is deployed or has persisted state.
 - `python/references/api-errors.md` — only when the API declares typed errors.
 - `python/references/state-nested-models.md` — only when a state type has groups of fields that belong together.
@@ -217,7 +218,7 @@ Apps" above):
 <!-- generated:start reading-list front-door=web-app step=frontend -->
 - `references/react-client.md` — An unset `VITE_REBOOT_URL` points at Vite's origin; copy `build/templates/web-app/web/`; own port, `strictPort`, sign-in, typed errors.
 - `python/references/react-generated-client.md` — Mutations resolve to `{ response, aborted }`, never throw; `rbt generate --react=` output: `use<Type>()` overloads, reader returns, naming.
-- `references/ui-design.md` — Brief, Reboot's brand by default (a user's brand replaces it), primary view by task, page anatomy, labeled controls, light/dark toggle, restyle by token values, screenshot review.
+- `references/ui-design.md` — Brief, the house default look (a user's brand replaces it), primary view by task, page anatomy, labeled controls, light/dark toggle, restyle by token values, screenshot review.
 - `python/references/patterns-react-state.md` — only when a page keeps local state beside live readers.
 - `references/ui-restyle.md` — only when the user asks to change the look of an app that already runs.
 <!-- generated:end -->
@@ -225,7 +226,6 @@ Apps" above):
 **Before the tests:**
 
 <!-- generated:start reading-list front-door=web-app step=tests -->
-- `python/references/testing-features.md` — Built-in steps match their exact spelling; who calls, `creates` / `does`, saved values, `eventually`, aborts, `@wip`, custom steps.
 - `python/references/testing-project-setup.md` — Missing `pytest.ini` paths break `_rbt` imports; no `pytest-asyncio`; `tests/` layout, fixture with `allowed_origins=[]`, `reboot[dev]`.
 - `python/references/testing-web-app.md` — Pages need accessible markup (labels, named buttons) to be driven; the `frontend` fixture, web steps, clicked-through sign-in, recordings.
 - `python/references/patterns-load-and-benchmarking.md` — only when you measure load, or a page or method is slow.

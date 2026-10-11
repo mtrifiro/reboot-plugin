@@ -134,7 +134,8 @@ Hand off the **setup wizard at the backend root
 (`http://localhost:<port>`, the `dev run --port=` in `.rbtrc`)**, not the `/mcp` URL: it connects an MCP
 client (Claude, ChatGPT, MCPJam, …) and completes OAuth. Surface and open
 it once at first startup, as the `run` skill directs. Never start the
-MCPJam inspector yourself — the wizard launches it on demand. Bare
+MCPJam inspector at startup: the wizard launches it, or the `run` skill
+when the user asks. Bare
 `rbt dev run` / `npm run dev` print only the API/MCP/inspect URLs, not
 the wizard.
 
@@ -170,10 +171,10 @@ by tools/gen-index.py. Edit the frontmatter, not the lists. -->
 > `frontend/mcp/<name>/` bundles an MCP host loads. Use
 > [`references/react-scaffolding.md`](references/react-scaffolding.md)
 > and [`references/react-app-tsx.md`](references/react-app-tsx.md).
-> Sole exception:
+> Two exceptions:
 > [`web-app/references/ui-design.md`](../web-app/references/ui-design.md)
-> holds the design principles every front door follows (build's design
-> phase names 01–02; `references/ui-design.md` names the rest).
+> holds the design principles every front door follows, and
+> `web-app/references/ui-restyle.md` restyles a running app.
 
 _Design_ — until the user accepts the domain model and feature files
 (build skill, "Accept the Design"):
@@ -187,6 +188,7 @@ _Design_ — until the user accepts the domain model and feature files
 - `references/api-state-shapes.md` — Never nest state Models; `list[Item]` only for bounded identity-less sub-records; a nested `Model` is `Optional`, hydrated in `create`.
 - `python/references/state-actor-decomposition.md` — A Type with unrelated field clusters serializes writers and grows a God `User`; split it into separate Types.
 - `python/references/state-collections.md` — Never `list[Entity]` on parents; decide if each item is its own Type, then `list[Sub]`, ID list or `OrderedMap`.
+- `python/references/testing-features.md` — Built-in steps match their exact spelling; who calls, `creates` / `does`, saved values, `eventually`, aborts, `@wip`, custom steps.
 - `python/references/api-schema-evolution.md` — only when changing an API that is deployed or has persisted state.
 - `python/references/api-errors.md` — only when the API declares typed errors.
 - `python/references/state-nested-models.md` — only when a state type has groups of fields that belong together.
@@ -264,7 +266,7 @@ servicer before the first test):
 - `references/react-app-tsx.md` — No-id `use<Type>()` returns `{ <type>, isLoading }`: render a child once the handle exists; `_rbt_react` imports; composing readers.
 - `python/references/react-generated-client.md` — Mutations resolve to `{ response, aborted }`, never throw; `rbt generate --react=` output: `use<Type>()` overloads, reader returns, naming.
 - `references/ui-design.md` — The web app's principles inside a host: shared `frontend/mcp/styles.css`, `useHostTheme()` (the host owns light/dark), one focused view, skeletons.
-- `web-app/references/ui-design.md` — Brief, Reboot's brand by default (a user's brand replaces it), primary view by task, page anatomy, labeled controls, light/dark toggle, restyle by token values, screenshot review.
+- `web-app/references/ui-design.md` — Brief, the house default look (a user's brand replaces it), primary view by task, page anatomy, labeled controls, light/dark toggle, restyle by token values, screenshot review.
 - `python/references/patterns-react-state.md` — only when a page keeps local state beside live readers.
 - `references/pop-out-to-web-app.md` — only when a widget needs a "pop out into the web app" button.
 - `web-app/references/ui-restyle.md` — only when the user asks to change the look of an app that already runs.
@@ -273,7 +275,6 @@ servicer before the first test):
 **Before the tests:**
 
 <!-- generated:start reading-list front-door=mcp-ui step=tests -->
-- `python/references/testing-features.md` — Built-in steps match their exact spelling; who calls, `creates` / `does`, saved values, `eventually`, aborts, `@wip`, custom steps.
 - `python/references/testing-project-setup.md` — Missing `pytest.ini` paths break `_rbt` imports; no `pytest-asyncio`; `tests/` layout, fixture with `allowed_origins=[]`, `reboot[dev]`.
 - `python/references/patterns-load-and-benchmarking.md` — only when you measure load, or a page or method is slow.
 - `python/references/testing-external-context.md` — only when writing custom steps or harness tests.

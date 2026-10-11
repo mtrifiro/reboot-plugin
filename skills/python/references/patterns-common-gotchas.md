@@ -627,7 +627,7 @@ section. Add or change a trap in its owning reference, not here. -->
 
 **`build/references/flywheel.md`**
 - Asking the brief's open questions before the first prototype runs: assume, say so, build, and review on the running app
-- Writing a feature's implementation, after the first prototype, before its slice of the design is accepted, unless the user said up front to build without stopping
+- Writing a feature's implementation, after the first prototype, before its slice of the design is accepted, unless the user said up front to build on
 - Creating an object or choosing a method kind without saying so: every object and every decision is said as it is made, in the user's nouns, with its why
 - Folding a rule change into a "fix": a reworded `Rule:`, a changed declaration or a loosened authorizer is a Design change however small the diff
 - Calling a deploy, merge or acceptance done for the user: they decide
