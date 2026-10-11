@@ -428,7 +428,16 @@ placeholders, renames paths, keeps every file the project already has
 (step 1's API file, a `CLAUDE.md`) and replaces the dashboard's three
 stubs (the dashboard keeps running). The sample servicer, feature, test
 module and UI are replaced in steps 3, 5 and 6; a dual-frontend app
-copies `templates/both/`. Then:
+copies `templates/both/`. Then say what the folder now holds, directory
+by directory, each with its job in the user's terms, from the table in
+`templates/README.md`: `api/`, the objects and their methods, the one
+definition the backend and the browser are generated from; `backend/src/`,
+the code behind each method; `tests/`, the feature files and the
+scenarios that run them; the frontend directory, the pages; `scripts/`,
+the test, deploy and backup commands; `deploy/`, the deploy's settings
+and record; `AGENTS.md`, the project's map for a coding agent. From
+here on, a step that adds a file names it and its job the moment it
+lands. Then:
 
 1. `uv sync`.
 2. `uv run rbt generate`. Don't read the output; the servicer signature
