@@ -77,8 +77,9 @@ description and rules (with descriptions), `@wip` on the whole
 feature. Then write one scenario for each example situation from
 Step 1, under the rule it illustrates (else at the feature's top
 level), in the built-in steps (Step 4's bullets say how; the
-transfer scenario in `testing-features.md` is a whole one). The
-feature, before its scenarios:
+transfer scenario in `testing-features.md` is a whole one). Each is
+set-up, actions, then checks; an action that must follow a check
+starts its own scenario. The feature, before its scenarios:
 
 ```gherkin
 @wip

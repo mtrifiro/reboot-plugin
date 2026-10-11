@@ -324,7 +324,8 @@ not waited for:
 
 | Error text (stable prefix) | Meaning | Fix |
 | --- | --- | --- |
-| `Step definition is not found:` | No step matches: a custom step without `parsers.parse`, a typo, or a `When`-only step (`saves the text of`, `clicks`, `fills`) after `Then` | Wrap in `parsers.parse`; match the built-in spelling and keyword |
+| `Step definition is not found:` | No step matches: a custom step without `parsers.parse`, or a typo | Wrap in `parsers.parse`; match the built-in spelling and keyword |
+| `… is an action, but under a Then it is read as a check` | An action (`does`, `attempts`, `clicks`) after `Then`, caught by `tests/step_order.py` before the scenario runs | Move it above the first `Then`, or split the scenario |
 | `Almost: a Given or When 'has' saves what it reads now; 'eventually has' asserts, under a Then` | `eventually has` under `Given`/`When` | Move it under `Then` |
 | `Almost: a Given or When 'has' saves, e.g. `path` saved as `name`` | An assertion under `Given`/`When` | Assert under `Then` |
 | `Almost: say a saved value as <name>, not $name` | `$name` / `${name}` spelling | `<name>` |

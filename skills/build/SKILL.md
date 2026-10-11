@@ -161,10 +161,8 @@ it off. "Just build it", said up front, skips the reviews' waits too.
 5. Write the design, as you state it, to `design/design.md` in the
    project, as it takes shape: the same words the user reads, every
    choice with its why, the deviations from the brief and the
-   alternatives set aside. Keep it current as the design changes; it
-   is what "Accept the Design" asks them to accept, and it stays in the
-   repository when the conversation is gone, a build without stopping
-   included.
+   alternatives set aside. Keep it current until accepted; it outlives
+   the conversation.
 Updates start with the design too (Update Flow).
 
 ### Writing the Design for a Human Reader

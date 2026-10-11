@@ -10,8 +10,8 @@ names:
 tags: [testing, error-text]
 cluster: ""
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/testing-features.md § Errors you will see"
 ---
 # A built-in call step after `Then` fails as "Step definition is not found", and only after the whole run
 
@@ -22,3 +22,5 @@ resolved_by: ""
 **Repro.** `Then as "a", \`get\` on the \`X\` for "x" has \`v=1\`` then `And "a" does an \`inc\` on \`X\` of "x"`.
 
 **Where in the skills.** `python/references/testing-features.md`, Errors table (the `Step definition is not found:` row); `reboot/bdd/steps.py` for the hint.
+
+**Resolution (2026-10-10).** The templates' `tests/step_order.py`, imported by `conftest.py`, looks up every step before a scenario runs; a step under a `Then` that matches only an action fails the scenario at once, with the file and line and the fix (move it above the first `Then`, or split the scenario). `feature` Step 2 says a scenario is set-up, actions, then checks, and the Errors table carries the new message. Seen again in a later restaurant-app-3 session (`tests/managing.feature:37`, `tests/kitchen.feature:33`). Projects copied before this change don't have the check.

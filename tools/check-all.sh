@@ -21,6 +21,7 @@ python3 tests/hooks/orphans_test.py -q
 python3 tests/hooks/schema_guard_test.py -q   # skips itself without a cached Node
 python3 tests/templates/copy_test.py -q
 python3 tests/templates/run_progress_test.py -q   # skips itself without pytest
+python3 tests/templates/step_order_test.py -q   # skips itself without pytest-bdd
 python3 tests/templates/ports_test.py -q
 python3 tests/templates/test_sh_test.py -q   # skips itself without pytest
 python3 tests/templates/feature_lint_test.py -q   # skips itself without pytest-bdd
@@ -43,6 +44,7 @@ if [ "${1:-}" = "--full" ]; then
     bin/uv run --no-project --with pytest==8.4.2 python tests/templates/run_progress_test.py -q
     bin/uv run --no-project --with pytest==8.4.2 python tests/templates/test_sh_test.py -q
     bin/uv run --no-project --with pytest==8.4.2 --with pytest-bdd==8.1.0 python tests/templates/feature_lint_test.py -q
+    bin/uv run --no-project --with pytest==8.4.2 --with pytest-bdd==8.1.0 python tests/templates/step_order_test.py -q
     SMOKE_FULL=1 tools/templates-smoke.sh
     bin/uv run --no-project --with playwright sh -c \
         'python -m playwright install --with-deps chromium >/dev/null && python tools/style-check.py --browser'

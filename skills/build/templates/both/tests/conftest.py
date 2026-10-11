@@ -42,6 +42,10 @@ from run_progress import (  # noqa: F401
     pytest_sessionfinish,
 )
 
+# An action written after a Then, named before the scenario runs
+# (step_order.py).
+from step_order import pytest_bdd_before_scenario  # noqa: F401
+
 try:
     from reboot.bdd import parsers, then
     from reboot.bdd.web import WebApp
