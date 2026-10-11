@@ -14,6 +14,16 @@
 # cannot ship.
 #
 #   tools/templates-smoke.sh [mcp-ui] [web-app] [both]   # default: all three
+#   tools/templates-smoke.sh --reap                     # only stop leftovers
+#
+# The scenarios start each template's backend as its own process, in its
+# own process group, so a run cut off before its servers stop leaves
+# them running from a deleted folder. On exit the run stops every
+# process whose program lives in its scratch folder (the scenario
+# servers' .venv python); on start it stops those of earlier runs whose
+# folder is gone, the case a hard kill leaves (no exit trap runs then).
+# Only the program path counts, never other words on a command line, so
+# a shell that merely mentions a path is never touched.
 #
 # Environment:
 #   SMOKE_FULL=1   also run the scenarios (`pytest`), not just collect
@@ -30,8 +40,54 @@ if [ "${#FRONT_DOORS[@]}" -eq 0 ]; then
   FRONT_DOORS=(mcp-ui web-app both)
 fi
 
+# The pids of processes whose program (the first word of the command
+# line) lies under the folder $1.
+pids_running_from() {
+  ps -axo pid=,command= | awk -v dir="$1/" -v self="$$" \
+    '$1 != self && index($2, dir) == 1 { print $1 }'
+}
+
+# Stop the given pids: TERM, up to five seconds, then KILL.
+stop_pids() {
+  [ "$#" -gt 0 ] || return 0
+  kill "$@" 2>/dev/null || true
+  for _ in 1 2 3 4 5 6 7 8 9 10; do
+    alive=""
+    for pid in "$@"; do kill -0 "$pid" 2>/dev/null && alive="$alive $pid"; done
+    [ -z "$alive" ] && return 0
+    sleep 0.5
+  done
+  # shellcheck disable=SC2086  # a list of pids
+  kill -9 $alive 2>/dev/null || true
+}
+
+# Leftovers of earlier runs: processes naming a templates-smoke.* folder
+# that no longer exists.
+reap_stale() {
+  local stale="" dir pid
+  while read -r pid dir; do
+    [ -n "$dir" ] && [ ! -d "$dir" ] && stale="$stale $pid"
+  done < <(ps -axo pid=,command= | awk -v self="$$" '$1 != self {
+      if (match($2, /^\/.*\/templates-smoke\.[A-Za-z0-9][A-Za-z0-9][A-Za-z0-9][A-Za-z0-9][A-Za-z0-9][A-Za-z0-9]\//))
+        print $1, substr($2, 1, RLENGTH - 1)
+    }')
+  if [ -n "$stale" ]; then
+    echo "templates-smoke: stopping leftovers of an earlier run:$stale"
+    # shellcheck disable=SC2086  # a list of pids
+    stop_pids $stale
+  fi
+}
+
+if [ "${1:-}" = "--reap" ]; then
+  reap_stale
+  exit 0
+fi
+reap_stale
+
 WORK="$(mktemp -d "${TMPDIR:-/tmp}/templates-smoke.XXXXXX")"
 cleanup() {
+  # shellcheck disable=SC2046  # a list of pids
+  stop_pids $(pids_running_from "$WORK")
   if [ "${SMOKE_KEEP:-0}" = "1" ]; then
     echo "kept: $WORK"
   else
@@ -39,8 +95,21 @@ cleanup() {
   fi
 }
 trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
 
+# Each step prints the time the one before it took, so a slow smoke
+# says where its time went.
+STEP_START=""
+STEP_NAME=""
 step() {
+  local now
+  now=$(date +%s)
+  if [ -n "$STEP_START" ]; then
+    echo "    ($STEP_NAME: $((now - STEP_START)) s)"
+  fi
+  STEP_START=$now
+  STEP_NAME="$*"
   echo
   echo "==> [$FD] $*"
 }
@@ -94,7 +163,7 @@ for FD in "${FRONT_DOORS[@]}"; do
     uv run pytest -q
   fi
 
-  echo
+  step "done"
   echo "PASS: $FD"
 done
 

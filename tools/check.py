@@ -140,6 +140,7 @@ CHECKS = [
     unit("tests/tools/check_symbols_test.py", 0.04),
     unit("tests/tools/run_evals_test.py", 10.5),
     unit("tests/tools/check_transcript_test.py", 0.05),
+    unit("tests/tools/templates_smoke_test.py", 6.1),
     unit("tests/tools/check_test.py", 0.5),
 
     Check("check-cli", "integration", ["python3", "tools/check-cli.py"], 18.3),
@@ -218,7 +219,7 @@ PATHS = [
     ("tools/run-evals.sh", ["tools/run_evals", "shellcheck"]),
     ("tools/evals_cache.py", ["tools/run_evals"]),
     ("tools/style-check.*", ["style-browser"]),
-    ("tools/templates-smoke.sh", ["shellcheck", "templates-smoke"]),
+    ("tools/templates-smoke.sh", ["tools/templates_smoke", "shellcheck", "templates-smoke"]),
     ("tools/check-mods.sh", ["shellcheck", "mods"]),
     ("tools/check.py", ["tools/check"]),
     ("tools/githooks/*", ["shellcheck"]),
