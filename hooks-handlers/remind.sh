@@ -164,10 +164,11 @@ files (the `feature` skill): agree on a feature in English before
 writing its API or code, and iterate on its scenarios with the user.
 - Work follows the Reboot Flywheel (Design, Prove, Observe). The first
 prototype comes after one round of scope questions (options, the
-simplest recommended), then the whole design within that scope, each object and decision said as it is made with its
-why, and reviewed running: the architecture, the rules and the feature
-set, with the user; teach Reboot as it builds, a sentence per step on
-the idea behind it, in the user's nouns. After it, agree
+simplest recommended), then the whole design within that scope, each
+object and decision with its why in the proposed-model report, and
+reviewed running: the architecture, the rules and the feature set, with
+the user. Reboot is taught in the reports, in the user's nouns. After
+it, agree
 each feature in
 English, show the slice of the model it adds, and write no
 implementation until the user accepts it or said up front to build on
