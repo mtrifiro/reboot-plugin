@@ -20,18 +20,49 @@ the plugin pins.
 | `findings.py` | Schema + summary of `findings/`; `--todo` lists the open items with the fixes the combined report names, grouped by file, with a mechanism to try | an item breaks the schema, or a `resolved_by` names a file, section, function or grader that doesn't exist (`findings/README.md`) |
 | `check-manifests.py` | The JSON manifests parse; the Reboot version pins (`VERSION`, the manifests, `bin/rbt`, the templates' `pyproject.toml`) agree; each marketplace entry with a local source matches that plugin's own manifest (name, and version: a Claude marketplace entry must carry one); the Codex marketplace names only plugins the Claude one has | a manifest doesn't parse, two pins differ, or an entry and its plugin disagree |
 | `check-mods.sh` | Each mod in `mods/` as the engine reads it: `claude plugin validate`, then its `*.test.ts` with `claude plugin test` | validation or a test fails |
-| `check-facts.py` | Facts (inline code, error texts, Never leads, numbers, link targets) under `skills/` at a git revision (`--base`, default `HEAD`) that the working tree no longer has anywhere | not in `check-all.sh`: a review aid during a rewrite; exits 1 when a fact is gone |
+| `check-facts.py` | Facts (inline code, error texts, Never leads, numbers, link targets) under `skills/` at a git revision (`--base`, default `HEAD`) that the working tree no longer has anywhere | not in `check.sh`: a review aid during a rewrite; exits 1 when a fact is gone |
+| `check.sh` | Runs everything above in stages; `check.py` holds the stages, the checks and the path table (see Stages) | a check fails |
 | `package-plugin.sh` | Zips the committed plugin (manifest, skills, hooks, shims, README) as a `.plugin` file the Claude app installs from a chat; `dependencies` dropped since the app runs no mods | (not a check) |
-
-`check-all.sh` runs them in order, with the tests in `tests/` (the
-hooks, the shims, the templates, and these tools in `tests/tools/`) and `shellcheck` over every shell script (`--full` adds
-the CLI, symbol, template-build and rendered-style checks, and the mods
-when `claude` is on PATH); `.github/workflows/skills-checks.yml` runs
-the fast set, the mods and the full set on every pull request.
 
 - `known-defects.json` — symbols missing because of an upstream bug,
   each tied to the finding that tracks it. Remove an entry when the
   fix ships. `reflib.py` is the shared frontmatter model the others import.
+
+## Stages
+
+`check.sh` runs the checks and the tests in `tests/` in stages, cheapest
+first, and stops after the first stage that fails. Times measured on a
+Mac with the downloads cached; `--list` prints every check's.
+
+| Stage | Checks | Time | Protects |
+| --- | --- | ---: | --- |
+| `lint` | gen-index, lint-references, lint-frontmatter, findings, budget, style, templates-drift, manifests | <1 s | the text: generated regions, front matter, the budget, copies that must agree |
+| `shell` | shellcheck over every shell script (`bin/uvx` fetches it when not installed) | 1 s | the hooks, shims and template scripts as shell |
+| `unit` | the 27 unittest files under `tests/` | 55 s | each hook, shim, template script and tool, against fakes and temp dirs |
+| `integration` | check-cli, check-symbols, the schema guard on a fetched Node, the template tests under pytest, style-check `--browser`, templates-smoke (`SMOKE_FULL=1`, 2.5 to 4 min), the mods when `claude` is on PATH | 3 to 4.5 min; network | the skills against the pinned Reboot; the templates built and their scenarios run |
+| `behavior` | the evals (`run-evals.sh`) | model calls, money | what an agent decides; prints the cases and the command unless `--run-evals` |
+
+```sh
+tools/check.sh                      # lint, shell, unit (= check-all.sh)
+tools/check.sh --upto integration   # (= check-all.sh --full)
+tools/check.sh --stage unit         # one stage; --only <check> for one check
+tools/check.sh --changed [BASE]     # only what the changed paths can break
+tools/check.sh --changed --explain  # and which PATHS row picked each check
+tools/check.sh --list
+```
+
+`--changed` diffs the working tree (untracked files included) against
+BASE, by default the merge base with `fork/main` (else `origin/main`);
+`--changed HEAD` takes uncommitted work only. `PATHS` in `check.py` maps
+each path to the checks it can break (skills text: check-cli,
+check-symbols and the eval cases whose graders load that skill;
+templates: the template tests, shellcheck, the smoke; hooks: the hook
+tests; `bin/`, `lib/`: the shim tests; a tool or a test: its own test;
+`mods/`: the mods). `lint` runs whole on any change; a path no row
+matches runs `shell` and `unit` whole. `check-all.sh` is a wrapper kept
+for habits and docs. `.github/workflows/skills-checks.yml` runs lint,
+shell and unit as separate steps, the mods, and the integration stage
+on every pull request.
 
 ## Front matter
 

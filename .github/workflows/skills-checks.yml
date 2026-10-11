@@ -9,16 +9,19 @@ on:
 
 jobs:
   fast:
-    # Generated indices in sync, references in the template, findings
-    # schema, budget table, manifests and version pins, the hook tests,
-    # shellcheck over every shell script. No network.
+    # The stages of tools/check.sh that need no network, one step each
+    # so a failure names its stage: lint (generated indices, front
+    # matter, findings, budget, style copies, manifests and pins), shell
+    # (shellcheck over every shell script), unit (the tests in tests/).
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: { python-version: "3.12" }
       - run: shellcheck --version   # preinstalled on the runner image; fail here if not
-      - run: tools/check-all.sh
+      - run: tools/check.sh --stage lint
+      - run: tools/check.sh --stage shell
+      - run: tools/check.sh --stage unit
 
   mods:
     # Each mod's manifest, module and tests, against the Claude Code
@@ -35,13 +38,14 @@ jobs:
       - run: tools/check-mods.sh
 
   full:
-    # Every rbt flag and reboot symbol against the pinned Reboot, the
-    # three templates built from scratch with their scenarios run, and
-    # the stylesheet page rendered in a browser.
+    # The integration stage: every rbt flag and reboot symbol against
+    # the pinned Reboot, the three templates built from scratch with
+    # their scenarios run, and the stylesheet page rendered in a
+    # browser. The mods skip here (no claude); the mods job runs them.
     runs-on: ubuntu-latest
     needs: fast
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: { python-version: "3.12" }
-      - run: tools/check-all.sh --full
+      - run: tools/check.sh --stage integration
