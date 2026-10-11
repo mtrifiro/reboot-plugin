@@ -152,19 +152,23 @@ or links. The models below are the hotel; write yours.
 > **The design, for your review.** Here is the design as we settled
 > it, feature by feature: `Room` owns "booked at most once per night", `Reservation.create`
 > books every room or none and is called only by the app, and each
-> rule has a scenario that will test it. The look: navy on cream,
+> rule has a scenario that will test it. The first prototype is
+> booking a room; cancellations and the housekeeping view follow one at
+> a time once it runs. The look: navy on cream,
 > Reboot's default since you named no brand; name one, or a site, and
 > I'll read it. This is the cheapest moment to change any of it, before
 > anything depends on it. Take your time; I'll
 > wait for your go-ahead or your changes.
 
-> **The prototype is built and tested.** The app is running at
-> http://localhost:9991; all 9 scenarios pass. This is the stage where
-> the code is checked against the design you accepted, so what you see
-> should match the rules we agreed on. Try the screens the way a guest
-> or a manager would: anything the prototype shows is missing, like
-> what happens when a second guest wants the same night, is a new rule,
-> and we can add it to the design from here.
+> **The first prototype is built and tested.** Booking a room is
+> running at http://localhost:9991; all 4 scenarios pass. This is the
+> stage where the code is checked against the design you accepted, so
+> what you see should match the rules we agreed on. Try the screens the
+> way a guest or a manager would: anything the prototype shows is
+> missing, like what happens when a second guest wants the same night,
+> is a new rule, and we can add it to the design from here. Next on
+> the backlog is cancellations; say so and it comes the same way, or
+> pick another.
 
 > **The feature is built and tested.** The full suite ran at this
 > commit: 11 of 12 scenarios pass; the one that doesn't is "A guest
@@ -223,6 +227,9 @@ the card. Under 60 columns, so it never wraps.
 - Writing the implementation (Step 2 onward) before the design is
   accepted, unless the user said up front to build without stopping.
   "No answer is not acceptance."
+- Building a second feature before the first prototype runs and is
+  handed off, or writing every feature's file before the first one
+  runs: the rest wait in the backlog and come one at a time.
 - Folding a rule change into a "fix": a reworded `Rule:`, a changed
   declaration or a loosened authorizer is a Design change however small
   the diff.

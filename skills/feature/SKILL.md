@@ -62,11 +62,12 @@ an API:
 
 Ask whether that is the feature; iterate on the English until they
 agree — the file follows the words. In a build, this is one slice of
-the design conversation: once the file is written (Step 2), the build
-shows the slice of the domain model the feature adds and asks for the
-next; "Accept the Design" closes that conversation, where the user
-accepts the rules, their scenarios and the domain model together,
-before any implementation.
+the design conversation: the build shows the slice of the domain model
+the feature adds and asks for the next; the first prototype is one
+feature, whose file is written now (Step 2) while the rest wait in the
+design's backlog; "Accept the Design" closes that conversation, where
+the user accepts the rules, their scenarios and the domain model
+together, before any implementation.
 
 ## Step 2 — Write it down, tagged `@wip`
 

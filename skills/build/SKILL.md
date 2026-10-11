@@ -84,13 +84,18 @@ take item 0's defaults and say so at the handoff.
    (`AGENTS.md`'s `Data:` line; "keep the data", said at any point,
    writes `keep since <date>` there, committed). Defaults: the web
    app, disposable data, no invariant beyond the brief.
-1. **A slice per feature.** Per capability, follow the [`feature`
-   skill](../feature/SKILL.md): agree on it in plain English and write
-   its `@wip` feature file before the API exists. Then show the slice
-   of the domain model it adds, as rows of the review table ("Accept
-   the Design") under the rows so far, and ask: the next feature, or is
-   that the app? The design derives from those features; the feature
-   skill's Step 2a is this flow's Step 2a.
+1. **A slice per feature, one feature first.** Per capability, follow
+   the [`feature` skill](../feature/SKILL.md)'s Step 1: agree on it in
+   plain English, show the slice of the domain model it adds, as rows
+   of the review table ("Accept the Design") under the rows so far,
+   and ask: the next feature, or is that the app? The conversation
+   ends by naming, in the user's words, the one feature the app exists
+   for: **the first prototype**. Only that feature's `@wip` file is
+   written now (the feature skill's Step 2; its Step 2a is this flow's
+   Step 2a); the rest go to the backlog in `design/design.md`, one line
+   each in the proposed order, and come one at a time through the
+   Update Flow. A brief that implies more than three or four features
+   gets told so, with the order proposed.
 2. **Implement the brief literally** — the interactions the user
    described, not a pattern "common on sites like this". List any
    deviation (extra confirm step, staging area, batching) with its
@@ -145,8 +150,9 @@ take item 0's defaults and say so at the handoff.
      brief per `web-app/references/ui-design.md`.
 5. Write the design, as you state it, to `design/design.md` in the
    project, a slice at a time: the same words the user reads, every
-   choice with its why, the deviations from the brief and the
-   alternatives set aside. Keep it current as the design changes; it
+   choice with its why, the deviations from the brief, the alternatives
+   set aside, and the backlog: the features not yet built, one line
+   each in order. Keep it current as the design changes; it
    is what "Accept the Design" asks them to accept, and it stays in the
    repository when the conversation is gone, a build without stopping
    included.
@@ -266,6 +272,15 @@ web-app (summary vs. detail readers, aggregation, per-caller views):
 read its front-door reading list. Step 1 closes Design; "Accept the
 Design" sits between it and Step 2, where Prove begins.
 
+**The first prototype is one feature, running within fifteen minutes
+of its acceptance.** Steps 1 to 7 build that feature alone: its state
+types, its methods, its page or tool, its scenarios. Note the time at
+acceptance; a step that runs past ten minutes stops and says what is
+taking the time and what it proposes to cut. Until the app has a
+second feature there is no screenshot pass and no page timing (Step
+5), and the suite is the feature's scenarios. Each later feature
+arrives the same way through the Update Flow.
+
 **Once the first feature file exists (Design Phase, item 1), start the
 developer dashboard** with the [`dashboard` skill](../dashboard/SKILL.md):
 its Features page shows the rules and scenarios as they are written,
@@ -298,9 +313,10 @@ reshapes a state type or method.
 
 ### Accept the Design
 
-Design ends here: the domain model (`api/`, generated) and the `@wip`
-feature files exist, and no implementation does. The review table has
-grown on screen a slice at a time; now close the conversation. The
+Design ends here: the domain model the first prototype needs (`api/`,
+generated) and its `@wip` feature file exist, the backlog is written,
+and no implementation does. The review table has grown on screen a
+slice at a time; now close the conversation. The
 first time a project reaches this point, open with the design card
 ([`references/flywheel.md`](references/flywheel.md), "Stage cards").
 Show the whole **review table**, one row per rule, in the design's words:
@@ -311,7 +327,8 @@ Show the whole **review table**, one row per rule, in the design's words:
 
 Every rule in a feature file gets a row; a rule with no owner, method
 or scenario is a gap to name, not to fill silently. List the feature
-files by path, and point at the dashboard's Models and Features pages.
+file by path and the backlog in order, and point at the dashboard's
+Models and Features pages.
 Under the table, **Beyond the brief**: one line per interaction, rule or
 status the design adds to or changes from what the user asked, with its
 reason, so they accept those too; `design/review.md` records their
@@ -476,7 +493,7 @@ Read "Before the frontend".
    404 on every page). An MCP UI needs none: the host frames it.
 5. `npm run build` there (sanity check). web-app: start the app now
    with the [`run` skill](../run/SKILL.md) (Step 7 only hands it off),
-   then `uv run --with playwright python scripts/screenshots.py <routes>` saves every
+   then, from the second feature on, `uv run --with playwright python scripts/screenshots.py <routes>` saves every
    route at desktop and phone width, light and dark; open and check each
    against `ui-design.md` principles 03–09 and its Never list, fix
    what fails in one pass, then pin it with a look scenario per page.
@@ -493,7 +510,7 @@ Read "Before the frontend".
      (`page_timing.py` doesn't measure input; hold to this by
      construction.)
 
-   Time the loads on every route, cold and warm, against the local
+   From the second feature on, time the loads on every route, cold and warm, against the local
    backend with the demo data. web-app: with the app running, on the
    production build, not Vite's dev server:
 
@@ -520,8 +537,9 @@ Read "Before the frontend".
 
 ### Step 6 — Tests
 
-Read "Before the tests". **Write and run every design feature's
-scenarios before handoff**, in the built-in steps of
+Read "Before the tests". **Write and run the feature's scenarios
+before handoff** (the first prototype's one feature; later, each
+feature's as it is built), in the built-in steps of
 `python/references/testing-features.md`:
 - mcp-ui: every action the user should _do_ through the tool surface
   ("add an item and see it listed"), calling the methods the tools call.
@@ -589,8 +607,14 @@ prototype card ([`references/flywheel.md`](references/flywheel.md),
    when there are any, offer the [`report` skill](../report/SKILL.md).
 6. Unless the user asked for only one front door, the one-line offer of
    the other (`app` skill, "At handoff").
+7. The backlog's next feature, proposed: the Update Flow builds it and
+   hands it off running before the one after; the user picks.
 
 ## Update Flow
+
+A feature from the backlog comes here one at a time: agreed, sliced,
+built, run and handed off, about ten minutes each, before the next; the
+user picks what comes next at every handoff.
 
 1. Read `.rbtrc`, `design/design.md` and `design/decisions.md`, the
    API definition, servicer, `main.py` and the frontend entry (mcp-ui:

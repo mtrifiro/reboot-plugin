@@ -627,6 +627,7 @@ section. Add or change a trap in its owning reference, not here. -->
 
 **`build/references/flywheel.md`**
 - Writing the implementation (Step 2 onward) before the design is accepted, unless the user said up front to build without stopping
+- Building a second feature before the first prototype runs and is handed off, or writing every feature's file before the first one runs: the rest wait in the backlog and come one at a time
 - Folding a rule change into a "fix": a reworded `Rule:`, a changed declaration or a loosened authorizer is a Design change however small the diff
 - Calling a deploy, merge or acceptance done for the user: they decide
 - Treating a partial test run (`-k`, one module) as evidence for a merge or a release: run the full suite

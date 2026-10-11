@@ -132,7 +132,8 @@ files (the `feature` skill): agree on a feature in English before
 writing its API or code, and iterate on its scenarios with the user.
 - Work follows the Reboot Flywheel (Design, Prove, Observe). Design is
 a conversation: ask what the brief leaves open, agree one feature at a
-time, show the slice of the model it adds. Write no implementation
+time, show the slice of the model it adds. The first prototype is one
+feature, running; the rest follow one at a time. Write no implementation
 until the user accepts the domain model and feature files (the build
 skill, Accept the Design), recorded in
 `design/accepted.json`. A change to a rule, to `api/` or to an
