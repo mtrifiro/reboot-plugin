@@ -269,10 +269,15 @@ def glob_part(part):
     return re.compile(out + r"\Z")
 
 
-def same_line(path, target):
-    """Whether `path` (maybe a glob) is `target`, holds it, or lies under it."""
+def same_line(path, target, holds=True):
+    """Whether `path` (maybe a glob) is `target` or lies under it, or, with
+    `holds`, is an ancestor of it. Only a command that removes or moves
+    `path` itself reaches what an ancestor holds. A copy or a redirect into
+    an ancestor writes a new name there and leaves the code alone."""
     a = [p for p in path.split("/") if p]
     b = [p for p in target.split("/") if p]
+    if not holds and len(a) < len(b):
+        return False
     for x, y in zip(a, b):
         if re.search(r"[*?[{]", x):
             if not glob_part(x).match(y):
@@ -291,8 +296,8 @@ def shell_writes_code(command, cwd, root):
         word = home + word[1:] if word.startswith("~") else word
         return os.path.normpath(os.path.join(d, word))
 
-    def hit(path):
-        return next((t for t in targets if same_line(path, t)), None)
+    def hit(path, holds=False):
+        return next((t for t in targets if same_line(path, t, holds)), None)
 
     d, subshells, pushed = os.path.normpath(cwd), [], []
     for piece in pieces(command):
@@ -332,9 +337,14 @@ def shell_writes_code(command, cwd, root):
         found = git_targets(rest, d, at) if name == "git" else [at(d, w) for w in write_targets(name, rest)]
         if found == "all":
             return root
-        for path in found:
-            if hit(path):
-                return hit(path)
+        # What removes or moves a path also takes what it holds: the paths
+        # git names, rm and its kin, and every mv operand but the last,
+        # the directory it moves into.
+        removes = name in ("git", "rm", "rmdir", "unlink", "shred")
+        for n, path in enumerate(found):
+            holds = removes or (name == "mv" and n < len(found) - 1)
+            if hit(path, holds):
+                return hit(path, holds)
     return None
 
 
