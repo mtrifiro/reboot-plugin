@@ -81,9 +81,16 @@ One record's detail is a `kv` list in a `drawer` (`drawer-body` scrolls,
 Confirm a destructive action with a `confirm-bar` in place; report a
 finished one with a `notice`.
 
-A well-designed list is a full primary view; don't add a chart to make
-it look visual. Add a second view over the same reader when it answers
-a question the first can't.
+**Highly visual and highly interactive, by default.** Unless the user
+asks for plain, the first build draws the domain's own shape as its
+primary view (a floor plan, a board, a timeline, a calendar), status in
+color with a legend, summary tiles with real numbers. The work happens
+on that view: drag to move, click to open the drawer and act, edit in
+place, detail on hover, and every view updates live as state changes,
+since a Reboot reader pushes each change to the page. Visual is the
+data's shape, not decoration: no chart a list answers better, no
+gradient or glow. Add a second view over the same reader when it
+answers a question the first can't.
 
 **03 Anatomy.** `topbar` (product name, account, theme toggle) →
 `page-head` in a `brand-band` (a headline saying what the page is for, a

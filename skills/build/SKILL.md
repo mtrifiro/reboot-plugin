@@ -302,7 +302,8 @@ waits.
      on every method, written for the AI. A description can't be
      edited once deployed; `mcp=` can
      (`python/references/api-schema-evolution.md`).
-   - The look: the five-line brief (who and on what screen, the task,
+   - The look, highly visual and interactive unless the user asks for
+     plain: the five-line brief (who and on what screen, the task,
      the primary view's question, the accent from the house palette,
      or the user's brand, with its real source, the type) and the primary
      view for the task (`web-app/references/ui-design.md`, 01 to 02).

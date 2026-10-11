@@ -141,21 +141,27 @@ _NARRATE = ("narration as statements of fact at the level of the domain, with th
             "Plugin Browser's writing standard adapted (why before what, short sentences, "
             "no dashes) and the model paragraph at the head of the build skill (How the "
             "build talks; app, Voice; flywheel, Tone)")
+# 2026-10-11, last: the user's designs came out more interesting when
+# asked for "highly visual and highly interactive"; it is the default now.
+_VISUAL = ("highly visual and interactive by default: the domain's shape as the primary "
+           "view, work done on it, live updates (ui-design.md; build, The look)")
+_VISUAL_SIGNAL = ("the design-look evals stay green, and a first build's screenshots show "
+                  "a drawn primary view with direct manipulation unless plain was asked")
 CEILINGS = {
     "mcp-ui": Ceiling(
-        49100, was=48300, since="2026-10-11",
-        closes=f"{_NARRATE}; {_TEACH}; before that: {_SLICES}; {_COUNTED}, and "
+        49200, was=49100, since="2026-10-11",
+        closes=f"{_VISUAL}; {_NARRATE}; {_TEACH}; before that: {_SLICES}; {_COUNTED}, and "
                f"web-app/references/ui-design.md, which mcp-ui/SKILL.md names as "
                f"the principles every front door follows; P1.23, P4.26 "
                f"(mcp-ui/SKILL.md); P4.25, P4.27, P4.32 (api-method-types.md); "
                f"P3.175 (api-state-shapes.md); {_WAVE_3_BUILD}; {_WAVE_3_REACT}; "
                f"{_WAVE_3_PYTHON}",
-        signal=f"{_TEACH_SIGNAL}; {_SLICES_SIGNAL}; {_WAVE_3_SIGNAL}"),
+        signal=f"{_VISUAL_SIGNAL}; {_TEACH_SIGNAL}; {_SLICES_SIGNAL}; {_WAVE_3_SIGNAL}"),
     "web-app": Ceiling(
-        46600, was=45800, since="2026-10-11",
-        closes=f"{_NARRATE}; {_TEACH}; before that: {_SLICES}; {_COUNTED}; {_WAVE_3_BUILD}; "
+        46700, was=46600, since="2026-10-11",
+        closes=f"{_VISUAL}; {_NARRATE}; {_TEACH}; before that: {_SLICES}; {_COUNTED}; {_WAVE_3_BUILD}; "
                f"{_WAVE_3_REACT}; P3.94 (react-client.md); {_WAVE_3_PYTHON}",
-        signal=f"{_TEACH_SIGNAL}; {_SLICES_SIGNAL}; {_WAVE_3_SIGNAL}"),
+        signal=f"{_VISUAL_SIGNAL}; {_TEACH_SIGNAL}; {_SLICES_SIGNAL}; {_WAVE_3_SIGNAL}"),
     "backend-only": Ceiling(
         27000, was=26000, since="2026-10-10",
         closes=_WAVE_3_PYTHON,
