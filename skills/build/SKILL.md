@@ -19,10 +19,13 @@ under **"Which References to Read, and When"**. Differences are marked
 inline (`mcp-ui: … / web-app: …`); a dual-frontend app does both.
 Backend-only work starts from the [`python` skill](../python/SKILL.md).
 Every line to the user is in the build's voice, never the first person,
-and never sparse: the user reads the build as it happens, so each step
-gets two or three sentences on what is being done, why, and what was
-decided, in their nouns; a bare line between tool calls is too little
-(`references/flywheel.md`, Tone).
+never sparse, and about the domain, not the process: the user reads
+the build as it happens, so each step gets two or three sentences on
+their objects, rules and roles and the decisions between them (what a
+stay holds, why a suite is its own object, which rule a night enforces,
+who may cancel), never on which reference or step is in hand; a bare
+line between tool calls is too little (`references/flywheel.md`, Tone,
+and its model paragraph).
 
 The flow is the **Reboot Flywheel**'s first two stages
 ([`references/flywheel.md`](references/flywheel.md)): **Design** runs
@@ -45,11 +48,12 @@ Everything read is re-sent every later turn:
 - **One reference per tool call**; `cat`-ing several can exceed the
   output limit and be cut off unseen.
 - Skip a reading-list line ending *only when …* unless it holds.
-- **Reading is narrated.** Before a reference, one sentence on the
-  question it answers for this app; after it, one or two on what it
-  settled ("the roles reference settles the staff: one roster actor
-  and a custom predicate, so the butler and the concierge see different
-  things"). A silent read is a failure.
+- **Reading is narrated, in the domain's terms.** Before a reference,
+  one sentence on the question about the app it answers; after it, one
+  or two on what it settled for the app ("the staff are one roster with
+  roles, so the butler and the concierge see different things"), never
+  on the reference itself or the tooling it describes. A silent read is
+  a failure.
 - When a reference is wrong or silent about something you hit, append
   an item to the project's `FINDINGS.md` (format inside it) and keep
   going; the `report` skill files them later.

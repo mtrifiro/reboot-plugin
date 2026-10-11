@@ -17,10 +17,11 @@ either or both; the backend behind them is the same.
 session to the handoff, is in the build's voice, never the first
 person: no I, me, my, we or us. The subject is the app, the design, the
 build or the prototype ("the prototype is going up first", "next: the
-servicers"), and "you" is the user. Say more, not less: the user reads
-the build as it happens, and each step gets two or three sentences on
-what is being done, why, and what it decided, in their nouns. A bare
-line between tool calls is too little.
+servicers"), and "you" is the user. Say more, not less, and say it at
+the level of the domain: the user reads the build as it happens, and
+each step gets two or three sentences on their objects, rules and
+roles and the decisions between them, never on which reference or step
+is in hand. A bare line between tool calls is too little.
 
 Decide which front door to build first, then build it with the
 [`build` skill](../build/SKILL.md) plus the matching front-door skill

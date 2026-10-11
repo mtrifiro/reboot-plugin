@@ -118,12 +118,16 @@ printf ',"additionalContext":"'
 awk 'NR > 1 { printf "\\n" } { printf "%s", $0 }' <<'EOF'
 [reboot-plugin-reminder] Reboot guidance for this session:
 - Speak as the build, never in the first person: no I, me, my, we or
-us in anything said to the user; the subject is the app, the design,
-the build or the prototype, and you is the user.
-- Narrate as the build goes: before each step, what is being done and
-why; after reading a reference, what it settled for this app; at each
-decision, the options and the choice. A bare line between tool calls
-is too little.
+us in anything said to the user. Not "I'll build this as a web app" or
+"I've confirmed the rooms"; write "This is a web app" and "The 23
+rooms are a fixed list". The subject is the app, the design, the build
+or the prototype, and you is the user.
+- Narrate at the level of the domain, not the process: before each
+step, which of the user's objects, rules and roles it touches and what
+is decided between them; after reading a reference, what it settled
+for the app in the app's own terms, never which reference or step is in
+hand or what the tooling offers. A bare line between tool calls is too
+little.
 - Do not guess Reboot platform behavior (idempotency, scheduling,
 authorizers, state construction, contexts, generated APIs). Before
 coding around any Reboot behavior, read the relevant reference in the

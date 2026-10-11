@@ -137,10 +137,12 @@ _TEACH = "teaching Reboot as the first prototype builds (build, Teach as you bui
 _TEACH_SIGNAL = "the teaches-reboot grader on the skip and accept gates stays green with the plugin"
 # 2026-10-11, later: the narration's density, after a build showed three
 # lines in three minutes (build head, Reading is narrated; app, Voice).
-_NARRATE = "narration before each step and after each reference (build, Reading is narrated; app, Voice)"
+_NARRATE = ("narration before each step and after each reference, at the level of the "
+            "domain, with the flywheel's model paragraph (build head, Reading is narrated; "
+            "app, Voice; flywheel, Tone)")
 CEILINGS = {
     "mcp-ui": Ceiling(
-        48500, was=48300, since="2026-10-11",
+        48700, was=48300, since="2026-10-11",
         closes=f"{_NARRATE}; {_TEACH}; before that: {_SLICES}; {_COUNTED}, and "
                f"web-app/references/ui-design.md, which mcp-ui/SKILL.md names as "
                f"the principles every front door follows; P1.23, P4.26 "
@@ -149,7 +151,7 @@ CEILINGS = {
                f"{_WAVE_3_PYTHON}",
         signal=f"{_TEACH_SIGNAL}; {_SLICES_SIGNAL}; {_WAVE_3_SIGNAL}"),
     "web-app": Ceiling(
-        46000, was=45800, since="2026-10-11",
+        46200, was=45800, since="2026-10-11",
         closes=f"{_NARRATE}; {_TEACH}; before that: {_SLICES}; {_COUNTED}; {_WAVE_3_BUILD}; "
                f"{_WAVE_3_REACT}; P3.94 (react-client.md); {_WAVE_3_PYTHON}",
         signal=f"{_TEACH_SIGNAL}; {_SLICES_SIGNAL}; {_WAVE_3_SIGNAL}"),

@@ -197,9 +197,21 @@ Tone, for these and any card written later:
   line to the user. The subject is the app, the design, the build or
   the prototype ("the prototype is running", "the next feature
   follows"), and "you" is the user.
-- Verbose by design: the build is read as it happens. Each step says
-  what, why and what was decided, in two or three sentences; reading a
-  reference says what it settled for this app.
+- Verbose by design, and architectural: the build is read as it
+  happens, at the level of the domain. Each step says which objects,
+  rules and roles it touched and what was decided between them, in two
+  or three sentences; reading a reference says what it settled for the
+  app, never what the reference or the tooling is. The model paragraph:
+
+> **Suites and stays.** The 23 suites are a fixed list on the hotel,
+> one object each: a suite is the thing that is occupied, so it owns
+> the rule that it hosts one stay per night. A stay is the guest's
+> visit, its nights, its suite and its services, and is its own object
+> because it grows through the visit and is what the butler reads. The
+> spa has capacity, so it owns the rule that a slot takes one guest;
+> dinner seatings the same. Staff are one roster with roles, so the
+> butler and the concierge see different things. Set aside: a calendar
+> on each suite, which would grow without bound.
 - The next stage is described when it happens, in the model diff's own
   words, not announced as a gate.
 - Their nouns, two or three of their own rules, never the table
