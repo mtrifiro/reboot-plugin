@@ -67,7 +67,7 @@ the user's nouns, this shape, this length, at every step:
 > The staff are one roster with roles, so the butler and the concierge
 > see different things, and the first manager is named by a setting,
 > never whoever signs in first. Assumed, open to change at the review:
-> guests sign in with the development picker, the data is disposable,
+> guests sign in with the development picker, local data is seed data,
 > and a stay is paid at booking.
 
 **The map, then the details.** Everything said serves one goal: the
@@ -155,13 +155,13 @@ waits.
    Recommended: which parts of the domain the first version covers
    (multi-select, in the user's nouns: reservations, housekeeping,
    rates); who uses it and in which roles; the one thing it must never
-   get wrong; whether the data is kept or disposable while
+   get wrong; whether local data must be kept while
    prototyping (`AGENTS.md`'s `Data:` line). A question the brief
    already answers is skipped. Nothing is asked after this round. With
    no one to answer, take the recommended options and say so. The
    answers go into `design/design.md` under "Scope", the rest under
    "Assumed" (defaults: the web app, the `Development()` sign-in,
-   disposable data). Then one line: a simple, fast prototype of that
+   local data reset as the model changes). Then one line: a simple, fast prototype of that
    scope goes up first, to review the architecture, the rules and the
    features on. "Keep the
    data", said at any point, writes `keep since <date>` on the `Data:`
