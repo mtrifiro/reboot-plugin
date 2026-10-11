@@ -23,16 +23,24 @@ words ("a class or a membership"). An existing project skips it.
 > one request at a time, so the rules you describe hold without a
 > database to manage.
 >
-> Designing a Reboot app proceeds like this, with a report at each
-> milestone:
+> Designing a Reboot app proceeds like this, through the three stages
+> of the **Reboot Flywheel**. Each milestone ends in a report with its
+> evidence, and every report is kept in the project.
+>
+> **Design**, does the design say what you mean?
 > 1. A few questions about scope.
 > 2. The domain model: the objects, their methods, and who may call
 >    each, shown as a map of the app.
 > 3. The feature spec: each capability written as rules and examples
 >    in plain English, which become the app's tests.
+>
+> **Prove**, does the code do what the design says?
 > 4. The build: the code behind every method, and the pages.
 > 5. The full feature suite, then the pages in a browser.
-> 6. Your review on the running app, then new features one at a time.
+> 6. Your review on the running app. Accepting it closes the first turn.
+>
+> **Observe**, what is the running app doing, and why? What it shows
+> starts the next turn: new features, one at a time.
 >
 > Interrupt at any time. Questions along the way are welcome, and the
 > build answers each one before it goes on.

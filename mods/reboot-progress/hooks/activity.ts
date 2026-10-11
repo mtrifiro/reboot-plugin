@@ -25,7 +25,7 @@ export const TESTING = 'Waiting for the tests to finish'
  * here rather than to the chat, which hears only its reports.
  */
 export function stepLine(command: string): string | null {
-  const m = command.match(/(?:^|&&\s*|;\s*)(?:\S*\/)?reboot-now\s+([^;&|<>]+?)\s*$/)
+  const m = command.match(/(?:^|&&\s*|;\s*)(?:\S*\/)?reboot-now\s+([^;&|<>\n]+?)\s*(?:$|[;&|<>\n])/)
   const line = m?.[1]?.replace(/^(["'])(.*)\1$/, '$2').trim()
   return line ? line.slice(0, 200) : null
 }

@@ -139,11 +139,13 @@ uv run rbt dashboard
 
 Once, for good: the page tracks its viewers (`Presence`) and the
 developer's reopen preference, which `rbt dev run` consults. Never
-re-open it on reloads or restarts. Tell the user where it is and what
-it shows now, e.g. "The developer dashboard is at
-http://127.0.0.1:<port>/. Its Models page shows each object, its state
-and its methods. The Call Graph fills in once the methods' code is
-written.", and continue the build.
+re-open it on reloads or restarts. During a build, say nothing in the
+chat: `reboot-now Starting the Reboot developer dashboard` for the band,
+and the domain-model report names it and what it shows. Asked for it
+directly, tell the user where it is and what it shows now: "The Reboot
+developer dashboard is at http://127.0.0.1:<port>/. Its Models page
+shows each domain object, its state and its methods. The Call Graph
+fills in once the methods' code is written."
 
 ## Known issues
 

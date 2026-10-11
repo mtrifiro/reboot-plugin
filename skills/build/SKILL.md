@@ -57,17 +57,24 @@ welcome says it now, with its examples from the brief, before anything else.
 
 **The reports' frame.** The brief, each milestone report and the
 review stand apart from the work around them: a horizontal rule
-(`---`), a `##` title, an intro of one or two sentences saying what
+(`---`), a `#` title in title case, the largest heading, an intro of one or two sentences saying what
 the report is and what the user does with it, the body, what comes
-next and why, a closing note in italics, and a second rule. The note
+next and why, **Evidence so far**, a closing note in italics, and a
+second rule. Evidence so far lists what this milestone proved, each a
+fact with its count or date and the file that holds it: "6 feature
+files, 42 scenarios, in `tests/`. None has run yet." The review
+gathers every report's evidence, each line linked to its report. Sections
+inside take `###`, so the title stands well above them. The note
 says what the report is and where it is kept: "*This is the domain-model
 report. It is saved as `design/reports/2-domain-model.md`, with every
 report from this build, in order.*" The build writes the same text,
-without the rules, to that file before sending it. Titles and files:
-The brief (`1-brief.md`), The domain model (`2-domain-model.md`), The
-feature spec (`3-feature-spec.md`), The app is built (`4-built.md`),
-The full feature suite (`5-full-suite.md`), Your review
-(`6-review.md`). A later feature's reports continue the numbering,
+without the rules, to that file before sending it. Each title names
+the Reboot Flywheel stage it belongs to, the words the progress band
+uses. Titles and files: Reboot Design · The Brief (`1-brief.md`),
+Reboot Design · Proposed Domain Model (`2-domain-model.md`), Reboot
+Design · Feature Spec (`3-feature-spec.md`), Reboot Prove · The App Is
+Built (`4-built.md`), Reboot Prove · The Full Feature Suite
+(`5-full-suite.md`), Reboot Prove · Your Review (`6-review.md`). A later feature's reports continue the numbering,
 `7-feature-spec-<feature>.md`.
 
 **The milestone reports.** Each intro opens with its milestone in one
@@ -75,7 +82,7 @@ plain sentence.
 
 **1. The app has a domain model**, once Step 1 has written the API
 file and the dashboard is open. It opens "The app has a proposed domain
-model." and holds, under short headings:
+model." and holds, under `###` headings:
 
 1. **The map**, a table with one row per object, in the user's nouns.
    Its columns are the three design questions: what the objects are,
@@ -104,34 +111,31 @@ model." and holds, under short headings:
    > Set aside: a calendar on each suite, which would grow without bound,
    > and a single hotel object holding every stay, which would serialize
    > every booking behind every other.
-   >
-   > The staff are one roster with roles, so the butler and the concierge
-   > see different things, and the first manager is named by a setting,
-   > never whoever signs in first. Assumed, open to change at the review:
-   > guests sign in with the development picker, local data is seed data,
-   > and a stay is paid at booking.
 
 3. **Roles**: who signs in and what each role may do.
 4. **Set aside**: each alternative not taken, with its reason.
 5. **Assumed**, open to change at the review.
-6. **The dashboard**: its Models page shows each object's state and
-   methods. The Call Graph, which method calls which, fills in once the
+6. **The Reboot developer dashboard**, by that name and at its address:
+   its Models page shows each object's state and methods. The Call Graph, which method calls which, fills in once the
    methods have code.
 
-**2. The app has a feature spec**, once every feature file matches the
-model and has run red (Step 2a). It opens "The app has a feature spec."
-and holds each feature by name, then each rule and, under it, each
+**2. The app has a feature spec**, right after the domain-model report,
+once every feature file is written and matches the model, before the
+project shell. It opens "The app has a feature spec." and holds each feature by name, then each rule and, under it, each
 scenario in plain English, its name and what it shows ("A second guest
 asks for a booked room: refused, the first stay unchanged"). These are
 the app's tests and the rules it promises, so the user corrects them
 here, before any code; the dashboard's Features page shows the same.
-It says why every scenario ran red first: each is proven able to fail,
-and one that passed before the code existed would check nothing.
+Its next steps say what happens before any code and why: the project
+shell is set up, then every scenario runs against empty methods and
+fails, since a scenario that passed before the code existed would check
+nothing. The next report gives the count that failed.
 
 **3. The app has been built**, the first time every method has its
 code, the authorizers say who may call each, and the pages render. It
-marks the build's biggest transition, from proposal to running code,
-and opens "The app has been built." It holds what changed (each method
+says every scenario ran red before the code (Step 2a), marks the
+build's biggest transition, from proposal to running code, and opens
+"The app has been built." It holds what changed (each method
 has its body, the callers are enforced, the app serves its pages at its
 address), what to open (the app, and the dashboard, whose Call Graph
 now shows which method calls which), and anything not yet working and
@@ -223,7 +227,7 @@ waits.
    in the user's nouns, so a wrong guess is caught before the model:
 
    > ---
-   > ## The brief
+   > # Reboot Design · The Brief
    > This brief restates what the first version will hold, so a wrong
    > guess is caught before the model is drawn. A proposed model is
    > being built. Objects include rooms, stays, the nights each room is
@@ -233,14 +237,15 @@ waits.
    > - **Who uses it:** guests book and make requests. Staff sign in
    >   with one role and see every room.
    > - **Never wrong:** a room is never booked twice for one night.
-   > - **How a guest books:** a room type for a span of nights. The
-   >   room is chosen at check-in.
    > - **Assumed:** a web app, development sign-in, sample data that
    >   resets when the model changes.
    > - **Left for later:** rates, payments, more staff roles.
    >
    > The domain-model report comes next, with the dashboard open on
    > the model.
+   >
+   > **Evidence so far:** your scope answers and what was assumed, in
+   > `design/design.md`.
    >
    > *This is the brief. It is saved as `design/reports/1-brief.md`,
    > where every report from this build is kept, in order.*
@@ -431,7 +436,7 @@ implementation.
 **The first prototype is the whole design, built straight through and
 reported at each milestone.** Steps 1 to 7 build every feature file's
 model, methods, pages or tools and scenarios. The milestone reports
-come after Step 1 (domain model), Step 2a (feature spec), the first
+come after Step 1 (domain model, then feature spec), the first
 complete build (built) and as Step 6 starts (the full suite), the
 review after Step 7, and the steps between are quiet. The first prototype skips the screenshot pass
 and page timing (Step 5); they come with the first update.
@@ -440,11 +445,8 @@ and page timing (Step 5); they come with the first update.
 first look at Reboot, and the design is what it teaches most. In the
 domain-model report, each object's paragraph names the design
 question its choices answer, what the object is, what it can do or who
-may call it, and the principle behind them: "A
-reservation is its own object, because it lives and changes apart from
-the room"; "`book` is a transaction, because it holds every night or
-none"; "only the app calls `hold`, so no guest can claim a night
-directly". Reboot's terms are defined once there: the domain model is
+may call it, and the principle behind them, as the hotel model above
+does. Reboot's terms are defined once there: the domain model is
 made of domain objects; each is defined by its state type, what it
 holds, and its methods, and runs them one at a time; a reader, writer,
 transaction or workflow is what a method may touch; an authorizer is

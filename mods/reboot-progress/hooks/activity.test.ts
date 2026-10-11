@@ -21,6 +21,8 @@ describe('activity', () => {
     expect(stepLine('reboot-now Running the full suite, 42 scenarios')).toBe('Running the full suite, 42 scenarios')
     expect(stepLine('cd /p/hotel && /plugin/bin/reboot-now Writing the pages')).toBe('Writing the pages')
     expect(stepLine('reboot-now "Quoted line"')).toBe('Quoted line')
+    expect(stepLine('reboot-now Copying the project shell; P=/x; copy.sh web-app .')).toBe('Copying the project shell')
+    expect(stepLine('reboot-now Writing the servicers && grep -n x y')).toBe('Writing the servicers')
     expect(stepLine('reboot-now')).toBe(null)
     expect(stepLine('cat bin/reboot-now')).toBe(null)
     expect(stepLine('grep -n now bin/reboot-now')).toBe(null)

@@ -17,7 +17,7 @@ every message the build showed the user and reports:
 - the messages between reports that are none of the allowed lines (the
   scope questions, the brief after them, a question only the user
   can answer, a long-step notice), with their opening words;
-- reports missing their frame: a `##` title, the rules around them, and
+- reports missing their frame: a `#` title, the rules around them, the evidence so far, and
   the closing note naming the file under `design/reports/`;
 - lines in the first person, "settled", "actor" (a domain object to the user), em or en dashes, semicolons.
 
@@ -45,7 +45,8 @@ FIRST_PERSON = re.compile(r"(?:^|[.!?]\s+|\n)\s*(I|I'll|I'm|I've|I'd|We|We'll|We
 ACTOR = re.compile(r"\bactors?\b", re.I)
 SETTLED = re.compile(r"\bsettled\b", re.I)
 DASH = re.compile(r"[—–]")
-FRAMED = [re.compile(r"^## ", re.M), re.compile(r"^-{3,}\s*$", re.M), re.compile(r"design/reports/")]
+FRAMED = [re.compile(r"^# ", re.M), re.compile(r"^-{3,}\s*$", re.M),
+          re.compile(r"Evidence so far", re.I), re.compile(r"design/reports/")]
 CODE = re.compile(r"```.*?```|`[^`\n]*`", re.S)
 
 
