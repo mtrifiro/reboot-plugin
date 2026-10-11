@@ -9,10 +9,10 @@ allowed-tools: Bash, Read, Write, Glob, Grep, Edit
 
 **Say the welcome first,** the moment this skill loads, before the
 routing line or the scope round. It is visible text in the chat, sent
-verbatim, never written in thinking, where the user sees only the app's
-summary of it. The same response goes on at once with the `build` and
-front-door skills: a response that holds only the welcome ends the turn,
-and the build sits idle until the user types. It is fixed text except
+verbatim as a message of its own with no tool call, never written in
+thinking, where the user sees only the app's summary of it. The plugin
+refuses tool calls until it is sent, then carries the build on to the
+`build` and front-door skills. It is fixed text except
 the examples in angle brackets: two things from the user's brief that
 will be objects, in the user's words ("a class or a membership"). An
 existing project skips it.
