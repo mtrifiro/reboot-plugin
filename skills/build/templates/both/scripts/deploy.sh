@@ -121,7 +121,13 @@ else
   fi
   echo "$api_check" | while IFS= read -r line; do say "API: $line"; done
   if [ "$backend" = auto ]; then
-    if [ -n "$(git diff --name-only "$last_backend"..HEAD -- backend/ api/ .rbtrc Dockerfile)" ]; then backend=yes; else backend=no; fi
+    # What the backend image ships: its code and API, the dependency pins,
+    # and `frontend/` when `rbt serve` serves the UIs built from it (an
+    # MCP UI; python/references/lifecycle-dockerfile.md).
+    shipped="backend/ api/ .rbtrc Dockerfile pyproject.toml requirements.lock requirements.txt uv.lock"
+    if grep -q '^serve run --frontend-dist-path=' .rbtrc 2>/dev/null; then shipped="$shipped frontend/"; fi
+    # shellcheck disable=SC2086  # a word list of paths
+    if [ -n "$(git diff --name-only "$last_backend"..HEAD -- $shipped)" ]; then backend=yes; else backend=no; fi
   fi
 fi
 if [ "$backend" = yes ]; then say "backend: deploy${last_backend:+ (production runs $last_backend)}"

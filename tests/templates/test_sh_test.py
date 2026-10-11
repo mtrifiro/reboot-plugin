@@ -138,6 +138,47 @@ class TestShTest(unittest.TestCase):
         self.assertEqual(r.returncode, 1)
         self.assertIn("partial", r.stderr)
 
+    def test_a_filtered_or_collect_only_run_is_not_full(self) -> None:
+        r = self.test_sh("full", "--collect-only")
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        record = self.record()
+        self.assertFalse(record["full"], "collect-only runs nothing")
+        self.assertEqual(record["passed"], 0)
+        self.test_sh("full", "--deselect", "tests/kitchen_test.py::test_kitchen")
+        self.assertFalse(self.record()["full"], "a deselect narrows the run")
+        self.test_sh("full", "--ignore=tests/kitchen_test.py")
+        self.assertFalse(self.record()["full"], "an ignore narrows the run")
+        self.test_sh("full", "--lf")
+        self.assertFalse(self.record()["full"], "a rerun of the last failures narrows the run")
+
+    def test_an_expected_failure_and_an_empty_run_are_refused(self) -> None:
+        (self.project / "tests" / "kitchen_test.py").write_text(
+            "import pytest\n# scenarios('kitchen.feature')\n"
+            "@pytest.mark.xfail\ndef test_kitchen():\n    assert False\n")
+        self.git("commit", "-qam", "an expected failure")
+        r = self.test_sh("full")
+        self.assertEqual(r.returncode, 0, "pytest passes an xfail")
+        record = self.record()
+        self.assertTrue(record["full"])
+        self.assertEqual(record["failed"], 1, "an xfail is a failure")
+        self.assertEqual(record["exit"], 0)
+        sha = self.git("rev-parse", "HEAD")
+        r = self.hook(f"refs/heads/main {sha} refs/heads/main {'0' * 40}\n")
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("1 failing scenario", r.stderr)
+        for name in ("orders_test.py", "kitchen_test.py"):
+            (self.project / "tests" / name).write_text("# no scenarios yet\n")
+        self.git("commit", "-qam", "nothing to run")
+        r = self.test_sh("full")
+        self.assertEqual(r.returncode, 5, "pytest: no tests collected")
+        record = self.record()
+        self.assertTrue(record["full"])
+        self.assertEqual((record["passed"], record["exit"]), (0, 5))
+        sha = self.git("rev-parse", "HEAD")
+        r = self.hook(f"refs/heads/main {sha} refs/heads/main {'0' * 40}\n")
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("exited with status 5", r.stderr)
+
     def hook(self, stdin: str) -> subprocess.CompletedProcess:
         return subprocess.run(["sh", ".githooks/pre-push", "origin", "git@example.com:x.git"],
                               cwd=self.project, input=stdin, capture_output=True, text=True)

@@ -9,12 +9,16 @@ reach `main`. Imported by `conftest.py`; git-ignored.
      "tree": "<the working tree's git hash>",
      "passed": 12, "failed": 0, "wip": 2, "blocked": 1}
 
-`full` is false when the run was narrowed (a path, `-k`, `-m`): a
-partial run is not evidence for a release. `tree` is the working tree
-as git would store it, every tracked and untracked (not ignored) file
-included, so the record names exactly what ran. `wip` counts scenarios
-tagged `@wip` that ran (they pass or fail like any other); `blocked`
-counts `@blocked` ones, which are skipped with their reason.
+`full` is false when the run was narrowed (a path, `-k`, `-m`, a
+deselect, an ignore, `--lf`, `--sw`, `--collect-only`): a partial run is
+not evidence for a release. `exit` is pytest's status: an interrupted or
+errored run is not evidence either. `failed` counts a scenario marked
+`xfail` too: an expected failure is still a failure. `tree` is the
+working tree as git would store it, every tracked and untracked (not
+ignored) file included, so the record names exactly what ran. `wip`
+counts scenarios tagged `@wip` that ran (they pass or fail like any
+other); `blocked` counts `@blocked` ones, which are skipped with their
+reason; `skipped` counts every other skip.
 
 While a run is on, `tests/.suite-running` holds the pytest process's
 pid; the plugin's suite guard refuses regenerating, restarting and code
@@ -55,21 +59,23 @@ def _tree() -> str:
 
 # Options whose next argument is a value, not a path to run.
 _TAKES_VALUE = {"-p", "-o", "-c", "-n", "-W", "-r", "--rootdir", "--deselect",
-                "--ignore", "--confcutdir", "--basetemp", "--junitxml", "--tb",
-                "--recording-slowmo", "--recording-dwell"}
+                "--ignore", "--ignore-glob", "--confcutdir", "--basetemp", "--junitxml",
+                "--tb", "--recording-slowmo", "--recording-dwell"}
+# Options that leave scenarios out, or stop before the end.
+_NARROWS = {"-k", "-m", "--deselect", "--ignore", "--ignore-glob", "--lf", "--last-failed",
+            "--sw", "--stepwise", "--co", "--collect-only"}
 
 
 def _narrowed(args: list[str]) -> bool:
-    """Whether the run was narrowed to a path, `-k` or `-m`."""
+    """Whether the run was narrowed: to a path, by `-k`, `-m`, a deselect
+    or ignore, a rerun of the last failures, stepwise, or collect-only."""
     previous = ""
     for arg in args:
-        if previous in ("-k", "-m"):
-            previous = ""
-            continue
         if previous in _TAKES_VALUE:
             previous = ""
             continue
-        if arg in ("-k", "-m") or arg.startswith(("-k=", "-m=")):
+        name = arg.split("=", 1)[0]
+        if name in _NARROWS:
             return True
         if not arg.startswith("-"):
             return True
@@ -102,7 +108,8 @@ def pytest_terminal_summary(terminalreporter, exitstatus, config) -> None:  # ty
         for r in stats.get(key, [])
         if getattr(r, "when", "") == "call"
     ]
-    failed = sum(1 for r in calls if r.outcome == "failed") + len(stats.get("error", []))
+    failed = (sum(1 for r in calls if r.outcome == "failed") + len(stats.get("error", []))
+              + len(stats.get("xfailed", [])))
     skipped = stats.get("skipped", [])
     narrowed = _narrowed(list(config.invocation_params.args))
     record = {
@@ -110,11 +117,13 @@ def pytest_terminal_summary(terminalreporter, exitstatus, config) -> None:  # ty
         "revision": _git("rev-parse", "--short", "HEAD"),
         "dirty": bool(_git("status", "--porcelain", "--", "api", "backend", "tests", "web", "frontend")),
         "full": not narrowed,
+        "exit": int(exitstatus),
         "tree": _tree(),
         "passed": sum(1 for r in calls if r.outcome == "passed"),
         "failed": failed,
         "wip": sum(1 for r in calls if "wip" in r.keywords),
         "blocked": sum(1 for r in skipped if "blocked" in r.keywords),
+        "skipped": sum(1 for r in skipped if "blocked" not in r.keywords),
     }
     partial = PATH.with_suffix(".json.partial")
     partial.write_text(json.dumps(record, indent=2) + "\n")

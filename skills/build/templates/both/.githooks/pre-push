@@ -36,6 +36,10 @@ if not record.get("full"):
     why = "the last run was partial"
 elif record.get("failed", 0):
     why = f"the last run had {record['failed']} failing scenario(s)"
+elif record.get("exit", 0):
+    why = f"the last run exited with status {record['exit']} (interrupted, or an error outside a scenario)"
+elif not record.get("passed", 0):
+    why = "the last run ran no scenario"
 elif record.get("tree") != tree:
     why = "the tree being pushed is not the one the last full run passed on"
 if why:
