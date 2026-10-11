@@ -117,6 +117,9 @@ printf '{"hookSpecificOutput":{"hookEventName":"%s"' "$event"
 printf ',"additionalContext":"'
 awk 'NR > 1 { printf "\\n" } { printf "%s", $0 }' <<'EOF'
 [reboot-plugin-reminder] Reboot guidance for this session:
+- Speak as the build, never in the first person: no I, me, my, we or
+us in anything said to the user; the subject is the app, the design,
+the build or the prototype, and you is the user.
 - Do not guess Reboot platform behavior (idempotency, scheduling,
 authorizers, state construction, contexts, generated APIs). Before
 coding around any Reboot behavior, read the relevant reference in the

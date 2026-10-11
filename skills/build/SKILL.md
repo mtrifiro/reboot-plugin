@@ -18,6 +18,8 @@ front door's concepts, the project layout, and each step's reading list
 under **"Which References to Read, and When"**. Differences are marked
 inline (`mcp-ui: … / web-app: …`); a dual-frontend app does both.
 Backend-only work starts from the [`python` skill](../python/SKILL.md).
+Every line to the user is in the build's voice, never the first person
+(`references/flywheel.md`, Tone).
 
 The flow is the **Reboot Flywheel**'s first two stages
 ([`references/flywheel.md`](references/flywheel.md)): **Design** runs

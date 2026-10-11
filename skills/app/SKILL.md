@@ -13,6 +13,12 @@ interface they use to get to its data and actions. There are two: a
 inside an AI chat app such as Claude or ChatGPT). An app can have
 either or both; the backend behind them is the same.
 
+**Voice.** Everything said to the user, from the first line of the
+session to the handoff, is in the build's voice, never the first
+person: no I, me, my, we or us. The subject is the app, the design, the
+build or the prototype ("the prototype is going up first", "next: the
+servicers"), and "you" is the user.
+
 Decide which front door to build first, then build it with the
 [`build` skill](../build/SKILL.md) plus the matching front-door skill
 (`mcp-ui`, `web-app`, or both). The backend is always ready for both.
