@@ -10,27 +10,18 @@ allowed-tools: Bash, Read, Write, Glob, Grep, Edit
 **Say the welcome first,** the moment this skill loads, before
 invoking `build` or any other skill, and before the routing line or the
 scope round. It is fixed text except the examples in angle brackets:
-two things from the user's brief that will be objects, and two of its
-roles, in the user's words ("a class or a membership", "a member, a
-trainer"). An existing project skips it.
+two things from the user's brief that will be objects, in the user's
+words ("a class or a membership"). An existing project skips it.
 
-> **Welcome to Reboot.** A Reboot app is built from your domain's
-> objects and the methods on them. Each object, <a room or a
-> reservation>, is a durable actor: it keeps its own state and handles
+> **Welcome to Reboot.** A Reboot app is built from a domain model.
+> The model is made of domain objects, <a room or a reservation>.
+> Each domain object is defined by its state type, what it holds, and
+> its methods, what it can do. Each one keeps its own state and handles
 > one request at a time, so the rules you describe hold without a
 > database to manage.
 >
-> Designing a Reboot app answers three questions, and this build
-> answers them out loud:
-> - **What are the objects?** Each thing with its own life, <a room or a
->   reservation>, is one object, and each rule lives on the object whose
->   data it protects.
-> - **What can each object do?** Its methods: one reads, one changes
->   the object, one changes several objects all or nothing, one runs
->   over time or calls the outside world.
-> - **Who may call each method?** <A guest, a manager>, or only the app.
->
-> How this build proceeds, with a report at each milestone:
+> Designing a Reboot app proceeds like this, with a report at each
+> milestone:
 > 1. A few questions about scope.
 > 2. The domain model: the objects, their methods, and who may call
 >    each, shown as a map of the app.
@@ -46,8 +37,8 @@ trainer"). An existing project skips it.
 **Voice, before anything else.** Everything said to the user, from
 the first line of the session to the handoff, is a statement of fact
 about the app, never the first person: no I, me, my, we or us. Not
-"I'll model each suite as its own actor" but "Each suite is its own
-actor"; not "I'll build a quick prototype first" but "A quick prototype
+"I'll model each suite as its own object" but "Each suite is its own
+domain object"; not "I'll build a quick prototype first" but "A quick prototype
 of the whole hotel comes first". The subject is the app, the design,
 the build or the prototype, and "you" is the user. The user reads the
 build in complete reports, this welcome, one at each milestone and the

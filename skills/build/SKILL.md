@@ -27,10 +27,10 @@ being tested with the full feature suite) and the review at the
 handoff (Step 7). Between them the build is
 quiet: no commentary on steps, references, files or fixes, never "Now
 the styles the timeline needs" or "The app shell is in place. The gate
-board comes next", since the progress band shows where it stands. The only lines between reports:
-the scope questions, one line after them ("A proposed model is being
-built. Objects include flights, gates, and the assignments between
-them."), a question only the user can answer, and one sentence when a
+board comes next". A step line goes to the progress band instead, as
+a command: `reboot-now Writing the servicers`, plain words, no quotes,
+no apostrophes. The only lines between reports:
+the scope questions, the brief after them (Design Phase, item 0), a question only the user can answer, and one sentence when a
 step runs past ten minutes, saying what takes the time. Never the
 first person: a sentence that starts with I is rewritten before it is
 sent. The model is proposed until the user accepts it at the review,
@@ -41,9 +41,10 @@ The sentences, so a newcomer understands on one reading: the first
 sentence about an object says why it exists, the harm it prevents or
 the job it does, with the object as its subject, and what it holds
 comes after. Each sentence under about twenty words, one idea, an
-active verb. The user's own nouns, and Reboot's own terms (actor,
-writer, transaction, authorizer, scenario), each said in a few words
-the first time. Facts stated directly, no hedging, no praise. No em or
+active verb. The user's own nouns, and Reboot's own terms (domain
+object, state type, writer, transaction, authorizer, scenario), each
+said in a few words the first time. Never "actor" to the user, though
+the references use it: it is a domain object. Facts stated directly, no hedging, no praise. No em or
 en dashes, no semicolons, no parentheses, no closing sentence that
 sums up; a report's structure is short headings, a table and lists, and none of: crucial,
 essential, vital, key, robust, seamless, leverage, delve, empower,
@@ -52,15 +53,31 @@ comprehensive, pivotal.
 A new build whose first words to the user were not the `app` skill's
 welcome says it now, with its examples from the brief, before anything else.
 
-**The milestone reports.** Each opens with its milestone in one plain
-sentence, and ends with what comes next and why, one line each.
+**The reports' frame.** The brief, each milestone report and the
+review stand apart from the work around them: a horizontal rule
+(`---`), a `##` title, an intro of one or two sentences saying what
+the report is and what the user does with it, the body, what comes
+next and why, a closing note in italics, and a second rule. The note
+says what the report is and where it is kept: "*This is the domain-model
+report. It is saved as `design/reports/2-domain-model.md`, with every
+report from this build, in order.*" The build writes the same text,
+without the rules, to that file before sending it. Titles and files:
+The brief (`1-brief.md`), The domain model (`2-domain-model.md`), The
+feature spec (`3-feature-spec.md`), The app is built (`4-built.md`),
+The full feature suite (`5-full-suite.md`), Your review
+(`6-review.md`). A later feature's reports continue the numbering,
+`7-feature-spec-<feature>.md`.
+
+**The milestone reports.** Each intro opens with its milestone in one
+plain sentence.
 
 **1. The app has a domain model**, once Step 1 has written the API
 file and the dashboard is open. It opens "The app has a proposed domain
 model." and holds, under short headings:
 
 1. **The map**, a table with one row per object, in the user's nouns.
-   Its columns are the welcome's three questions:
+   Its columns are the three design questions: what the objects are,
+   what each can do, and who may call it:
 
    | Object, and the rules it owns | What it can do | Who may call it |
    | --- | --- | --- |
@@ -200,9 +217,35 @@ waits.
    answers go into `design/design.md` under "Scope", the rest under
    "Assumed" (defaults: the web app, the `Development()` sign-in).
    Local data is seed data, reset when the model changes, never asked.
-   Then one line, its objects in the user's nouns: "A proposed model is
-   being built. Objects include flights, gates, and the assignments
-   between them."
+   Then the brief, everything the first version is understood to hold,
+   in the user's nouns, so a wrong guess is caught before the model:
+
+   > ---
+   > ## The brief
+   > This brief restates what the first version will hold, so a wrong
+   > guess is caught before the model is drawn. A proposed model is
+   > being built. Objects include rooms, stays, the nights each room is
+   > held, and guest requests.
+   > - **Covers:** reservations, check-in and check-out, housekeeping,
+   >   guest requests.
+   > - **Who uses it:** guests book and make requests. Staff sign in
+   >   with one role and see every room.
+   > - **Never wrong:** a room is never booked twice for one night.
+   > - **How a guest books:** a room type for a span of nights. The
+   >   room is chosen at check-in.
+   > - **Assumed:** a web app, development sign-in, sample data that
+   >   resets when the model changes.
+   > - **Left for later:** rates, payments, more staff roles.
+   >
+   > The domain-model report comes next, with the dashboard open on
+   > the model.
+   >
+   > *This is the brief. It is saved as `design/reports/1-brief.md`,
+   > where every report from this build is kept, in order.*
+   > ---
+
+   A line the user did not answer says it was assumed. Nothing is said
+   between the brief and that report.
 1. **The whole app, in one report.** Write every capability's `@wip`
    feature file from the scope ([`feature`
    skill](../feature/SKILL.md), Step 2; its Step 2a is this flow's).
@@ -393,13 +436,15 @@ and page timing (Step 5); they come with the first update.
 
 **Teach in the reports, design first.** The first build is the user's
 first look at Reboot, and the design is what it teaches most. In the
-domain-model report, each object's paragraph names the welcome's
-question its choices answer and the principle behind them: "A
+domain-model report, each object's paragraph names the design
+question its choices answer, what the object is, what it can do or who
+may call it, and the principle behind them: "A
 reservation is its own object, because it lives and changes apart from
 the room"; "`book` is a transaction, because it holds every night or
 none"; "only the app calls `hold`, so no guest can claim a night
-directly". Reboot's terms are defined once there: an actor keeps its
-state and runs its methods one at a time; a reader, writer,
+directly". Reboot's terms are defined once there: the domain model is
+made of domain objects; each is defined by its state type, what it
+holds, and its methods, and runs them one at a time; a reader, writer,
 transaction or workflow is what a method may touch; an authorizer is
 who may call it; a scenario is a rule in English the suite runs. The
 review adds the dev loop, the dashboard and `rbt inspect`. A term the

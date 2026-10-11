@@ -147,11 +147,11 @@ or links. The models below are the hotel; write yours.
 > architecture, the rules and the feature set on: `Room` owns "booked
 > at most once per night", `Reservation.create` books every room or
 > none and is called only by the app, guests sign in with the
-> development picker, and local data is seed data. Reboot keeps each
-> room as its own actor and runs its methods one at a time, which is
+> development picker, and local data is seed data. Each room is
+> its own domain object and runs its methods one at a time, which is
 > what makes the first rule hold. Anything the brief left out is a new
-> feature, agreed and added one at a time. The look: violet on
-> paper, the house default since you named no brand; name one, or a
+> feature, agreed and added one at a time. The look: the house
+> default, an accent from its palette, since you named no brand; name one, or a
 > site, and it gets read. Try the screens the way a guest would: this
 > is the cheapest moment to change any of it. Take your time; the
 > build waits for your go-ahead or your changes.

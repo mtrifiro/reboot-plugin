@@ -20,6 +20,17 @@ export const WAITING = 'Idle'
 export const TESTING = 'Waiting for the tests to finish'
 
 /**
+ * The build's own step line, `reboot-now Writing the servicers`, as the
+ * band's Now, or null for any other command. The build sends its step lines
+ * here rather than to the chat, which hears only its reports.
+ */
+export function stepLine(command: string): string | null {
+  const m = command.match(/(?:^|&&\s*|;\s*)(?:\S*\/)?reboot-now\s+([^;&|<>]+?)\s*$/)
+  const line = m?.[1]?.replace(/^(["'])(.*)\1$/, '$2').trim()
+  return line ? line.slice(0, 200) : null
+}
+
+/**
  * How far a test run's output says it is: pytest's `[ 42%]` (or
  * Playwright's `[12/40]`), the latest one, and the failures so far, from
  * pytest's `F`/`E` in a line of dots, `FAILED`/`ERROR` in a verbose line,

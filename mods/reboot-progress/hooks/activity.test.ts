@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'claude-code/testing'
 
-import { WAITING, endTurn, isTesting, testCommand, testLine, testProgress, fallback, isWorthSummarizing, parseSummary, startTask, summaryPrompt, textOf } from './activity'
+import { WAITING, endTurn, isTesting, stepLine, testCommand, testLine, testProgress, fallback, isWorthSummarizing, parseSummary, startTask, summaryPrompt, textOf } from './activity'
 
 describe('activity', () => {
   test('reads the text blocks of a row', () => {
@@ -13,6 +13,16 @@ describe('activity', () => {
       ]),
     ).toBe('Now writing the servicers.\nThen tests.')
     expect(textOf(undefined)).toBe('')
+  })
+
+  test('reads the build\'s step line from its command', () => {
+    expect(stepLine('reboot-now Writing the servicers')).toBe('Writing the servicers')
+    expect(stepLine('reboot-now Running the full suite, 42 scenarios')).toBe('Running the full suite, 42 scenarios')
+    expect(stepLine('cd /p/hotel && /plugin/bin/reboot-now Writing the pages')).toBe('Writing the pages')
+    expect(stepLine('reboot-now "Quoted line"')).toBe('Quoted line')
+    expect(stepLine('reboot-now')).toBe(null)
+    expect(stepLine('cat bin/reboot-now')).toBe(null)
+    expect(stepLine('grep -n now bin/reboot-now')).toBe(null)
   })
 
   test('skips short asides', () => {

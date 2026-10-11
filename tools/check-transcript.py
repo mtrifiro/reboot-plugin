@@ -15,9 +15,11 @@ every message the build showed the user and reports:
 - whether the first message is the welcome;
 - which milestone reports and the review appear, and in order;
 - the messages between reports that are none of the allowed lines (the
-  scope questions, one line naming the objects, a question only the user
+  scope questions, the brief after them, a question only the user
   can answer, a long-step notice), with their opening words;
-- lines in the first person, "settled", em or en dashes, semicolons.
+- reports missing their frame: a `##` title, the rules around them, and
+  the closing note naming the file under `design/reports/`;
+- lines in the first person, "settled", "actor" (a domain object to the user), em or en dashes, semicolons.
 
 Exit 0 always: it is a report, not a gate.
 """
@@ -39,10 +41,11 @@ MILESTONES = [
 ]
 SCOPE_LINE = re.compile(r"\bA proposed model is being built\. Objects include\b")
 REVIEW = re.compile(r"\b(first prototype is running|for your review)\b", re.I)
-SCOPE_LINE = re.compile(r"\bA proposed model is being built\. Objects include\b")
 FIRST_PERSON = re.compile(r"(?:^|[.!?]\s+|\n)\s*(I|I'll|I'm|I've|I'd|We|We'll|We're|Let me|Let's)\b")
+ACTOR = re.compile(r"\bactors?\b", re.I)
 SETTLED = re.compile(r"\bsettled\b", re.I)
 DASH = re.compile(r"[—–]")
+FRAMED = [re.compile(r"^## ", re.M), re.compile(r"^-{3,}\s*$", re.M), re.compile(r"design/reports/")]
 CODE = re.compile(r"```.*?```|`[^`\n]*`", re.S)
 
 
@@ -85,8 +88,8 @@ def kind(text: str) -> str:
     for name, rx in MILESTONES:
         if rx.search(text):
             return name
-    if SCOPE_LINE.search(text) and len(text) < 400:
-        return "scope-line"
+    if SCOPE_LINE.search(text):
+        return "brief"
     if REVIEW.search(text):
         return "review"
     if text.rstrip().endswith("?") and len(text) < 600:
@@ -101,16 +104,20 @@ def check(session: Path) -> dict:
     first_person = [m for p in prose for m in FIRST_PERSON.findall(p)]
     def lines(rx):
         return [l.strip()[:100] for p in prose for l in p.splitlines() if rx.search(l)]
-    reports = [k for k in kinds if k in ("welcome", "review") or k in dict(MILESTONES)]
+    reports = [k for k in kinds if k in ("welcome", "brief", "review") or k in dict(MILESTONES)]
     return {
         "session": str(session),
         "messages": len(messages),
         "welcome_first": bool(kinds) and kinds[0] == "welcome",
         "reports_in_order": reports,
+        "unframed": [k for m, k in zip(messages, kinds)
+                     if k in ("brief", "review") or k in dict(MILESTONES)
+                     if not all(rx.search(m) for rx in FRAMED)],
         "between": [m.strip().splitlines()[0][:100] for m, k in zip(messages, kinds) if k == "other"],
         "first_person": len(first_person),
         "first_person_lines": lines(FIRST_PERSON)[:8],
         "settled": lines(SETTLED)[:5],
+        "actor": lines(ACTOR)[:5],
         "dashes": len(lines(DASH)),
         "semicolons": sum(p.count(";") for p in prose),
     }
@@ -129,13 +136,14 @@ def main() -> None:
     print(f"messages shown: {result['messages']}")
     print(f"welcome first: {'yes' if result['welcome_first'] else 'no'}")
     print(f"reports, in order: {', '.join(result['reports_in_order']) or 'none'}")
+    print(f"reports missing their frame: {', '.join(result['unframed']) or 'none'}")
     print(f"messages between reports: {len(result['between'])}")
     for line in result["between"][:12]:
         print(f"  - {line}")
     print(f"first-person sentences: {result['first_person']}")
     for line in result["first_person_lines"]:
         print(f"  - {line}")
-    print(f"'settled': {len(result['settled'])}   dashes: {result['dashes']}   semicolons: {result['semicolons']}")
+    print(f"'settled': {len(result['settled'])}   'actor': {len(result['actor'])}   dashes: {result['dashes']}   semicolons: {result['semicolons']}")
 
 
 if __name__ == "__main__":

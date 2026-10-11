@@ -19,7 +19,8 @@
 #      `uv run rbt dashboard …`, the MCPJam inspector. These
 #      are approved ONLY inside a Reboot project tree (the working
 #      directory, or an ancestor, holds a `.rbtrc`), and only with
-#      the flags each may take.
+#      the flags each may take. Also the build's step line,
+#      `reboot-now <plain words>`, a no-op, anywhere.
 #
 # Guards that hold for every case:
 #
@@ -454,6 +455,15 @@ case "$tool" in
                         case "$url" in http://localhost:*) bport="${url#http://localhost:}" ;; *) exit 1 ;; esac
                         case "$mport" in ''|*[!0-9]*) exit 1 ;; esac
                         case "$bport" in ''|*[!0-9]*) exit 1 ;; esac
+                        approved=$((approved + 1))
+                        ;;
+                    'reboot-now '*)
+                        # The build's step line for the progress band, a
+                        # no-op in the plugin's bin/: plain words,
+                        # letters, digits and `,.:/_-` only, so nothing
+                        # in it can quote, expand or chain.
+                        line="${trimmed#reboot-now }"
+                        case "$line" in *[!A-Za-z0-9\ ,.:/_-]*) exit 1 ;; esac
                         approved=$((approved + 1))
                         ;;
                     'npx @mcpjam/inspector@'* | mcpjam-inspector | 'mcpjam-inspector '*)

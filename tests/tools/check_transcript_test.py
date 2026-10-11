@@ -34,17 +34,27 @@ class CheckTranscriptTest(unittest.TestCase):
             "The first prototype is running, for your review.",
         ))
         self.assertTrue(r["welcome_first"])
-        self.assertEqual(r["reports_in_order"], ["welcome", "domain-model", "feature-spec", "built", "full-suite", "review"])
+        self.assertEqual(r["reports_in_order"], ["welcome", "brief", "domain-model", "feature-spec", "built", "full-suite", "review"])
         self.assertEqual(r["between"], [])
         self.assertEqual(r["first_person"], 0)
+        self.assertEqual(r["unframed"], ["brief", "domain-model", "feature-spec", "built", "full-suite", "review"])
+
+    def test_a_framed_report(self):
+        r = ct.check(session(
+            "---\n## The brief\nThis brief restates the first version. A proposed model is being built. "
+            "Objects include rooms.\n\n*This is the brief. It is saved as `design/reports/1-brief.md`.*\n---",
+        ))
+        self.assertEqual((r["reports_in_order"], r["unframed"]), (["brief"], []))
 
     def test_commentary_first_person_and_settled_are_counted(self):
         r = ct.check(session(
             "Now the API step references, read together.",
             "I'll build the rooms next. The design is settled — rooms first.",
+            "Each room is an actor.",
         ))
         self.assertFalse(r["welcome_first"])
-        self.assertEqual(len(r["between"]), 2)
+        self.assertEqual(len(r["between"]), 3)
+        self.assertEqual(len(r["actor"]), 1)
         self.assertEqual(r["first_person"], 1)
         self.assertEqual(len(r["settled"]), 1)
         self.assertEqual(r["dashes"], 1)

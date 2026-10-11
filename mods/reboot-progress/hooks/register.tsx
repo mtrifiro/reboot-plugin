@@ -26,7 +26,7 @@ import {
 import type { LinkProbe } from './deploy'
 import { REBOOT_LOGO } from './logo'
 import { SUITE_FILE, type History, isSuiteShown, parseSuite, remember, settle, suiteLine, suiteStatus } from './suite'
-import { STARTING, WAITING, endTurn, fallback, isWorthSummarizing, parseSummary, startTask, summaryPrompt, isTesting, testCommand, testLine, testProgress, testStatus, textOf } from './activity'
+import { STARTING, WAITING, endTurn, fallback, isWorthSummarizing, parseSummary, startTask, stepLine, summaryPrompt, isTesting, testCommand, testLine, testProgress, testStatus, textOf } from './activity'
 import type { Summary } from './activity'
 import {
   RUN,
@@ -656,6 +656,16 @@ export const register: Register = on => {
       const run = await read($, testRun)
       const base = { command: '', startedAt: now, seenAt: now, percent: null, failed: 0 }
       await update($, testRun, () => ({ ...base, ...run, outputPath: testOutput[1]! }))
+    }
+
+    // The build's step line is Now as written: no summary, and any
+    // narration summary still on its way is dropped.
+    const line = e.tool === 'Bash' && ran.isError !== true ? stepLine(String(e.command)) : null
+    if (line !== null && (await isEngaged($, false))) {
+      latestSummary++
+      narrationWaiting = null
+      await showTask($, { now: line, done: null, decision: null })
+      return ran
     }
 
     const call = callOf(e)

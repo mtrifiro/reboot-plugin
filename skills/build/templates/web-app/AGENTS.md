@@ -19,6 +19,7 @@ change it here in the same commit.
 | Test modules | `tests/*_test.py`; each `scenarios(...)` names the features it runs |
 | Deploy, backup, restore | `scripts/deploy.sh`, `deploy/config`, `deploy/before-backend`, `scripts/backup.sh`, `scripts/restore.py` |
 | The design and why each choice was made (read before changing it) | `design/design.md`, `design/decisions.md` (one entry per acceptance, appended) |
+| The build's reports to the user, numbered in order (the brief, domain model, feature spec, built, full suite, review, then each later feature's) | `design/reports/` |
 | The accepted design, what a change did to it (Design or Prove), the last test run, each deploy's release record | `design/accepted.json` and `design/review.md`, `scripts/model_diff.py`, `tests/.last-run.json`, `deploy/ledger.jsonl` |
 | `rbt` config | `.rbtrc` (line-based, not YAML) |
 | Ports (backend, dashboard, Vite), chosen at scaffold so projects on one machine don't meet | `.rbtrc` (`dev run --port`, `--dashboard-port`, `dashboard --port`), `web/vite.config.ts`, `web/.env.development`; `scripts/doctor.sh` says who answers on them |

@@ -145,8 +145,10 @@ English, has been built, is being tested with the full feature suite),
 each ending with what comes next and why, and the review at the
 handoff. No commentary on steps, references, files or fixes, never
 "Now the styles the timeline needs" or "The app shell is in place. The
-gate board comes next"; the progress band shows where the build
-stands. The model is proposed
+gate board comes next". A step line goes to the progress band as a
+command instead: `reboot-now Writing the servicers`, plain words, no
+quotes. Each report is framed: a rule, a title, an intro, a closing
+note naming its file under `design/reports/`, a rule. The model is proposed
 until the user accepts it, never "settled". The first sentence about an
 object says why it exists, with the object as its subject. Sentences
 under about twenty words, one idea each, no em or en dashes, no
