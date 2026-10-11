@@ -55,6 +55,13 @@ describe('lineStage', () => {
     expect(lineStage(null, { isDeploying: false, isTestLine: false })).toBe(null)
   })
 
+  test("a first build is Design through its screens, the prototype the user reviews", () => {
+    const at = (step: number) => lineStage({ step, isDone: false, kind: 'build' }, { isDeploying: false, isTestLine: false })
+    expect([at(2), at(3), at(4), at(5)]).toEqual(['Design', 'Design', 'Design', 'Design'])
+    expect([at(6), at(7)]).toEqual(['Prove', 'Prove'])
+    expect(lineStage({ step: 3, isDone: false, kind: 'feature' }, { isDeploying: false, isTestLine: false })).toBe('Prove')
+  })
+
   test('a deploy is Promote, over everything else', () => {
     expect(lineStage(planning, { isDeploying: true, isTestLine: true })).toBe('Promote')
   })

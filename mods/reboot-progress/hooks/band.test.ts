@@ -49,8 +49,8 @@ for (const surface of ['terminal', 'desktop'] as const) {
     expect((await band.findAll({ type: 'Text', text: HEADING(surface) })).length).toBe(1)
     expect(await band.findAll({ type: 'Text', text: /^(Building|Adding Feature|Fixing|Done)$/ })).toEqual([])
     expect(await band.findAll({ type: 'Text', text: /access rules|backend|screens/ })).toEqual([])
-    // The servicers are Prove.
-    expect((await band.findAll({ type: 'Text', text: 'Prove \u00b7 ' })).length).toBe(1)
+    // A first build designs through its prototype: the servicers are Design.
+    expect((await band.findAll({ type: 'Text', text: 'Design \u00b7 ' })).length).toBe(1)
     // No progress bar: the task's name alone.
     expect(await band.findAll({ type: 'Text', text: /█|░/ })).toEqual([])
 

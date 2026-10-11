@@ -24,12 +24,11 @@ existing project skips it.
 > one request at a time, so the rules you describe hold without a
 > database to manage.
 >
-> This build follows the **Reboot Flywheel**. **Design** comes first:
-> a few questions about scope, then the domain model and the feature
-> spec, each a report to correct before any code. **Prove** builds it
-> and tests it against every scenario, ending in your review of the
-> running app. **Observe** shows what the running app does, and starts
-> the next round. Interrupt at any time.
+> This build follows the **Reboot Flywheel**. **Design** builds the
+> domain model, the feature spec and a running prototype, each for you
+> to review. **Prove** runs every scenario against it and collects the
+> evidence. **Observe** shows what the running app does, and starts the
+> next round. Interrupt at any time.
 
 **Voice, before anything else.** Everything said to the user, from
 the first line of the session to the handoff, is a statement of fact

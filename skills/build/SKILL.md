@@ -72,9 +72,11 @@ without the rules, to that file before sending it, the feature spec with every s
 the Reboot Flywheel stage it belongs to, the words the progress band
 uses. Titles and files: Reboot Design · The Brief (`1-brief.md`),
 Reboot Design · Proposed Domain Model (`2-domain-model.md`), Reboot
-Design · Feature Spec (`3-feature-spec.md`), Reboot Prove · The App Is
+Design · Feature Spec (`3-feature-spec.md`), Reboot Design · The Prototype Is
 Built (`4-built.md`), Reboot Prove · The Full Feature Suite
-(`5-full-suite.md`), Reboot Prove · Your Review (`6-review.md`). A later feature's reports continue the numbering,
+(`5-full-suite.md`), Reboot Design · Your Review (`6-review.md`), which
+ends Design and carries Prove's evidence. A first build designs through
+its running prototype. A later feature's reports continue the numbering,
 `7-feature-spec-<feature>.md`.
 
 **The milestone reports.** Each intro opens with its milestone in one
@@ -155,7 +157,9 @@ The flow is the **Reboot Flywheel**'s first two stages
 ([`references/flywheel.md`](references/flywheel.md)): **Design** runs
 through Step 1 and ends when the user accepts the domain model and the
 feature files ("Accept the Design"); **Prove** is Steps 2 to 7, building
-to that accepted design. A change that alters the design goes back
+to that accepted design. A first build's Design runs through the
+running prototype, Steps 2 to 5, since its review is the acceptance;
+its Prove is the red run and Step 6. A change that alters the design goes back
 through the acceptance.
 
 <!-- generated:start catalog skill=build -->

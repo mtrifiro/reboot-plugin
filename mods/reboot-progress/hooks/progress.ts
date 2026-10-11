@@ -15,12 +15,14 @@ export const STEPS = [
 export const RUN = STEPS.length - 1
 
 /**
- * The Reboot Flywheel stage a step belongs to: Design until the data
- * model is accepted, Prove from the project shell on. A deploy is
- * Promote, which the band shows while one runs.
+ * The Reboot Flywheel stage a step belongs to. A first build designs
+ * through its running prototype, which the user reviews, so it is Design
+ * until the tests; a feature or fix is Design until its data model is
+ * accepted, Prove from the project shell on. A deploy is Promote, which
+ * the band shows while one runs.
  */
-export function stageOf(step: number): 'Design' | 'Prove' {
-  return step <= 1 ? 'Design' : 'Prove'
+export function stageOf(step: number, kind?: TaskKind): 'Design' | 'Prove' {
+  return step <= (kind === 'build' ? SCREENS : 1) ? 'Design' : 'Prove'
 }
 
 /**
@@ -31,12 +33,12 @@ export function stageOf(step: number): 'Design' | 'Prove' {
  * Planning); else the task's own stage.
  */
 export function lineStage(
-  t: { step: number; isDone: boolean } | null,
+  t: { step: number; isDone: boolean; kind?: TaskKind } | null,
   o: { isDeploying: boolean; isTestLine: boolean },
 ): 'Design' | 'Prove' | 'Promote' | null {
   if (o.isDeploying) return 'Promote'
   if (t === null || t.isDone) return null
-  return o.isTestLine ? 'Prove' : stageOf(t.step)
+  return o.isTestLine ? 'Prove' : stageOf(t.step, t.kind)
 }
 
 /** The review table the build skill shows at its checkpoint: its header row. */
