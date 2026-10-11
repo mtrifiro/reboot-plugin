@@ -46,7 +46,7 @@ SKILLS = ROOT / "skills"
 FRONT_DOORS = ("mcp-ui", "web-app", "backend-only")
 
 # SKILL.md files every build of a front door reads in full, in order:
-# the router, the build spine, the dashboard it starts before Step 1,
+# the router, the build spine, the dashboard it starts at the first feature,
 # the front door's delta, the feature workflow and run. Backend-only
 # work starts from the python skill.
 SKILLS_READ = {

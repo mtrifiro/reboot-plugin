@@ -1,6 +1,6 @@
 ---
 name: dashboard
-description: Start the Reboot developer dashboard (`rbt dashboard`) for a project and open it once in the browser. Use while building, before the first API file, so the developer watches the API take shape, and whenever the user asks for the dashboard; not for running an app (the run skill). `rbt dev run` only finds a dashboard already serving on `--dashboard-port` (default 9871), so start it here, before or after the app runs.
+description: Start the Reboot developer dashboard (`rbt dashboard`) for a project and open it once in the browser. Use while building, once the first feature file exists, so the developer watches the features and then the API take shape, and whenever the user asks for the dashboard; not for running an app (the run skill). `rbt dev run` only finds a dashboard already serving on `--dashboard-port` (default 9871), so start it here, before or after the app runs.
 argument-hint: [<project-directory>]
 allowed-tools: Bash, Read, Write, Glob, Grep, Edit
 ---
@@ -14,12 +14,13 @@ allowed-tools: Bash, Read, Write, Glob, Grep, Edit
 page), its features from the `.feature` files under `tests/` (Features
 page: rules, scenarios, methods used, `@wip` and `@blocked` marks,
 browser-scenario recordings), and an API changelog. It reads the API and
-feature **files**, not a running app, so start it early in a build —
-before the first API file — and the developer watches the API take
-shape.
+feature **files**, not a running app, so start it once the first
+feature file exists (earlier it shows an empty model) and the developer
+watches the features, then the API, take shape.
 
 Come here when the [`build` skill](../build/SKILL.md) directs you
-(before its Step 1, the API) or the user asks for the dashboard.
+(after the first feature file, before its Step 1, the API) or the user
+asks for the dashboard.
 
 > This skill only **starts the dashboard**; running the app is the
 > [run skill](../run/SKILL.md). `rbt dev run` doesn't start a

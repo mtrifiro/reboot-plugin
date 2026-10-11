@@ -252,10 +252,12 @@ web-app (summary vs. detail readers, aggregation, per-caller views):
 read its front-door reading list. Step 1 closes Design; "Accept the
 Design" sits between it and Step 2, where Prove begins.
 
-**Before step 1, start the developer dashboard** with the
-[`dashboard` skill](../dashboard/SKILL.md) so the user watches the API
-take shape (it stubs `pyproject.toml` / `.rbtrc` if absent). If it
-fails, say so in a sentence and keep building.
+**Once the first feature file exists (Design Phase, item 0), start the
+developer dashboard** with the [`dashboard` skill](../dashboard/SKILL.md):
+its Features page shows the rules and scenarios as they are written,
+its Models page the API once Step 1 writes it (it stubs
+`pyproject.toml` / `.rbtrc` if absent; earlier it shows an empty
+model). If it fails, say so in a sentence and keep building.
 
 ### Step 1 — API definition
 
