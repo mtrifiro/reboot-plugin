@@ -68,7 +68,7 @@ inside take `###`, so the title stands well above them. The note
 says what the report is and where it is kept: "*This is the domain-model
 report. It is saved as `design/reports/2-domain-model.md`, with every
 report from this build, in order.*" The build writes the same text,
-without the rules, to that file before sending it. Each title names
+without the rules, to that file before sending it, the feature spec with every scenario. Each title names
 the Reboot Flywheel stage it belongs to, the words the progress band
 uses. Titles and files: Reboot Design · The Brief (`1-brief.md`),
 Reboot Design · Proposed Domain Model (`2-domain-model.md`), Reboot
@@ -121,11 +121,13 @@ model." and holds, under `###` headings:
 
 **2. The app has a feature spec**, right after the domain-model report,
 once every feature file is written and matches the model, before the
-project shell. It opens "The app has a feature spec." and holds each feature by name, then each rule and, under it, each
-scenario in plain English, its name and what it shows ("A second guest
-asks for a booked room: refused, the first stay unchanged"). These are
-the app's tests and the rules it promises, so the user corrects them
-here, before any code; the dashboard's Features page shows the same.
+project shell. It opens "The app has a feature spec." with the counts,
+then one line per feature: its name and its rules, the promises the user
+corrects here ("**Booking**: no room is sold twice for a night · a
+cancelled stay gives its nights back"). No scenarios in the chat, but
+**Assumed, correct me** names each that encodes a guess. The file
+shows each as "A second guest asks for a booked room: refused,
+the first stay unchanged", as the chat says.
 Its next steps say what happens before any code and why: the project
 shell is set up, then every scenario runs against empty methods and
 fails, since a scenario that passed before the code existed would check
