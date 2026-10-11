@@ -189,6 +189,10 @@ encryption), check Reboot's standard library: the `stdlib-*.md`
 references in the `python` skill.
 - Read a step's references together, one Read each, in parallel;
 never several in one `cat`, which can be cut off unseen.
+- Never leave the running app broken: stop it with the `run` skill
+before a breaking change (a non-additive API change, a removed type, an
+expunge, pages rewritten across edits), say so in the step line, and
+start it once the scenarios pass and its page loads.
 - Deploys and dev-loop restarts are slow; never use repeated deploys
 or restarts to discover how Reboot behaves. After two failed attempts
 at the same goal, stop, read the relevant skill reference, and explain

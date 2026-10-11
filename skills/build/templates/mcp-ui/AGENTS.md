@@ -72,3 +72,5 @@ change it here in the same commit.
 5. **Servicers are listed only in `registry.py`.** One missing from a
    test's list fails only when called.
 6. **Log surprises the moment they happen** in `FINDINGS.md`.
+7. **Never leave the running app broken.** Stop it (`run` skill)
+   before a breaking change; start it once the scenarios pass.

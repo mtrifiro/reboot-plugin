@@ -257,9 +257,13 @@ waits.
    and body only, with no next steps, Evidence or note. A line the user
    did not answer says it was assumed. Nothing is said between the
    brief and the domain-model report.
-1. **The whole app, in one report.** Write every capability's `@wip`
-   feature file from the scope ([`feature`
-   skill](../feature/SKILL.md), Step 2; its Step 2a is this flow's).
+1. **Rules first, then the model, then the scenarios.** Write every
+   feature's `@wip` file from the scope with its name, purpose and
+   rules only ([`feature` skill](../feature/SKILL.md), Step 2, the
+   feature before its scenarios). The rules decide the model (items 3
+   and 4, Step 1): "every night or none" makes booking a transaction.
+   Once the API file is written, each file gets its scenarios in the
+   built-in steps, against that model (its Step 2a is this flow's).
    Each object and decision, with what it buys or costs and the choice
    set aside ("`Night` rather than a calendar on `Room`: a room's
    calendar grows without bound"), goes into the domain-model report,
@@ -481,13 +485,9 @@ factories).
 - web-app: `mcp=None` everywhere and no `UI()` until an MCP UI is
   added; descriptions are already written for the AI.
 
-Then tell the user the state types you wrote, one line each in the
-design's words: its name, what one holds, whose it is, and its methods
-by name with what each lets someone do ("**Site**: one per connected
-Analytics property, with its cached numbers. `overview` shows the
-numbers for a period; `refresh` fetches new ones from Google"). Do it
-again, marking what changed, whenever a later step adds, removes or
-reshapes a state type or method.
+The domain-model report names each state type and method; a later
+change to one says so, one line each. Then each feature's scenarios
+(Design Phase, item 1).
 
 ### Accept the Design
 
@@ -799,12 +799,17 @@ cards"), then:
 A feature after the review comes here one at a time: agreed, sliced,
 built, run and handed off, before the next.
 
-1. Read `.rbtrc`, `design/design.md` and `design/decisions.md`, the
-   API definition, servicer, `main.py` and the frontend entry (mcp-ui:
-   `frontend/mcp/<ui-name>/App.tsx`; web-app: `web/src/App.tsx`). A
-   change that goes against a recorded decision says so to the user
-   before the design changes, naming the entry and its why. Work on
-   `main` or a branch as the developer chose
+**Never leave the app broken.** Before a change that breaks it while
+it runs (a non-additive API change, a removed type, an expunge, pages
+rewritten across edits), stop it with the [`run`
+skill](../run/SKILL.md), saying so in the step line: "**Reboot Prove** ·
+The app is down while room types change". Start it once the
+scenarios pass and its page loads.
+
+1. Read `.rbtrc`, `design/design.md`, `design/decisions.md`, the API,
+   servicers, `main.py` and the frontend entry. A change against a
+   recorded decision names that entry and its why to the user first.
+   Work on `main` or a branch as the developer chose
    ([`references/flywheel.md`](references/flywheel.md), "Where the work
    happens").
 2. Assess state model changes; with persisted state or a deploy, follow
@@ -813,18 +818,15 @@ built, run and handed off, before the next.
    before the API changes ([`feature` skill](../feature/SKILL.md)),
    then show the slice of the model it adds, as review-table rows.
 4. Update the API (every new property with `description=`) →
-   `uv run rbt generate`. Tell the user any state type or method added
-   or changed, one line each (Step 1). Run
-   `python3 scripts/model_diff.py` (it measures from the accepted
-   design; `HEAD` as the base when the project has no record): any
-   design change goes through "Accept the Design" before step 5, with
-   `design/design.md` updated to the changed design. Once accepted,
-   `design/review.md` rewritten for it, a new entry at the end of
-   `design/decisions.md` (Step 2.5; **Replaces** names the entries it
-   overturns, which stay as they are), `python3 scripts/model_diff.py
-   --accept` and a commit of `api/`, `tests/*.feature` and `design/`
-   ("Design accepted: <what>") record it. None (a new scenario under an
-   existing rule, a code fix) stays in Prove.
+   `uv run rbt generate`, and name each state type or method changed,
+   one line each. `python3 scripts/model_diff.py`
+   (from the accepted design, else `HEAD`) sends any design change
+   through "Accept the Design" before step 5, `design/design.md`
+   updated. Once accepted: `design/review.md` rewritten, an entry
+   appended to `design/decisions.md` (Step 2.5; **Replaces** names the
+   entries it overturns), `python3 scripts/model_diff.py --accept`, and
+   a commit, "Design accepted: <what>". A new scenario under an
+   existing rule, or a fix, stays in Prove.
 5. Update servicer methods, and the authorizer of any servicer whose
    methods changed, as the accepted "Who may call" says. An authorizer
    change the accepted design didn't name is a design change: back to
@@ -837,7 +839,7 @@ built, run and handed off, before the next.
    click-through flow). Run `uv run mypy backend/ tests/` and
    `uv run pytest`; fix everything; ask before removing `@wip`.
 8. If a file, command or rule changed, update `AGENTS.md` to match.
-9. Not running: start it with the [`run` skill](../run/SKILL.md).
+9. Start it (`run` skill); hand off once its page loads.
 10. Close with the feature or fix card
     ([`references/flywheel.md`](references/flywheel.md), "Stage cards"):
     in full the first time, one line after.
