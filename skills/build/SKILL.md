@@ -155,17 +155,15 @@ waits.
    Recommended: which parts of the domain the first version covers
    (multi-select, in the user's nouns: reservations, housekeeping,
    rates); who uses it and in which roles; the one thing it must never
-   get wrong; whether local data must be kept while
-   prototyping (`AGENTS.md`'s `Data:` line). A question the brief
+   get wrong. A question the brief
    already answers is skipped. Nothing is asked after this round. With
    no one to answer, take the recommended options and say so. The
    answers go into `design/design.md` under "Scope", the rest under
-   "Assumed" (defaults: the web app, the `Development()` sign-in,
-   local data reset as the model changes). Then one line: a simple, fast prototype of that
+   "Assumed" (defaults: the web app, the `Development()` sign-in).
+   Local data is seed data, reset when the model changes, never asked.
+   Then one line: a simple, fast prototype of that
    scope goes up first, to review the architecture, the rules and the
-   features on. "Keep the
-   data", said at any point, writes `keep since <date>` on the `Data:`
-   line, committed.
+   features on.
 1. **The whole app, said object by object.** Write every capability's
    `@wip` feature file from the scope ([`feature`
    skill](../feature/SKILL.md), Step 2; its Step 2a is this flow's).

@@ -85,12 +85,10 @@ work, use an application-level switch, or expunge.
 uv run rbt dev expunge --yes
 ```
 
-- **Under `Data: disposable` (`AGENTS.md`, the templates' default) expunge
-  without asking** whenever an API change is not additive: say so in
-  one line, stop completely, expunge, run. From the first deploy, or
-  once the user says "keep the data" (write `keep since <date>` on that
-  line and commit it), API changes stay additive and the plugin's
-  schema guard holds them to that.
+- **Locally, expunge without asking** whenever an API change is not
+  additive: say so in one line, stop completely, expunge, run. Local
+  data is seed data. From the first deploy, API changes stay additive
+  and the plugin's schema guard holds them to that.
 - **Stop completely first.** It deletes only
   `.rbt/dev/<application-name>/` (1.6.0 source) and doesn't check for
   running processes: a live backend loops forever on

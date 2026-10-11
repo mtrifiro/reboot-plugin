@@ -4,7 +4,7 @@
 //
 //   - PreToolUse on an edit (Claude Code's Edit, MultiEdit and Write;
 //     Codex's apply_patch): in a project with persisted state (dev state
-//     under `.rbt/dev/`, unless AGENTS.md says `Data: disposable`; or a
+//     under `.rbt/dev/` only when AGENTS.md says `Data: keep`; or a
 //     production deploy in `deploy/ledger.jsonl`), builds each changed
 //     API definition file in
 //     memory and refuses the edit when the runtime couldn't boot over the
@@ -53,11 +53,11 @@ export function projectOf(path) {
 /** Where the project holds state the API must boot over, else null. */
 export function stateOf(root) {
   const dev = join(root, '.rbt/dev')
-  // Under AGENTS.md's `Data: disposable` (the templates' default until
-  // the first deploy, or until the user says to keep the data) dev
-  // state is seed data the build expunges freely, so it doesn't guard.
-  const disposable = dataPolicy(readOr(join(root, 'AGENTS.md')) ?? '') === 'disposable'
-  if (!disposable && existsSync(dev)) {
+  // Local dev state is seed data the build expunges freely, so it
+  // guards only when AGENTS.md opts in with `Data: keep`. A production
+  // deploy always guards (below).
+  const kept = dataPolicy(readOr(join(root, 'AGENTS.md')) ?? '') === 'keep'
+  if (kept && existsSync(dev)) {
     const name = applicationName(readOr(join(root, '.rbtrc')) ?? '')
     const has = name
       ? existsSync(join(dev, name))

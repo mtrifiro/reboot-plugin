@@ -123,7 +123,9 @@ class SchemaGuardTest(unittest.TestCase):
             f.write(text)
 
     def with_dev_state(self) -> None:
+        # Local state guards only when the project keeps its data.
         os.makedirs(os.path.join(self.project, ".rbt/dev/hello"))
+        self.with_data("keep")
 
     def run_hook(self, payload: dict) -> str:
         payload = {
@@ -255,8 +257,10 @@ class SchemaGuardTest(unittest.TestCase):
     def with_data(self, line: str) -> None:
         self.write("AGENTS.md", f"# hello\n\n- **Workflow:** main\n- **Data:** {line}\n")
 
-    def test_disposable_data_leaves_dev_state_unguarded(self) -> None:
-        self.with_dev_state()
+    def test_local_state_is_unguarded_by_default(self) -> None:
+        os.makedirs(os.path.join(self.project, ".rbt/dev/hello"))
+        self.write("AGENTS.md", "# hello\n\n- **Workflow:** main\n")
+        self.assertEqual(self.patch(CHANGE_TYPE), "")
         self.with_data("disposable. Dev state is seed data.")
         self.assertEqual(self.patch(CHANGE_TYPE), "")
         self.assertEqual(self.bash("sed -i 's/int/str/' api/hello/v1/hello.py"), "")

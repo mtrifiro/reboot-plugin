@@ -622,10 +622,9 @@ function gitTargets(
 }
 
 /**
- * AGENTS.md's `Data:` line: `disposable` while the project is a
- * prototype (dev state is seed data the build expunges freely), `keep`
- * once the data matters (the user said so, or the first deploy), null
- * when the project predates the line.
+ * AGENTS.md's `Data:` line. Local dev state is seed data the build
+ * expunges freely; `keep` opts a project's local data into the guard.
+ * `disposable` is what older projects wrote; null is the default.
  */
 export const dataPolicy = (agentsMd: string): 'keep' | 'disposable' | null => {
   const m = agentsMd.match(/^\s*-\s*\*\*Data:\*\*\s*(keep|disposable)\b/im)
