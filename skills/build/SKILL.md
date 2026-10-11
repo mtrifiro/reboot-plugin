@@ -19,10 +19,11 @@ under **"Which References to Read, and When"**. Differences are marked
 inline (`mcp-ui: … / web-app: …`); a dual-frontend app does both.
 Backend-only work starts from the [`python` skill](../python/SKILL.md).
 
-**How the build talks: three reports, quiet between.** The user reads
-the build in three complete reports, each written for a reader who saw
-nothing else: the welcome (`app` skill), the proposed model (below)
-and the review at the handoff (Step 7). Between them the build is
+**How the build talks: four reports, quiet between.** The user reads
+the build in four complete reports, each written for a reader who saw
+nothing else: the welcome (`app` skill), the proposed model (below),
+"From model to working code" (below) and the review at the handoff
+(Step 7). Between them the build is
 quiet: no commentary on steps, references, files or fixes, never "Now
 the styles the timeline needs" or "The app shell is in place. The gate
 board comes next", since the progress band shows where it stands. The only lines between reports:
@@ -105,6 +106,27 @@ headings, in this order:
    code, so each is proven able to fail; one that passes then would
    check nothing. Then the methods' code, who may call each, the pages,
    and the full suite before the review.
+
+**From model to working code**, the third report, comes the first time
+every method has its code and the scenarios run green, before the
+browser checks. It marks the build's biggest transition, the way the
+welcome marks its start, and opens "The model is now working code." It
+holds, under short headings:
+
+1. **What changed**: the proposal is running code. Each method has its
+   body, the authorizers enforce who may call each, and the app serves
+   its pages at its address.
+2. **What is proven, and how**: every scenario passes, so each rule the
+   features state holds in code, said in a line per rule. Anything
+   `@blocked` and why.
+3. **What is checked now, and why**: the pages in a browser, as each
+   role would use them, because a passing scenario proves a rule, not
+   that a person can reach it. Then the look, light and dark, desktop
+   and phone.
+4. **What to open**: the app's address, and the dashboard, whose Call
+   Graph now shows which method calls which.
+5. **What comes before the review**: the browser checks and the full
+   suite, with the reason for each.
 
 The flow is the **Reboot Flywheel**'s first two stages
 ([`references/flywheel.md`](references/flywheel.md)): **Design** runs

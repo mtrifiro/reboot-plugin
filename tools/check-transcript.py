@@ -5,9 +5,9 @@
     tools/check-transcript.py <project dir>     # its newest session
     tools/check-transcript.py <...> --json
 
-A build speaks in three reports and is quiet between them (the build
-skill, "How the build talks"): the welcome, the proposed model, and the
-review at the handoff. The planning-only evals squeeze a build into one
+A build speaks in four reports and is quiet between them (the build
+skill, "How the build talks"): the welcome, the proposed model, "From
+model to working code", and the review at the handoff. The planning-only evals squeeze a build into one
 message, so they cannot see that rhythm; a real session can. This reads
 every message the build showed the user and reports:
 
@@ -31,6 +31,7 @@ from pathlib import Path
 
 WELCOME = re.compile(r"\bWelcome to Reboot\b")
 PROPOSED = re.compile(r"\bA proposed model is being built\b")
+WORKING = re.compile(r"\bThe model is now working code\b")
 REVIEW = re.compile(r"\b(first prototype is running|for your review)\b", re.I)
 SCOPE_LINE = re.compile(r"\bA proposed model is being built\. Objects include\b")
 FIRST_PERSON = re.compile(r"(?:^|[.!?]\s+|\n)\s*(I|I'll|I'm|I've|I'd|We|We'll|We're|Let me|Let's)\b")
@@ -77,6 +78,8 @@ def kind(text: str) -> str:
         return "welcome"
     if PROPOSED.search(text) and not SCOPE_LINE.search(text.strip()[:200]) or "| Object" in text and PROPOSED.search(text):
         return "proposed-model"
+    if WORKING.search(text):
+        return "working-code"
     if SCOPE_LINE.search(text) and len(text) < 400:
         return "scope-line"
     if REVIEW.search(text):
@@ -93,7 +96,7 @@ def check(session: Path) -> dict:
     first_person = [m for p in prose for m in FIRST_PERSON.findall(p)]
     def lines(rx):
         return [l.strip()[:100] for p in prose for l in p.splitlines() if rx.search(l)]
-    reports = [k for k in kinds if k in ("welcome", "proposed-model", "review")]
+    reports = [k for k in kinds if k in ("welcome", "proposed-model", "working-code", "review")]
     return {
         "session": str(session),
         "messages": len(messages),

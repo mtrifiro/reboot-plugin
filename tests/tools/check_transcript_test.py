@@ -28,10 +28,11 @@ class CheckTranscriptTest(unittest.TestCase):
             "Which parts does the first version cover?",
             "A proposed model is being built. Objects include rooms and stays.",
             "A proposed model is being built.\n\n| Object | What it can do | Who |",
+            "The model is now working code. Every scenario passes.",
             "The first prototype is running, for your review.",
         ))
         self.assertTrue(r["welcome_first"])
-        self.assertEqual(r["reports_in_order"], ["welcome", "proposed-model", "review"])
+        self.assertEqual(r["reports_in_order"], ["welcome", "proposed-model", "working-code", "review"])
         self.assertEqual(r["between"], [])
         self.assertEqual(r["first_person"], 0)
 

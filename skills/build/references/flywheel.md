@@ -184,8 +184,9 @@ Tone, for these and any card written later:
   line to the user. The subject is the app, the design, the build or
   the prototype ("the prototype is running", "the next feature
   follows"), and "you" is the user.
-- Few and complete: the build speaks in three reports, the welcome, the
-  proposed model and the review, and is quiet between them. Each is
+- Few and complete: the build speaks in four reports, the welcome, the
+  proposed model, "From model to working code" and the review, and is
+  quiet between them. Each is
   written for a reader who saw nothing else. The sentence rules and the
   proposed model's sections are at the head of the build skill ("How
   the build talks").
