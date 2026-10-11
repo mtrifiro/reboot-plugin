@@ -6,7 +6,7 @@
 # copy.sh, then, with the plugin's own shims (bin/rbt, bin/uv,
 # bin/npm, bin/node) first on PATH:
 #
-#   uv sync -> rbt generate -> npm install -> rbt generate
+#   uv sync -> npm install -> rbt generate
 #   -> npm run build (tsc -b + vite) -> mypy backend/ tests/
 #   -> pytest --collect-only
 #
@@ -140,13 +140,12 @@ for FD in "${FRONT_DOORS[@]}"; do
   step "uv sync"
   uv sync --quiet
 
-  step "rbt generate (before npm install)"
-  rbt generate
-
+  # npm install first: the React bindings need node_modules, so one
+  # generate after it makes both the Python and the TypeScript code.
   step "npm install"
   (cd "$FRONTEND" && npm install --no-audit --no-fund --loglevel=error)
 
-  step "rbt generate (with node_modules)"
+  step "rbt generate"
   rbt generate
 
   step "npm run build (tsc -b + vite build)"
