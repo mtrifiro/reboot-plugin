@@ -90,6 +90,8 @@ If held, inspect it (`ps -o pid,ppid,etime,command -p <pid>`):
 
 - `envoy` or `backend/src/main.py` from this project with parent pid
   `1`: an orphan — clear it via "Stop, restart, reset" below.
+- `scripts/placeholder.py`: the not-running page, which holds the port
+  while the app is down; `rbt dev run` and `npm run dev` stop it first.
 - Anything else: not yours; don't kill it. Set `dev run --port=<port>`
   in `.rbtrc` instead. A flag `.rbtrc` sets can't also be passed on the
   command line (`the flag '--port' was set multiple times`; 1.6.0).

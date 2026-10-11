@@ -9,7 +9,9 @@ shim finds its root through a symlink and names `lib/` when it is
 missing; `uv run rbt` (REBOOT_UV_RUN, set by the uv shim) passes the
 guards before it reaches `uv run`; the venv route applies the
 known-defect patches unless REBOOT_SKIP_PATCHES is set; the project's
-API lint runs before `generate` and a failure refuses it.
+API lint runs before `generate` and a failure refuses it; `dev run` in
+a project with scripts/placeholder.py stops the not-running page, then
+starts its watcher on the shim's pid, once on every route.
 
     python3 tests/shims/rbt_test.py
 """
@@ -32,6 +34,12 @@ FAKE_UV = "#!/bin/sh\necho \"uv $*\"\necho \"REBOOT_UV_RUN=${REBOOT_UV_RUN:-}\"\
 FAKE_PATCH = "import sys\nprint('patched', *sys.argv[1:])\n"
 FAILING_LINT = "import sys\nprint('api/x.py:1: bad')\nsys.exit(1)\n"
 PASSING_LINT = "print('api_lint: pass')\n"
+FAKE_PLACEHOLDER = (
+    "import os, sys\n"
+    "with open(os.path.join(os.path.dirname(__file__), 'placeholder.log'), 'a') as f:\n"
+    "    f.write(' '.join(sys.argv[1:]) + '\\n')\n"
+    "print('placeholder output is hidden')\n"
+    "sys.exit(int(os.environ.get('PLACEHOLDER_EXIT', '0')))\n")
 
 
 class RbtShimTest(unittest.TestCase):
@@ -261,6 +269,40 @@ class RbtShimTest(unittest.TestCase):
         self.assertEqual(r.returncode, 0, r.stderr)
         r = self.rbt("dev", "run", cwd=self.project, REBOOT_LOCK_WAIT="1")
         self.assertEqual(r.returncode, 0, "only generate runs the lint")
+
+    # The not-running page.
+
+    def placeholder_calls(self) -> list[str]:
+        log = self.project / "scripts" / "placeholder.log"
+        return log.read_text().splitlines() if log.exists() else []
+
+    def assert_stop_then_watch(self, r: subprocess.CompletedProcess) -> None:
+        self.assertEqual(r.returncode, 0, r.stderr)
+        calls = self.placeholder_calls()
+        self.assertEqual(len(calls), 2, calls)
+        self.assertEqual(calls[0], "stop")
+        self.assertRegex(calls[1], r"^watch --pid [0-9]+$")
+        self.assertNotIn("placeholder output", r.stdout + r.stderr)
+        (self.project / "scripts" / "placeholder.log").unlink()
+
+    def test_dev_run_stops_the_placeholder_then_watches(self) -> None:
+        (self.project / "scripts").mkdir()
+        (self.project / "scripts" / "placeholder.py").write_text(FAKE_PLACEHOLDER)
+        r = self.rbt("dev", "run", cwd=self.project, REBOOT_LOCK_WAIT="1")
+        self.assert_stop_then_watch(r)
+        self.assertIn("rbt dev run", r.stdout)
+        self.make_venv()
+        self.assert_stop_then_watch(self.rbt("dev", "run", cwd=self.project, REBOOT_LOCK_WAIT="1"))
+        r = self.uv_run("dev", "run", cwd=self.project, REBOOT_LOCK_WAIT="1")
+        self.assert_stop_then_watch(r)
+        self.assertIn("uv run rbt dev run", r.stdout)
+        r = self.rbt("dev", "run", cwd=self.project, REBOOT_LOCK_WAIT="1", PLACEHOLDER_EXIT="3")
+        self.assertEqual(r.returncode, 0, "a failing placeholder never stops rbt")
+        self.assertIn("venv-rbt dev run", r.stdout)
+        (self.project / "scripts" / "placeholder.log").unlink()
+        for args in (("generate",), ("dev", "run", "--help"), ("dev", "expunge", "--yes")):
+            self.rbt(*args, cwd=self.project, REBOOT_LOCK_WAIT="1")
+        self.assertEqual(self.placeholder_calls(), [], "only dev run touches it")
 
 
 if __name__ == "__main__":

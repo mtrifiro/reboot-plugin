@@ -153,6 +153,17 @@ patch_venv() {
     [ -n "${REBOOT_SKIP_PATCHES:-}" ] || python3 "$PLUGIN_ROOT/lib/patch_reboot.py" --quiet "$project" || true
 }
 
+# The not-running page (the project's scripts/placeholder.py) holds the
+# port the user visits while the app is down: stopped before `dev run`
+# so the app can bind it, and watching this process, which becomes
+# `rbt` (or `uv run`) at the exec below, to come back when it exits.
+# Never fails this shim.
+if [ "$wants_help" = 0 ] && [ "${1:-} ${2:-}" = "dev run" ] && [ -n "$project" ] \
+    && [ -f "$project/scripts/placeholder.py" ] && command -v python3 >/dev/null 2>&1; then
+    python3 "$project/scripts/placeholder.py" stop </dev/null >/dev/null 2>&1 || true
+    python3 "$project/scripts/placeholder.py" watch --pid $$ </dev/null >/dev/null 2>&1 || true
+fi
+
 # Record which agent session owns a long-running dev command; see
 # `lib/own.sh`. Never fails this shim.
 "$PLUGIN_ROOT/lib/own.sh" $$ rbt "$@" || true

@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "predev": "python3 ../scripts/placeholder.py stop || true",
     "dev": "vite",
     "typecheck": "tsc -b",
     "build": "tsc -b && vite build"

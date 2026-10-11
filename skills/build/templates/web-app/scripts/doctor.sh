@@ -16,7 +16,8 @@
 #   ALLOWED_EMAIL_DOMAINS), which change what the scenarios see;
 # - who serves this project's ports, and from which directory: another
 #   project's backend or dashboard answering on them, or two listeners
-#   (one per IP stack) that are not the same process.
+#   (one per IP stack) that are not the same process. The not-running
+#   placeholder page (scripts/placeholder.py) is named, not counted.
 
 set -eu
 cd "$(dirname -- "$0")/.."
@@ -32,6 +33,7 @@ app="$(sed -n 's/^dev run --application-name=//p' .rbtrc 2>/dev/null | head -n 1
 
 # Processes of this project reparented to pid 1 (their session is gone).
 ps -axww -o pid=,ppid=,etime=,command= | awk -v root="$root" '
+  /scripts\/placeholder\.py/ { next }
   $2 == 1 && index($0, root "/") { print }
   $2 == 1 && /\/plugins\/data\/reboot\/bin\/envoy-/ { print }
 ' | while IFS= read -r line; do
@@ -86,6 +88,12 @@ if command -v lsof >/dev/null 2>&1; then
   for port in $ports; do
     pids="$(lsof -nP -t -iTCP:"$port" -sTCP:LISTEN 2>/dev/null | sort -u || true)"
     [ -n "$pids" ] || continue
+    if [ "$(printf '%s\n' "$pids" | wc -l)" -eq 1 ] \
+        && ps -o command= -p "$pids" 2>/dev/null | grep -q 'scripts/placeholder\.py' \
+        && [ "$(lsof -a -d cwd -p "$pids" -Fn 2>/dev/null | sed -n 's/^n//p' | head -n 1)" = "$root" ]; then
+      echo "doctor: port $port holds the not-running placeholder page; \`rbt dev run\` and \`npm run dev\` stop it"
+      continue
+    fi
     if [ "$(printf '%s\n' "$pids" | wc -l)" -gt 1 ]; then
       say "port $port has more than one listener ($(printf '%s' "$pids" | tr '\n' ' ')): one per IP stack, so localhost may reach either"
     fi

@@ -28,6 +28,7 @@ python3 tests/templates/feature_lint_test.py -q   # skips itself without pytest-
 python3 tests/templates/harness_hygiene_test.py -q
 python3 tests/templates/api_lint_test.py -q
 python3 tests/templates/doctor_test.py -q
+python3 tests/templates/placeholder_test.py -q
 python3 tests/shims/rbt_test.py -q
 python3 tests/hooks/suite_guard_test.py -q
 python3 tests/hooks/session_start_test.py -q

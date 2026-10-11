@@ -27,6 +27,16 @@
 # take effect.
 set -euo pipefail
 
+# A Reboot project's not-running page (its scripts/placeholder.py) on
+# the port the user visits, unless the app already holds it or the
+# feature is off. In the background, so the session never waits on it,
+# and never failing the hook. Runs under Codex too.
+project="${CLAUDE_PROJECT_DIR:-$PWD}"
+if [ -f "$project/.rbtrc" ] && [ -f "$project/scripts/placeholder.py" ] \
+    && command -v python3 >/dev/null 2>&1; then
+    (python3 "$project/scripts/placeholder.py" serve </dev/null >/dev/null 2>&1 &) || true
+fi
+
 # Both variables are required to write a meaningful line: an env file
 # to append to, and the plugin root whose `bin/` goes on PATH. When
 # either is missing this is a silent, successful no-op, since a
