@@ -48,7 +48,7 @@ if [ "$(field hook_event_name)" = PostToolUse ]; then
     [ "$(field skill)" = reboot:app ] || exit 0
     in_new_build || exit 0
     # shellcheck disable=SC1112  # the ’ is meant
-    printf '%s' '{"hookSpecificOutput":{"hookEventName":"PostToolUse","additionalContext":"[reboot-plugin-welcome] Your next output is the app skill’s welcome, as visible text: its two paragraphs verbatim, each on one line, no quote marks, its examples from the user’s brief. Do not draft it or summarize it in thinking first. Send it as a message of its own, with no tool call. The build goes on after it."}}'
+    printf '%s' '{"hookSpecificOutput":{"hookEventName":"PostToolUse","additionalContext":"[reboot-plugin-welcome] Your next output is the app skill’s welcome, as visible text: its paragraph verbatim, on one line, no quote marks, its examples from the user’s brief. Do not draft it or summarize it in thinking first. Send it as a message of its own, with no tool call. The build goes on after it."}}'
     exit 0
 fi
 

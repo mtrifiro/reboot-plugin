@@ -12,15 +12,13 @@ routing line or the scope round: your next output is the welcome itself,
 as visible text, never drafted or written in thinking, where the user
 sees only the app's summary of it. It is a message of its own with no
 tool call. The plugin refuses tool calls until it is sent, then carries
-the build on to the `build` and front-door skills. It is the two
-paragraphs below, verbatim, each on one line, with no quote marks. The
+the build on to the `build` and front-door skills. It is the
+paragraph below, verbatim, on one line, with no quote marks. The
 only change is the examples in angle brackets: two things from the
 user's brief that will be objects, in the user's words ("a class or a
 membership"). An existing project skips it.
 
-**Welcome to Reboot.** A Reboot app is built from a domain model. The model is made of domain objects, <a room or a reservation>. Each domain object is defined by its state type, what it holds, and its methods, what it can do. Each one keeps its own state and handles one request at a time, so the rules you describe hold without a database to manage.
-
-This build follows the **Reboot Flywheel**. **Design** builds the domain model, the feature spec and a running prototype, each for you to review. **Prove** runs every scenario against it and collects the evidence. **Observe** shows what the running app does, and starts the next round. Interrupt at any time.
+**Welcome to Reboot.** A Reboot app is built from a domain model. The model is made of domain objects, such as <a room or a reservation>. Each domain object is defined by its state (what it holds) and its methods (what it can do). Each one keeps its own state and handles one request at a time, so the rules you describe hold without a database to manage.
 
 **Voice, before anything else.** Everything said to the user, from
 the first line of the session to the handoff, is a statement of fact

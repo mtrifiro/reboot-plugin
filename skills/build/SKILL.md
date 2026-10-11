@@ -456,8 +456,8 @@ domain-model report, each object's paragraph names the design
 question its choices answer, what the object is, what it can do or who
 may call it, and the principle behind them, as the hotel model above
 does. Reboot's terms are defined once there: the domain model is
-made of domain objects; each is defined by its state type, what it
-holds, and its methods, and runs them one at a time; a reader, writer,
+made of domain objects; each is defined by its state, what it
+holds, and its methods, what it can do, and runs them one at a time; a reader, writer,
 transaction or workflow is what a method may touch; an authorizer is
 who may call it; a scenario is a rule in English the suite runs. The
 review adds the dev loop, the dashboard and `rbt inspect`. A term the
