@@ -8,4 +8,4 @@ allowed_tools: [Read, Glob, Grep, Skill, AskUserQuestion]
 append_system_prompt: "You are in a planning-only session: you can read files and load skills but cannot write files or run commands. No one can answer a question in this session: state the assumptions you go on with and continue. Follow any skills that apply as far as you can without writing, and say what you would do at each step. End with a short summary of the design so far and what happens next."
 ---
 
-Build a hotel booking app: guests book rooms for a range of nights, and a room can be booked at most once per night. Just build it; don't stop to check the design with me.
+Build a Reboot hotel booking app: guests book rooms for a range of nights, and a room can be booked at most once per night. Just build it; don't stop to check the design with me.
