@@ -1,7 +1,7 @@
 ---
-title: React Scaffolding — package.json, vite.config.ts, tsconfigs, index.css
+title: React Scaffolding, package.json, vite.config.ts, tsconfigs, index.css
 impact: CRITICAL
-impactDescription: The shell files for the `frontend/` tree. `vite.config.ts` is load-bearing — flattening the HTML output breaks MCP UI artifact discovery (the server resolves `frontend/dist/mcp/<name>/index.html`, the **nested** Vite default). `npm run build` runs `build.mjs`, which auto-discovers and builds every UI; tsconfigs split into `app` and `node` halves.
+impactDescription: The shell files for the `frontend/` tree. `vite.config.ts` is load-bearing: flattening the HTML output breaks MCP UI artifact discovery (the server resolves `frontend/dist/mcp/<name>/index.html`, the **nested** Vite default). `npm run build` runs `build.mjs`, which auto-discovers and builds every UI; tsconfigs split into `app` and `node` halves.
 tags: web, react, vite, tsconfig, package-json, css, build, hmr, scaffolding, build-mjs, template
 summary: "Flattening `vite.config.ts` output breaks UI discovery at `frontend/dist/mcp/<name>/index.html`; copy `build/templates/mcp-ui/frontend/`; `npm install` before second `rbt generate`."
 step: frontend
@@ -11,7 +11,7 @@ verified: 1.6.0
 docs: ""
 ---
 
-# React Scaffolding — package.json, vite.config.ts, tsconfigs, index.css
+# React Scaffolding: package.json, vite.config.ts, tsconfigs, index.css
 
 ## When you are here
 
@@ -34,7 +34,7 @@ cd .. && rbt generate         # again, now that node_modules exists
 cd frontend && npm run build  # tsc -b, then build.mjs
 ```
 
-- **`frontend/vite.config.ts` — copy exactly, never edit.** One config,
+- **`frontend/vite.config.ts`: copy exactly, never edit.** One config,
   three jobs: the `serve` dev server (HMR for every `mcp/<name>` UI and
   the `web/` SPA under `base: "/__/frontend/"`, port `RBT_VITE_PORT` or
   `4444`, `strictPort`, `host: true`), and two builds chosen by
@@ -43,25 +43,25 @@ cd frontend && npm run build  # tsc -b, then build.mjs
   MCP server resolves, JS and CSS inlined by `viteSingleFile`; `web`
   builds the SPA into `dist/web/` with `base: "/__/frontend/web/"`. Also
   sets the `@api` alias and `dedupe: ["react", "react-dom", "zod"]`.
-- **`frontend/build.mjs`** — `npm run build` runs `tsc -b && node
+- **`frontend/build.mjs`** `npm run build` runs `tsc -b && node
   build.mjs`, which discovers every `mcp/<name>/index.html` (and
   `web/index.html`) and builds each through `vite.config.ts`. Adding or
   removing a UI touches no script.
-- **`frontend/package.json`** — the set `@reboot-dev/create-ui@1.6.0`
+- **`frontend/package.json`** the set `@reboot-dev/create-ui@1.6.0`
   writes: `@reboot-dev/reboot-react` and `@reboot-dev/reboot-api` at the
   backend's `reboot` version, the two `@modelcontextprotocol` packages,
   React 18, `zod` 4, dev dependencies including `@types/node` and
   `vite-plugin-singlefile`. Rename only `name`.
 - **`frontend/tsconfig.json` / `tsconfig.app.json` /
-  `tsconfig.node.json`** — the app half type-checks `mcp`, `web` and
+  `tsconfig.node.json`** the app half type-checks `mcp`, `web` and
   `vite-env.d.ts` with the `@api/*` path; the node half `vite.config.ts`.
   **`frontend/vite-env.d.ts`** (Vite client types) types `*.module.css`
   imports and `import.meta.env`.
-- **`frontend/mcp/clicker/`** — one UI: `index.html`, `main.tsx`
+- **`frontend/mcp/clicker/`** one UI: `index.html`, `main.tsx`
   (`RebootClientProvider` with no `url`; the backend serves the UI),
   `App.tsx` (calls `useHostTheme()`), `App.module.css`, `index.css`
   (imports the shared `frontend/mcp/styles.css`).
-- **`frontend/mcp/styles.css`, `frontend/mcp/host-theme.ts`** — the
+- **`frontend/mcp/styles.css`, `frontend/mcp/host-theme.ts`** the
   tokens and classes every UI shares, and the hook that follows the
   host's light/dark theme (`ui-design.md`).
 
@@ -104,12 +104,12 @@ writes only missing files for every `UI()` method lacking an
 
 | Error text (stable prefix) | Meaning | Fix |
 | --- | --- | --- |
-| `Web artifact 'frontend/dist/mcp/<name>/index.html' is missing` | The UI was never built | `cd frontend && npm run build` — do not edit `vite.config.ts` |
+| `Web artifact 'frontend/dist/mcp/<name>/index.html' is missing` | The UI was never built | `cd frontend && npm run build`: do not edit `vite.config.ts` |
 | `Unknown build target:` | `vite build` ran without `RBT_BUILD_TARGET`, or for a UI with no `index.html` | Run `npm run build` (it sets the target) |
 | `Property 'useGet' does not exist on type '{ counter: UseCounterApi \| undefined; isLoading: boolean; }'` | Zero-arg `use<Type>()` returns `{ <type>, isLoading }` at 1.6.0, not the handle | Destructure it and mount a child once the handle is defined (template `App.tsx`) |
 
 ## See also
 
-- [`react-app-tsx.md`](react-app-tsx.md) — writing the component
-- [`project-shell.md`](project-shell.md) — `.rbtrc` HMR and dist configs
-- [`build/templates/README.md`](../../build/templates/README.md) — every template file explained
+- [`react-app-tsx.md`](react-app-tsx.md), writing the component
+- [`project-shell.md`](project-shell.md), `.rbtrc` HMR and dist configs
+- [`build/templates/README.md`](../../build/templates/README.md), every template file explained

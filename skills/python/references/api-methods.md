@@ -1,5 +1,5 @@
 ---
-title: Pick a Method Factory — `Reader`, `Writer`, `Transaction`, or `Workflow`
+title: Pick a Method Factory, `Reader`, `Writer`, `Transaction`, or `Workflow`
 impact: CRITICAL
 impactDescription: The factory drives the context type, isolation, and access semantics
 tags: method, reader, writer, transaction, workflow, factory, constructor, mode, mcp, User
@@ -11,7 +11,7 @@ verified: 1.6.0
 docs: ""
 ---
 
-# Pick a Method Factory — `Reader`, `Writer`, `Transaction`, or `Workflow`
+# Pick a Method Factory: `Reader`, `Writer`, `Transaction`, or `Workflow`
 
 ## When you are here
 
@@ -37,10 +37,10 @@ optional `errors=[...]` ([`api-errors.md`](api-errors.md)), optional
 an MCP tool).
 
 `Transaction` `mode=` (both from `reboot.api`) sets how it locks its own state:
-- `mode=Exclusive()` — exclusive from the start; concurrent callers
+- `mode=Exclusive()`, exclusive from the start; concurrent callers
   queue. Use when it writes its own state (most transactions) or when
   in doubt.
-- `mode=Shared()` — shared, upgraded only if the body writes its own
+- `mode=Shared()`: shared, upgraded only if the body writes its own
   state; callers proceed concurrently. Use when it mostly reads its own
   state while writing others (e.g. the root of a tree of states).
 
@@ -95,7 +95,7 @@ BankMethods = Methods(
 ### The Servicer Signature Each Declaration Obliges
 
 `rbt generate` turns every entry into one method on `<Type>.Servicer`;
-yours must match. This is the whole contract — don't read the generated
+yours must match. This is the whole contract: don't read the generated
 `*_rbt.py` (tens of thousands of lines):
 
 ```python
@@ -137,20 +137,20 @@ Two generated shapes you do not write:
 
 ## Never
 
-- `balance=BalanceResponse` (a bare `Model`) in `Methods(...)` — every
+- `balance=BalanceResponse` (a bare `Model`) in `Methods(...)`: every
   entry must be a factory call.
-- Omit `mcp=` — required on all four factories, `Workflow` included.
+- Omit `mcp=`: required on all four factories, `Workflow` included.
   Use `mcp=None`.
-- `factory=True` on a `Reader` or `Workflow` — refused by
+- `factory=True` on a `Reader` or `Workflow`: refused by
   `rbt generate`. Make the factory a `Writer`/`Transaction` and
   schedule the workflow from it.
-- Choose `Writer` for a method that must change another actor — a writer
+- Choose `Writer` for a method that must change another actor: a writer
   mutates only its own actor (`servicer-writer.md`). Two types whose
   transactions write each other deadlock under concurrency; see
   `state-actor-decomposition.md` § Never.
 - A sign-up method that creates `User`, an id passed to `useUser()`
-  in the browser, or constructing `User` in tests — see Limits.
-- `mcp=Resource()` — not supported; use `Tool()`.
+  in the browser, or constructing `User` in tests: see Limits.
+- `mcp=Resource()`: not supported; use `Tool()`.
 
 ## Limits
 
@@ -161,7 +161,7 @@ Two generated shapes you do not write:
   access, state ID `context.auth.user_id`. A `User` type without
   `oauth=` fails to start.
   - Codegen injects `create` (`Transaction(factory=True)`) and
-    `set_claims`; both are reserved — override them in the servicer,
+    `set_claims`; both are reserved: override them in the servicer,
     don't declare them.
   - Every `User` state field needs a default or `Optional`.
   - In tests, `rbt.create_external_context_as(name, user_id)` suffices
@@ -187,6 +187,6 @@ Two generated shapes you do not write:
 
 ## See also
 
-- [`api-pydantic.md`](api-pydantic.md) — fields, defaults, generated names
-- [`servicer-workflow.md`](servicer-workflow.md) — implementing a `Workflow`
-- [`rpc-constructor-calls.md`](rpc-constructor-calls.md) — calling a `factory=True` method
+- [`api-pydantic.md`](api-pydantic.md), fields, defaults, generated names
+- [`servicer-workflow.md`](servicer-workflow.md), implementing a `Workflow`
+- [`rpc-constructor-calls.md`](rpc-constructor-calls.md), calling a `factory=True` method

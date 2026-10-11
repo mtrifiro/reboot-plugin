@@ -5,22 +5,22 @@ argument-hint: [<project-directory>]
 allowed-tools: Bash, Read, Write, Glob, Grep, Edit, AskUserQuestion
 ---
 
-# upgrade — Upgrade a Reboot Application
+# upgrade: Upgrade a Reboot Application
 
 The single authoritative upgrade procedure. Triggers:
 
-- `rbt` prints `A newer Reboot (X.Y.Z) is available; ...` — a
+- `rbt` prints `A newer Reboot (X.Y.Z) is available; ...`: a
   `newer Reboot is available` notice is not blocking: ask the developer at a convenient moment; if they decline,
   keep iterating.
 - An app refuses to start with `This application depends on reboot <X>, but it is being run by an rbt CLI at version <Y>`
-  — blocking: switch to this skill unconditionally.
+: blocking: switch to this skill unconditionally.
 - The user asks to upgrade or update Reboot.
 
 Never start an upgrade without the developer's approval. Order is
-fixed: make the **plugin** current (steps 1–2), then bring the
-**application** to the plugin's version (steps 3–9).
+fixed: make the **plugin** current (steps 1 to 2), then bring the
+**application** to the plugin's version (steps 3 to 9).
 
-## Step 1 — Is this plugin itself up to date?
+## Step 1: Is this plugin itself up to date?
 
 The plugin's version is its `VERSION` file:
 `${CLAUDE_PLUGIN_ROOT}/VERSION` in Claude Code, else two directories
@@ -34,9 +34,9 @@ curl -fsSL --max-time 5 https://pypi.org/pypi/reboot/json |
 PyPI unreachable: say so and continue with step 3 (`VERSION` is still a
 valid, if possibly stale, target).
 
-## Step 2 — If the plugin is out of date, update it first
+## Step 2: If the plugin is out of date, update it first
 
-If PyPI is newer, update the plugin **before** touching the app — the
+If PyPI is newer, update the plugin **before** touching the app: the
 new release's migration notes and matching skills arrive only with it.
 The developer performs the update and restart:
 
@@ -52,7 +52,7 @@ The developer performs the update and restart:
 
 Stop here.
 
-## Step 3 — Determine the application's current version
+## Step 3: Determine the application's current version
 
 Project root: the directory (user-named or current) containing
 `.rbtrc`. Current version is the app's pin:
@@ -61,17 +61,17 @@ Project root: the directory (user-named or current) containing
 - Node.js: the `@reboot-dev/reboot` version in `package.json`.
 
 The **target** is exactly the plugin's `VERSION`, never "latest on
-PyPI" — a newer release may need migration steps this plugin doesn't
+PyPI": a newer release may need migration steps this plugin doesn't
 know.
 
-## Step 4 — Compare
+## Step 4: Compare
 
 - **Current == target:** report it's up to date. Stop.
 - **Current > target:** do NOT downgrade; update the plugin (step 2).
   Stop.
 - **Current < target:** proceed.
 
-## Step 5 — Plan, and confirm with the developer
+## Step 5: Plan, and confirm with the developer
 
 Read every fragment (`.md`) in this skill's `migrations/<version>/`
 directories with current < `<version>` ≤ target, in ascending version
@@ -82,15 +82,15 @@ skip one whose `applies` doesn't list this app's front door, or whose
 from/to versions and each remaining fragment's `summary`, plus the
 skipped ones and why; get their go-ahead before changing anything.
 
-## Step 6 — Apply the code migrations
+## Step 6: Apply the code migrations
 
 Apply the fragments in ascending version order. If one asks for the
 developer's input (e.g. which feature a test belongs to), ask and finish
-it before the next. Code changes only — don't bump pins or regenerate
+it before the next. Code changes only: don't bump pins or regenerate
 yet, so an interrupted upgrade still pins the old version, the mismatch
 check fires next run, and this skill can be rerun.
 
-## Step 7 — Bump every pin, once, to the exact target version
+## Step 7: Bump every pin, once, to the exact target version
 
 - `pyproject.toml`: every exact `reboot` pin, incl. `reboot[dev]` and
   any other dev dependency on it.
@@ -104,7 +104,7 @@ check fires next run, and this skill can be rerun.
   otherwise replace it with this plugin's copy
   (`python/references/stdlib-oauth-tokens.md`).
 
-## Step 8 — Reinstall, regenerate, test
+## Step 8: Reinstall, regenerate, test
 
 From the project root:
 
@@ -113,7 +113,7 @@ From the project root:
 3. `uv run mypy backend/ tests/`, then the tests; fix upgrade-caused
    failures, guided by the migration notes.
 
-## Step 9 — Report
+## Step 9: Report
 
 Summarize the version change, migration steps applied (if any), and test
 results.

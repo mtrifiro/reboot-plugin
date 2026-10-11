@@ -33,13 +33,13 @@ results. Read each part below when you reach its moment.
 
 ## Never
 
-- `self` or `self.state` in a workflow — it is a `@classmethod`.
-- A plain `await` on anything with effects — every `await` takes the
+- `self` or `self.state` in a workflow: it is a `@classmethod`.
+- A plain `await` on anything with effects: every `await` takes the
   primitive for what it calls (calls part).
 - `schedule(...)` from a workflow (`servicer-workflow-declare.md`, "Never").
-- A wall-clock or random value read directly in the body — capture it
+- A wall-clock or random value read directly in the body: capture it
   with `at_least_once` (external part).
-- Driving the phase after a commit from a plan rebuilt locally — after
+- Driving the phase after a commit from a plan rebuilt locally: after
   an unclean kill a workflow replayed onto a different path and wedged
   (agentic-demo, 1.4.0). Drive post-commit phases from the actor's
   committed state.
@@ -64,6 +64,6 @@ None known. Each part lists its own.
 
 ## See also
 
-- [`api-methods.md`](api-methods.md) — the `Workflow(...)` factory and servicer signature
-- [`agent-pydantic-ai.md`](agent-pydantic-ai.md) — LLM calls inside a workflow
-- [`scheduling-recurring.md`](scheduling-recurring.md) — recurring jobs dispatching workflows
+- [`api-methods.md`](api-methods.md), the `Workflow(...)` factory and servicer signature
+- [`agent-pydantic-ai.md`](agent-pydantic-ai.md), LLM calls inside a workflow
+- [`scheduling-recurring.md`](scheduling-recurring.md), recurring jobs dispatching workflows

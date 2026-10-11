@@ -42,7 +42,7 @@ def authorizer(self):
 
 Evaluation (1.6.0 `AllowIfAuthorizerRule`):
 
-- Predicates run **one at a time, in list order**, never concurrently — for
+- Predicates run **one at a time, in list order**, never concurrently: for
   `all` and `any` alike.
 - `all` returns the first `Unauthenticated` / `PermissionDenied`; later
   predicates may assume earlier ones returned `Ok` (put one reading
@@ -59,9 +59,9 @@ The stdlib `OrderedMapServicer` defaults to `allow_if(all=[is_app_internal])`.
 
 ## Never
 
-- `allow_if(all=[...], any=[...])` — asserts
+- `allow_if(all=[...], any=[...])`: asserts
   ``Exactly one of `all` or `any` must be passed``.
-- `allow_if(any=[is_app_internal, allow_if(all=[a, b])])` — rules do not
+- `allow_if(any=[is_app_internal, allow_if(all=[a, b])])`: rules do not
   nest (an `AuthorizerRule` is not a predicate; `mypy` rejects it). Write
   one predicate combining `a` and `b` (`auth-custom-predicates.md`).
 - Read a `PermissionDenied` from `allow_if(any=[is_app_internal,
@@ -83,7 +83,7 @@ The stdlib `OrderedMapServicer` defaults to `allow_if(all=[is_app_internal])`.
   ```
 
 - An expensive predicate (one that reads another actor) before
-  `has_verified_token` in `all=[...]` — it runs for unauthenticated callers.
+  `has_verified_token` in `all=[...]`: it runs for unauthenticated callers.
 
 ## Limits
 
@@ -102,6 +102,6 @@ The stdlib `OrderedMapServicer` defaults to `allow_if(all=[is_app_internal])`.
 
 ## See also
 
-- [`auth-built-in-predicates.md`](auth-built-in-predicates.md) — the three shipped predicates
-- [`auth-custom-predicates.md`](auth-custom-predicates.md) — combining checks in one predicate
-- [`servicer-authorizer.md`](servicer-authorizer.md) — per-method rules, tokenless call paths
+- [`auth-built-in-predicates.md`](auth-built-in-predicates.md), the three shipped predicates
+- [`auth-custom-predicates.md`](auth-custom-predicates.md), combining checks in one predicate
+- [`servicer-authorizer.md`](servicer-authorizer.md), per-method rules, tokenless call paths

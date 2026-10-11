@@ -25,7 +25,7 @@ Any Python for a Reboot app (see the description). Specifically:
 
 - Changing the API of an app that has persisted state or is deployed:
   read `references/api-schema-evolution.md` first.
-- Workflows: pick primitives per `servicer-workflow-calls.md` —
+- Workflows: pick primitives per `servicer-workflow-calls.md`,
   `.per_workflow(alias)` / `.per_iteration(alias)` / `.always()` for
   Reboot calls; `at_least_once` by default for external calls
   (`at_most_once` for the rare non-retryable one); `until` /
@@ -116,7 +116,7 @@ the lists below:
   and be cut off.
 - Never read generated or installed source (`*_rbt.py`,
   `*_rbt_react.ts`, `site-packages/`, `node_modules/`, codegen
-  templates) — the costliest way to learn a fact; the references hold
+  templates): the costliest way to learn a fact; the references hold
   the shapes. If something isn't covered, bound the output (a targeted
   `grep -n … | head -40`, or `sed -n '<start>,<end>p'` over a known
   range), never a whole generated file.
@@ -127,73 +127,73 @@ and Web Apps read their builder skill's lists instead. -->
 
 ### Defining the API
 
-_Design_ — until the user accepts the domain model and feature files
+_Design_: until the user accepts the domain model and feature files
 (build skill, "Accept the Design"):
 
 <!-- generated:start reading-list front-door=backend-only step=api -->
-- `references/api-methods.md` — The factory fixes the servicer's context type, and `mcp=` is required; `Reader`/`Writer`/`Transaction`/`Workflow`, `factory=True`, `errors=`, `description=`.
-- `references/api-pydantic.md` — A non-zero `Field` default is rejected at import; tags, zero defaults, `API(...)` wiring, Request/Response naming.
-- `references/state-actor-decomposition.md` — A Type with unrelated field clusters serializes writers and grows a God `User`; split it into separate Types.
-- `references/state-collections.md` — Never `list[Entity]` on parents; decide if each item is its own Type, then `list[Sub]`, ID list or `OrderedMap`.
-- `references/testing-features.md` — Built-in steps match their exact spelling; who calls, `creates` / `does`, saved values, `eventually`, aborts, `@wip`, custom steps.
-- `references/api-schema-evolution.md` — only when changing an API that is deployed or has persisted state.
-- `references/api-errors.md` — only when the API declares typed errors.
-- `references/state-nested-models.md` — only when a state type has groups of fields that belong together.
-- `references/state-scalar-fields.md` — only when a field holds a secret, token or PII, or you want a non-zero default.
+- `references/api-methods.md`: The factory fixes the servicer's context type, and `mcp=` is required; `Reader`/`Writer`/`Transaction`/`Workflow`, `factory=True`, `errors=`, `description=`.
+- `references/api-pydantic.md`: A non-zero `Field` default is rejected at import; tags, zero defaults, `API(...)` wiring, Request/Response naming.
+- `references/state-actor-decomposition.md`: A Type with unrelated field clusters serializes writers and grows a God `User`; split it into separate Types.
+- `references/state-collections.md`: Never `list[Entity]` on parents; decide if each item is its own Type, then `list[Sub]`, ID list or `OrderedMap`.
+- `references/testing-features.md`: Built-in steps match their exact spelling; who calls, `creates` / `does`, saved values, `eventually`, aborts, `@wip`, custom steps.
+- `references/api-schema-evolution.md`: only when changing an API that is deployed or has persisted state.
+- `references/api-errors.md`: only when the API declares typed errors.
+- `references/state-nested-models.md`: only when a state type has groups of fields that belong together.
+- `references/state-scalar-fields.md`: only when a field holds a secret, token or PII, or you want a non-zero default.
 <!-- generated:end -->
 
 ### The project shell
 
-_Prove_ — building to the accepted design:
+_Prove_: building to the accepted design:
 
 <!-- generated:start reading-list front-door=backend-only step=shell -->
-- `references/lifecycle-application-entry.md` — Pass servicer classes, not instances, and register stdlib libraries; `async def main()` awaiting `Application(servicers=[...], initialize=...).run()`.
-- `references/lifecycle-project-setup.md` — Never add `__init__.py` or edit `*_rbt.py`; copy `build/templates/<front-door>/`; mypy sees `self.state` as `Any`: typed locals.
-- `references/lifecycle-rbtrc.md` — `.rbtrc` is line-based, not YAML; `--application-name` not `--name`; `--env-file` for secrets; `serve run` lines; named configs.
-- `references/lifecycle-secrets.md` — only when the app needs secrets (API keys, OAuth client secrets).
-- `references/lifecycle-dev-loop.md` — only when the dev loop misses an edit, restarts in a loop, or runs beside the test suite.
+- `references/lifecycle-application-entry.md`: Pass servicer classes, not instances, and register stdlib libraries; `async def main()` awaiting `Application(servicers=[...], initialize=...).run()`.
+- `references/lifecycle-project-setup.md`: Never add `__init__.py` or edit `*_rbt.py`; copy `build/templates/<front-door>/`; mypy sees `self.state` as `Any`: typed locals.
+- `references/lifecycle-rbtrc.md`: `.rbtrc` is line-based, not YAML; `--application-name` not `--name`; `--env-file` for secrets; `serve run` lines; named configs.
+- `references/lifecycle-secrets.md`: only when the app needs secrets (API keys, OAuth client secrets).
+- `references/lifecycle-dev-loop.md`: only when the dev loop misses an edit, restarts in a loop, or runs beside the test suite.
 <!-- generated:end -->
 
 ### Implementing a Servicer
 
 <!-- generated:start reading-list front-door=backend-only step=servicer -->
-- `references/lifecycle-initialize-hook.md` — Each `initialize` call runs once per app lifetime, not per boot; migrations need new aliases; failures retry forever.
-- `references/lifecycle-seeding.md` — Concurrent or one-per-record seeding hangs or takes minutes; seed in sequential batched transactions with stable per-call aliases.
-- `references/rpc-calls.md` — Writers can't call writers or transactions, even their own; caller identity doesn't travel; writer cycles deadlock; pass kwargs.
-- `references/servicer-constructor.md` — Never set initial state in `__init__`; a second call aborts `StateAlreadyConstructed`; use `Transaction(factory=True)` if it constructs others.
-- `references/servicer-reader.md` — Mutating `self.state` in a reader is silently discarded; signature must match the API; reader-to-reader calls; subscription re-runs.
-- `references/servicer-writer.md` — Writers mutate one actor: no writes to others, no external calls, schedule only on self; errors roll back.
-- `references/rpc-constructor-calls.md` — Constructors aren't on `.ref(id)` and a second call aborts; call `<X>.<ctor>(context, id, ...)`; get-or-create.
-- `references/rpc-refs.md` — `self.state_id` raises, use `self.ref().state_id`; probing existence without `StateNotConstructed`; caller-supplied IDs; reserved method names.
-- `references/servicer-workflow.md` — only when you declared a `Workflow`.
-- `references/agent-pydantic-ai.md` — only when the backend calls an LLM.
-- `references/agent-tools.md` — only when an LLM agent needs tools that read or change Reboot state.
-- `references/crypto-root-keys.md` — only when building your own key-derivation feature.
-- `references/patterns-cross-actor-reads.md` — only when a reader composes data from other actors, or a page waits on a slow reader.
-- `references/patterns-time-and-randomness.md` — only when a method reads the clock or random values.
-- `references/scheduling-basic.md` — only when deferring work with `schedule()` or `spawn(when=…)`.
-- `references/servicer-transaction.md` — only when you declared a `Transaction`.
-- `references/stdlib-ciphertext.md` — only when storing secrets or PII encrypted at rest.
-- `references/stdlib-ordered-map.md` — only when the design uses an `OrderedMap`.
-- `references/stdlib-queue.md` — only when the design uses a work `Queue`.
-- `references/patterns-error-handling.md` — only when a method declares, raises or translates errors.
-- `references/patterns-idempotency.md` — only when a workflow or `initialize` repeats calls, or an outside call must not run twice.
-- `references/rpc-forall.md` — only when fanning one call out to many actors.
-- `references/scheduling-recurring.md` — only when the app needs a recurring or cron job.
-- `references/stdlib-presence.md` — only when tracking who is connected (presence).
-- `references/stdlib-pubsub.md` — only when publishing to topics (pub/sub).
-- `references/stdlib-item.md` — only when using the stdlib `Item` value envelope.
+- `references/lifecycle-initialize-hook.md`: Each `initialize` call runs once per app lifetime, not per boot; migrations need new aliases; failures retry forever.
+- `references/lifecycle-seeding.md`: Concurrent or one-per-record seeding hangs or takes minutes; seed in sequential batched transactions with stable per-call aliases.
+- `references/rpc-calls.md`: Writers can't call writers or transactions, even their own; caller identity doesn't travel; writer cycles deadlock; pass kwargs.
+- `references/servicer-constructor.md`: Never set initial state in `__init__`; a second call aborts `StateAlreadyConstructed`; use `Transaction(factory=True)` if it constructs others.
+- `references/servicer-reader.md`: Mutating `self.state` in a reader is silently discarded; signature must match the API; reader-to-reader calls; subscription re-runs.
+- `references/servicer-writer.md`: Writers mutate one actor: no writes to others, no external calls, schedule only on self; errors roll back.
+- `references/rpc-constructor-calls.md`: Constructors aren't on `.ref(id)` and a second call aborts; call `<X>.<ctor>(context, id, ...)`; get-or-create.
+- `references/rpc-refs.md`: `self.state_id` raises, use `self.ref().state_id`; probing existence without `StateNotConstructed`; caller-supplied IDs; reserved method names.
+- `references/servicer-workflow.md`: only when you declared a `Workflow`.
+- `references/agent-pydantic-ai.md`: only when the backend calls an LLM.
+- `references/agent-tools.md`: only when an LLM agent needs tools that read or change Reboot state.
+- `references/crypto-root-keys.md`: only when building your own key-derivation feature.
+- `references/patterns-cross-actor-reads.md`: only when a reader composes data from other actors, or a page waits on a slow reader.
+- `references/patterns-time-and-randomness.md`: only when a method reads the clock or random values.
+- `references/scheduling-basic.md`: only when deferring work with `schedule()` or `spawn(when=…)`.
+- `references/servicer-transaction.md`: only when you declared a `Transaction`.
+- `references/stdlib-ciphertext.md`: only when storing secrets or PII encrypted at rest.
+- `references/stdlib-ordered-map.md`: only when the design uses an `OrderedMap`.
+- `references/stdlib-queue.md`: only when the design uses a work `Queue`.
+- `references/patterns-error-handling.md`: only when a method declares, raises or translates errors.
+- `references/patterns-idempotency.md`: only when a workflow or `initialize` repeats calls, or an outside call must not run twice.
+- `references/rpc-forall.md`: only when fanning one call out to many actors.
+- `references/scheduling-recurring.md`: only when the app needs a recurring or cron job.
+- `references/stdlib-presence.md`: only when tracking who is connected (presence).
+- `references/stdlib-pubsub.md`: only when publishing to topics (pub/sub).
+- `references/stdlib-item.md`: only when using the stdlib `Item` value envelope.
 <!-- generated:end -->
 
 The stdlib already provides these; read the reference **before**
-writing your own actor type — a hand-rolled `Queue` / `OrderedMap` /
+writing your own actor type: a hand-rolled `Queue` / `OrderedMap` /
 etc. is almost always wrong:
 
 | You need...                                       | Use                 | Reference                |
 | ------------------------------------------------- | ------------------- | ------------------------ |
-| Durable FIFO — work queue, job queue, intake      | `Queue`             | `stdlib-queue.md`        |
+| Durable FIFO: work queue, job queue, intake      | `Queue`             | `stdlib-queue.md`        |
 | Sorted key-value with pagination / ordering       | `OrderedMap`        | `stdlib-ordered-map.md`  |
-| Presence — who's online / connected               | `Presence`          | `stdlib-presence.md`     |
+| Presence: who's online / connected               | `Presence`          | `stdlib-presence.md`     |
 | Pubsub / broadcast / fan-out to subscribers       | `Topic`             | `stdlib-pubsub.md`       |
 | Item builder for `Queue` / `Topic` payloads       | `Item`              | `stdlib-item.md`         |
 | Store OAuth access/refresh tokens from a provider | `OAuthTokenManager` | `stdlib-oauth-tokens.md` |
@@ -215,15 +215,15 @@ first.
 ### Authorization
 
 <!-- generated:start reading-list front-door=backend-only step=auth -->
-- `references/auth-allow-deny.md` — `allow()` to silence warnings, pass tests or mark internal methods makes them public; `deny()` blocks everyone; `return allow()`.
-- `references/auth-allow-if.md` — `is_app_internal` in `any` turns anonymous `Unauthenticated` into `PermissionDenied`; `allow_if(all=[...])` or `allow_if(any=[...])`, never both or nested; `all` short-circuits.
-- `references/auth-built-in-predicates.md` — Token predicates alone deny servicer-to-servicer calls; `has_verified_token`, `is_app_internal`, `state_id_is_user_id` and compositions.
-- `references/servicer-authorizer.md` — Without real rules every external call is denied; identity doesn't cross servicer calls; tokenless paths; `oauth=` vs `token_verifier=`.
-- `references/auth-custom-predicates.md` — Predicates must be keyword-only with `**kwargs` and check `context.app_internal` first; per-method rules via `<Type>.Authorizer(method=rule, _default=rule)`.
-- `references/auth-external-api-calls.md` — only when calling an external service's API as the user.
-- `references/auth-roles.md` — only when staff sign in with roles (a manager, a host, a server; editors and readers).
-- `references/stdlib-oauth-tokens.md` — only when storing a user's OAuth tokens for an external service.
-- `references/auth-claims.md` — only when you use claims or `set_claims`.
+- `references/auth-allow-deny.md`: `allow()` to silence warnings, pass tests or mark internal methods makes them public; `deny()` blocks everyone; `return allow()`.
+- `references/auth-allow-if.md`: `is_app_internal` in `any` turns anonymous `Unauthenticated` into `PermissionDenied`; `allow_if(all=[...])` or `allow_if(any=[...])`, never both or nested; `all` short-circuits.
+- `references/auth-built-in-predicates.md`: Token predicates alone deny servicer-to-servicer calls; `has_verified_token`, `is_app_internal`, `state_id_is_user_id` and compositions.
+- `references/servicer-authorizer.md`: Without real rules every external call is denied; identity doesn't cross servicer calls; tokenless paths; `oauth=` vs `token_verifier=`.
+- `references/auth-custom-predicates.md`: Predicates must be keyword-only with `**kwargs` and check `context.app_internal` first; per-method rules via `<Type>.Authorizer(method=rule, _default=rule)`.
+- `references/auth-external-api-calls.md`: only when calling an external service's API as the user.
+- `references/auth-roles.md`: only when staff sign in with roles (a manager, a host, a server; editors and readers).
+- `references/stdlib-oauth-tokens.md`: only when storing a user's OAuth tokens for an external service.
+- `references/auth-claims.md`: only when you use claims or `set_claims`.
 <!-- generated:end -->
 
 ### Testing
@@ -233,11 +233,11 @@ work (agree in English, tag `@wip`, iterate on scenarios) is the
 [`feature` skill](../feature/SKILL.md).
 
 <!-- generated:start reading-list front-door=backend-only step=tests -->
-- `references/testing-project-setup.md` — Missing `pytest.ini` paths break `_rbt` imports; no `pytest-asyncio`; `tests/` layout, fixture with `allowed_origins=[]`, `reboot[dev]`.
-- `references/patterns-load-and-benchmarking.md` — only when you measure load, or a page or method is slow.
-- `references/testing-external-context.md` — only when writing custom steps or harness tests.
-- `references/testing-failure-recovery.md` — only when the app has a spawned task, a `Workflow`, or scheduled work.
-- `references/testing-harness.md` — only when a `unittest` test boots the harness directly, for what a scenario cannot say.
+- `references/testing-project-setup.md`: Missing `pytest.ini` paths break `_rbt` imports; no `pytest-asyncio`; `tests/` layout, fixture with `allowed_origins=[]`, `reboot[dev]`.
+- `references/patterns-load-and-benchmarking.md`: only when you measure load, or a page or method is slow.
+- `references/testing-external-context.md`: only when writing custom steps or harness tests.
+- `references/testing-failure-recovery.md`: only when the app has a spawned task, a `Workflow`, or scheduled work.
+- `references/testing-harness.md`: only when a `unittest` test boots the harness directly, for what a scenario cannot say.
 <!-- generated:end -->
 
 ### Type-checking (do this after every change)
@@ -250,7 +250,7 @@ wrong context type, nonexistent response fields, wrong return types.
   in `references/lifecycle-project-setup.md`) putting `backend/src`,
   `backend/api`, `tests` and `api` on `mypy_path` with
   `explicit_package_bases = True` so `*_rbt.py` modules resolve. Missing?
-  Create it first — `mypy` is useless without it.
+  Create it first: `mypy` is useless without it.
 - After any Python edit under `backend/`, run `uv run mypy backend/ tests/`
   (or `mypy backend/ tests/`) from the project root; fix **every** error.
 - "Done" means both `mypy backend/ tests/` and `uv run pytest` are green.
@@ -263,100 +263,100 @@ Load only what the task needs (the lists above say when). Full catalog:
 
 <!-- generated:start catalog skill=python -->
 **Lifecycle**
-- `references/lifecycle-application-entry.md` — Define the Application Entry Point
-- `references/lifecycle-backup-restore.md` — Back Up and Restore — `rbt export`, Expunge, `rbt import`
-- `references/lifecycle-dev-loop.md` — Debug the Dev and Test Loop
-- `references/lifecycle-dockerfile.md` — Write a Reboot Cloud Dockerfile
-- `references/lifecycle-initialize-hook.md` — Use `initialize` for First-Run Setup
-- `references/lifecycle-project-setup.md` — Set Up a Reboot Python Project
-- `references/lifecycle-rbtrc.md` — Configure `.rbtrc` Correctly
-- `references/lifecycle-reboot-cloud.md` — Deploy on Reboot Cloud
-- `references/lifecycle-secrets.md` — Set Secrets — Env Vars in Dev, `rbt cloud secret set` in Cloud
-- `references/lifecycle-seeding.md` — Seed Data in Batches, Sequentially, with Aliases
+- `references/lifecycle-application-entry.md`: Define the Application Entry Point
+- `references/lifecycle-backup-restore.md`: Back Up and Restore, `rbt export`, Expunge, `rbt import`
+- `references/lifecycle-dev-loop.md`: Debug the Dev and Test Loop
+- `references/lifecycle-dockerfile.md`: Write a Reboot Cloud Dockerfile
+- `references/lifecycle-initialize-hook.md`: Use `initialize` for First-Run Setup
+- `references/lifecycle-project-setup.md`: Set Up a Reboot Python Project
+- `references/lifecycle-rbtrc.md`: Configure `.rbtrc` Correctly
+- `references/lifecycle-reboot-cloud.md`: Deploy on Reboot Cloud
+- `references/lifecycle-secrets.md`: Set Secrets, Env Vars in Dev, `rbt cloud secret set` in Cloud
+- `references/lifecycle-seeding.md`: Seed Data in Batches, Sequentially, with Aliases
 
 **API**
-- `references/api-errors.md` — Define and Raise Typed Errors
-- `references/api-methods.md` — Pick a Method Factory — `Reader`, `Writer`, `Transaction`, or `Workflow`
-- `references/api-pydantic.md` — Define APIs in Pydantic
-- `references/api-schema-evolution.md` — Schema Evolution Is Additive-Only on Deployed Applications
+- `references/api-errors.md`: Define and Raise Typed Errors
+- `references/api-methods.md`: Pick a Method Factory, `Reader`, `Writer`, `Transaction`, or `Workflow`
+- `references/api-pydantic.md`: Define APIs in Pydantic
+- `references/api-schema-evolution.md`: Schema Evolution Is Additive-Only on Deployed Applications
 
 **Servicer**
-- `references/servicer-authorizer.md` — Authorizers — When to Write Them, What They See
-- `references/servicer-constructor.md` — Handle Constructor Methods
-- `references/servicer-reader.md` — Implement Reader Methods
-- `references/servicer-transaction.md` — Implement Transaction Methods
-- `references/servicer-workflow-calls.md` — Classifying Workflow Calls and Calling Reboot (via `servicer-workflow.md`)
-- `references/servicer-workflow-declare.md` — Declaring and Starting a Workflow (via `servicer-workflow.md`)
-- `references/servicer-workflow-exit.md` — How a Workflow Exits (via `servicer-workflow.md`)
-- `references/servicer-workflow-external.md` — Calling External Systems from a Workflow (via `servicer-workflow.md`)
-- `references/servicer-workflow-loop.md` — Iterating in a Workflow with context.loop (via `servicer-workflow.md`)
-- `references/servicer-workflow-wait.md` — Waiting in a Workflow with until and until_changes (via `servicer-workflow.md`)
-- `references/servicer-workflow.md` — Building Durable Workflows
-- `references/servicer-writer.md` — Implement Writer Methods
+- `references/servicer-authorizer.md`: Authorizers, When to Write Them, What They See
+- `references/servicer-constructor.md`: Handle Constructor Methods
+- `references/servicer-reader.md`: Implement Reader Methods
+- `references/servicer-transaction.md`: Implement Transaction Methods
+- `references/servicer-workflow-calls.md`: Classifying Workflow Calls and Calling Reboot (via `servicer-workflow.md`)
+- `references/servicer-workflow-declare.md`: Declaring and Starting a Workflow (via `servicer-workflow.md`)
+- `references/servicer-workflow-exit.md`: How a Workflow Exits (via `servicer-workflow.md`)
+- `references/servicer-workflow-external.md`: Calling External Systems from a Workflow (via `servicer-workflow.md`)
+- `references/servicer-workflow-loop.md`: Iterating in a Workflow with context.loop (via `servicer-workflow.md`)
+- `references/servicer-workflow-wait.md`: Waiting in a Workflow with until and until_changes (via `servicer-workflow.md`)
+- `references/servicer-workflow.md`: Building Durable Workflows
+- `references/servicer-writer.md`: Implement Writer Methods
 
 **Agent**
-- `references/agent-pydantic-ai.md` — Call LLMs via the Reboot `Agent`, Never a Raw SDK
-- `references/agent-tools.md` — Give the Agent Tools with `@agent.tool` and `@agent.tool_plain`
+- `references/agent-pydantic-ai.md`: Call LLMs via the Reboot `Agent`, Never a Raw SDK
+- `references/agent-tools.md`: Give the Agent Tools with `@agent.tool` and `@agent.tool_plain`
 
 **Stdlib**
-- `references/stdlib-ciphertext.md` — Use `Ciphertext` for Envelope Encryption and Crypto-Shredding
-- `references/stdlib-item.md` — Use `Item` for Heterogeneous Values in Stdlib Containers
-- `references/stdlib-oauth-tokens.md` — Store Provider OAuth Tokens in `OAuthTokenManager`, Not Hand-Rolled `Ciphertext`
-- `references/stdlib-ordered-map.md` — Use `OrderedMap` for Distributed Sorted Key/Value Storage
-- `references/stdlib-presence.md` — Track Online Subscribers with `Presence`
-- `references/stdlib-pubsub.md` — Use `Topic` for Publish/Subscribe Fan-Out to Queues
-- `references/stdlib-queue.md` — Use `Queue` for Durable FIFO Work Queues
+- `references/stdlib-ciphertext.md`: Use `Ciphertext` for Envelope Encryption and Crypto-Shredding
+- `references/stdlib-item.md`: Use `Item` for Heterogeneous Values in Stdlib Containers
+- `references/stdlib-oauth-tokens.md`: Store Provider OAuth Tokens in `OAuthTokenManager`, Not Hand-Rolled `Ciphertext`
+- `references/stdlib-ordered-map.md`: Use `OrderedMap` for Distributed Sorted Key/Value Storage
+- `references/stdlib-presence.md`: Track Online Subscribers with `Presence`
+- `references/stdlib-pubsub.md`: Use `Topic` for Publish/Subscribe Fan-Out to Queues
+- `references/stdlib-queue.md`: Use `Queue` for Durable FIFO Work Queues
 
 **Crypto**
-- `references/crypto-root-keys.md` — Derive Your Own Keys from Reboot's Managed Crypto Root Keys (with Rotation)
+- `references/crypto-root-keys.md`: Derive Your Own Keys from Reboot's Managed Crypto Root Keys (with Rotation)
 
 **State**
-- `references/state-actor-decomposition.md` — Split a State Type That Holds Multiple Concerns
-- `references/state-collections.md` — Pick the Right Shape for Each Collection
-- `references/state-nested-models.md` — Compose State with Nested `Model`s
-- `references/state-scalar-fields.md` — Use Zero-Value Defaults for Scalar State Fields
+- `references/state-actor-decomposition.md`: Split a State Type That Holds Multiple Concerns
+- `references/state-collections.md`: Pick the Right Shape for Each Collection
+- `references/state-nested-models.md`: Compose State with Nested `Model`s
+- `references/state-scalar-fields.md`: Use Zero-Value Defaults for Scalar State Fields
 
 **Auth**
-- `references/auth-allow-deny.md` — `allow()` and `deny()` — Narrow Uses, Not Defaults
-- `references/auth-allow-if.md` — Compose Predicates with `allow_if(all=...)` / `allow_if(any=...)`
-- `references/auth-built-in-predicates.md` — Built-In Authorizer Predicates
-- `references/auth-claims.md` — Identity Claims and `User.set_claims`
-- `references/auth-custom-predicates.md` — Write Custom Authorizer Predicates
-- `references/auth-external-api-calls.md` — Calling External-Service APIs on the User's Behalf
-- `references/auth-roles.md` — A Staff Roster with Roles
+- `references/auth-allow-deny.md`: `allow()` and `deny()`, Narrow Uses, Not Defaults
+- `references/auth-allow-if.md`: Compose Predicates with `allow_if(all=...)` / `allow_if(any=...)`
+- `references/auth-built-in-predicates.md`: Built-In Authorizer Predicates
+- `references/auth-claims.md`: Identity Claims and `User.set_claims`
+- `references/auth-custom-predicates.md`: Write Custom Authorizer Predicates
+- `references/auth-external-api-calls.md`: Calling External-Service APIs on the User's Behalf
+- `references/auth-roles.md`: A Staff Roster with Roles
 
 **RPC**
-- `references/rpc-calls.md` — Call Actor Methods with Kwargs and a Context
-- `references/rpc-constructor-calls.md` — Call a Constructor as `Type.<ctor>(context, id, ...)`
-- `references/rpc-forall.md` — Fan Out Calls with `Service.forall(ids).method(context)`
-- `references/rpc-refs.md` — Get Actor References with `Service.ref(id)`
+- `references/rpc-calls.md`: Call Actor Methods with Kwargs and a Context
+- `references/rpc-constructor-calls.md`: Call a Constructor as `Type.<ctor>(context, id, ...)`
+- `references/rpc-forall.md`: Fan Out Calls with `Service.forall(ids).method(context)`
+- `references/rpc-refs.md`: Get Actor References with `Service.ref(id)`
 
 **Scheduling**
-- `references/scheduling-basic.md` — Schedule Future Work with `ref.schedule(when=...)`
-- `references/scheduling-recurring.md` — Recurring and "Cron" Schedules by Self-Rescheduling
+- `references/scheduling-basic.md`: Schedule Future Work with `ref.schedule(when=...)`
+- `references/scheduling-recurring.md`: Recurring and "Cron" Schedules by Self-Rescheduling
 
 **Testing**
-- `references/testing-external-context.md` — Drive Tests with `create_external_context`, Assert, Wait, and Mock
-- `references/testing-failure-recovery.md` — Test Failure Recovery — `rbt.down()` and `rbt.up(revision=...)`
-- `references/testing-features.md` — Specify Behavior in Feature Files
-- `references/testing-harness.md` — Spin Up Tests with the `Reboot()` Harness
-- `references/testing-project-setup.md` — Lay Out a Reboot Backend Test Suite
-- `references/testing-web-app.md` — Drive the Web App from Scenarios
+- `references/testing-external-context.md`: Drive Tests with `create_external_context`, Assert, Wait, and Mock
+- `references/testing-failure-recovery.md`: Test Failure Recovery, `rbt.down()` and `rbt.up(revision=...)`
+- `references/testing-features.md`: Specify Behavior in Feature Files
+- `references/testing-harness.md`: Spin Up Tests with the `Reboot()` Harness
+- `references/testing-project-setup.md`: Lay Out a Reboot Backend Test Suite
+- `references/testing-web-app.md`: Drive the Web App from Scenarios
 
 **Patterns**
-- `references/patterns-common-gotchas.md` — Every "Never" in One List
-- `references/patterns-cross-actor-reads.md` — Cross-Actor Reads and Reader Shape
-- `references/patterns-error-handling.md` — Error Handling Patterns
-- `references/patterns-idempotency.md` — Make Constructor and `initialize` Calls Idempotent
-- `references/patterns-load-and-benchmarking.md` — Load, Cost and Benchmarking
-- `references/patterns-react-state.md` — React State on Top of Reactive Readers
-- `references/patterns-time-and-randomness.md` — Time and Randomness in Method Bodies
+- `references/patterns-common-gotchas.md`: Every "Never" in One List
+- `references/patterns-cross-actor-reads.md`: Cross-Actor Reads and Reader Shape
+- `references/patterns-error-handling.md`: Error Handling Patterns
+- `references/patterns-idempotency.md`: Make Constructor and `initialize` Calls Idempotent
+- `references/patterns-load-and-benchmarking.md`: Load, Cost and Benchmarking
+- `references/patterns-react-state.md`: React State on Top of Reactive Readers
+- `references/patterns-time-and-randomness.md`: Time and Randomness in Method Bodies
 
 **React**
-- `references/react-generated-client.md` — The Generated React Client Contract
+- `references/react-generated-client.md`: The Generated React Client Contract
 
 **Lookups**
-- `references/errors.md` — Look Up an Error
+- `references/errors.md`: Look Up an Error
 <!-- generated:end -->
 
 ## External References

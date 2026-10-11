@@ -1,5 +1,5 @@
 ---
-title: API Definition — Method Types and Tool Exposure
+title: API Definition, Method Types and Tool Exposure
 impact: CRITICAL
 impactDescription: The pydantic API file is the source of truth for both Reboot codegen AND MCP tool surface. `UI()` is MCP-UI-only; every method (including `User`'s) requires explicit `mcp=`; application types need `factory=True` on their `create` Writer.
 tags: api, pydantic, ui, tool, mcp, reader, writer, transaction, workflow, factory, user
@@ -11,7 +11,7 @@ verified: 1.6.0
 docs: ""
 ---
 
-# API Definition — Method Types and Tool Exposure
+# API Definition: Method Types and Tool Exposure
 
 ## When you are here
 
@@ -182,19 +182,19 @@ entity's Readers, Writers and UIs go on its own `Type`.
 ## Never
 
 - `show_person=UI(request=ShowPersonProps)` on `User`, where
-  `ShowPersonProps` carries `person_id: str` — the AI can confuse the ID with
+  `ShowPersonProps` carries `person_id: str`: the AI can confuse the ID with
   another entity's, the component must call `usePerson({ id: personId })`
   by hand, and MCPJam shows a leaky entity-ID input. Put
   `show=UI(request=None, path="frontend/mcp/person", ...)` on `Person`;
   entity IDs never go in a `request=<Model>` field.
-- A method with no `mcp=` — not even `Workflow`, which is easy to miss;
+- A method with no `mcp=`: not even `Workflow`, which is easy to miss;
   codegen rejects it. Write `mcp=None`.
-- An application type whose `create` Writer lacks `factory=True` — no
+- An application type whose `create` Writer lacks `factory=True`: no
   `create` is generated for the `User` transaction to call.
-- `UI(path=...)` without `request=` — no default; write `request=None`.
-- `UI(path="mcp/clicker")` or an absolute path — use
+- `UI(path=...)` without `request=`: no default; write `request=None`.
+- `UI(path="mcp/clicker")` or an absolute path: use
   `"frontend/mcp/<name>"`, relative to the project root.
-- `mcp=Resource()` — rejected at 1.6.0; use `Tool()`.
+- `mcp=Resource()`: rejected at 1.6.0; use `Tool()`.
 
 ## Limits
 
@@ -220,11 +220,11 @@ entity's Readers, Writers and UIs go on its own `Type`.
 | `1 validation error for UI` / `request` / `Field required` | `UI()` without `request=` | `request=None` |
 | `'Resource()' is not yet supported; use 'Tool()' instead` | `mcp=Resource()` | `mcp=Tool()` |
 | `"type[<Type>]" has no attribute "create"` | mypy: the type has no `factory=True` method (observed at 1.4.1) | `factory=True` on its `create` Writer |
-| `AttributeError: type object '<Type>' has no attribute '<WrongName>'` | Request/response referenced by source class name | `<Type>.<MethodPascalCase>Request` — see [`api-pydantic.md`](../../python/references/api-pydantic.md) |
+| `AttributeError: type object '<Type>' has no attribute '<WrongName>'` | Request/response referenced by source class name | `<Type>.<MethodPascalCase>Request`: see [`api-pydantic.md`](../../python/references/api-pydantic.md) |
 | claude.ai shows `Connector not found` for a `UI(request=<Model>)` view after a 200 tool result | The host never requests the view's resource (claude.ai, 2026-10); the same read replayed with the session returns the page | A `UI(request=None)` view renders; diagnose on the host's side, not the server's |
 
 ## See also
 
-- [`servicer-patterns.md`](servicer-patterns.md) — implementing the `User` front door
-- [`react-app-tsx.md`](react-app-tsx.md) — the UI's zero-arg hook
-- [`api-methods.md`](../../python/references/api-methods.md) — factory choice, servicer signatures
+- [`servicer-patterns.md`](servicer-patterns.md), implementing the `User` front door
+- [`react-app-tsx.md`](react-app-tsx.md), the UI's zero-arg hook
+- [`api-methods.md`](../../python/references/api-methods.md), factory choice, servicer signatures

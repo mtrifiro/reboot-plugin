@@ -100,18 +100,18 @@ async def main():
 
 ## Never
 
-- `Queue.ref(id).create(context)` — no constructor
+- `Queue.ref(id).create(context)`: no constructor
   (`'WeakReference' object has no attribute 'create'`); enqueue directly.
-- `dequeue` from a writer or transaction — workflow-only; use
+- `dequeue` from a writer or transaction: workflow-only; use
   `try_dequeue` there.
-- A bare `.spawn()` of the consumer from `initialize` — raises
+- A bare `.spawn()` of the consumer from `initialize`: raises
   `IdempotencyRequiredError`; use `.idempotently("alias").spawn()`.
-- Reading `empty` on a queue that may never have been enqueued to —
+- Reading `empty` on a queue that may never have been enqueued to:
   aborts `StateNotConstructed` (observed at 1.6.0); a workflow retries
   forever. Use `try_dequeue` (empty on an unused queue), a blocking
   `dequeue`, or enqueue once first.
 - Calling `try_dequeue` twice on the same queue from one `until`
-  callable — the second is refused without an alias
+  callable: the second is refused without an alias
   (`servicer-workflow-wait.md`).
 - Hand-rolling a queue as a list field on actor state.
 
@@ -142,6 +142,6 @@ async def main():
 
 ## See also
 
-- [`servicer-workflow-loop.md`](servicer-workflow-loop.md) — the consume loop's iteration boundary
-- [`servicer-workflow-declare.md`](servicer-workflow-declare.md) — declaring and starting the consumer
-- [`lifecycle-initialize-hook.md`](lifecycle-initialize-hook.md) — aliases for calls in `initialize`
+- [`servicer-workflow-loop.md`](servicer-workflow-loop.md), the consume loop's iteration boundary
+- [`servicer-workflow-declare.md`](servicer-workflow-declare.md), declaring and starting the consumer
+- [`lifecycle-initialize-hook.md`](lifecycle-initialize-hook.md), aliases for calls in `initialize`

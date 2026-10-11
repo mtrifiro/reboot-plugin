@@ -27,7 +27,7 @@ SIGINT (Ctrl-C) by terminating every child's process group (read from
 source, not yet confirmed in practice), has no SIGTERM handler, and
 starts each child in its own session. So `kill`, `pkill` (SIGTERM) or
 SIGKILL on `rbt dev run` or its `uv run` parent leave the app and Envoy
-running with parent pid `1`. Observed 1.4.1–1.6.0 (reboot-crm,
+running with parent pid `1`. Observed 1.4.1 to 1.6.0 (reboot-crm,
 cineloop, reboot-air, student-system, MattPRD): orphans serve reads
 from a deleted store, hold the RocksDB lock, re-seed with old code and
 block the port.
@@ -66,7 +66,7 @@ lsof .rbt/dev/<application-name>/p000000/LOCK
 
 ### Restart
 
-1. Stop completely and wait until step 4 prints nothing — two
+1. Stop completely and wait until step 4 prints nothing: two
    `rbt dev run`s over one state directory fight over the RocksDB lock
    and crash-loop (theater-network, 1.4.0). The plugin's `rbt` shim waits
    up to 10 s for the lock to clear after a SIGINT and refuses a
@@ -108,12 +108,12 @@ uv run rbt dev expunge --yes
 - **When to expunge:** dev state that lived through incompatible designs
   (changed method kinds, old scheduled tasks for reworked methods) fails
   with native asserts (`database.cc Check failed`) or context errors on
-  task replay — expunge and reseed rather than debug (theater-network,
+  task replay, expunge and reseed rather than debug (theater-network,
   1.4.0).
 
 ## Never
 
-- **Iterating on a state shape with the `--watch` loop live** — the fix
+- **Iterating on a state shape with the `--watch` loop live** the fix
   is refused until you expunge
   ([`lifecycle-dev-loop.md`](../../python/references/lifecycle-dev-loop.md) § Never).
 - **If an edit does not take,** look for `Application modified;
@@ -156,6 +156,6 @@ uv run rbt dev expunge --yes
 
 ## See also
 
-- [`../SKILL.md`](../SKILL.md) — starting every process the app needs
-- [`../../python/references/lifecycle-dev-loop.md`](../../python/references/lifecycle-dev-loop.md) — test-loop hygiene, hangs
-- [`../../python/references/lifecycle-rbtrc.md`](../../python/references/lifecycle-rbtrc.md) — `.rbtrc` flags, expunge line
+- [`../SKILL.md`](../SKILL.md), starting every process the app needs
+- [`../../python/references/lifecycle-dev-loop.md`](../../python/references/lifecycle-dev-loop.md), test-loop hygiene, hangs
+- [`../../python/references/lifecycle-rbtrc.md`](../../python/references/lifecycle-rbtrc.md), `.rbtrc` flags, expunge line

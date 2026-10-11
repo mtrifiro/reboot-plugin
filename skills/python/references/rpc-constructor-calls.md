@@ -44,11 +44,11 @@ await account.deposit(context, amount=request.initial_deposit)
 
 ## Never
 
-- `await Account.ref(account_id).open(context)` — constructors are not
+- `await Account.ref(account_id).open(context)`: constructors are not
   on the ref. mypy: `"WeakReference" has no attribute "open"`; runtime:
   `AttributeError: 'WeakReference' object has no attribute 'open'`
   (observed at 1.6.0).
-- `Lab.create(context, id)` on a type with no `factory=True` method —
+- `Lab.create(context, id)` on a type with no `factory=True` method:
   not generated (mypy: `"type[Lab]" has no attribute "create"`,
   showtime-32, 1.4.1; confirmed at 1.6.0). Call a writer.
 - Expecting a second constructor call to be a no-op. Outside an
@@ -70,13 +70,13 @@ await account.deposit(context, amount=request.initial_deposit)
       logo = Logo.ref(host)
   ```
 
-- `except Seat.PlaceAborted: pass` to tolerate "already exists" —
+- `except Seat.PlaceAborted: pass` to tolerate "already exists":
   `<Method>Aborted` also carries system errors: a ping timeout under
   load arrived as `PlaceAborted` and was swallowed, leaving actors
   missing (theater-network-15, 1.4.0). Check `aborted.error` and
   re-raise the rest, as above.
 - Stamping caller identity in a constructor reached from another
-  servicer — `context.auth` is `None` there; pass the owner as a
+  servicer: `context.auth` is `None` there; pass the owner as a
   request field (reboot-crm-03, 1.6.0; `servicer-authorizer.md` § Never).
 
 ## Limits
@@ -105,6 +105,6 @@ await account.deposit(context, amount=request.initial_deposit)
 
 ## See also
 
-- [`servicer-constructor.md`](servicer-constructor.md) — writing the constructor body
-- [`rpc-refs.md`](rpc-refs.md) — probing whether an actor exists
-- [`api-errors.md`](api-errors.md) — inspecting `aborted.error`
+- [`servicer-constructor.md`](servicer-constructor.md), writing the constructor body
+- [`rpc-refs.md`](rpc-refs.md), probing whether an actor exists
+- [`api-errors.md`](api-errors.md), inspecting `aborted.error`

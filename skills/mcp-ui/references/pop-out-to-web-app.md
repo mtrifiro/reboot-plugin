@@ -1,5 +1,5 @@
 ---
-title: Pop-out button — deep-linking an MCP UI widget to your web app
+title: Pop-out button, deep-linking an MCP UI widget to your web app
 impact: MEDIUM
 impactDescription: An MCP UI widget runs in a sandboxed iframe that blocks `window.open`, so a naive "open in browser" button silently does nothing in most hosts. Use the bound entity's `state_id` to build a deep link and ask the host to open it via the MCP Apps `openLink` request, with a `window.open` fallback.
 tags: react, app-tsx, pop-out, deep-link, openLink, state_id, useMcpApp, dual-frontend, web-app
@@ -12,7 +12,7 @@ verified: 1.6.0
 docs: ""
 ---
 
-# Pop-out button — deep-linking an MCP UI widget to your web app
+# Pop-out button: deep-linking an MCP UI widget to your web app
 
 ## When you are here
 
@@ -73,15 +73,15 @@ export const ClickerApp = () => {
 
 ## Never
 
-- `window.open(url)` alone — the iframe is sandboxed without
+- `window.open(url)` alone: the iframe is sandboxed without
   `allow-popups`, so it silently no-ops in most hosts. Try `openLink`
   first.
-- `mcpApp.openLink(...)` without `?.` — `useMcpApp()` is `null` outside a
+- `mcpApp.openLink(...)` without `?.`: `useMcpApp()` is `null` outside a
   host and on early renders.
-- Calling `useMcpApp()` after the `counter === undefined` early return —
+- Calling `useMcpApp()` after the `counter === undefined` early return:
   hooks must run on every render.
 - A hardcoded origin, or `window.location.origin` alone, in a deployed
-  app — the widget runs on the backend's origin but the web app is on its
+  app: the widget runs on the backend's origin but the web app is on its
   own domain. Use `webAppUrl()` (`frontend/mcp/web-app-url.ts`), which
   reads `VITE_WEB_APP_URL` from `web/.env.production` (the `deploy`
   skill sets it).
@@ -90,7 +90,7 @@ export const ClickerApp = () => {
 
 - `useMcpApp()` (re-exported from `@reboot-dev/reboot-react`) returns the
   `@modelcontextprotocol/ext-apps` `App`; `openLink({ url })` resolves to
-  `{ isError }` — the host may deny a blocked domain or the user cancel.
+  `{ isError }`: the host may deny a blocked domain or the user cancel.
 - The entity's authorizer still applies in the web app: the signed-in
   user must be allowed to read the deep-linked entity.
 
@@ -104,5 +104,5 @@ None known.
 
 ## See also
 
-- [`react-app-tsx.md`](react-app-tsx.md) — how the hook resolves the entity
-- [`react-generated-client.md`](../../python/references/react-generated-client.md) — the handle's `state_id`
+- [`react-app-tsx.md`](react-app-tsx.md), how the hook resolves the entity
+- [`react-generated-client.md`](../../python/references/react-generated-client.md), the handle's `state_id`

@@ -14,7 +14,7 @@ grows over the frontend-serving commits.
 ### `--mcp-frontend-host` renamed to `--frontend-host`
 
 The `rbt dev run` / `rbt serve run` frontend dev-proxy is no longer
-MCP-specific — it fronts web apps too — so its flag `--mcp-frontend-host`
+MCP-specific, it fronts web apps too, so its flag `--mcp-frontend-host`
 is now just `--frontend-host`, and the `RBT_MCP_FRONTEND_HOST` env var is
 now `RBT_FRONTEND_HOST`.
 
@@ -22,7 +22,7 @@ In your `.rbtrc`, rename every `--mcp-frontend-host` to `--frontend-host`.
 
 ### URL prefix is now `/__/frontend/`, and the frontend root is named explicitly
 
-Reboot now serves every frontend — MCP UIs and web apps alike — under a
+Reboot now serves every frontend, MCP UIs and web apps alike, under a
 single fixed URL prefix `/__/frontend/` (it was `/__/web/`), and it no
 longer discovers the frontend root by walking for a `vite.config.ts`; you
 name it explicitly with `--frontend-root-path`.

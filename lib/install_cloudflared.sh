@@ -26,7 +26,7 @@ CLOUDFLARED_VERSION="2026.5.0"
 # Heads up: Cloudflare's release notes mislabel the macOS digest.
 # The notes list a SHA next to `cloudflared-darwin-arm64.tgz`, but
 # that value is actually the digest of the binary *inside* the
-# tarball — not of the `.tgz` artifact GitHub serves. The Linux
+# tarball: not of the `.tgz` artifact GitHub serves. The Linux
 # entries are correct because those artifacts are bare binaries.
 SHA256_DARWIN_ARM64="116ef11a59fc4f31e7f1bcc4378070cd7ca053fa37b4484b1432bb150b358219"
 # Of the `.tgz` as fetched on 2026-10-10 (the notes' digest is of the
@@ -37,7 +37,7 @@ SHA256_LINUX_ARM64="2dc0945345677d27de3ae390a31c3b168866b48766da5f4cfd3fc473ce57
 
 # `PLUGIN_DATA` is hardcoded rather than read from `$CLAUDE_PLUGIN_DATA`.
 # Claude Code only sets that env var when it runs something from a
-# plugin entry point — e.g. a hook command. It is *not* set when the
+# plugin entry point: e.g. a hook command. It is *not* set when the
 # agent runs a binary directly via its Bash tool, even when that binary
 # happens to be a shim we ship in `bin/`. Honoring it would mean shims
 # invoked from a hook write to one cache and shims invoked directly by

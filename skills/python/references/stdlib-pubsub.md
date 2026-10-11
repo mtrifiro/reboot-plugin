@@ -28,7 +28,7 @@ both sides.
 | Method | Kind | Notes |
 | --- | --- | --- |
 | `publish` | writer | exactly one of `value` / `bytes` / `any` (single) or `items: list[Item]` (bulk) |
-| `subscribe` | writer | `queue_id: str` — the `Queue` that will receive items; repeating it is a no-op |
+| `subscribe` | writer | `queue_id: str`: the `Queue` that will receive items; repeating it is a no-op |
 | `broker` | workflow | internal; scheduled by the first `publish` or `subscribe` |
 
 ```python
@@ -74,12 +74,12 @@ await Topic.ref(topic_id).publish(context, value=some_value)
 
 ## Never
 
-- Publishing with no consumer side — nothing reads the topic itself.
-- Consuming from the topic directly — each subscriber consumes from its
+- Publishing with no consumer side: nothing reads the topic itself.
+- Consuming from the topic directly: each subscriber consumes from its
   **own** `Queue`.
-- Starting `broker` yourself — the first `publish`/`subscribe`
+- Starting `broker` yourself: the first `publish`/`subscribe`
   schedules it.
-- `PubSub.ref(...)` or `subscribe(context, topic=..., queue_id=...)` —
+- `PubSub.ref(...)` or `subscribe(context, topic=..., queue_id=...)`:
   the 1.6.0 type is `Topic`; `subscribe` takes only `queue_id` (the
   topic is the actor ID).
 
@@ -110,6 +110,6 @@ await Topic.ref(topic_id).publish(context, value=some_value)
 
 ## See also
 
-- [`stdlib-queue.md`](stdlib-queue.md) — the subscriber's consume loop
-- [`stdlib-item.md`](stdlib-item.md) — the published value envelope
-- [`servicer-workflow-loop.md`](servicer-workflow-loop.md) — per-iteration scope in loops
+- [`stdlib-queue.md`](stdlib-queue.md), the subscriber's consume loop
+- [`stdlib-item.md`](stdlib-item.md), the published value envelope
+- [`servicer-workflow-loop.md`](servicer-workflow-loop.md), per-iteration scope in loops

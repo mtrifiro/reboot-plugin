@@ -61,8 +61,8 @@ def bullet(ref: Ref, host_skill: str, front_door: str | None) -> str:
     # word here is re-read on every turn of every build.
     when = ref.when(front_door) if front_door else ref.fm.get("when", "")
     if when:
-        return f"- {display(ref, host_skill)} — only when {when}."
-    return f"- {display(ref, host_skill)} — {ref.summary.rstrip('.')}."
+        return f"- {display(ref, host_skill)}: only when {when}."
+    return f"- {display(ref, host_skill)}: {ref.summary.rstrip('.')}."
 
 
 def render(kind: str, args: dict, host_skill: str, refs: list[Ref]) -> str:
@@ -95,7 +95,7 @@ def render(kind: str, args: dict, host_skill: str, refs: list[Ref]) -> str:
                 LISTED.add(r.rel)
                 # Titles, not summaries: the catalog is for finding a file by
                 # topic; the reading lists carry the summaries.
-                b = f"- {display(r, host_skill)} — {r.title}"
+                b = f"- {display(r, host_skill)}: {r.title}"
                 if r.via:
                     b += f" (via `{r.via}`)"
                 out.append(b + "\n")
@@ -105,7 +105,7 @@ def render(kind: str, args: dict, host_skill: str, refs: list[Ref]) -> str:
             out.append("**Lookups**\n")
             for r in lookups:
                 LISTED.add(r.rel)
-                out.append(f"- {display(r, host_skill)} — {r.title}\n")
+                out.append(f"- {display(r, host_skill)}: {r.title}\n")
         return "".join(out).rstrip("\n") + "\n"
     if kind == "never-digest":
         return never_digest(refs, host_skill)
@@ -123,13 +123,16 @@ def never_items(ref: Ref) -> list[str]:
     items = []
     for bullet in re.split(r"^- ", m.group(1), flags=re.M)[1:]:
         first = " ".join(bullet.split())
-        # Only the lead: a bold phrase, else the wrong form before " — ",
-        # else the first sentence. The reference holds the reason.
+        # Only the lead: a bold phrase, else the wrong form before the
+        # first ": " outside code, else the first sentence. The reference
+        # holds the reason.
         bold = re.match(r"\*\*(.+?)\*\*", first)
+        colon = next((m.start() for m in re.finditer(r": ", first)
+                      if first[: m.start()].count("`") % 2 == 0), None)
         if bold:
             lead = bold.group(1)
-        elif " — " in first:
-            lead = first.split(" — ", 1)[0]
+        elif colon is not None:
+            lead = first[:colon]
         else:
             cut = re.search(r"(?<=[.;])\s", first)
             lead = first[: cut.start()] if cut else first
@@ -239,13 +242,13 @@ def process(path: Path, refs: list[Ref]) -> tuple[str, str, int]:
     return text, BLOCK.sub(sub, text), count
 
 
-STAGE_MARK = re.compile(r"^_(Design|Prove|Observe)_ —", re.M)
+STAGE_MARK = re.compile(r"^_(Design|Prove|Observe)_ ?[—:]", re.M)
 
 
 def stage_errors(path: Path) -> list[str]:
     """A reading list sits under the Flywheel stage its step belongs to.
 
-    The stage markers (`_Design_ — …`, `_Prove_ — …`) are hand-written
+    The stage markers (`_Design_: …`, `_Prove_: …`) are hand-written
     above the lists; a file with none is not checked."""
     text = path.read_text(encoding="utf-8")
     marks = [(m.start(), m.group(1).lower()) for m in STAGE_MARK.finditer(text)]

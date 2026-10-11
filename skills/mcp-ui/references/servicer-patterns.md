@@ -1,5 +1,5 @@
 ---
-title: Servicer Patterns — User Front Door, Workflow Magic, Scheduling
+title: Servicer Patterns, User Front Door, Workflow Magic, Scheduling
 impact: CRITICAL
 impactDescription: The MCP-UI-specific servicer shape layered on top of `python`'s Servicer rules. The User-side `create_<X>` Transaction is the front door for every application-type instance; a workflow it starts on the new instance must be `.schedule()`-d, not awaited; workflow bodies follow the python workflow references.
 tags: servicer, user, transaction, workflow, ref, schedule, spawn, classmethod, inline-writer, front-door
@@ -11,7 +11,7 @@ verified: 1.6.0
 docs: ""
 ---
 
-# Servicer Patterns — User Front Door, Workflow Magic, Scheduling
+# Servicer Patterns: User Front Door, Workflow Magic, Scheduling
 
 ## When you are here
 
@@ -139,24 +139,24 @@ python workflow parts, don't improvise:
 ## Never
 
 - `await Game.ref(game.state_id).autoplay(context)` from a Transaction,
-  Writer or Reader — schedule it; only `ExternalContext` and
+  Writer or Reader: schedule it; only `ExternalContext` and
   `WorkflowContext` may await a workflow.
-- `.schedule().autoplay(context, request=Game.AutoplayRequest())` — pass
+- `.schedule().autoplay(context, request=Game.AutoplayRequest())`: pass
   fields as kwargs.
-- `cls.ref()` or `self.ref()` in a workflow — `cls` is the BaseServicer
+- `cls.ref()` or `self.ref()` in a workflow: `cls` is the BaseServicer
   and there is no `self`; use `MyType.ref()`
   ([`servicer-workflow-declare.md`](../../python/references/servicer-workflow-declare.md)).
 - Wrapping an inline writer in `at_least_once` / `at_most_once` /
-  `.idempotently(...)` — Reboot calls are already durable; scope is the
+  `.idempotently(...)`: Reboot calls are already durable; scope is the
   only knob.
-- A model (LLM) call in the `create_<X>` Transaction — transactions
+- A model (LLM) call in the `create_<X>` Transaction: transactions
   retry, so it is billed per retry. Call it from a scheduled workflow
   ([`agent-pydantic-ai.md`](../../python/references/agent-pydantic-ai.md)).
 
 ## Limits
 
 - A factory method (`<X>.create`) accepts only `TransactionContext`,
-  `WorkflowContext` or `ExternalContext` (1.6.0 generated client) — hence
+  `WorkflowContext` or `ExternalContext` (1.6.0 generated client): hence
   the `User` front-door method is a `Transaction`.
 - Constructors cannot be scheduled; only non-constructor methods appear
   on `schedule()`.
@@ -173,6 +173,6 @@ python workflow parts, don't improvise:
 
 ## See also
 
-- [`api-method-types.md`](api-method-types.md) — the API these implement
-- [`servicer-workflow.md`](../../python/references/servicer-workflow.md) — workflow body, part by part
-- [`rpc-constructor-calls.md`](../../python/references/rpc-constructor-calls.md) — constructor call semantics
+- [`api-method-types.md`](api-method-types.md), the API these implement
+- [`servicer-workflow.md`](../../python/references/servicer-workflow.md), workflow body, part by part
+- [`rpc-constructor-calls.md`](../../python/references/rpc-constructor-calls.md), constructor call semantics

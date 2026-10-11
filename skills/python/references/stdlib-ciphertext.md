@@ -25,9 +25,9 @@ unrecoverable without finding the data. Own key derivation:
 `crypto-root-keys.md`.
 
 ```
-root KEK   — derived from REBOOT_CRYPTO_ROOT_KEYS (auto-provisioned); never stored.
-  └ wraps → WrappingKey — one per (key manager, scope); the revocable unit, stored *encrypted*.
-     └ wraps → DEK — a fresh per-value data-encryption key.
+root KEK  : derived from REBOOT_CRYPTO_ROOT_KEYS (auto-provisioned); never stored.
+  └ wraps → WrappingKey: one per (key manager, scope); the revocable unit, stored *encrypted*.
+     └ wraps → DEK: a fresh per-value data-encryption key.
         └ encrypts → your plaintext   (the stored "envelope")
 ```
 
@@ -85,7 +85,7 @@ try:
     plaintext = response.plaintext
 except Ciphertext.DecryptAborted as aborted:
     if isinstance(aborted.error, ScopeShredded):
-        ...   # permanently unrecoverable — the scope was shredded
+        ...   # permanently unrecoverable: the scope was shredded
     elif isinstance(aborted.error, DecryptionFailed):
         ...   # wrong associated_data, or the envelope is corrupt
     elif isinstance(aborted.error, UnknownRootKeyVersion):
@@ -125,20 +125,20 @@ Cloud provision the variable (`lifecycle-secrets.md`).
 
 ## Never
 
-- `libraries=[ciphertext_library()]` alone — it requires
+- `libraries=[ciphertext_library()]` alone: it requires
   `ordered_map_library()`.
-- `associated_data=b"user-42:ssn"` or `json.dumps(...)` — ambiguous or
+- `associated_data=b"user-42:ssn"` or `json.dumps(...)`: ambiguous or
   non-canonical; use `make_associated_data` with the same fields at
   decrypt.
-- Addressing `WrappingKey` directly — implementation detail; use
+- Addressing `WrappingKey` directly: implementation detail; use
   `KeyManager.shred(scope=...)`.
-- Calling these methods from untrusted clients — no authorizer, so the
+- Calling these methods from untrusted clients: no authorizer, so the
   app-internal default applies; call from your servicers or add an
   authorizer (`auth-allow-if.md`).
-- Dropping the `Ciphertext` id — store `state_id`; nothing else finds
+- Dropping the `Ciphertext` id: store `state_id`; nothing else finds
   the value.
 - Removing an old root key version before `status` shows
-  `rotating == False` — values still wrapped under it fail with
+  `rotating == False`: values still wrapped under it fail with
   `UnknownRootKeyVersion`.
 
 ## Limits
@@ -169,6 +169,6 @@ Cloud provision the variable (`lifecycle-secrets.md`).
 
 ## See also
 
-- [`crypto-root-keys.md`](crypto-root-keys.md) — the root-key facility underneath
-- [`lifecycle-secrets.md`](lifecycle-secrets.md) — how `REBOOT_CRYPTO_ROOT_KEYS` is provisioned
-- [`auth-allow-if.md`](auth-allow-if.md) — exposing methods beyond app-internal
+- [`crypto-root-keys.md`](crypto-root-keys.md), the root-key facility underneath
+- [`lifecycle-secrets.md`](lifecycle-secrets.md), how `REBOOT_CRYPTO_ROOT_KEYS` is provisioned
+- [`auth-allow-if.md`](auth-allow-if.md), exposing methods beyond app-internal

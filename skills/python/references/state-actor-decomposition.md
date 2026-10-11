@@ -91,7 +91,7 @@ no reader, or make one the owner and have the other read it.
 ## Never
 
 - Declare a constructor that may ever create another actor as a
-  `Writer(factory=True)` — a writer cannot call another actor, and the
+  `Writer(factory=True)`: a writer cannot call another actor, and the
   later change to `Transaction` has been refused over persisted state
   (`api-schema-evolution.md` § Limits). Start with
   `Transaction(mode=Exclusive(), factory=True)`.
@@ -104,7 +104,7 @@ no reader, or make one the owner and have the other read it.
   usually means a duplicated fact: pick the owner and delete the copy
   rather than invert the call. A return to A through `per_workflow` (a
   later transaction of its own) is not a cycle, though it greps the same.
-- Put a new feature on `User` because it is the entry point — that is
+- Put a new feature on `User` because it is the entry point: that is
   how the God actor grows.
 
 ## Limits
@@ -133,6 +133,6 @@ None known.
 
 ## See also
 
-- [`state-collections.md`](state-collections.md) — per-item decomposition of collections
-- [`state-nested-models.md`](state-nested-models.md) — store the ID, not the object
-- [`patterns-cross-actor-reads.md`](patterns-cross-actor-reads.md) — reading across the split actors
+- [`state-collections.md`](state-collections.md), per-item decomposition of collections
+- [`state-nested-models.md`](state-nested-models.md), store the ID, not the object
+- [`patterns-cross-actor-reads.md`](patterns-cross-actor-reads.md), reading across the split actors

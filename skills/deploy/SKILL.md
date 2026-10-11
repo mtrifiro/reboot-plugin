@@ -5,7 +5,7 @@ argument-hint: [<project-directory>]
 allowed-tools: Bash, Read, Write, Glob, Grep, Edit, AskUserQuestion
 ---
 
-# deploy — Put a Reboot App in Production
+# deploy: Put a Reboot App in Production
 
 > **Version notices:** if `rbt` reports a version mismatch or a newer
 > Reboot, follow the [upgrade skill](../upgrade/SKILL.md).
@@ -46,7 +46,7 @@ the last run was not a clean, full, passing run of this commit. On
 another branch, say what isn't merged into the production branch yet
 and ask whether to merge it first; never merge or switch on your own.
 
-Steps 1–7 below are the first deploy. After it, a deploy is
+Steps 1 to 7 below are the first deploy. After it, a deploy is
 `scripts/deploy.sh --dry-run` (show the user what would ship), then
 `scripts/deploy.sh`. The dry run's output comes with the "Ready to
 deploy" card and Step 7's checks end with "Live"
@@ -59,11 +59,11 @@ line", there).
 
 - A finished Web App (or a dual-frontend app's web frontend) should go
   live on the user's domain.
-- An MCP UI with **no** web frontend: Steps 1–3 only — MCP UIs ship in
+- An MCP UI with **no** web frontend: Steps 1 to 3 only, MCP UIs ship in
   the backend image and are served by the backend.
 - Any later deploy: run the script (Options below).
 
-## Step 1 — Gather inputs (ask early, in one pass)
+## Step 1: Gather inputs (ask early, in one pass)
 
 Ask for all of this up front (one `AskUserQuestion` round or message):
 
@@ -75,7 +75,7 @@ Ask for all of this up front (one `AskUserQuestion` round or message):
    Pages: Edit, Zone: Read, and DNS: Edit (DNS only if the zone is on
    Cloudflare).
 3. **Reboot Cloud access**: `REBOOT_CLOUD_API_KEY`, the organization, an
-   application name and size — see
+   application name and size, see
    `python/references/lifecycle-reboot-cloud.md`.
 
 The credentials go in `.deploy.env` at the project root, which the
@@ -89,7 +89,7 @@ CLOUDFLARE_API_TOKEN=...
 CLOUDFLARE_ACCOUNT_ID=...
 ```
 
-## Step 2 — Install and configure the deploy script
+## Step 2: Install and configure the deploy script
 
 A project from the build templates has `scripts/deploy.sh`,
 `scripts/api_removals.py`, the backup scripts (`scripts/backup.sh`,
@@ -129,7 +129,7 @@ application only. Commit `deploy/` and the scripts.
   backup exports from:
   `echo '{"backend_commit": "<sha>", "api_url": "https://<id>.<cell>.rbt.cloud"}' >> deploy/ledger.jsonl`.
 
-## Step 3 — Deploy the backend
+## Step 3: Deploy the backend
 
 `scripts/deploy.sh` deploys both halves: an old bundle keeps calling
 methods a breaking backend change removed, so never ship such a change
@@ -173,7 +173,7 @@ commonly bites here:
   `dist/mcp/<name>/` is in it; the **web** SPA need _not_ be (it goes to
   the static host).
 
-## Step 4 — Allow the frontend's origin on the backend
+## Step 4: Allow the frontend's origin on the backend
 
 ```python
 application = Application(
@@ -185,7 +185,7 @@ application = Application(
 )
 ```
 
-- Entries are exact origins — `scheme://host[:port]`, no trailing slash
+- Entries are exact origins: `scheme://host[:port]`, no trailing slash
   or path. List **every** origin served (e.g. `https://example.com` and
   `https://www.example.com` if both resolve, and
   `https://<project>.pages.dev` if wanted).
@@ -197,20 +197,20 @@ application = Application(
 
 Commit, push, and `scripts/deploy.sh --backend-only`.
 
-## Step 5 — Set up the production frontend build
+## Step 5: Set up the production frontend build
 
 Detect the layout (as the [run skill](../run/SKILL.md) does):
 
-- **Standalone Web App** — one SPA, stock Vite config, `index.html` at
+- **Standalone Web App** one SPA, stock Vite config, `index.html` at
   the top of the SPA directory (e.g. `web/`); default `base: "/"`.
-- **Dual-frontend** — `frontend/vite.config.ts` builds
+- **Dual-frontend** `frontend/vite.config.ts` builds
   `RBT_BUILD_TARGET=mcp:<name>` targets and an `RBT_BUILD_TARGET=web`
   target into `dist/`; the web build uses `base: "/__/frontend/web/"`.
 
 1. **Bake in the backend URL**: in `ENV_DIR`, next to the SPA's dev
    `.env` (which sets `VITE_REBOOT_URL`), write `.env.production` and
    **commit it** (the script builds from the commit and stops without
-   it) — Vite's production build reads it; leave `.env` alone:
+   it), Vite's production build reads it; leave `.env` alone:
 
    ```sh
    VITE_REBOOT_URL=https://<application-id>.<cell>.rbt.cloud
@@ -245,7 +245,7 @@ Detect the layout (as the [run skill](../run/SKILL.md) does):
    host rewrite fixes, and every route silently renders nothing on the
    custom domain.
 
-## Step 6 — Create the Pages project, publish, attach the domain
+## Step 6: Create the Pages project, publish, attach the domain
 
 With the Cloudflare credentials exported (`set -a; . ./.deploy.env; set +a`),
 `wrangler` runs headless (no `wrangler login`). Create the project once:
@@ -286,7 +286,7 @@ provisions TLS automatically after validation. Then set `SITE_URL` in
 `deploy/config` to the domain and commit, so later deploys check the
 site people use.
 
-## Step 7 — Verify
+## Step 7: Verify
 
 The script already waited for the revision to serve (`/__/inspect`
 returns 503 for about thirty seconds after `rbt cloud up`; reboot-crm,
@@ -304,10 +304,10 @@ returns 503 for about thirty seconds after `rbt cloud up`; reboot-crm,
 
    must include `access-control-allow-origin: https://app.example.com`
    and `access-control-allow-credentials: true`; otherwise the Cloud
-   backend predates the `allowed_origins` change — redeploy.
+   backend predates the `allowed_origins` change: redeploy.
 3. **In the browser** (user or browser tool): open
    `https://app.example.com`, sign in (bounces through `/__/oauth/start`
-   and back), confirm signed-in live data renders — proving the
+   and back), confirm signed-in live data renders, proving the
    cross-origin WebSocket path.
 
 ## Options
@@ -332,13 +332,13 @@ scripts/deploy.sh --first          # the first deploy: no ledger yet
 ## Troubleshooting
 
 - **Blank page, MIME-type or 404 asset errors:** asset prefix doesn't
-  match the host — on dual-frontend, the `/__/frontend/web/*` line is
+  match the host, on dual-frontend, the `/__/frontend/web/*` line is
   missing from `_redirects` or isn't first.
 - **Routes render nothing on the custom domain but `/` loads:** basename
   from `import.meta.env.BASE_URL` (Step 5.3).
 - **CORS errors in the console:** exact origin (scheme, `www.`) missing
   from `allowed_origins`, or the backend not redeployed after.
-- **Sign-in fails with an invalid-redirect error:** same cause —
+- **Sign-in fails with an invalid-redirect error:** same cause,
   `/__/oauth/start` refuses the `return_to`.
 - **"did not serve within five minutes":** the revision is unhealthy;
   `rbt cloud logs --revisions=<n>` (the script prints the command). On

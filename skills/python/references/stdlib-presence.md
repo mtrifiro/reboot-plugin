@@ -20,9 +20,9 @@ Building a who-is-online list (room participants, tabs on a document)
 or collaborative cursors. Three types, all from
 `reboot.std.presence.v1.presence`:
 
-- **`Subscriber`** — one user/tab; counts live connections (`toggles`).
-- **`Presence`** — the present subscriber IDs for one scope (e.g. a room).
-- **`MousePosition`** — optional per-subscriber cursor.
+- **`Subscriber`** one user/tab; counts live connections (`toggles`).
+- **`Presence`** the present subscriber IDs for one scope (e.g. a room).
+- **`MousePosition`** optional per-subscriber cursor.
 
 Connection lifetime is a long-lived `Subscriber.connect` reader whose
 cancellation the framework observes; no ping/pong.
@@ -48,17 +48,17 @@ there is no `presence_library()` at 1.6.0.
 
 | Type | Method | Kind | Request fields |
 | --- | --- | --- | --- |
-| `Subscriber` | `create` | writer | — |
-| `Subscriber` | `connect` | reader | `nonce` — long-lived; returns only when canceled |
-| `Subscriber` | `toggle` | writer | `nonce` — bumps `toggles`, schedules `wait_for_disconnect` |
-| `Subscriber` | `status` | reader | — → `present` (`toggles > 0`) |
-| `Subscriber` | `wait_for_disconnect` | workflow | `nonce` — waits for `connect` to end, then decrements `toggles` |
-| `Presence` | `create` | writer | — |
-| `Presence` | `subscribe` | writer | `subscriber_id` — adds it, schedules `watch` |
-| `Presence` | `list` | reader | — → `subscriber_ids` |
-| `Presence` | `watch` | workflow | `subscriber_id` — removes it once `status` is no longer present |
+| `Subscriber` | `create` | writer | |
+| `Subscriber` | `connect` | reader | `nonce`: long-lived; returns only when canceled |
+| `Subscriber` | `toggle` | writer | `nonce`: bumps `toggles`, schedules `wait_for_disconnect` |
+| `Subscriber` | `status` | reader | → `present` (`toggles > 0`) |
+| `Subscriber` | `wait_for_disconnect` | workflow | `nonce`: waits for `connect` to end, then decrements `toggles` |
+| `Presence` | `create` | writer | |
+| `Presence` | `subscribe` | writer | `subscriber_id`: adds it, schedules `watch` |
+| `Presence` | `list` | reader | → `subscriber_ids` |
+| `Presence` | `watch` | workflow | `subscriber_id`: removes it once `status` is no longer present |
 | `MousePosition` | `update` | writer | `left`, `top` (int32) |
-| `MousePosition` | `position` | reader | — → `left`, `top` |
+| `MousePosition` | `position` | reader | → `left`, `top` |
 
 ### Connection lifecycle
 
@@ -119,18 +119,18 @@ package.
 ## Never
 
 - `from reboot.std.presence.subscriber.v1.subscriber import Subscriber`
-  or `...mouse_tracker.v1.mouse_position` — proto package names, not
+  or `...mouse_tracker.v1.mouse_position`: proto package names, not
   Python modules (`ModuleNotFoundError`); import from
   `reboot.std.presence.v1.presence`.
-- `import reboot.std.react.presence` — no such module; React is npm
+- `import reboot.std.react.presence`: no such module; React is npm
   `@reboot-dev/reboot-std-react/presence`.
-- `Subscriber.create(context, subscriber_id)` — `create` is a plain
+- `Subscriber.create(context, subscriber_id)`: `create` is a plain
   writer, not a constructor; use `Subscriber.ref(subscriber_id).create(context)`.
-- Calling `presence.subscribe` before the subscriber has toggled —
+- Calling `presence.subscribe` before the subscriber has toggled:
   aborts `FailedPrecondition` (`status` not yet present).
-- Reusing a `nonce` for a second `connect` while the first is open —
+- Reusing a `nonce` for a second `connect` while the first is open:
   aborts `AlreadyExists`.
-- Rolling your own heartbeat / ping-pong presence — use this protocol.
+- Rolling your own heartbeat / ping-pong presence: use this protocol.
 
 ## Limits
 
@@ -163,6 +163,6 @@ package.
 
 ## See also
 
-- [`lifecycle-application-entry.md`](lifecycle-application-entry.md) — where `servicers=` is assembled
-- [`react-generated-client.md`](react-generated-client.md) — how generated React hooks behave
-- [`servicer-workflow-wait.md`](servicer-workflow-wait.md) — the `until` behind `watch`
+- [`lifecycle-application-entry.md`](lifecycle-application-entry.md), where `servicers=` is assembled
+- [`react-generated-client.md`](react-generated-client.md), how generated React hooks behave
+- [`servicer-workflow-wait.md`](servicer-workflow-wait.md), the `until` behind `watch`

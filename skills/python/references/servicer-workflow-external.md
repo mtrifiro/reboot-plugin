@@ -48,7 +48,7 @@ more times); `at_most_once` records the failure, **poisoning** the
 alias so every later attempt raises `AtMostOnceFailedBeforeCompleting`
 (zero or one times).
 
-### `at_least_once` — the default
+### `at_least_once`: the default
 
 ```python
 from reboot.aio.workflows import at_least_once
@@ -96,12 +96,12 @@ async def fetch() -> Optional[list[League]]:
             return await fetch_leagues(token)
         except aiohttp.ClientError:
             await asyncio.sleep(2**attempt)
-    return None  # data, not a raise — a raise retries forever
+    return None  # data, not a raise: a raise retries forever
 
 leagues = await at_least_once("Fetch leagues", context, fetch)
 ```
 
-### `at_most_once` — only when a duplicate is the failure
+### `at_most_once`: only when a duplicate is the failure
 
 Non-negotiable: (1) catch inside the callable and return failures as
 data; (2) also catch `AtMostOnceFailedBeforeCompleting` at the call (a
@@ -125,7 +125,7 @@ async def send_login_sms(
             )
             return SmsResult(ok=True, message_id=response.id)
         except sms_client.TransientError as e:
-            # MUST be data, not raise — a raise poisons the alias.
+            # MUST be data, not raise: a raise poisons the alias.
             return SmsResult(ok=False, reason=f"transient: {e}")
         except sms_client.PermanentError as e:
             return SmsResult(ok=False, reason=f"permanent: {e}")
@@ -156,17 +156,17 @@ limiter; a count kept in a closure resets on replay (constellation,
 
 ## Never
 
-- A plain `await` on an external call — it re-runs on every replay,
+- A plain `await` on an external call: it re-runs on every replay,
   possibly returning a different value, so derived state diverges.
-- `idempotency_key=str(uuid.uuid4())` inside the effecting callable — a
+- `idempotency_key=str(uuid.uuid4())` inside the effecting callable: a
   new key per attempt defeats dedup.
-- Counting attempts in a closure to give up — the count resets every
+- Counting attempts in a closure to give up: the count resets every
   replay; the give-up branch is dead.
-- `raise` inside an `at_most_once` callable — poisons the alias forever.
-- A value-returning callable with no annotation and no `type=` — raises
+- `raise` inside an `at_most_once` callable: poisons the alias forever.
+- A value-returning callable with no annotation and no `type=`: raises
   at runtime; inside `at_most_once` that poisons the alias.
 - `at_most_once` for a Reboot call or an idempotent external call.
-- A test stand-in that pops answers off a list — effect validation runs
+- A test stand-in that pops answers off a list: effect validation runs
   the callable twice. Derive the answer from the input.
 
 ## Limits
@@ -207,6 +207,6 @@ limiter; a count kept in a closure resets on replay (constellation,
 
 ## See also
 
-- [`servicer-workflow-exit.md`](servicer-workflow-exit.md) — stopping after a failed call
-- [`agent-pydantic-ai.md`](agent-pydantic-ai.md) — LLM calls in workflows
-- [`servicer-workflow-calls.md`](servicer-workflow-calls.md) — alias naming rules
+- [`servicer-workflow-exit.md`](servicer-workflow-exit.md), stopping after a failed call
+- [`agent-pydantic-ai.md`](agent-pydantic-ai.md), LLM calls in workflows
+- [`servicer-workflow-calls.md`](servicer-workflow-calls.md), alias naming rules

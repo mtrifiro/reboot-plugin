@@ -17,7 +17,7 @@ docs: ""
 
 You are holding an error string: a traceback line, a `<Method>Aborted`,
 a mypy message, a `reboot.bdd` "Almost" match, a startup refusal. Grep
-this file for a distinctive fragment of it (not the whole line —
+this file for a distinctive fragment of it (not the whole line:
 paths and ids vary) before guessing which concept it belongs to:
 
 ```sh
@@ -74,7 +74,7 @@ here. -->
 | `AssertionError: Transaction '<id>' missing for state type '<type>'`, then `cygrpc` errors from `Participant/Abort` | Several calls at once on one context (`asyncio.gather` in `initialize`) | One call at a time per context, or a context per concurrent caller | `python/references/lifecycle-initialize-hook.md` |
 | `AtMostOnceFailedBeforeCompleting` | This `at_most_once` alias started earlier and never stored a result | Catch it at the call site; the alias stays poisoned until expunge | `python/references/servicer-workflow-external.md` |
 | `AttributeError: '` … `' object has no attribute '` | A `Field` without a default, read before it was set | Add the zero default | `python/references/api-pydantic.md` |
-| `AttributeError: type object '<Type>' has no attribute '<WrongName>'` | Request/response referenced by source class name | `<Type>.<MethodPascalCase>Request` — see `api-pydantic.md` | `mcp-ui/references/api-method-types.md` |
+| `AttributeError: type object '<Type>' has no attribute '<WrongName>'` | Request/response referenced by source class name | `<Type>.<MethodPascalCase>Request`: see `api-pydantic.md` | `mcp-ui/references/api-method-types.md` |
 | `AttributeError: 'WeakReference' object has no attribute` | A constructor called through `Service.ref(id)` | `Service.<ctor>(context, id, ...)` | `python/references/rpc-constructor-calls.md` |
 | `AttributeError: 'XServicer' object has no attribute 'state_id'` | `self.state_id` on a servicer | `self.ref().state_id` / `context.state_id` | `python/references/rpc-refs.md` |
 | `backup: ... the export holds nothing; this is not a backup` | Export succeeded with no lines: wrong address, or an app that was expunged | Check `api_url` in `deploy/ledger.jsonl`; do not deploy | `python/references/lifecycle-backup-restore.md` |
@@ -290,16 +290,16 @@ here. -->
 | `was deleted from servicer type` | A method was deleted or renamed | Restore it; keep as a shim | `python/references/api-schema-evolution.md` |
 | `was removed from Pydantic model` | A field was deleted (any model) | Restore it | `python/references/api-schema-evolution.md` |
 | `'WeakReference' object has no attribute 'create'` | Tried to construct a `Queue` | Enqueue directly | `python/references/stdlib-queue.md` |
-| `Web artifact 'frontend/dist/mcp/<name>/index.html' is missing` | The UI was never built | `cd frontend && npm run build` — do not edit `vite.config.ts` | `mcp-ui/references/react-scaffolding.md` |
+| `Web artifact 'frontend/dist/mcp/<name>/index.html' is missing` | The UI was never built | `cd frontend && npm run build`: do not edit `vite.config.ts` | `mcp-ui/references/react-scaffolding.md` |
 | `which will now forever more raise` | stderr note: an exception escaped an `at_most_once` callable | Return failures as data | `python/references/servicer-workflow-external.md` |
 | `While validating effects, the re-run of the last iteration of the` | The re-run last iteration did not break | Make the break condition replay-stable | `python/references/servicer-workflow-loop.md` |
 <!-- generated:end -->
 
 ## Never
 
-- Adding a row here by hand — it is overwritten on the next
+- Adding a row here by hand: it is overwritten on the next
   generation. Add it to the owning reference's "Errors you will see".
-- Concluding "not documented" from a miss on the whole message —
+- Concluding "not documented" from a miss on the whole message:
   grep a distinctive fragment (the exception name, a quoted phrase).
 
 ## Limits
@@ -317,5 +317,5 @@ None known.
 
 ## See also
 
-- [`patterns-common-gotchas.md`](patterns-common-gotchas.md) — every Never, one line each
-- [`lifecycle-dev-loop.md`](lifecycle-dev-loop.md) — hangs and failures with no error
+- [`patterns-common-gotchas.md`](patterns-common-gotchas.md), every Never, one line each
+- [`lifecycle-dev-loop.md`](lifecycle-dev-loop.md), hangs and failures with no error

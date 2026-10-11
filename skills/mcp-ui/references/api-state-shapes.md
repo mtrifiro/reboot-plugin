@@ -1,5 +1,5 @@
 ---
-title: API State Shapes — List and Nested Sub-Objects
+title: API State Shapes, List and Nested Sub-Objects
 impact: HIGH
 impactDescription: Two recurring MCP UI state patterns. `list[Item]` of non-state Models is for **bounded sub-records** that have no identity of their own; entity collections (people, posts, messages, anything addressable on its own) must be promoted to their own state `Type`. Single nested `Model` sub-objects must be `Optional` with `default=None` and hydrated in the factory `create`, a `Transaction(mode=Exclusive(), factory=True)`.
 tags: state, list, nested, sub-object, optional, model, default, default_factory, decomposition, crud
@@ -11,12 +11,12 @@ verified: 1.6.0
 docs: ""
 ---
 
-# API State Shapes — List and Nested Sub-Objects
+# API State Shapes: List and Nested Sub-Objects
 
 ## When you are here
 
 Giving an MCP UI application type a list of sub-records or one nested
-sub-object. Framework rules live in the python skill — read them first:
+sub-object. Framework rules live in the python skill: read them first:
 [`state-collections.md`](../../python/references/state-collections.md)
 (in-state `list[Sub]` vs `list[str]` of foreign IDs vs an `OrderedMap` of
 IDs, and when to decompose into its own `Type`);
@@ -36,7 +36,7 @@ post) and items have no identity:
   type; import it standalone in the servicer:
   `from <pkg>.v1.<name> import LineItem`.
 - `items: list[LineItem] = Field(tag=N, default_factory=list)`.
-- CRUD Writers as needed — `add`, `remove`, `toggle`, `reorder` — each
+- CRUD Writers as needed, `add`, `remove`, `toggle`, `reorder`, each
   validating indices before mutating; `reorder` is `pop` + `insert`.
   React calls are camelCase:
   `await myType.reorderItem({ fromIndex: 0, toIndex: 1 })`.
@@ -86,22 +86,22 @@ Plural sub-objects are `list[GuestPreferences]` with
 ## Never
 
 - `list[Item]` for an entity collection (`Person`, `Post`, `Message`,
-  `Task`, anything with its own identity, lifecycle or methods) — fine in
+  `Task`, anything with its own identity, lifecycle or methods): fine in
   a 10-row demo, fails as it grows or items need their own auth/methods.
   Give the item its own `Type` and store IDs
   ([`state-collections.md`](../../python/references/state-collections.md)).
-- A `MAX_ITEMS` cap to keep a collection small enough for `list[Sub]` —
+- A `MAX_ITEMS` cap to keep a collection small enough for `list[Sub]`:
   needing a cap means it is unbounded; a synced or scraped collection is
   an `OrderedMap` of IDs (`state-collections.md` § Never).
-- `OrderedMap.ref(f"{self.ref().state_id}-items")` — persist the map's ID
+- `OrderedMap.ref(f"{self.ref().state_id}-items")`: persist the map's ID
   in a field allocated once in the constructor (`items_index_id`); see
   `state-collections.md`.
 - A state `Model` (one registered as `Type(state=X)`) as a field, or a
-  `list[<StateModel>]`, on another state `Model` — store its string ID,
+  `list[<StateModel>]`, on another state `Model`: store its string ID,
   reach it with `<Type>.ref(id)`
   ([`state-nested-models.md`](../../python/references/state-nested-models.md)).
 - A non-`Optional` nested `Model` field with `default=` or
-  `default_factory=` — rejected at startup; errors in
+  `default_factory=`: rejected at startup; errors in
   [`api-pydantic.md`](../../python/references/api-pydantic.md).
 
 ## Limits
@@ -119,6 +119,6 @@ None beyond `api-pydantic.md` and `state-collections.md`.
 
 ## See also
 
-- [`state-collections.md`](../../python/references/state-collections.md) — pick the collection shape
-- [`api-pydantic.md`](../../python/references/api-pydantic.md) — nested Model defaults, errors
-- [`react-app-tsx.md`](react-app-tsx.md) — many actors in one UI
+- [`state-collections.md`](../../python/references/state-collections.md), pick the collection shape
+- [`api-pydantic.md`](../../python/references/api-pydantic.md), nested Model defaults, errors
+- [`react-app-tsx.md`](react-app-tsx.md), many actors in one UI

@@ -5,7 +5,7 @@ argument-hint: [<project-directory>]
 allowed-tools: Bash, Read, Write, Glob, Grep, Edit
 ---
 
-# dashboard — Start the Reboot Developer Dashboard
+# dashboard: Start the Reboot Developer Dashboard
 
 > **Version notices:** if `rbt` reports a version mismatch or a newer
 > Reboot, follow the [upgrade skill](../upgrade/SKILL.md).
@@ -23,19 +23,19 @@ the end of its Step 1, the API) or the user asks for the dashboard.
 
 > This skill only **starts the dashboard**; running the app is the
 > [run skill](../run/SKILL.md). `rbt dev run` doesn't start a
-> dashboard — it only finds one already serving on `--dashboard-port`
-> (default 9871) — so this is also how to get one next to a running
+> dashboard, it only finds one already serving on `--dashboard-port`
+> (default 9871), so this is also how to get one next to a running
 > app. The dashboard is optional: if any step fails, tell the user it's
 > unavailable and carry on building; don't debug it.
 
-## Step 1 — Locate the project
+## Step 1: Locate the project
 
 Use the directory the user named, or the current one. The project root
 holds (or will hold) `.rbtrc`; run every command from it. The API
 directory is `api/` in every scaffold this plugin produces, unless an
 existing `.rbtrc`'s `generate <dir>` line says otherwise.
 
-## Step 2 — The minimum files
+## Step 2: The minimum files
 
 In a build flow scaffolding has created these; create only what's
 missing:
@@ -45,7 +45,7 @@ missing:
    `rbt dashboard` refuses to start without `reboot[dev]` (its Features
    page runs on it); add it at the same version as a `reboot`-only pin.
    Templates: `../python/references/lifecycle-project-setup.md`.
-2. **`.rbtrc`** — the dashboard's only source: API directory from
+2. **`.rbtrc`** the dashboard's only source: API directory from
    `generate <dir>` (required, or it refuses to start); for code checks,
    the app from `dev run --application=` and generated Python from
    `generate --python=`. Its location anchors the working directory and
@@ -63,7 +63,7 @@ missing:
    `dashboard --port=<dashboard>` and `dev run --dashboard-port=<dashboard>`.
    The scaffold (build Step 2) keeps them.
 
-3. **The API directory** (`mkdir -p api`); empty is fine — files are
+3. **The API directory** (`mkdir -p api`); empty is fine: files are
    picked up as they appear.
 
 If `uv` is not on PATH (this plugin's `uv` shim normally installs it):
@@ -72,7 +72,7 @@ If `uv` is not on PATH (this plugin's `uv` shim normally installs it):
 curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
-## Step 3 — Is a dashboard already serving?
+## Step 3: Is a dashboard already serving?
 
 The dashboard serves on the port `.rbtrc` names (`dashboard --port=`;
 9871 when it names none). Probe it:
@@ -101,9 +101,9 @@ lsof -a -d cwd -p <pid>
 - Otherwise start this project's with `--port=<port>`; a later
   `rbt dev run` then needs `--dashboard-port=<port>`.
 - `pgrep` finds this project's but the probe fails: it outlived its port
-  (reboot-crm, 1.6.0) — stop it and start fresh.
+  (reboot-crm, 1.6.0), stop it and start fresh.
 
-## Step 4 — Start the dashboard
+## Step 4: Start the dashboard
 
 From the project root, in its own background shell:
 
@@ -116,7 +116,7 @@ uv run rbt dashboard
 - Flags: only `--config`, `--default-config`, `--working-directory`,
   `--port` (1.6.0). No flag suppresses the browser
   (`rbt dev run --no-open-dashboard` exists, but `--no-open-browser`
-  fails with `unrecognized arguments`, exit 2 — in a background shell
+  fails with `unrecognized arguments`, exit 2: in a background shell
   that looks like a failed start).
 - It prints `Your dashboard is at http://127.0.0.1:9871/` immediately;
   wait for the Step 3 probe to succeed before calling it up. Leave it
@@ -129,7 +129,7 @@ uv run rbt dashboard
   set: on a mid-sized app the default heap runs out, the check retries
   forever and the Call Graph never publishes (reboot-crm, 1.6.0).
 
-## Step 5 — Open it once
+## Step 5: Open it once
 
 ```sh
 "$BROWSER" http://127.0.0.1:<port>/ || \

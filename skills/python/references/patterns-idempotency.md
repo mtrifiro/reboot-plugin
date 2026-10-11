@@ -99,17 +99,17 @@ next mutation _without_ an idempotency key fails:
 ## Never
 
 - A seed that opts out of the key and is not idempotent itself, e.g.
-  `await bank.always().add_account(context, ...)` in `initialize` — runs
+  `await bank.always().add_account(context, ...)` in `initialize`: runs
   every boot, adding the account again. Keep seeds keyed, or make the
   method a no-op once done.
-- Branching on the response of a replayed call — it returns the first
+- Branching on the response of a replayed call: it returns the first
   run's stored response without running the body, so counts, `created`
   flags and timestamps describe the first run (reboot-air-141-22,
   1.4.1: a startup log claimed 540 new flights every boot when 180
   were new). Ask a reader what is new.
-- An alias built from a timestamp or fresh uuid — a new key each time,
+- An alias built from a timestamp or fresh uuid: a new key each time,
   never recognized as a repeat.
-- One alias for two different mutations — the second returns the
+- One alias for two different mutations: the second returns the
   first's result, or raises `is being reused _unsafely_` if it targets
   a different actor or method (`lifecycle-initialize-hook.md`).
 
@@ -133,6 +133,6 @@ next mutation _without_ an idempotency key fails:
 
 ## See also
 
-- [`lifecycle-initialize-hook.md`](lifecycle-initialize-hook.md) — how `initialize` keys each call
-- [`patterns-time-and-randomness.md`](patterns-time-and-randomness.md) — retry-safe ids and timestamps
-- [`testing-harness.md`](testing-harness.md) — contexts in tests
+- [`lifecycle-initialize-hook.md`](lifecycle-initialize-hook.md), how `initialize` keys each call
+- [`patterns-time-and-randomness.md`](patterns-time-and-randomness.md), retry-safe ids and timestamps
+- [`testing-harness.md`](testing-harness.md), contexts in tests

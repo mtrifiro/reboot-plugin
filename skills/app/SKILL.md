@@ -1,11 +1,11 @@
 ---
 name: app
-description: Build a Reboot application from a user description. Every backend is designed ready for both front doors — an MCP UI (ChatGPT, Claude, VSCode, Goose) and a standalone web app — with one `User` per identity via `oauth=...`. Builds the front door(s) the prompt names (MCP/Claude/ChatGPT → `mcp-ui`; a URL/SPA/"website" → `web-app`; both named → both); otherwise builds the web app first without asking and offers the MCP UI at handoff.
+description: Build a Reboot application from a user description. Every backend is designed ready for both front doors, an MCP UI (ChatGPT, Claude, VSCode, Goose) and a standalone web app, with one `User` per identity via `oauth=...`. Builds the front door(s) the prompt names (MCP/Claude/ChatGPT → `mcp-ui`; a URL/SPA/"website" → `web-app`; both named → both); otherwise builds the web app first without asking and offers the MCP UI at handoff.
 argument-hint: [<app-description>]
 allowed-tools: Bash, Read, Write, Glob, Grep, Edit
 ---
 
-# app — Build a Reboot Application
+# app: Build a Reboot Application
 
 **Say the welcome first,** the moment this skill loads, before
 invoking `build` or any other skill, and before the routing line or the
@@ -83,10 +83,10 @@ ends at the build skill's "Accept the Design"
 
 ### The two destinations
 
-- **`mcp-ui`** — exposed through an MCP host (ChatGPT, Claude, VSCode,
+- **`mcp-ui`** exposed through an MCP host (ChatGPT, Claude, VSCode,
   Goose, etc.) via MCP tools; any visual UI is embedded in the host as
   MCP UI artifacts.
-- **`web-app`** — served at a URL and used in a normal browser: the
+- **`web-app`** served at a URL and used in a normal browser: the
   Reboot backend behind a React frontend.
 
 ### Triggers (verbatim in the prompt)

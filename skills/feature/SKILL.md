@@ -5,7 +5,7 @@ argument-hint: [<feature-description>]
 allowed-tools: Bash, Read, Write, Glob, Grep, Edit, AskUserQuestion
 ---
 
-# feature — Specify a Feature, Then Build It
+# feature: Specify a Feature, Then Build It
 
 > **Version notices:** if `rbt` reports a version mismatch or a newer
 > Reboot, follow the [upgrade skill](../upgrade/SKILL.md).
@@ -19,8 +19,8 @@ the same order.
 
 In the **Reboot Flywheel**
 ([`build/references/flywheel.md`](../build/references/flywheel.md)),
-Steps 1–2 are Design: the rules and scenarios the user accepts with the
-domain model. Steps 2a–5 are Prove.
+Steps 1 to 2 are Design: the rules and scenarios the user accepts with the
+domain model. Steps 2a to 5 are Prove.
 
 **A fix, a bug report or a review finding** starts at
 [A fix, a bug report, a review finding](#a-fix-a-bug-report-a-review-finding),
@@ -30,26 +30,26 @@ the stored state behind the report
 
 References (in the `python` skill), each at the step that needs it:
 
-- `../python/references/testing-features.md` — **before writing any
+- `../python/references/testing-features.md`: **before writing any
   scenario**: step vocabulary, who calls, saved values, assertions,
   `@wip` / `@blocked`, custom steps.
-- `../python/references/testing-web-app.md` — when a scenario opens the
+- `../python/references/testing-web-app.md`: when a scenario opens the
   web app: the `frontend` fixture, web app steps, accessible markup,
   recordings.
-- `../python/references/testing-project-setup.md` — the files a suite
+- `../python/references/testing-project-setup.md`: the files a suite
   needs (`reboot[dev]`, `pytest.ini`, `.gitignore`).
-- `../python/references/lifecycle-seeding.md` — only when fixtures load
-  seed data; `../python/references/lifecycle-dev-loop.md` — when a run
+- `../python/references/lifecycle-seeding.md`, only when fixtures load
+  seed data; `../python/references/lifecycle-dev-loop.md`, when a run
   goes quiet or passes alone and fails in the suite.
 
-## Step 1 — Propose the feature in English
+## Step 1: Propose the feature in English
 
 Before any file changes, describe the feature as a person would, not as
 an API:
 
 - **Name**: a sentence about the activity ("Customers can transfer
   money between accounts").
-- **Purpose**: a short paragraph — who does it, why, what they see
+- **Purpose**: a short paragraph, who does it, why, what they see
   when it worked.
 - **Rules**: only clear business rules or system-wide invariants worth
   formal verification (money is conserved by a transfer; a balance
@@ -61,7 +61,7 @@ an API:
   flow, if that is how the feature is used.
 
 Ask whether that is the feature; iterate on the English until they
-agree — the file follows the words. In a build, the first prototype's
+agree: the file follows the words. In a build, the first prototype's
 features are written from the build's scope round and reviewed
 running. Each later feature after that is one slice of the design
 conversation: agreed here, its
@@ -69,7 +69,7 @@ slice of the domain model shown, then "Accept the Design", where the
 user accepts the rules, their scenarios and the domain model together,
 before any implementation.
 
-## Step 2 — Write it down, tagged `@wip`
+## Step 2: Write it down, tagged `@wip`
 
 Create `tests/<capability>.feature`, named for the activity
 (`transfers.feature`, not `bank.feature`), with the agreed name,
@@ -111,7 +111,7 @@ Feature: Customers can transfer money between accounts
   and in a fix's reproducing scenario's name; the model diff and the
   pull request body pick it up from there.
 
-## Step 2a — See each scenario fail before writing the code
+## Step 2a: See each scenario fail before writing the code
 
 Run the new scenarios against the code as it is
 (`uv run pytest -m wip`, or `-k "<scenario name>"` for one), before
@@ -171,7 +171,7 @@ change behavior, not permission to skip the feature. For each:
 Only a change with no behavior a scenario could see (a typo in a
 comment, a rename inside one function) skips this, and you say so.
 
-## Step 3 — Build the feature
+## Step 3: Build the feature
 
 Change the API, servicers and frontend by the
 [`build` skill](../build/SKILL.md)'s flow with your front-door skill
@@ -183,10 +183,10 @@ Two rules matter most:
   beside the property, or a request to add it.
 - **Build web app pages with accessible markup** from the start
   (`testing-web-app.md`): labels paired with inputs, buttons that say
-  what they do, tables with a labeled heading — that is what lets a
+  what they do, tables with a labeled heading, that is what lets a
   scenario drive the page.
 
-## Step 4 — Iterate on the scenarios with the user
+## Step 4: Iterate on the scenarios with the user
 
 Scenarios come before the code (Steps 2 and 2a); this is the loop that
 follows. After each change run them, then show each scenario, ask what
@@ -218,7 +218,7 @@ else the feature must do, write it, see it fail, make it pass.
 - **A dashboard review after each round**: the feature's card, its
   rules, the methods it uses and those no feature uses, the recordings.
 
-## Step 5 — Ask before taking `@wip` off
+## Step 5: Ask before taking `@wip` off
 
 When every scenario passes (or is `@blocked` with a reason) and the
 user says the feature does what they meant, ask whether to remove the

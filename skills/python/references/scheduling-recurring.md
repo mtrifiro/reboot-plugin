@@ -100,21 +100,21 @@ async def interest(self, context: WriterContext) -> None:
 
 ## Never
 
-- A one-shot `schedule(when=…)` expecting it to recur — it fires once.
+- A one-shot `schedule(when=…)` expecting it to recur: it fires once.
 - `….schedule(when=…)` from inside a workflow `run()` to line up the next
-  occurrence — raises `TypeError`, retries forever. Use `spawn(when=…)`
+  occurrence: raises `TypeError`, retries forever. Use `spawn(when=…)`
   ([`scheduling-basic.md`](scheduling-basic.md)).
-- A naive `datetime` in `when=` — server-local zone, so "02:00" differs
+- A naive `datetime` in `when=`: server-local zone, so "02:00" differs
   by machine. Use `datetime.now(timezone.utc)` or `tzinfo=timezone.utc`.
-- `datetime.now()` read directly in a **workflow** body — differs every
+- `datetime.now()` read directly in a **workflow** body: differs every
   replay; capture it with `at_least_once`
   ([`servicer-workflow-external.md`](servicer-workflow-external.md)).
 - A "set active" writer that overwrites an existing generation token on a
-  redundant start — the pending tick loses the token and dies while the
+  redundant start: the pending tick loses the token and dies while the
   caller sees "already active" and schedules nothing. Write the token
   only on the inactive → active transition.
 - Starting `run()` from both the chain and another entry point (an admin
-  button, a startup hook) without a claim — passes overlap
+  button, a startup hook) without a claim: passes overlap
   ([`servicer-workflow-declare.md`](servicer-workflow-declare.md)).
 
 ## Limits
@@ -151,6 +151,6 @@ async def interest(self, context: WriterContext) -> None:
 
 ## See also
 
-- [`scheduling-basic.md`](scheduling-basic.md) — `when=`, contexts, timer limits
-- [`servicer-workflow-declare.md`](servicer-workflow-declare.md) — the `run()` workflow
-- [`servicer-writer.md`](servicer-writer.md) — the tick writer's rules
+- [`scheduling-basic.md`](scheduling-basic.md), `when=`, contexts, timer limits
+- [`servicer-workflow-declare.md`](servicer-workflow-declare.md), the `run()` workflow
+- [`servicer-writer.md`](servicer-writer.md), the tick writer's rules

@@ -71,14 +71,14 @@ except Showing.HoldSeatsAborted as aborted:
 
 ## Never
 
-- `except Seat.PlaceAborted: pass` for "already exists" tolerance — a
+- `except Seat.PlaceAborted: pass` for "already exists" tolerance: a
   timeout under load is also `PlaceAborted` and gets swallowed; check
   `isinstance(aborted.error, StateAlreadyConstructed)`, re-raise the rest.
-- `except Exception:` around a Reboot call — swallows infrastructure
+- `except Exception:` around a Reboot call: swallows infrastructure
   failures and retries; catch the typed `<Method>Aborted`.
-- Catch only to log and continue — let it propagate; the framework logs
+- Catch only to log and continue: let it propagate; the framework logs
   the typed payload.
-- Write compensating undo after catching your own method's abort — a
+- Write compensating undo after catching your own method's abort: a
   raised `<Method>Aborted` already rolled back its writes
   (`api-errors.md`).
 
@@ -103,6 +103,6 @@ except Showing.HoldSeatsAborted as aborted:
 
 ## See also
 
-- [`api-errors.md`](api-errors.md) — declaring and raising typed errors
-- [`rpc-refs.md`](rpc-refs.md) — probing existence via `StateNotConstructed`
-- [`react-generated-client.md`](react-generated-client.md) — errors in the browser
+- [`api-errors.md`](api-errors.md), declaring and raising typed errors
+- [`rpc-refs.md`](rpc-refs.md), probing existence via `StateNotConstructed`
+- [`react-generated-client.md`](react-generated-client.md), errors in the browser

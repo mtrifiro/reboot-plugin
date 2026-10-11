@@ -31,7 +31,7 @@ domain and fail only a question about which kind of app; `no-question`
 survives only on `design-skip-gate`, the bypass): `route-both`,
 `route-just-website` and `route-mcp` score the same in both arms.
 `mcp-ready` and the design cases are where the plugin's effect shows
-(no plugin: 0–3 of 3 on `mcp-ready` across runs, so it is noisy; near
+(no plugin: 0 to 3 of 3 on `mcp-ready` across runs, so it is noisy; near
 zero on the design cases). The design cases, three runs per arm on
 2026-10-11: `design-accept-gate` 0.90 with the plugin, 0.00 without,
 under the prototype-first flow (assumptions, one feature built and

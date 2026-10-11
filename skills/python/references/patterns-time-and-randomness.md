@@ -111,16 +111,16 @@ seconds (cineloop-24, 1.4.1; `testing-harness.md`).
 ## Never
 
 - `seat.hold_id = str(uuid4())` in a writer when a later call
-  addresses the hold by that id across a client retry — derive it or
+  addresses the hold by that id across a client retry: derive it or
   take it from the request.
-- `datetime.now()` or `uuid4()` read directly in a workflow body — it
+- `datetime.now()` or `uuid4()` read directly in a workflow body: it
   differs on every replay; capture it with `at_least_once`.
 - Building an `at_least_once` / `.per_workflow` alias from a timestamp
-  or fresh uuid — the alias must be identical across replays.
-- A test double inside `at_least_once` that pops answers off a list —
+  or fresh uuid: the alias must be identical across replays.
+- A test double inside `at_least_once` that pops answers off a list:
   validation keeps the second invocation's answer; derive the answer
   from its input (reboot-crm-04, 1.6.0).
-- Looking for `context.now()` — it does not exist at 1.6.0 (mattprd-05
+- Looking for `context.now()`: it does not exist at 1.6.0 (mattprd-05
   asks for one).
 
 ## Limits
@@ -149,6 +149,6 @@ seconds (cineloop-24, 1.4.1; `testing-harness.md`).
 
 ## See also
 
-- [`servicer-workflow-external.md`](servicer-workflow-external.md) — `at_least_once` capture code
-- [`patterns-idempotency.md`](patterns-idempotency.md) — retry-safe creation and aliases
-- [`scheduling-basic.md`](scheduling-basic.md) — deadlines that other viewers see
+- [`servicer-workflow-external.md`](servicer-workflow-external.md), `at_least_once` capture code
+- [`patterns-idempotency.md`](patterns-idempotency.md), retry-safe creation and aliases
+- [`scheduling-basic.md`](scheduling-basic.md), deadlines that other viewers see

@@ -79,20 +79,20 @@ class AccountServicer(Account.Servicer):
 ## Never
 
 - `raise ValueError("not enough funds")` (or any non-`Aborted`
-  exception) for a business failure — the caller gets `<Method>Aborted`
+  exception) for a business failure: the caller gets `<Method>Aborted`
   carrying `Unknown`; the message only reaches the log.
-- `return None` (or a sentinel field) to signal failure — ambiguous and
+- `return None` (or a sentinel field) to signal failure: ambiguous and
   untyped. Raise.
 - `raise OverdraftError(...)` or `raise Account.OverdraftErrorAborted(...)`
-  — a `Model` is not an exception; write
+: a `Model` is not an exception; write
   `Account.WithdrawAborted(OverdraftError(...))`.
 - Raise an error `Model` the method did not list in its own
-  `errors=[...]` — fails the type check when the `Aborted` is
+  `errors=[...]`: fails the type check when the `Aborted` is
   constructed (1.6.0 source). Add it to `errors=` (compatible; see
   [`api-schema-evolution.md`](api-schema-evolution.md)).
-- An error `Model` with no fields — breaks the generated React client
+- An error `Model` with no fields: breaks the generated React client
   at import; see `react-generated-client.md` § Errors you will see.
-- A rejection counter written inside the transaction that rejects —
+- A rejection counter written inside the transaction that rejects:
   the abort rolls it back with everything else, so the count stays at
   zero (returns-desk, 1.4.0). The caller or workflow that catches the
   `<Method>Aborted` records it, after the abort.
@@ -119,6 +119,6 @@ class AccountServicer(Account.Servicer):
 
 ## See also
 
-- [`patterns-error-handling.md`](patterns-error-handling.md) — catching and propagating typed errors
-- [`api-methods.md`](api-methods.md) — the `errors=` factory argument
-- [`api-pydantic.md`](api-pydantic.md) — field rules for error Models
+- [`patterns-error-handling.md`](patterns-error-handling.md), catching and propagating typed errors
+- [`api-methods.md`](api-methods.md), the `errors=` factory argument
+- [`api-pydantic.md`](api-pydantic.md), field rules for error Models

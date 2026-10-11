@@ -85,5 +85,5 @@ them, so each turn shows the user one change they can judge.
 
 ## See also
 
-- [`ui-design.md`](ui-design.md) — principles 01 (a source), 12 (the screenshot review), 13 (restyle mechanics)
-- [`../../build/templates/README.md`](../../build/templates/README.md) — `scripts/screenshots.py`
+- [`ui-design.md`](ui-design.md), principles 01 (a source), 12 (the screenshot review), 13 (restyle mechanics)
+- [`../../build/templates/README.md`](../../build/templates/README.md), `scripts/screenshots.py`

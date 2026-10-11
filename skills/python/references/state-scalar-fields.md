@@ -67,13 +67,13 @@ in `stdlib-ciphertext.md`.
 
 ## Never
 
-- `api_key: str = Field(tag=1, default="")` holding the key itself —
+- `api_key: str = Field(tag=1, default="")` holding the key itself:
   plaintext at rest. Store `api_key_id`.
-- `balance: int = Field(tag=1, default=100)` — rejected at import;
+- `balance: int = Field(tag=1, default=100)`: rejected at import;
   zero default, set `100` in the constructor.
-- `image: bytes = Field(tag=1, default=b"")` — `bytes` is not a field
+- `image: bytes = Field(tag=1, default=b"")`: `bytes` is not a field
   type (`api-pydantic.md` § Limits). Base64 in a `str`.
-- Hand-roll `Ciphertext` for OAuth tokens — `OAuthTokenManager` adds
+- Hand-roll `Ciphertext` for OAuth tokens: `OAuthTokenManager` adds
   the per-user index, key manager and shred scope for you.
 
 ## Limits
@@ -92,6 +92,6 @@ None known beyond the default-value rows in
 
 ## See also
 
-- [`stdlib-ciphertext.md`](stdlib-ciphertext.md) — encrypting secrets at rest
-- [`stdlib-oauth-tokens.md`](stdlib-oauth-tokens.md) — storing OAuth tokens
-- [`api-pydantic.md`](api-pydantic.md) — the full field rules
+- [`stdlib-ciphertext.md`](stdlib-ciphertext.md), encrypting secrets at rest
+- [`stdlib-oauth-tokens.md`](stdlib-oauth-tokens.md), storing OAuth tokens
+- [`api-pydantic.md`](api-pydantic.md), the full field rules

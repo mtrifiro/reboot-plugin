@@ -26,12 +26,11 @@ Stop vs. retry depends on whether the raised exception is declared.
 
 A running workflow has three outcomes:
 
-1. **Return normally** — done; any `response=` value is recorded.
-2. **Raise a declared `<Type>.<Workflow>Aborted(<Error>(...))`** —
-   **terminates**, not retried; the error is its recorded failure,
+1. **Return normally** done; any `response=` value is recorded.
+2. **Raise a declared `<Type>.<Workflow>Aborted(<Error>(...))`** **terminates**, not retried; the error is its recorded failure,
    inspected like a writer/transaction abort
    ([`api-errors.md`](api-errors.md)).
-3. **Raise anything else** (`ValueError`, transient HTTP error, a bug) —
+3. **Raise anything else** (`ValueError`, transient HTTP error, a bug):
    transient: replayed from the last checkpoint indefinitely, until it
    succeeds, a fix ships, or the state is expunged.
 
@@ -81,7 +80,7 @@ class OrderServicer(Order.Servicer):
                 )
                 return ChargeResult(ok=True, charge_id=response.id)
             except stripe.error.CardError as e:
-                # Permanent — data, so the alias isn't poisoned.
+                # Permanent: data, so the alias isn't poisoned.
                 return ChargeResult(ok=False, reason=str(e))
 
         outcome = await at_most_once("Charge", context, do_charge)
@@ -111,14 +110,14 @@ After a failure-as-data, choose deliberately:
 
 ## Never
 
-- `raise ValueError("amount must be positive")` where you mean "stop" —
+- `raise ValueError("amount must be positive")` where you mean "stop":
   bad input stays bad, so it retries forever. Raise
   `Order.FulfillAborted(InvalidRequest(field="amount", reason="must be positive"))`
   with the error declared.
-- Catching a transient error and converting it to a declared abort —
+- Catching a transient error and converting it to a declared abort:
   fails the workflow on the first hiccup. Let it propagate.
 - `raise` inside an `at_least_once` / `at_most_once` callable to mean
-  "stop" — `at_least_once` retries indefinitely; `at_most_once` poisons
+  "stop": `at_least_once` retries indefinitely; `at_most_once` poisons
   the alias. Return data, decide in the body.
 - Raising an abort class whose error is not in the method's `errors=`.
 
@@ -139,6 +138,6 @@ None known.
 
 ## See also
 
-- [`api-errors.md`](api-errors.md) — the typed-error contract
-- [`patterns-error-handling.md`](patterns-error-handling.md) — choosing declared errors
-- [`servicer-workflow-external.md`](servicer-workflow-external.md) — failures as data
+- [`api-errors.md`](api-errors.md), the typed-error contract
+- [`patterns-error-handling.md`](patterns-error-handling.md), choosing declared errors
+- [`servicer-workflow-external.md`](servicer-workflow-external.md), failures as data

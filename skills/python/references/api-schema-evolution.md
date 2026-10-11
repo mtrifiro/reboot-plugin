@@ -19,7 +19,7 @@ docs: ""
 You are changing the API of an app with persisted state: a deployed app,
 or `rbt dev run` with `--application-name=...`. On boot the runtime
 compares the API against the schema the state was written with and
-refuses a backwards-incompatible change — the same gate under
+refuses a backwards-incompatible change: the same gate under
 `rbt dev run`, `rbt serve` and Reboot Cloud. What you ship stays in the
 schema until the data is expunged.
 
@@ -45,7 +45,7 @@ name. Request/response models follow the state-model field rules.
 
 ### When you need a "change", add instead
 
-**Change a method's signature or semantics** — add a new method, migrate
+**Change a method's signature or semantics** add a new method, migrate
 callers, keep the old one as a delegating shim. Moving
 `deposit(amount: float)` to integer cents:
 
@@ -73,7 +73,7 @@ api = API(
 )
 ```
 
-**Change a field's type or shape** — add a field with a new `tag`; in
+**Change a field's type or shape** add a field with a new `tag`; in
 writers, copy old-field data across on touch. The old field stays
 declared and reads as its zero value once unused.
 
@@ -84,7 +84,7 @@ class CartState(Model):
 ```
 
 **Add an ID field (child actor, `OrderedMap` index) to a `Type` with
-existing actors** — allocate it lazily, because a `factory=True`
+existing actors** allocate it lazily, because a `factory=True`
 constructor is a no-op on an existing actor and the field would stay
 `""` forever. Readers treat `""` as "no index yet".
 
@@ -95,7 +95,7 @@ async def add_flight(self, context: TransactionContext, request) -> None:
     await OrderedMap.ref(self.state.flights_index_id).insert(...)
 ```
 
-**Add an index or counter over existing data** — ship the backfill in
+**Add an index or counter over existing data** ship the backfill in
 the same change:
 - An idempotent method deriving its payload from persisted state, not
   re-run seed computations ("today at 14:00" recomputed later drifts
@@ -104,10 +104,10 @@ the same change:
   `.idempotently("ledger-backfill-v2")`; bump the suffix to re-run (why:
   `lifecycle-initialize-hook.md`). Log what it did.
 
-**Restructure state across types** — add the new `Type` beside the old,
+**Restructure state across types** add the new `Type` beside the old,
 migrate on access (or via a `Workflow`), leave the old one inert.
 
-**Plan for accretion** — what you add, you keep (API and generated
+**Plan for accretion** what you add, you keep (API and generated
 clients). Name fields so the default is the zero value (`show_tags`, not
 `hide_tags`); flipping a default costs a second field. Mark superseded
 fields in their (editable) field description. Get method descriptions
@@ -123,14 +123,14 @@ right before state first persists.
 
 ## Never
 
-- Rewording a method's `description=` after state exists — boot is
+- Rewording a method's `description=` after state exists: boot is
   refused. Put evolving rules in the servicer method's docstring.
   Reboot intends to push an upstream fix that lets a method's description change after it is created; until a release says so, the rule holds.
 - Iterating on a state shape while `rbt dev run` watches
   (`lifecycle-dev-loop.md` § Never).
 - Allocating a new ID field only in the `factory=True` constructor of
-  a type with existing actors — it is never back-filled.
-- Calling a backfill bare from `initialize` — it runs once ever; if
+  a type with existing actors: it is never back-filled.
+- Calling a backfill bare from `initialize`: it runs once ever; if
   that run was a no-op it never runs again. Use a versioned alias.
 - `rbt dev expunge` without `--yes`, or while `rbt dev run` is live
   (`lifecycle-rbtrc.md` § Never).
@@ -176,14 +176,14 @@ right before state first persists.
 | ``waiting for modification, or hit `x` to expunge`` | `rbt dev run` with `ask` | Fix the code (reloads) or press `x` |
 | `Reboot options for method 'create'` … `updated from... writer { constructor { } } to... transaction` | A factory constructor's kind cannot change against persisted state, though the kind change is compatible elsewhere | Keep the writer and construct the dependent actor lazily on first use; declare new factories `Transaction(mode=Exclusive(), factory=True)` |
 
-Recovery: `rbt dev run` — fix the code, or `x`, or
-`rbt dev expunge --application-name=<app> --yes`; `rbt serve` — delete
-the data under `--state-directory`; Reboot Cloud —
+Recovery: `rbt dev run`, fix the code, or `x`, or
+`rbt dev expunge --application-name=<app> --yes`; `rbt serve`, delete
+the data under `--state-directory`; Reboot Cloud,
 `rbt cloud down --api-key=...` (brings the app down **and expunges its
 state**), then `rbt cloud up`.
 
 ## See also
 
-- [`state-collections.md`](state-collections.md) — ID fields for child actors
-- [`lifecycle-initialize-hook.md`](lifecycle-initialize-hook.md) — versioned-alias backfills
-- [`state-scalar-fields.md`](state-scalar-fields.md) — zero-value default rule
+- [`state-collections.md`](state-collections.md), ID fields for child actors
+- [`lifecycle-initialize-hook.md`](lifecycle-initialize-hook.md), versioned-alias backfills
+- [`state-scalar-fields.md`](state-scalar-fields.md), zero-value default rule

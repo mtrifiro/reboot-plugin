@@ -83,29 +83,29 @@ on an in-system actor that schedules the HTTP send in a workflow, then
 ## Never
 
 - Multi-actor work in a `Writer` (`withdraw(...)` then `deposit(...)`
-  on other actors) — a writer mutates one actor.
-- An external call in the body — it fires on abort and every re-run.
-- Stash data on `self` — each call may get a fresh servicer instance;
+  on other actors): a writer mutates one actor.
+- An external call in the body: it fires on abort and every re-run.
+- Stash data on `self`: each call may get a fresh servicer instance;
   state lives in `self.state` or other actors.
 - One transaction over N things when N is more than a handful (Reset
-  All over 48 showings stalled a suite; cineloop-40, 1.4.1) — every actor is a two-phase-
+  All over 48 showings stalled a suite; cineloop-40, 1.4.1): every actor is a two-phase-
   commit participant. Iterate in a `Workflow`, one small transaction or
   writer per item, `.per_workflow(f"... {id}")` per step.
-- `schedule()` onto N foreign actors from one transaction — each
+- `schedule()` onto N foreign actors from one transaction: each
   becomes a 2PC participant; colliding prepares killed the dev database
   worker (`database.cc:1374` assert; theater-network-20, 1.4.0). Pass
   the list in a workflow's request and write each actor from the
   workflow.
-- Read an actor then write it as two calls — one writer returning what
+- Read an actor then write it as two calls: one writer returning what
   the caller needs was about 10x faster under contention
   (theater-chain-17).
 - Touch shared actors in different orders in different transactions
-  (A then B, B then A) — they wait on each other. Keep one global order.
+  (A then B, B then A): they wait on each other. Keep one global order.
 - Cancel in-flight transaction calls (load drivers, timing-out tests,
-  Ctrl-C) — see Limits. Drain: stop issuing, await in-flight calls.
-- Read `context.auth` in an actor called from this transaction — it is
+  Ctrl-C): see Limits. Drain: stop issuing, await in-flight calls.
+- Read `context.auth` in an actor called from this transaction: it is
   `None`; pass identity in the request (`servicer-authorizer.md`).
-- An aggregator, registry or dashboard among the participants — the
+- An aggregator, registry or dashboard among the participants: the
   participant set is the lock set, and a burst of transactions then
   convoys on that one actor for minutes (returns-desk, 1.4.0).
   Participants are the actors whose invariants the transaction enforces;
@@ -168,6 +168,6 @@ on an in-system actor that schedules the HTTP send in a workflow, then
 
 ## See also
 
-- [`servicer-workflow-external.md`](servicer-workflow-external.md) — external calls and N-item loops
-- [`patterns-load-and-benchmarking.md`](patterns-load-and-benchmarking.md) — measured costs and method
-- [`rpc-refs.md`](rpc-refs.md) — refs, existence probes, IDs
+- [`servicer-workflow-external.md`](servicer-workflow-external.md), external calls and N-item loops
+- [`patterns-load-and-benchmarking.md`](patterns-load-and-benchmarking.md), measured costs and method
+- [`rpc-refs.md`](rpc-refs.md), refs, existence probes, IDs

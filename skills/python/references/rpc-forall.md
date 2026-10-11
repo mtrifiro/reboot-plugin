@@ -42,12 +42,12 @@ await Queue.forall(queue_ids).enqueue(context, items=items)
 ## Never
 
 - Hand-rolling `asyncio.gather(*[Message.ref(mid).get(context) for mid
-  in ids])` — same work, more code.
-- Expecting framework-side batching — none at 1.6.0; one call per id.
+  in ids])`: same work, more code.
+- Expecting framework-side batching: none at 1.6.0; one call per id.
 - A subscribed reader that `forall`s over a large or growing set, or
-  fans out to readers that fan out again — keep the facts on the parent
+  fans out to readers that fan out again: keep the facts on the parent
   (`patterns-cross-actor-reads.md`).
-- `forall` over a writer from a `WriterContext` — as for a single call,
+- `forall` over a writer from a `WriterContext`: as for a single call,
   writers and transactions need a `TransactionContext`,
   `WorkflowContext` or `ExternalContext` (`rpc-calls.md`).
 
@@ -75,6 +75,6 @@ await Queue.forall(queue_ids).enqueue(context, items=items)
 
 ## See also
 
-- [`patterns-cross-actor-reads.md`](patterns-cross-actor-reads.md) — when not to fan out
-- [`patterns-load-and-benchmarking.md`](patterns-load-and-benchmarking.md) — measured fan-out budget
-- [`rpc-calls.md`](rpc-calls.md) — context rules per method kind
+- [`patterns-cross-actor-reads.md`](patterns-cross-actor-reads.md), when not to fan out
+- [`patterns-load-and-benchmarking.md`](patterns-load-and-benchmarking.md), measured fan-out budget
+- [`rpc-calls.md`](rpc-calls.md), context rules per method kind

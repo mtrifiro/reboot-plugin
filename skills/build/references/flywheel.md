@@ -30,8 +30,8 @@ change goes back to Design. The evidence each decision rests on is in
 
 | Stage | Skills and steps | Evidence | Ends with |
 | --- | --- | --- | --- |
-| **Design** | `app`; `feature` 1–2; `build` Design Phase, State Model Assessment, Step 1; `dashboard` Models and Features; Update Flow 1–4 | The domain model: state types, IDs, methods, kinds, who may call; the `@wip` feature files | **Accept**: the user accepts the model and the feature files on the running first prototype, and each later feature's slice before its implementation (`build`, "Accept the Design") |
-| **Prove** | `build` 2–7; `feature` 2a–5 and fixes; `python`; `run`; `upgrade`; `deploy` checks | Scenario results (`tests/.last-run.json`), mypy, page timing, the model diff | **Merge** (the pull request body) and **Promote** (`scripts/deploy.sh` and its release record) |
+| **Design** | `app`; `feature` 1 to 2; `build` Design Phase, State Model Assessment, Step 1; `dashboard` Models and Features; Update Flow 1 to 4 | The domain model: state types, IDs, methods, kinds, who may call; the `@wip` feature files | **Accept**: the user accepts the model and the feature files on the running first prototype, and each later feature's slice before its implementation (`build`, "Accept the Design") |
+| **Prove** | `build` 2 to 7; `feature` 2a to 5 and fixes; `python`; `run`; `upgrade`; `deploy` checks | Scenario results (`tests/.last-run.json`), mypy, page timing, the model diff | **Merge** (the pull request body) and **Promote** (`scripts/deploy.sh` and its release record) |
 | **Observe** | `inspect`; `deploy` Step 7; the app's logs | Stored state (`rbt inspect`): the history the design chose to record | A finding becomes a ticket, routed below |
 
 The decisions are the user's: the skills put the evidence in front of
@@ -110,7 +110,7 @@ entry, newest last; no entry is edited or removed, so a later change
 that overturns one adds its own entry naming it.
 
 ```markdown
-## 2026-10-10 — Design accepted: Front desk
+## 2026-10-10: Design accepted: Front desk
 
 - **Decided:** each Room is its own state, keyed by hotel and room
   number; `book` is a Writer on Room.
@@ -251,6 +251,6 @@ None known.
 
 ## See also
 
-- [`evidence.md`](evidence.md) — the pull request body, the release record
-- [`../../feature/SKILL.md`](../../feature/SKILL.md) — rules and scenarios first
-- [`../../inspect/SKILL.md`](../../inspect/SKILL.md) — read stored state in Observe
+- [`evidence.md`](evidence.md), the pull request body, the release record
+- [`../../feature/SKILL.md`](../../feature/SKILL.md), rules and scenarios first
+- [`../../inspect/SKILL.md`](../../inspect/SKILL.md), read stored state in Observe

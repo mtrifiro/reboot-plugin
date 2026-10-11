@@ -18,7 +18,7 @@ SHA256_DARWIN_X64="ab28d1784625d151e3f608a9412a009118f376118ed842ae643f8c2efdfb0
 
 # `PLUGIN_DATA` is hardcoded rather than read from `$CLAUDE_PLUGIN_DATA`.
 # Claude Code only sets that env var when it runs something from a
-# plugin entry point — e.g. a hook command. It is *not* set when the
+# plugin entry point: e.g. a hook command. It is *not* set when the
 # agent runs a binary directly via its Bash tool, even when that binary
 # happens to be a shim we ship in `bin/`. Honoring it would mean shims
 # invoked from a hook write to one cache and shims invoked directly by

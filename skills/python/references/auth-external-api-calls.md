@@ -1,7 +1,7 @@
 ---
 title: Calling External-Service APIs on the User's Behalf
 impact: HIGH
-impactDescription: Token capture is opt-in and easy to get subtly wrong — the wrong scope, a missing library, storing from a non-app-internal context, or an external call outside a Workflow all fail at runtime, not at startup. This is the host-agnostic recipe shared by MCP UIs and web apps.
+impactDescription: Token capture is opt-in and easy to get subtly wrong, the wrong scope, a missing library, storing from a non-app-internal context, or an external call outside a Workflow all fail at runtime, not at startup. This is the host-agnostic recipe shared by MCP UIs and web apps.
 tags: auth, oauth, tokens, store_tokens, oauth-token-manager, ciphertext, workflow, external, api, api-key, custom-endpoint, on-behalf, refresh-token, crypto-shred
 summary: "External calls as the user run only in a `Workflow`; tokens in `OAuthTokenManager`, user API keys as `Ciphertext`."
 step: auth
@@ -79,7 +79,7 @@ async def slack_callback(request):
     return RedirectResponse("/")
 ```
 
-**Path C** — a `Transaction` the UI calls with the raw key; state keeps
+**Path C** a `Transaction` the UI calls with the raw key; state keeps
 only the reference:
 
 ```python
@@ -118,7 +118,7 @@ Decrypt with the **same** `associated_data`; empty `acme_api_key_id` =
 ### Use: inside a `Workflow`
 
 Read the credential and call out in one `Workflow` (`WorkflowContext` is
-app-internal, as the token store requires), wrapped in `at_least_once` —
+app-internal, as the token store requires), wrapped in `at_least_once`:
 `at_most_once` when a duplicate is itself the failure
 (`servicer-workflow-external.md`). `context.state_id` is the `user_id` on
 a `User`-type servicer keyed by user ID.
@@ -173,23 +173,23 @@ await KeyManager.ref(_key_manager_id(GOOGLE)).shred(context, scope=user_id)
 
 ## Never
 
-- The outbound HTTP call in a `Reader` / `Writer` / `Transaction` —
+- The outbound HTTP call in a `Reader` / `Writer` / `Transaction`:
   retries and effect validation re-issue it. Only in a `Workflow`, in a
   durability primitive.
-- `context.auth.user_id` in that `Workflow` — scheduled / app-internal
+- `context.auth.user_id` in that `Workflow`: scheduled / app-internal
   calls don't reliably populate `context.auth`. Use `context.state_id`.
 - Tokens or API keys in a `str` field, or OAuth tokens in hand-rolled
-  `Ciphertext` — use `OAuthTokenManager` (A, B) or `Ciphertext` (C).
-- A user API key in `OAuthTokenManager` — it is for OAuth tokens.
-- `app_internal=True` on a route that acts on unvalidated input — it
+  `Ciphertext`: use `OAuthTokenManager` (A, B) or `Ciphertext` (C).
+- A user API key in `OAuthTokenManager`: it is for OAuth tokens.
+- `app_internal=True` on a route that acts on unvalidated input: it
   bypasses authorizers for **any** caller. Only on a callback that
   verifies the `state` you issued.
-- `app_internal=True` on a templated path (`/x/{id}`) — the app-internal
+- `app_internal=True` on a templated path (`/x/{id}`): the app-internal
   context is given only when the request path equals the declared string,
   so a path parameter silently yields an external context and
   app-internal-only calls are refused. Literal path; variables in the
   query string (1.6.0 `reboot/aio/http.py`).
-- Crashing on "not connected" — handle `found=False` and `FetchAborted`
+- Crashing on "not connected": handle `found=False` and `FetchAborted`
   with a connect / re-authenticate path.
 
 ## Limits
@@ -221,6 +221,6 @@ await KeyManager.ref(_key_manager_id(GOOGLE)).shred(context, scope=user_id)
 
 ## See also
 
-- [`stdlib-oauth-tokens.md`](stdlib-oauth-tokens.md) — `OAuthTokenManager` surface
-- [`servicer-workflow-external.md`](servicer-workflow-external.md) — durability primitive decision table
-- [`stdlib-ciphertext.md`](stdlib-ciphertext.md) — API keys, shred scopes
+- [`stdlib-oauth-tokens.md`](stdlib-oauth-tokens.md), `OAuthTokenManager` surface
+- [`servicer-workflow-external.md`](servicer-workflow-external.md), durability primitive decision table
+- [`stdlib-ciphertext.md`](stdlib-ciphertext.md), API keys, shred scopes

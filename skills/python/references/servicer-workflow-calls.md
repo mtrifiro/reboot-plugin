@@ -29,10 +29,10 @@ waiting: [`servicer-workflow-wait.md`](servicer-workflow-wait.md).
 
 | Call | Primitive |
 | --- | --- |
-| `SomeType.ref(id).method(context, …)` — any method on any actor | `.per_workflow(alias)` / `.per_iteration(alias)` / `.always()` |
-| `Service.ref().write(context, fn)` — inline mutation of this actor | same scope chain |
-| `agent.run(context, prompt)` — Reboot `Agent` (LLM) | none; it memoizes the model call ([`agent-pydantic-ai.md`](agent-pydantic-ai.md)) |
-| HTTP, Stripe, Twilio, S3, the clock, randomness — external | `at_least_once` (default) or `at_most_once` |
+| `SomeType.ref(id).method(context, …)`: any method on any actor | `.per_workflow(alias)` / `.per_iteration(alias)` / `.always()` |
+| `Service.ref().write(context, fn)`: inline mutation of this actor | same scope chain |
+| `agent.run(context, prompt)`: Reboot `Agent` (LLM) | none; it memoizes the model call ([`agent-pydantic-ai.md`](agent-pydantic-ai.md)) |
+| HTTP, Stripe, Twilio, S3, the clock, randomness: external | `at_least_once` (default) or `at_most_once` |
 | Block until Reboot state satisfies a condition | `until` / `until_changes` |
 
 Delayed/background work on an actor is Reboot too, but from a workflow
@@ -55,10 +55,10 @@ Every alias (scope chain, `at_least_once`, `at_most_once`, `until`,
 Reboot calls are already durable; choose only how often one runs
 across replays:
 
-- **`.per_workflow(alias)`** — once per workflow lifetime; replays return
+- **`.per_workflow(alias)`** once per workflow lifetime; replays return
   the memo. Setup, recording a decision, starting a child workflow.
-- **`.per_iteration(alias)`** — once per `context.loop` iteration.
-- **`.always()`** — never memoized; a live read on every wake.
+- **`.per_iteration(alias)`** once per `context.loop` iteration.
+- **`.always()`** never memoized; a live read on every wake.
 
 ```python
 from uuid import uuid4
@@ -121,25 +121,25 @@ async def control_loop(
 ## Never
 
 - `at_least_once(...)` / `at_most_once(...)` / `.idempotently(...)`
-  around a Reboot call — redundant; `at_most_once` adds a
+  around a Reboot call: redundant; `at_most_once` adds a
   poison-the-alias failure mode.
-- `async def make_move(s):` — the parameter must be named `state`.
-- `def try_claim(state) -> bool:` passed to `.write` — it is awaited;
+- `async def make_move(s):`: the parameter must be named `state`.
+- `def try_claim(state) -> bool:` passed to `.write`: it is awaited;
   use `async def`.
-- `Other.ref(id).read(context)` / `.write(context, fn)` — no inline
+- `Other.ref(id).read(context)` / `.write(context, fn)`: no inline
   read/write on a ref with an id; use declared methods.
-- `asyncio.gather` over **transaction** calls in one workflow — siblings
+- `asyncio.gather` over **transaction** calls in one workflow: siblings
   contend through the shared workflow root and all die at their lock
   deadline (8 concurrent, observed at 1.4.0). Run transactions
   sequentially; gathering **writer** calls is fine.
 - Calling the same method on the same actor twice with a bare
-  `.per_workflow()` / `.per_iteration()` — the auto key collides; give
+  `.per_workflow()` / `.per_iteration()`: the auto key collides; give
   each its own alias.
 - Calling a factory constructor from a workflow on an actor that may
-  already exist — aborts `StateAlreadyConstructed` and retries forever
+  already exist: aborts `StateAlreadyConstructed` and retries forever
   (observed at 1.6.0). Construct once, then call a writer.
 - Feeding an `.always()` result into a memoized call, an id or a later
-  step — it can differ on replay, so everything after it silently
+  step: it can differ on replay, so everything after it silently
   diverges after a restart (port-meridian, 1.5.0). Scope a read later
   steps depend on with `.per_workflow` / `.per_iteration`, and re-derive
   a contested outcome from committed state, never from a replayed local.
@@ -171,6 +171,6 @@ async def control_loop(
 
 ## See also
 
-- [`servicer-workflow-external.md`](servicer-workflow-external.md) — non-Reboot calls and the clock
-- [`servicer-workflow-loop.md`](servicer-workflow-loop.md) — what `per_iteration` iterates over
-- [`rpc-refs.md`](rpc-refs.md) — constructing refs and ids
+- [`servicer-workflow-external.md`](servicer-workflow-external.md), non-Reboot calls and the clock
+- [`servicer-workflow-loop.md`](servicer-workflow-loop.md), what `per_iteration` iterates over
+- [`rpc-refs.md`](rpc-refs.md), constructing refs and ids

@@ -24,7 +24,7 @@ MCP-host-specific. The hook surface is
 
 ## Do this
 
-### The `web/` shell — copy it
+### The `web/` shell: copy it
 
 `web/` arrives with the template (`copy.sh web-app ...`; see
 [`build/templates/README.md`](../../build/templates/README.md)); do not
@@ -32,18 +32,18 @@ run `npm create vite@latest`. Then `cd web && npm install`, `rbt generate`
 again, and `npm run build` to check the bundle. Every file is explained
 in the templates README; two are load-bearing:
 
-- **`vite.config.ts`** — `resolve.dedupe: ["react", "react-dom", "zod"]`
+- **`vite.config.ts`** `resolve.dedupe: ["react", "react-dom", "zod"]`
   (two copies break hooks and schema identity at runtime);
   `server.host: true` (Vite's `localhost` binds IPv6 `[::1]` only, so a
-  forwarded IPv4 port is refused with no dev-server error — the most
+  forwarded IPv4 port is refused with no dev-server error, the most
   common "starts fine, won't open").
-- **`src/App.tsx`** — the sign-in gate and one signed-in component;
+- **`src/App.tsx`** the sign-in gate and one signed-in component;
   replace its body.
 
-### The backend URL — set it explicitly in dev
+### The backend URL: set it explicitly in dev
 
 `<RebootClientProvider>` with no `url` falls back to `window.REBOOT_URL`,
-then `?rebootUrl=`, then `window.location.origin` — the **wrong** origin
+then `?rebootUrl=`, then `window.location.origin`: the **wrong** origin
 in dev, where the SPA is on Vite's port and the backend on the port
 `.rbtrc` names. The template reads `web/.env.development`
 (`VITE_REBOOT_URL=http://localhost:<port>`, written by the scaffold with
@@ -58,10 +58,10 @@ const REBOOT_URL =
 
 ### The generated client
 
-Hooks, mutators and error classes from `rbt generate --react=` — the
+Hooks, mutators and error classes from `rbt generate --react=`, the
 `useFoo` overloads, `UseFooApi`, the three-field reader return,
 `ResponseOrAborted`, `<Type><Method>Aborted`, snake→camel naming, why a
-hook id must be real on every render — are in
+hook id must be real on every render, are in
 [`react-generated-client.md`](../../python/references/react-generated-client.md).
 Do **not** open `web/src/api/**/*_rbt_react.ts` to rediscover them.
 Client state on top of the hooks:
@@ -126,7 +126,7 @@ every page this way from the start:
 - `data-testid` only on an element whose text is exactly a value a
   scenario reads back.
 - Nameable roles: `button`, `link`, `tab`, `checkbox`, `radio`,
-  `menuitem`, `option`, `row`, `table` — use the native element
+  `menuitem`, `option`, `row`, `table`, use the native element
   (`<button>`, `<a href>`, `<input type="checkbox">`), never a
   `<div onClick>`.
 - Render values that change on backend events as text so
@@ -177,6 +177,6 @@ every page this way from the start:
 
 ## See also
 
-- [`react-generated-client.md`](../../python/references/react-generated-client.md) — hooks, mutators, typed errors
-- [`testing-web-app.md`](../../python/references/testing-web-app.md) — scenarios that drive this page
-- [`build/templates/README.md`](../../build/templates/README.md) — every template file explained
+- [`react-generated-client.md`](../../python/references/react-generated-client.md), hooks, mutators, typed errors
+- [`testing-web-app.md`](../../python/references/testing-web-app.md), scenarios that drive this page
+- [`build/templates/README.md`](../../build/templates/README.md), every template file explained

@@ -58,7 +58,7 @@ running the body, so the `Bank.create` above is safe to leave. Hence:
   then `hello.idempotently("Follow-up").send(...)`.
 
 - **A migration or backfill is a new alias, not a new boot.** Editing
-  the body, restarting or redeploying never re-runs a used key — a
+  the body, restarting or redeploying never re-runs a used key: a
   backfill whose first run did nothing (data not there yet, or a
   half-deployed build ran it) is done for good: no effect, no error, no
   log; it isn't failing, it isn't called (cineloop, 1.4.1; key
@@ -99,11 +99,11 @@ whole hook under one token instead (1.6.0 source).
 ## Never
 
 - **Creating singletons in a Servicer's `__init__`** (`Bank.create(...)`
-  there) — Servicers are created lazily on first reference, with no
+  there): Servicers are created lazily on first reference, with no
   context.
-- **Expecting a bare call to run again next boot** — use a versioned
+- **Expecting a bare call to run again next boot** use a versioned
   alias (above).
-- **Trusting a replayed call's response** — it describes the first
+- **Trusting a replayed call's response** it describes the first
   boot; ask a reader what is new (`patterns-idempotency.md` § Never).
 - **Recomputing seed-time values in a migration.** "Today at 14:00"
   differs on migration day while seeded actors keep the old value.

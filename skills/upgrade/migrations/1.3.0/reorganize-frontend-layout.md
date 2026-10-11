@@ -25,8 +25,8 @@ Then update everything that named the old paths: `.rbtrc`
 `--frontend-dist-path=frontend/dist`, watch globs), the Dockerfile, and
 any `UI(path=...)` values or imports.
 
-Move your `vite-env.d.ts` — the `/// <reference types="vite/client" />`
-shim that types `*.module.css` imports and `import.meta.env` — to the
+Move your `vite-env.d.ts`, the `/// <reference types="vite/client" />`
+shim that types `*.module.css` imports and `import.meta.env`, to the
 `frontend/` root (a sibling of `mcp/`, `web/`, and `api/`), not under
 `frontend/web/src/`, and list it in each `tsconfig.app.json`'s
 `include` alongside your UI directories
@@ -39,7 +39,7 @@ under `mcp/` and builds each into the single-file
 It reads which UI to build from the `RBT_BUILD_TARGET` environment
 variable (the build scripts set it for you) instead of overloading
 Vite's `--mode`, which stays free for its usual `.env.<mode>`
-selection — drop any `vite build --mode <name>` invocations you carry.
+selection: drop any `vite build --mode <name>` invocations you carry.
 Rather than reproduce it here, copy it from the `mcp-ui` skill's
 `references/react-scaffolding.md`, where it's written out in full, with
 commentary.

@@ -118,25 +118,25 @@ async def main():
 
 ## Never
 
-- `await OrderedMap.create(context, map_id)` — the class has no
+- `await OrderedMap.create(context, map_id)`: the class has no
   `create`; use `OrderedMap.ref(map_id).create(context)`.
-- Omitting `ordered_map_library()` from `Application(libraries=[...])` —
+- Omitting `ordered_map_library()` from `Application(libraries=[...])`:
   fails on first call with an unknown state type error; at startup
   with `Missing required libraries: reboot.std.collections.ordered_map.v1.ordered_map`
   when a library that needs it (e.g. `Ciphertext`) is registered.
-- `OrderedMap.ref(f"{self.ref().state_id}-drafts")` — persist the ID
+- `OrderedMap.ref(f"{self.ref().state_id}-drafts")`: persist the ID
   as a field (`state-collections.md`).
-- Calling `insert` / `create` / `remove` from a `Writer` — they take a
+- Calling `insert` / `create` / `remove` from a `Writer`: they take a
   `TransactionContext` (or workflow / external context).
-- `create` then `insert` on the same map in one transaction — hung
+- `create` then `insert` on the same map in one transaction: hung
   when bisected at 1.3.0 (not re-verified at 1.6.0). Let the first
   `insert` construct it, or `create` in an earlier transaction.
 - Bulk-loading from concurrent transactions that insert into the same
-  map — see Scales as; load one transaction at a time.
+  map: see Scales as; load one transaction at a time.
 - Setting single-key (`key` + value) and bulk (`entries`) fields on one call,
-  or more than one value field per entry — mutually exclusive.
+  or more than one value field per entry: mutually exclusive.
 - `from uuid7 import ...` without declaring `uuid7` in
-  `pyproject.toml` — third-party, not part of `reboot`.
+  `pyproject.toml`: third-party, not part of `reboot`.
 
 ## Limits
 
@@ -187,6 +187,6 @@ async def main():
 
 ## See also
 
-- [`state-collections.md`](state-collections.md) — when to use one
-- [`stdlib-item.md`](stdlib-item.md) — the `Item` value envelope
-- [`servicer-transaction.md`](servicer-transaction.md) — locks and transaction size
+- [`state-collections.md`](state-collections.md), when to use one
+- [`stdlib-item.md`](stdlib-item.md), the `Item` value envelope
+- [`servicer-transaction.md`](servicer-transaction.md), locks and transaction size

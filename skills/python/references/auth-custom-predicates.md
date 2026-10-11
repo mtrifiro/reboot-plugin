@@ -77,7 +77,7 @@ class TaskListServicer(TaskList.Servicer):
   `allow_if` (`ContravariantStateType`; restaurant-app-3, 1.6.0).
 - **Check `context.app_internal` first** when other servicers,
   `initialize`, or scheduled work call the type: they carry no `context.auth`.
-- **`Unauthenticated`** = "no identity — sign in"; **`PermissionDenied`** =
+- **`Unauthenticated`** = "no identity: sign in"; **`PermissionDenied`** =
   "identity, but not allowed" (login redirect vs 403).
 - **Sync or async.** `allow_if` awaits an `async def` predicate; read
   another actor through its declared `Reader`:
@@ -113,26 +113,26 @@ StateAlreadyConstructed UnknownService UnknownTask InvalidMethod`.
 
 ## Never
 
-- `def can_edit(context, state, request):` — positional, no `**kwargs`;
+- `def can_edit(context, state, request):`: positional, no `**kwargs`;
   the runtime passes `context`, `state`, `request` by keyword and may
   add more.
 - One predicate that tells methods apart by `isinstance(request, ...)`
-  — a `request=None` method, or two sharing a request model, can't get
+: a `request=None` method, or two sharing a request model, can't get
   its own rule. Use `<Type>.Authorizer(method=...)`.
 - A custom `Authorizer` subclass, or splitting state across servicers,
-  to get per-method rules — `<Type>.Authorizer` already does it.
-- `allow_if(any=[is_app_internal, allow_if(all=[a, b])])` — rules don't
+  to get per-method rules: `<Type>.Authorizer` already does it.
+- `allow_if(any=[is_app_internal, allow_if(all=[a, b])])`: rules don't
   nest (`auth-allow-if.md` § Never); write one predicate combining them.
 - Annotate `state` with `<Type>Authorizer.StateType` / `.RequestTypes`
-  — they alias the **protobuf** types (`<name>_pb2.TaskList`), not the
+: they alias the **protobuf** types (`<name>_pb2.TaskList`), not the
   pydantic model received; they type-check (same fields) but name the
   wrong class.
-- Return `AuthorizerRule[TaskListState, Any]` from a helper — the
+- Return `AuthorizerRule[TaskListState, Any]` from a helper: the
   generated `<Type>.Authorizer` expects
   `AuthorizerRule[<protobuf state>, <protobuf requests>]` and rejects it.
   Use `AuthorizerRule[Any, Any]`.
 - `if request is None: <check auth>` without checking
-  `context.app_internal` first — nested reader calls get a confusing
+  `context.app_internal` first: nested reader calls get a confusing
   `Unauthenticated`.
 
 ## Limits
@@ -168,6 +168,6 @@ StateAlreadyConstructed UnknownService UnknownTask InvalidMethod`.
 
 ## See also
 
-- [`servicer-authorizer.md`](servicer-authorizer.md) — per-method constructor, call paths
-- [`auth-allow-if.md`](auth-allow-if.md) — evaluation order, aggregation
-- [`auth-built-in-predicates.md`](auth-built-in-predicates.md) — the shipped predicates
+- [`servicer-authorizer.md`](servicer-authorizer.md), per-method constructor, call paths
+- [`auth-allow-if.md`](auth-allow-if.md), evaluation order, aggregation
+- [`auth-built-in-predicates.md`](auth-built-in-predicates.md), the shipped predicates

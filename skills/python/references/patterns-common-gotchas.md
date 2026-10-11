@@ -40,8 +40,8 @@ section. Add or change a trap in its owning reference, not here. -->
 
 **`lifecycle-backup-restore.md`**
 - Never expunge without a backup taken after the last write, checked by its counts
-- Never `rbt import` into an application holding data: it overwrites what the backup has and deletes nothing, so the result is a merge of two states
-- Never put a dev backup into production: its users are the Development picker's identities
+- Never `rbt import` into an application holding data
+- Never put a dev backup into production
 - Never edit a backup in place
 - Never commit `exports/`
 
@@ -51,7 +51,7 @@ section. Add or change a trap in its owning reference, not here. -->
 - Iterating on a state shape while the watcher is live
 - Counting log lines to measure progress
 - Trusting a browser tab across a backend restart
-- Saving a live-code edit in pieces: hot reload boots each save, and a reference to a constant the next save defines throws `NameError` in a scheduled chain until then (marquee-control, 1.4.1)
+- Saving a live-code edit in pieces
 
 **`lifecycle-dockerfile.md`**
 - `CMD ["rbt", "dev", "run"]` in a Cloud image
@@ -74,10 +74,10 @@ section. Add or change a trap in its owning reference, not here. -->
 
 **`lifecycle-project-setup.md`**
 - `__init__.py` anywhere
-- Hand-editing `backend/api/<app>/v1/<app>_rbt.py` (or anything under `frontend/api/` / `web/src/api/`): `rbt generate` overwrites it
+- Hand-editing `backend/api/<app>/v1/<app>_rbt.py` (or anything under `frontend/api/` / `web/src/api/`)
 - Committing generated code or `.rbt/`
-- A nonstandard layout (entry point other than `backend/src/main.py`, API outside `api/`): `.rbtrc`, the template and every reference assume the canonical one
-- A `[tool.rye]` table: move dev deps into `[dependency-groups].dev`, drop the duplicated `reboot`, add `name`/`version`, replace `requirements*.lock` with `uv lock`
+- A nonstandard layout (entry point other than `backend/src/main.py`, API outside `api/`)
+- A `[tool.rye]` table
 
 **`lifecycle-rbtrc.md`**
 - YAML in `.rbtrc`
@@ -115,7 +115,7 @@ section. Add or change a trap in its owning reference, not here. -->
 **`api-errors.md`**
 - `raise ValueError("not enough funds")` (or any non-`Aborted` exception) for a business failure
 - `return None` (or a sentinel field) to signal failure
-- `raise OverdraftError(...)` or `raise Account.OverdraftErrorAborted(...)`
+- `raise OverdraftError(...)` or `raise Account.OverdraftErrorAborted(...)` 
 - Raise an error `Model` the method did not list in its own `errors=[...]`
 - An error `Model` with no fields
 - A rejection counter written inside the transaction that rejects
@@ -148,10 +148,10 @@ section. Add or change a trap in its owning reference, not here. -->
 **`servicer-authorizer.md`**
 - Omitting `authorizer()` "until later"
 - `allow()` as a "safe default"
-- Assume the caller's identity reaches an actor your servicer calls
+- Assume the caller's identity reaches an actor your servicer calls. A call from inside any servicer is app-internal with **no** bearer token; `context.auth` is `None` there (1.6.0 source
 - Gate per-method rules by `isinstance(request, ...)` in one predicate (`auth-custom-predicates.md` § Never)
-- A predicate on type X that calls a reader on the actor it guards: the actor waits on itself
-- A client- or MCP-facing method that fans out and relies on the gates of what it reads: its nested calls arrive app-internal and pass every `is_app_internal` arm
+- A predicate on type X that calls a reader on the actor it guards
+- A client- or MCP-facing method that fans out and relies on the gates of what it reads
 - Read `PermissionDenied` from `allow_if(any=[has_verified_token, is_app_internal])` as "signed in but forbidden"
 
 **`servicer-constructor.md`**
@@ -163,7 +163,7 @@ section. Add or change a trap in its owning reference, not here. -->
 - Re-deriving a `uuid4()` id minted in the constructor
 
 **`servicer-reader.md`**
-- Mutating `self.state` (`self.state.messages.append("seen") # NEVER`)
+- Mutating `self.state` (`self.state.messages.append("seen") # NEVER`). It does not raise
 - Calling a `Writer`, `Transaction` or constructor
 - Computing "mine" from `context.auth` in a reader another reader calls
 - `self.state_id`
@@ -239,7 +239,7 @@ section. Add or change a trap in its owning reference, not here. -->
 **`servicer-writer.md`**
 - Calling another actor's writer, transaction or constructor (`await Account.ref("audit-log").record(context, ...) # WRONG`)
 - `Other.ref(id).schedule(...)`
-- An external call (SMS, email, payment, LLM, network, filesystem), **even an idempotent one**
+- An external call (SMS, email, payment, LLM, network, filesystem), **even an idempotent one**. An enclosing transaction can abort and roll state back after the call happened, and the body re-runs on retries and under effect validation, firing it twice (real bug
 - Persisting a fresh `uuid4()` or clock value that is later re-derived or addressed (an actor id, an idempotency key)
 
 **`agent-pydantic-ai.md`**
@@ -321,7 +321,7 @@ section. Add or change a trap in its owning reference, not here. -->
 
 **`state-actor-decomposition.md`**
 - Declare a constructor that may ever create another actor as a `Writer(factory=True)`
-- Build a **writer cycle**: a transaction on `A` that writes `B`, while a transaction on `B` writes `A` (e.g
+- Build a **writer cycle**
 - Put a new feature on `User` because it is the entry point
 
 **`state-collections.md`**
@@ -359,7 +359,7 @@ section. Add or change a trap in its owning reference, not here. -->
 **`auth-allow-if.md`**
 - `allow_if(all=[...], any=[...])`
 - `allow_if(any=[is_app_internal, allow_if(all=[a, b])])`
-- Read a `PermissionDenied` from `allow_if(any=[is_app_internal, has_verified_token])` as "signed in but forbidden"
+- Read a `PermissionDenied` from `allow_if(any=[is_app_internal, has_verified_token])` as "signed in but forbidden". `is_app_internal` returns `PermissionDenied` to every external caller, so anonymous callers never get `Unauthenticated` and never learn to sign in. When it matters, use one predicate
 - An expensive predicate (one that reads another actor) before `has_verified_token` in `all=[...]`
 
 **`auth-built-in-predicates.md`**
@@ -373,15 +373,15 @@ section. Add or change a trap in its owning reference, not here. -->
 - Declare `set_claims` (or `create`) in the `User` API
 - Merge claims into existing state
 - Key roles or a directory by `Development()` user IDs
-- Link a sign-in to a roster entry, invitation or any email-keyed record unless `request.claims["email_verified"]` is true: an unverified address is a claim anybody can make, and `Development()` (five fabricated, verified addresses) never shows it (two builds of one brief, 1.6.0
-- A verified-email allowlist that may be empty while a real provider is configured: in the harness that is right, in production every account at the provider gets in
+- Link a sign-in to a roster entry, invitation or any email-keyed record unless `request.claims["email_verified"]` is true
+- A verified-email allowlist that may be empty while a real provider is configured
 
 **`auth-custom-predicates.md`**
 - `def can_edit(context, state, request):`
-- One predicate that tells methods apart by `isinstance(request, ...)`
+- One predicate that tells methods apart by `isinstance(request, ...)` 
 - A custom `Authorizer` subclass, or splitting state across servicers, to get per-method rules
 - `allow_if(any=[is_app_internal, allow_if(all=[a, b])])`
-- Annotate `state` with `<Type>Authorizer.StateType` / `.RequestTypes`
+- Annotate `state` with `<Type>Authorizer.StateType` / `.RequestTypes` 
 - Return `AuthorizerRule[TaskListState, Any]` from a helper
 - `if request is None: <check auth>` without checking `context.app_internal` first
 
@@ -398,24 +398,24 @@ section. Add or change a trap in its owning reference, not here. -->
 - Link a sign-in to a roster entry, an invitation or any email-keyed record unless `request.claims["email_verified"]` is true
 - A `role` field on `User` that a method on `User` writes
 - Key the roster by `Development()` user ids ([`auth-claims.md`](auth-claims.md) § Never)
-- "The first to sign in is the admin" in production, or an allowlist that may be empty with a real provider configured: with `has_verified_token` alone every account at the provider can read the app
-- A predicate on the roster type calling a reader on the roster: the actor waits on itself
-- Asking the roster on every method of every type: put the access gate on the caller's own `User` and ask the roster only where a role decides
+- "The first to sign in is the admin" in production, or an allowlist that may be empty with a real provider configured
+- A predicate on the roster type calling a reader on the roster
+- Asking the roster on every method of every type
 
 **`rpc-calls.md`**
 - `await account.deposit(context, DepositRequest(amount=100))`
 - A `dict` or different model in that slot (`deposit(context, {"amount": 1})`)
 - `deposit(request)` without the context, or a request in the options slot
-- A writer calling another actor's writer (or its own via `self.ref()`)
+- A writer calling another actor's writer (or its own via `self.ref()`) 
 - Plain dicts for a `list[Model]` kwarg
 - Forwarding `**kwargs: dict[str, str]` into a generated method
 - Relying on the caller's identity in the callee
-- A writer cycle: a transaction on A calls a writer on B while a transaction on B calls a writer on A
+- A writer cycle
 
 **`rpc-constructor-calls.md`**
 - `await Account.ref(account_id).open(context)`
 - `Lab.create(context, id)` on a type with no `factory=True` method
-- Expecting a second constructor call to be a no-op
+- Expecting a second constructor call to be a no-op. Outside an already-used key it aborts `StateAlreadyConstructed`, whatever the constructor branches on (`context.constructor` changes nothing); a retrying workflow loops forever (reboot-crm-68, 1.6.0). A used key (`initialize`'s automatic per-(actor, method) key, or a repeated `.idempotently(alias)`) returns the memoized result without running the body. Get-or-create
 - `except Seat.PlaceAborted: pass` to tolerate "already exists"
 - Stamping caller identity in a constructor reached from another servicer
 
@@ -430,12 +430,12 @@ section. Add or change a trap in its owning reference, not here. -->
 - `self.state_id`
 - `ChatRoomServicer().send(...)`
 - One ref used from two contexts (e.g. `program = Program.ref("BS-CS")`, called as the registrar and again as a second user)
-- Expect `Service.create(...)` / a factory on an existing actor to rerun its body (`rpc-constructor-calls.md` § Never)
+- Expect `Service.create(...)` / a factory on an existing actor to rerun its body (`rpc-constructor-calls.md` § Never). A field added to the constructor later is never back-filled on existing actors (`InvalidStateRefError: The 'state_id' option must be at least 1 character(s) long` when used as a ref); allocate lazily
 - Expect the caller's identity to travel through a ref call from inside a servicer
 
 **`scheduling-basic.md`**
 - `asyncio.create_task(...)` / `asyncio.sleep(...)` for delayed work
-- `Account.ref(other_id).schedule(...)` from a **writer**
+- `Account.ref(other_id).schedule(...)` from a **writer** overloads for another actor accept only `TransactionContext` (mypy reports an opaque overload mismatch)
 - `….schedule(when=…)` from a **workflow**, on any ref
 - Several scheduled transactions on one actor with the same `when=` (one `expire_hold` per seat)
 - A transaction that loops `schedule()` onto N foreign actors
@@ -486,9 +486,9 @@ section. Add or change a trap in its owning reference, not here. -->
 
 **`testing-project-setup.md`**
 - `ChatRoomServicer().send(...)` in a custom step or harness test
-- `pytest-asyncio` in the dev dependencies: `reboot.bdd` runs steps on the harness's loop and `IsolatedAsyncioTestCase` on its own
-- `oauth=OAuth(provider=...)` in a fixture without `allowed_origins`: every scenario fails (error below)
-- Tests under `backend/tests/` with a `backend/.pytest.ini`: tests are the application's, in root `tests/`, with the root `pytest.ini`
+- `pytest-asyncio` in the dev dependencies
+- `oauth=OAuth(provider=...)` in a fixture without `allowed_origins`
+- Tests under `backend/tests/` with a `backend/.pytest.ini`
 - Committing `*.recordings/`
 
 **`testing-web-app.md`**
@@ -608,36 +608,36 @@ section. Add or change a trap in its owning reference, not here. -->
 - Importing hooks from anything but `<name>_rbt_react`
 
 **`web-app/references/react-client.md`**
-- `npm create vite@latest` for `web/`: it emits React 19 / TypeScript 6 tsconfigs (`erasableSyntaxOnly`) the TypeScript 5 set rejects
-- `process.env.PORT` in `vite.config.ts` without `@types/node`: `tsc -b` fails
-- Leaving the port at Vite's default 5173 or dropping `strictPort`: another project's server on `[::1]:5173` silently answers `localhost` while this one answers `127.0.0.1`, and without `strictPort` Vite slides to the next port, leaving `.env` and `allowed_origins` wrong
-- Deploying with `allowed_origins=[]`: a standalone SPA is cross-origin from its backend by construction
-- The subscription traps (`#` in an id, an actor that may not exist, a seventh live read): `react-generated-client.md` § Never and Limits
+- `npm create vite@latest` for `web/`
+- `process.env.PORT` in `vite.config.ts` without `@types/node`
+- Leaving the port at Vite's default 5173 or dropping `strictPort`
+- Deploying with `allowed_origins=[]`
+- The subscription traps (`#` in an id, an actor that may not exist, a seventh live read)
 
 **`mcp-ui/references/react-scaffolding.md`**
-- Rewrite `vite.config.ts` to emit a flat `dist/<name>.html`: the MCP server only finds `frontend/dist/mcp/<name>/index.html`
+- Rewrite `vite.config.ts` to emit a flat `dist/<name>.html`
 - Hand-maintain per-UI `build:<name>` scripts
-- Run the second `rbt generate` before `npm install`: the documented order is generate, install, generate
-- Copy a `tsconfig*.json` from `npm create vite@latest`: it now targets React 19 / TypeScript 6 (`erasableSyntaxOnly`), not the React 18 / TypeScript 5 set pinned here
+- Run the second `rbt generate` before `npm install`
+- Copy a `tsconfig*.json` from `npm create vite@latest`
 
 **`build/references/evidence.md`**
-- A pull request body that lists files: list the rules and the domain model
-- Evidence from another revision: a test run before the last commit, or with uncommitted changes, is not this revision's
+- A pull request body that lists files
+- Evidence from another revision
 - Hand-editing `deploy/ledger.jsonl`
 
 **`build/references/flywheel.md`**
-- More than one round of questions before the first prototype: the scope round, then build and review on the running app
+- More than one round of questions before the first prototype
 - Writing a feature's implementation, after the first prototype, before its slice of the design is accepted, unless the user said up front to build on
-- Creating an object or choosing a method kind without saying so: every object and every decision is said as it is made, in the user's nouns, with its why
-- Folding a rule change into a "fix": a reworded `Rule:`, a changed declaration or a loosened authorizer is a Design change however small the diff
-- Calling a deploy, merge or acceptance done for the user: they decide
-- Treating a partial test run (`-k`, one module) as evidence for a merge or a release: run the full suite
+- Creating an object or choosing a method kind without saying so
+- Folding a rule change into a "fix"
+- Calling a deploy, merge or acceptance done for the user
+- Treating a partial test run (`-k`, one module) as evidence for a merge or a release
 - Choosing between `main` and branches for the developer, or going against the `Workflow:` line in `AGENTS.md`
 - Pushing, or opening, merging or closing a pull request, without the developer's yes for that one
 
 **`dashboard/references/known-issues.md`**
-- Restarting the app or regenerating to fix a dashboard symptom: the dashboard is a separate process
-- Killing every `rbt` process on the machine: other projects' apps and dashboards share it
+- Restarting the app or regenerating to fix a dashboard symptom
+- Killing every `rbt` process on the machine
 
 **`mcp-ui/references/pop-out-to-web-app.md`**
 - `window.open(url)` alone
@@ -649,8 +649,8 @@ section. Add or change a trap in its owning reference, not here. -->
 - `dev run --default=hmr`
 - `generate --react-extensions` in `.rbtrc`
 - `dev run --name=<project>`
-- Dropping `oauth=` from `main.py`: the `User` type is auto-constructed, and auto-construct servicers fail at startup without it
-- A `--watch` line for `api/`: `rbt dev run` already regenerates and restarts on API edits (`--generate-watch`, on by default at 1.6.0)
+- Dropping `oauth=` from `main.py`
+- A `--watch` line for `api/`
 
 **`run/references/stop-restart-reset.md`**
 - Iterating on a state shape with the `--watch` loop live
@@ -659,20 +659,20 @@ section. Add or change a trap in its owning reference, not here. -->
 - Assuming a stop worked
 
 **`mcp-ui/references/ui-design.md`**
-- Web fonts in an MCP UI, the house default's included: a host may block loading them in its frame
+- Web fonts in an MCP UI, the house default's included
 - A light/dark toggle, or a theme that ignores the host's
 - "loading..." or a bare spinner
-- A whole app in one UI (tabs of tables): one view per `UI()`
+- A whole app in one UI (tabs of tables)
 - Raw hex in components
 
 **`web-app/references/ui-design.md`**
-- Browser default styling: an unstyled `<button>`, `<select>` or `<input>`, or the default serif
+- Browser default styling
 - "Loading…" or a bare spinner
 - An empty list without a next action
-- `alert()`, `confirm()`, `prompt()`: they block the scenarios too
+- `alert()`, `confirm()`, `prompt()`
 - Raw hex in components
 - A page broken at phone width (16 px gutters, wide tables in `table-wrap`, tabs scrolling in their own row) or in either color scheme
-- Form fields in a `1fr 1fr` grid: a date or number input won't shrink and overflows its card
+- Form fields in a `1fr 1fr` grid
 - A first build without the light/dark toggle, or a palette with only one scheme
 - A placeholder as a control's only label, or labels removed to restyle (use `visually-hidden`)
 - Saturated color on two data dimensions at once
@@ -680,16 +680,16 @@ section. Add or change a trap in its owning reference, not here. -->
 - Keeping a plan's number after the screenshots show it hurts
 - A brand source nobody gave, or the house default kept while the user named another brand
 - A restyle that appends an override layer instead of changing the token values
-- A logo or favicon with a hard-coded color
+- A logo or favicon with a hard-coded color; use `var(--accent)` and `var(--on-accent)` (the favicon
 - A green, amber or red accent in either scheme, including a brand's green highlight promoted to the dark accent
 - Font-specific `font-feature-settings` left after the font changes
 - Truncating the main text of a row or card
-- Page links in a row that scrolls with its scrollbar hidden: past the edge they are gone with no sign
-- A layout chosen from a measurement that the layout itself changes
+- Page links in a row that scrolls with its scrollbar hidden
+- A layout chosen from a measurement that the layout itself changes. The bar's `min-height` read from the `--topbar-h` it writes only grew; a "tight" style that reached the measured copy flipped the nav between two layouts at one width. Measure what no layout touches, and check by sweeping the window width both ways, 4 px at a time, then holding still at each switch point
 - Uppercase on identifiers or data (`text-transform` turns "A.14b" into "A.14B")
 
 **`web-app/references/ui-restyle.md`**
-- A new palette from a taste word alone, or a named product's colors from memory (restaurant-app-2, 1.6.0: four guesses, four rejections)
+- A new palette from a taste word alone, or a named product's colors from memory (restaurant-app-2, 1.6.0
 - A look change in the same turn as a backend restart, expunge or reseed
 - A screenshot taken without opening it, or a change reported without saying where to look
 - Candidates kept as stacked blocks in `styles.css`
@@ -697,7 +697,7 @@ section. Add or change a trap in its owning reference, not here. -->
 
 ## Never
 
-- Adding a trap here by hand — it is overwritten on the next
+- Adding a trap here by hand: it is overwritten on the next
   generation. Put it in the owning reference's Never section.
 
 ## Limits
@@ -715,5 +715,5 @@ None known. Each owning reference lists its own.
 
 ## See also
 
-- [`patterns-idempotency.md`](patterns-idempotency.md) — `IdempotencyUncertainError` and replays
-- [`lifecycle-dev-loop.md`](lifecycle-dev-loop.md) — hangs and silent test failures
+- [`patterns-idempotency.md`](patterns-idempotency.md), `IdempotencyUncertainError` and replays
+- [`lifecycle-dev-loop.md`](lifecycle-dev-loop.md), hangs and silent test failures

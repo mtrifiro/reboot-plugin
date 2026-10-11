@@ -275,26 +275,24 @@ not waited for:
 
 ## Never
 
-- **`scope_id="<northwind id>"`** — quoted `<name>` is literal text: an
+- **`scope_id="<northwind id>"`** quoted `<name>` is literal text: an
   id nobody created, aborting two steps later. Recall bare,
   `scope_id=<northwind id>`; only the state id, `of "<id>"`, is quoted.
-- **`@then('mentioned "{text}"')` without `parsers.parse(...)`** —
-  registers nothing; the scenario fails "Step definition is not found".
-- **`eventually has` under `Given` or `When`** — it asserts; put it
+- **`@then('mentioned "{text}"')` without `parsers.parse(...)`** registers nothing; the scenario fails "Step definition is not found".
+- **`eventually has` under `Given` or `When`** it asserts; put it
   under `Then` (a later `Given` may follow).
-- **A `Rule:` with no `Scenario:` under it** — runs nothing; green while false.
-- **Asserting a remembered constant** (a flat price) — assert what the
+- **A `Rule:` with no `Scenario:` under it** runs nothing; green while false.
+- **Asserting a remembered constant** (a flat price): assert what the
   API returns, the way the UI computes it.
 - **A scenario counting every call to a stand-in** ("asked 9 times in
-  all") — one unrelated change breaks dozens. Count by kind.
-- **A stand-in that answers from a counter or a popped list** —
-  `at_least_once` runs it twice under effect validation and keeps the
+  all"): one unrelated change breaks dozens. Count by kind.
+- **A stand-in that answers from a counter or a popped list** `at_least_once` runs it twice under effect validation and keeps the
   **second** result. Derive the answer from the input; a billed or
   non-deterministic call takes
   `at_least_once(..., effect_validation=EffectValidation.DISABLED)`.
-- **Subclassing a servicer to weaken its authorizer** — declare who
+- **Subclassing a servicer to weaken its authorizer** declare who
   calls with `is an authenticated user`.
-- **`World.call` / `World.request` in a custom step** — built-in
+- **`World.call` / `World.request` in a custom step** built-in
   internals; call the generated clients.
 
 ## Limits
@@ -338,6 +336,6 @@ not waited for:
 
 ## See also
 
-- [`testing-web-app.md`](testing-web-app.md) — browser steps and markup
-- [`../../feature/SKILL.md`](../../feature/SKILL.md) — agreeing scenarios with the developer
-- [`testing-failure-recovery.md`](testing-failure-recovery.md) — the harness-only crash tests
+- [`testing-web-app.md`](testing-web-app.md), browser steps and markup
+- [`../../feature/SKILL.md`](../../feature/SKILL.md), agreeing scenarios with the developer
+- [`testing-failure-recovery.md`](testing-failure-recovery.md), the harness-only crash tests

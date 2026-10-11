@@ -108,7 +108,7 @@ it alone; the format is in `mods/README.md`, "The test-run file".
 
 ## Never
 
-- `ChatRoomServicer().send(...)` in a custom step or harness test — it
+- `ChatRoomServicer().send(...)` in a custom step or harness test: it
   bypasses identity, context, persistence and authorization. Use
   `world.context(user)` + `Service.ref(id).method(context, ...)` in a
   step ([testing-features.md](testing-features.md)),
@@ -144,6 +144,6 @@ it alone; the format is in `mods/README.md`, "The test-run file".
 
 ## See also
 
-- [testing-features.md](testing-features.md) — writing the scenarios
-- [testing-web-app.md](testing-web-app.md) — browser scenarios and the `frontend` fixture
-- [`build/templates/README.md`](../../build/templates/README.md) — every template file explained
+- [testing-features.md](testing-features.md), writing the scenarios
+- [testing-web-app.md](testing-web-app.md), browser scenarios and the `frontend` fixture
+- [`build/templates/README.md`](../../build/templates/README.md), every template file explained

@@ -80,24 +80,24 @@ than once.
 
 ## Never
 
-- `cls.ref()` or `self.ref()` inside the workflow — `cls.ref` is an
+- `cls.ref()` or `self.ref()` inside the workflow: `cls.ref` is an
   instance method of the generated `BaseServicer`. Use `MyType.ref()`
   from `<name>_rbt` (no argument = `context.state_id`).
-- `async def wf(self, context: WriterContext, …)` — use `@classmethod`,
+- `async def wf(self, context: WriterContext, …)`: use `@classmethod`,
   `cls`, `WorkflowContext`.
-- `self.state.x = …` in a workflow — use an inline `write`
+- `self.state.x = …` in a workflow: use an inline `write`
   ([`servicer-workflow-calls.md`](servicer-workflow-calls.md)).
-- `Workflow(factory=True)` — type-checks (`factory: bool` is on the base
+- `Workflow(factory=True)`: type-checks (`factory: bool` is on the base
   model) but `rbt generate` rejects it. Use a factory writer/transaction
   that schedules the workflow.
 - `Type.ref(id).per_workflow("…").schedule(when=…).wf(context)` from a
-  workflow — `schedule()` takes only `TransactionContext` (another
+  workflow: `schedule()` takes only `TransactionContext` (another
   actor) or `WriterContext | TransactionContext` (own actor); it raises
   and retries forever, unseen by mypy. Use `spawn(when=…)`.
-- `asyncio.create_task(...)` / `asyncio.sleep` to start or defer work —
+- `asyncio.create_task(...)` / `asyncio.sleep` to start or defer work:
   not durable. Use `schedule` / `spawn`.
 - Starting the same workflow from two places with nothing stopping
-  overlap (a startup hook plus an admin button) — each start runs
+  overlap (a startup hook plus an admin button): each start runs
   concurrently (16 concurrent passes observed at 1.6.0). Write the
   pass's start time as a claim in the atomic check-and-set that marks it
   running; a pass finding a live claim returns without a successor.
@@ -134,6 +134,6 @@ than once.
 
 ## See also
 
-- [`servicer-workflow-calls.md`](servicer-workflow-calls.md) — classify every awaited call
-- [`scheduling-basic.md`](scheduling-basic.md) — which context schedules what
-- [`api-methods.md`](api-methods.md) — the exact servicer signature
+- [`servicer-workflow-calls.md`](servicer-workflow-calls.md), classify every awaited call
+- [`scheduling-basic.md`](scheduling-basic.md), which context schedules what
+- [`api-methods.md`](api-methods.md), the exact servicer signature

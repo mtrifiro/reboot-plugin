@@ -1,7 +1,7 @@
 ---
 title: Store Provider OAuth Tokens in `OAuthTokenManager`, Not Hand-Rolled `Ciphertext`
 impact: HIGH
-impactDescription: OAuth access/refresh tokens are secrets at rest; the stdlib manager encrypts, indexes, and crypto-shreds them per user for you — a plain `str` field leaks them, and hand-rolling `Ciphertext` re-implements what already exists.
+impactDescription: OAuth access/refresh tokens are secrets at rest; the stdlib manager encrypts, indexes, and crypto-shreds them per user for you, a plain `str` field leaks them, and hand-rolling `Ciphertext` re-implements what already exists.
 tags: stdlib, oauth, tokens, access-token, refresh-token, store-tokens, ciphertext, encryption, crypto-shred, google, github, secret
 summary: "Never tokens in a `str` field or hand-rolled `Ciphertext`; `OAuthTokenManager`, three libraries (`oauth` vendored at 1.6.0), app-internal only."
 step: auth
@@ -81,7 +81,7 @@ if response.found:
     access_token = response.tokens.access_token
 ```
 
-**Store** (transaction) — only when you capture tokens yourself from a
+**Store** (transaction): only when you capture tokens yourself from a
 service other than the `oauth=` sign-in provider (the only path in a web
 app without `oauth=`):
 
@@ -103,14 +103,14 @@ only `fetch` (`auth-external-api-calls.md`, Path A).
 
 ## Never
 
-- Tokens in a `str` state field — plaintext at rest.
-- Hand-rolled `Ciphertext` for provider OAuth tokens — the manager
+- Tokens in a `str` state field: plaintext at rest.
+- Hand-rolled `Ciphertext` for provider OAuth tokens: the manager
   already encrypts, indexes by `user_id`, and shreds per user.
-- A user-pasted API key in `OAuthTokenManager` — that is `Ciphertext`
+- A user-pasted API key in `OAuthTokenManager`: that is `Ciphertext`
   (`auth-external-api-calls.md`, Path C).
 - Leaving out any of `oauth_library()`, `ciphertext_library()`,
   `ordered_map_library()`.
-- Calling `store` / `fetch` from an untrusted, external context — they
+- Calling `store` / `fetch` from an untrusted, external context: they
   are app-internal only.
 
 ## Limits
@@ -149,6 +149,6 @@ only `fetch` (`auth-external-api-calls.md`, Path A).
 
 ## See also
 
-- [`auth-external-api-calls.md`](auth-external-api-calls.md) — capture, use, refresh, erase
-- [`stdlib-ciphertext.md`](stdlib-ciphertext.md) — non-OAuth secrets, shred scopes
-- [`servicer-workflow-external.md`](servicer-workflow-external.md) — outbound calls in Workflows
+- [`auth-external-api-calls.md`](auth-external-api-calls.md), capture, use, refresh, erase
+- [`stdlib-ciphertext.md`](stdlib-ciphertext.md), non-OAuth secrets, shred scopes
+- [`servicer-workflow-external.md`](servicer-workflow-external.md), outbound calls in Workflows

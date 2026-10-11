@@ -63,8 +63,8 @@ for item in batch.items:
 ## Never
 
 - Two of `value=` / `bytes=` / `any=`, or one plus `items=`, on
-  `enqueue` / `publish` — raises `TypeError`.
-- `Item(value=..., bytes=...)` in a bulk list — the fields are
+  `enqueue` / `publish`: raises `TypeError`.
+- `Item(value=..., bytes=...)` in a bulk list: the fields are
   independent `optional`s, not a `oneof`, so it is stored with both set
   and an `if/elif` reader sees only `value`.
 
@@ -86,5 +86,5 @@ for item in batch.items:
 
 ## See also
 
-- [`stdlib-queue.md`](stdlib-queue.md) — producing and consuming items
-- [`stdlib-pubsub.md`](stdlib-pubsub.md) — publishing items to topics
+- [`stdlib-queue.md`](stdlib-queue.md), producing and consuming items
+- [`stdlib-pubsub.md`](stdlib-pubsub.md), publishing items to topics

@@ -1,5 +1,5 @@
 ---
-title: Authorizers — When to Write Them, What They See
+title: Authorizers, When to Write Them, What They See
 impact: HIGH
 impactDescription: Rules that ignore app-internal call paths or assume identity crosses servicer calls fail minutes later, or silently compute as if nobody is signed in
 tags: servicer, authorizer, allow, allow_if, auth, authorizers, production, oauth, token-verifier, is_app_internal, context.auth, per-method
@@ -11,7 +11,7 @@ verified: 1.6.0
 docs: "https://docs.reboot.dev/users/authorization"
 ---
 
-# Authorizers — When to Write Them, What They See
+# Authorizers: When to Write Them, What They See
 
 ## When you are here
 
@@ -94,9 +94,9 @@ class CounterServicer(Counter.Servicer):
 
 ## Never
 
-- Omitting `authorizer()` "until later" — the test harness, `rbt serve`
+- Omitting `authorizer()` "until later": the test harness, `rbt serve`
   and Reboot Cloud deny every external call to it.
-- `allow()` as a "safe default" — it makes the method public and
+- `allow()` as a "safe default": it makes the method public and
   unauthenticated (`auth-allow-deny.md`).
 - Assume the caller's identity reaches an actor your servicer calls. A
   call from inside any servicer is app-internal with **no** bearer
@@ -117,7 +117,7 @@ class CounterServicer(Counter.Servicer):
   `is_app_internal` arm. Authorize the caller in that method first
   (crm-kit, 1.6.0).
 - Read `PermissionDenied` from `allow_if(any=[has_verified_token,
-  is_app_internal])` as "signed in but forbidden" — anonymous callers
+  is_app_internal])` as "signed in but forbidden": anonymous callers
   get it too (`auth-allow-if.md` § Never).
 
 ## Limits
@@ -148,6 +148,6 @@ class CounterServicer(Counter.Servicer):
 
 ## See also
 
-- [`auth-built-in-predicates.md`](auth-built-in-predicates.md) — what each predicate checks
-- [`auth-custom-predicates.md`](auth-custom-predicates.md) — writing your own predicates
-- [`testing-harness.md`](testing-harness.md) — app-internal and impersonated test contexts
+- [`auth-built-in-predicates.md`](auth-built-in-predicates.md), what each predicate checks
+- [`auth-custom-predicates.md`](auth-custom-predicates.md), writing your own predicates
+- [`testing-harness.md`](testing-harness.md), app-internal and impersonated test contexts

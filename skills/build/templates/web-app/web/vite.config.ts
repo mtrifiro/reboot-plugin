@@ -3,8 +3,8 @@ import { defineConfig } from "vite";
 
 export default defineConfig({
   plugins: [react()],
-  // Two copies of `react` or `zod` — one from the app, one pulled
-  // through the Reboot packages — break hooks and schema identity
+  // Two copies of `react` or `zod`, one from the app, one pulled
+  // through the Reboot packages, break hooks and schema identity
   // checks at runtime.
   resolve: { dedupe: ["react", "react-dom", "zod"] },
   server: {

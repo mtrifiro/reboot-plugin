@@ -28,7 +28,7 @@ Stop/restart/expunge (kill order, ports, the RocksDB LOCK):
 (forever, with backoff), a lock wait after 30 s, a presumed-deadlocked
 transaction, a failed workflow attempt. Find the quiet failure:
 
-1. **Rerun with `pytest -s`** — capture hides the runtime log, which
+1. **Rerun with `pytest -s`** capture hides the runtime log, which
    holds the real exception and its retry line
    (`... failed with <Exception>; will retry after backoff ...`):
 
@@ -71,7 +71,7 @@ transaction, a failed workflow attempt. Find the quiet failure:
 - **Calling a run with no summary line a pass.** Pytest has died
   mid-run with no summary, traceback or non-zero exit; one was reported
   "0 failed" with an `F` already in its dots (reboot-crm).
-- **Running the suite while `rbt dev run` watches the same tree** — an
+- **Running the suite while `rbt dev run` watches the same tree** an
   edit regenerates `backend/api/**` under the suite, which then fails
   with `Method not found!` on methods that exist.
 - **Iterating on a state shape while the watcher is live.** A
@@ -82,7 +82,7 @@ transaction, a failed workflow attempt. Find the quiet failure:
   [`api-schema-evolution.md`](api-schema-evolution.md)). Locally the
   fix is an expunge, said in one line; in a deployed app, restore the
   persisted type.
-- **Counting log lines to measure progress** — effect-validation lines
+- **Counting log lines to measure progress** effect-validation lines
   are rate-limited (Limits), so a long seed looks hung. Read actor state
   with `rbt inspect`.
 - **Trusting a browser tab across a backend restart.** It retries dead

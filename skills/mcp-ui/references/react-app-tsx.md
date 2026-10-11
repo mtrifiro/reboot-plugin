@@ -1,5 +1,5 @@
 ---
-title: React App.tsx — Generated Hooks and Component Patterns
+title: React App.tsx, Generated Hooks and Component Patterns
 impact: HIGH
 impactDescription: The no-id `use<Type>()` hook resolves the actor from the MCP tool-call target but returns `{ <type>, isLoading }`, not the handle; reader and mutation calls go on the handle once it exists. Import from `@api/<pkg>/v1/<name>_rbt_react`. Many actors render through one composing reader.
 tags: react, app-tsx, hooks, useType, css-module, snake-camel, import-path, default-id, composing-reader, pagination, ordered-map, multi-actor
@@ -11,7 +11,7 @@ verified: 1.6.0
 docs: ""
 ---
 
-# React App.tsx — Generated Hooks and Component Patterns
+# React App.tsx: Generated Hooks and Component Patterns
 
 ## When you are here
 
@@ -124,9 +124,9 @@ input, for following a chain to another entity.
 
 ### Many actors: one composing reader
 
-For a correctly decomposed collection — each item its own `Type`, indexed
+For a correctly decomposed collection, each item its own `Type`, indexed
 by an `OrderedMap` on the parent (Shape C in
-[`state-collections.md`](../../python/references/state-collections.md)) —
+[`state-collections.md`](../../python/references/state-collections.md)),
 keep it decomposed and give the front-door type a `mcp=None` `Reader` that
 pages the index and reads each item: one UI subscription, fan-out
 server-side
@@ -139,7 +139,7 @@ async def dashboard(
     request: User.DashboardRequest,
 ) -> User.DashboardResponse:
     # `items_index_id`: a parent state field allocated once in its
-    # constructor — never synthesized from the state ID.
+    # constructor: never synthesized from the state ID.
     page = await OrderedMap.ref(self.state.items_index_id).range(
         context, start_key=request.cursor or None, limit=32,
     )
@@ -180,7 +180,7 @@ const DashboardPage: FC<{ user: UseUserApi }> = ({ user }) => {
   return (
     <div>
       {items.map((item) => (
-        <div key={item.itemId}>{item.title} — {item.status}</div>
+        <div key={item.itemId}>{item.title} · {item.status}</div>
       ))}
       {nextCursor && (
         <button onClick={() => setCursor(nextCursor)}>Load more</button>
@@ -195,20 +195,20 @@ const DashboardPage: FC<{ user: UseUserApi }> = ({ user }) => {
 
 ## Never
 
-- `const counter = useCounter(); counter.useGet()` — the no-id overload
+- `const counter = useCounter(); counter.useGet()`: the no-id overload
   returns `{ counter, isLoading }` (since 1.3.0), so `counter.useGet` is
   not a function. Destructure, then render a child taking
   `UseCounterApi`.
-- `counter?.useGet()` behind a condition in the same component — breaks
+- `counter?.useGet()` behind a condition in the same component: breaks
   the rules of hooks. Split the component.
 - `show_person=UI(request=...)` on `User` plus `usePerson({ id: personId })`
-  from a prop — put the UI on `Person` and use the no-id hook
+  from a prop: put the UI on `Person` and use the no-id hook
   ([`api-method-types.md`](api-method-types.md)).
 - Flattening a decomposed collection back into `list[Item]` on one actor
-  to regain a single subscription — use the composing reader.
-- An unguarded `useMcpApp().sendMessage(...)` — `useMcpApp()` can return
+  to regain a single subscription: use the composing reader.
+- An unguarded `useMcpApp().sendMessage(...)`: `useMcpApp()` can return
   `null` on early renders; use `app?.`.
-- Importing hooks from anything but `<name>_rbt_react` — they are emitted
+- Importing hooks from anything but `<name>_rbt_react`: they are emitted
   only there.
 
 ## Limits
@@ -233,6 +233,6 @@ const DashboardPage: FC<{ user: UseUserApi }> = ({ user }) => {
 
 ## See also
 
-- [`react-generated-client.md`](../../python/references/react-generated-client.md) — hook and mutation shapes
-- [`api-method-types.md`](api-method-types.md) — where each `UI()` lives
-- [`patterns-react-state.md`](../../python/references/patterns-react-state.md) — client state, subscription budget
+- [`react-generated-client.md`](../../python/references/react-generated-client.md), hook and mutation shapes
+- [`api-method-types.md`](api-method-types.md), where each `UI()` lives
+- [`patterns-react-state.md`](../../python/references/patterns-react-state.md), client state, subscription budget

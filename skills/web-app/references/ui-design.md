@@ -36,9 +36,9 @@ so; never name a source nobody gave. For example:
 Who: support leads, on a laptop, between calls
 Task: triage incoming bug reports by severity and status
 Question: what needs someone today?
-Accent: violet #5b3fd6 on paper — house default, no brand supplied
-        (or: teal #0f8a8a — from the team's logo)
-Type: house default — Bricolage Grotesque, Instrument Sans, JetBrains Mono (or the brand's)
+Accent: violet #5b3fd6 on paper: house default, no brand supplied
+        (or: teal #0f8a8a: from the team's logo)
+Type: house default: Bricolage Grotesque, Instrument Sans, JetBrains Mono (or the brand's)
 ```
 
 **Read a brand from its site, don't guess.** Open it in the browser and
@@ -127,7 +127,7 @@ use green, amber or red as the accent.
 width; filters in a grid with a small label above each; view, group
 and sort together; keyboard hints behind a "?", not in the toolbar.
 
-**07 Readable by default.** Rows of about 44–56 px; the main text wraps
+**07 Readable by default.** Rows of about 44 to 56 px; the main text wraps
 and is never cut off while secondary columns have room (mark them
 `secondary`, hidden first as the width shrinks); `density-compact` as
 an option; numbers labeled ("also seen ×2"); identifiers ("A.14b")
@@ -155,7 +155,7 @@ signs in through the dev login and saves every route at desktop
 `screenshots/`. Open every image. Compute the contrast of every text
 and background pair in both schemes with a short script, not by eye.
 After a hand toggle wait about 300 ms: cards fade over 160 ms and a
-mid-fade capture looks like a contrast bug. Check 03–09 and Never, fix
+mid-fade capture looks like a contrast bug. Check 03 to 09 and Never, fix
 in one pass, then pin a look scenario per page (`testing-web-app.md`,
 "Look steps"). A plan's exact numbers are starting points; when a
 screenshot shows one hurts legibility, deviate and say so at handoff.
@@ -229,6 +229,6 @@ None known.
 
 ## See also
 
-- [`react-client.md`](react-client.md) — wiring and accessible markup
-- [`build/templates/README.md`](../../build/templates/README.md) — template files and classes
-- [`testing-web-app.md`](../../python/references/testing-web-app.md) — look steps
+- [`react-client.md`](react-client.md), wiring and accessible markup
+- [`build/templates/README.md`](../../build/templates/README.md), template files and classes
+- [`testing-web-app.md`](../../python/references/testing-web-app.md), look steps

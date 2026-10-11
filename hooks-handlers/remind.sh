@@ -12,7 +12,7 @@
 #     recent tail no longer contains it, so long sessions see it
 #     again every so often without it piling up on every turn.
 #
-# Both Claude Code and Codex run this handler — both auto-discover
+# Both Claude Code and Codex run this handler: both auto-discover
 # the plugin's `hooks/hooks.json`, set `$CLAUDE_PLUGIN_ROOT` for its
 # commands, pass the same stdin fields, and accept the same
 # `hookSpecificOutput.additionalContext` output shape, which each CLI
@@ -55,8 +55,8 @@ print(value if isinstance(value, str) else "")
 }
 
 # True (0) when the session runs inside a Reboot project: the `cwd`
-# the CLI passes in the hook input — or, when that field is absent,
-# this process's own working directory — or any ancestor of it holds
+# the CLI passes in the hook input, or, when that field is absent,
+# this process's own working directory, or any ancestor of it holds
 # a `.rbtrc`. Mirrors the gate the `auto-approve.sh` PreToolUse hook
 # applies to the `run` skill's dev commands.
 in_reboot_project() {

@@ -9,14 +9,14 @@ when: ".rbtrc generates React code with explicit .js extensions"
 
 ## `generate --react-extensions` is no longer needed for Vite frontends
 
-Reboot's React frontends — including MCP UIs — build with
+Reboot's React frontends, including MCP UIs, build with
 Vite (or are type-checked by `tsc` under `moduleResolution: "bundler"`
 / `"node"`), all of which resolve the generated client's relative
 imports without explicit `.js` file extensions. The
 `generate --react-extensions` flag, which adds those extensions, is
 now only relevant to webpack + `ts-loader` setups, and `rbt generate`
 rejects it outright when a `--mobile` (React Native) client is also
-requested — Metro cannot resolve the `.js`-suffixed imports back to
+requested: Metro cannot resolve the `.js`-suffixed imports back to
 their `.ts` sources.
 
 If your `.rbtrc` contains a `generate --react-extensions` line and
@@ -32,7 +32,7 @@ Do **not** remove it in either of these cases:
 - You bundle the React client with webpack/`ts-loader`, which needs
   the extensions.
 - Your `--react` target writes to the **same output directory** as a
-  `--nodejs` (or `--web`) target that uses extensions — e.g.
+  `--nodejs` (or `--web`) target that uses extensions: e.g.
   `generate --react=api` and `generate --nodejs=api` both into `api/`.
   Reboot requires every target sharing a directory to agree on their
   `--*-extensions` setting, so the React client must keep extensions

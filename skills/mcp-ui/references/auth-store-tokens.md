@@ -1,7 +1,7 @@
 ---
 title: Capturing the Identity Provider's Tokens with `store_tokens=True`
 impact: HIGH
-impactDescription: The `store_tokens=True` capture path is opt-in and easy to get subtly wrong — the wrong scope, a missing library, or the real provider absent in `dev=` all fail at runtime, not startup.
+impactDescription: The `store_tokens=True` capture path is opt-in and easy to get subtly wrong, the wrong scope, a missing library, or the real provider absent in `dev=` all fail at runtime, not startup.
 tags: auth, oauth, scopes, tokens, store_tokens, ciphertext, google, github, auth0, workflow, api, external
 summary: "`store_tokens=True` captures only the sign-in provider's tokens, none under `Development()`; extra `scopes=[...]`, three libraries, root keys."
 step: auth
@@ -45,7 +45,7 @@ from reboot.std.collections.ordered_map.v1.ordered_map import (
 from reboot.std.oauth.v1.oauth import oauth_library
 from servicers.calendar import UserServicer
 
-# Calendar *events* only — narrower than the full `calendar` scope.
+# Calendar *events* only: narrower than the full `calendar` scope.
 _CALENDAR_SCOPE = "https://www.googleapis.com/auth/calendar.events"
 
 
@@ -80,7 +80,7 @@ Read back with `OAuthTokenManager.ref(<service id>).fetch(...)` inside a
 
 ## Never
 
-- Expect a Google/GitHub token from `Auth0` — `store_tokens=True`
+- Expect a Google/GitHub token from `Auth0`: `store_tokens=True`
   captures the provider's **own** tokens: an **Auth0** token under the
   tenant-domain service ID, good for Auth0's APIs, not Google Calendar.
   For the upstream API: the federated IdP token via Auth0's Management API
@@ -89,10 +89,10 @@ Read back with `OAuthTokenManager.ref(<service id>).fetch(...)` inside a
   the upstream service's own flow (Path B, `auth-external-api-calls.md`),
   or `Google(...)` sign-in directly if its API is the point.
 - Use `store_tokens=True` for a service that isn't the sign-in provider
-  (sign in with Google, call Slack) — no shortcut; Path B.
-- `dev=Development()` for a feature that needs provider tokens — the fake
+  (sign in with Google, call Slack): no shortcut; Path B.
+- `dev=Development()` for a feature that needs provider tokens: the fake
   picker stores nothing. Real provider (and credentials) in `dev=`.
-- Request broad scopes "just in case" — least you need.
+- Request broad scopes "just in case": least you need.
 
 ## Limits
 
@@ -122,6 +122,6 @@ Read back with `OAuthTokenManager.ref(<service id>).fetch(...)` inside a
 
 ## See also
 
-- [`auth-oauth-providers.md`](auth-oauth-providers.md) — choosing and configuring the provider
-- [`python/references/auth-external-api-calls.md`](../../python/references/auth-external-api-calls.md) — Path B, the Workflow call
-- [`python/references/stdlib-oauth-tokens.md`](../../python/references/stdlib-oauth-tokens.md) — `OAuthTokenManager` surface
+- [`auth-oauth-providers.md`](auth-oauth-providers.md), choosing and configuring the provider
+- [`python/references/auth-external-api-calls.md`](../../python/references/auth-external-api-calls.md), Path B, the Workflow call
+- [`python/references/stdlib-oauth-tokens.md`](../../python/references/stdlib-oauth-tokens.md), `OAuthTokenManager` surface

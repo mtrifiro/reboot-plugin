@@ -3,8 +3,8 @@
 One minimal project per front door: every scaffold file verbatim, plus
 the smallest API, servicer, `main.py`, feature file and test module that
 build, type-check and pass one scenario. `tools/templates-smoke.sh`
-builds both on every change. Copy a template — never retype a scaffold
-file from memory or a reference — then replace the sample domain (a
+builds both on every change. Copy a template, never retype a scaffold
+file from memory or a reference, then replace the sample domain (a
 counter) with the app's own.
 
 ## Copy
@@ -161,7 +161,7 @@ Pinned to what the plugin ships: Reboot `1.6.0` (`bin/rbt`
 `REBOOT_VERSION`) and the frontend set `@reboot-dev/create-ui@1.6.0`
 writes, at the exact versions its ranges resolved to (`react`/`react-dom`
 `18.3.1`, `typescript` `5.9.3`, `vite` `6.4.4`, `@vitejs/plugin-react`
-`4.7.0`, `zod` `4.6.5`) — not the React 19 / TypeScript 6 of
+`4.7.0`, `zod` `4.6.5`), not the React 19 / TypeScript 6 of
 `npm create vite@latest`. Exact pins rather than lockfiles: a scaffold
 builds the same way next month, and three `uv.lock`s would add 2 MB to
 every install. `tools/templates-drift.py` keeps the three templates'

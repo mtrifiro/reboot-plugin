@@ -65,11 +65,11 @@ async def update_shipping(
 ## Never
 
 - Use a **state** `Model` (one bound as `state=` in a `Type(...)`) as
-  a field of another state `Model`, alone or in a `list`/`dict` —
+  a field of another state `Model`, alone or in a `list`/`dict`:
   collapses separate actors into one. Store the other actor's string ID
   and use `<OtherType>.ref(id)`; the ID container (`list[str]`,
   `dict[str, str]`, a stdlib `OrderedMap`) is in `state-collections.md`.
-- Inline items that have their own identity, lifecycle or methods —
+- Inline items that have their own identity, lifecycle or methods:
   they are a `Type` of their own (same rule, `state-collections.md`).
 
 ## Limits
@@ -90,6 +90,6 @@ None known beyond the nested-`Model` default rows in
 
 ## See also
 
-- [`state-collections.md`](state-collections.md) — when a group becomes its own actor
-- [`api-pydantic.md`](api-pydantic.md) — `Optional` nested-Model default rule
-- [`patterns-cross-actor-reads.md`](patterns-cross-actor-reads.md) — read models across actors
+- [`state-collections.md`](state-collections.md), when a group becomes its own actor
+- [`api-pydantic.md`](api-pydantic.md), `Optional` nested-Model default rule
+- [`patterns-cross-actor-reads.md`](patterns-cross-actor-reads.md), read models across actors

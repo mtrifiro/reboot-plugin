@@ -1,5 +1,5 @@
 ---
-title: Set Secrets — Env Vars in Dev, `rbt cloud secret set` in Cloud
+title: Set Secrets, Env Vars in Dev, `rbt cloud secret set` in Cloud
 impact: HIGH
 impactDescription: Wrong delivery mechanism means either committing a secret to git (dev) or seeing `KeyError` at boot (cloud).
 tags: secrets, env, environment-variables, rbt-cloud, oauth, api-key, client-secret
@@ -12,7 +12,7 @@ verified: 1.6.0
 docs: ""
 ---
 
-# Set Secrets — Env Vars in Dev, `rbt cloud secret set` in Cloud
+# Set Secrets: Env Vars in Dev, `rbt cloud secret set` in Cloud
 
 ## When you are here
 
@@ -32,7 +32,7 @@ deploying: [`lifecycle-reboot-cloud.md`](lifecycle-reboot-cloud.md).
 ### In dev: one `.env`, named once in `.rbtrc`
 
 ```sh
-# .env — at the project root, listed in .gitignore
+# .env: at the project root, listed in .gitignore
 STRIPE_API_KEY=sk_test_...
 GOOGLE_OAUTH_CLIENT_ID=...
 GOOGLE_OAUTH_CLIENT_SECRET=...
@@ -72,7 +72,7 @@ rbt cloud secret delete AUTH0_CLIENT_SECRET ...
 ```
 
 On a running app, `secret set` rolls out a new revision by itself with
-the values in `os.environ` — once per call, so pass every key in one
+the values in `os.environ`: once per call, so pass every key in one
 call. Secrets are application-scoped.
 
 ### Reading secrets in application code
@@ -105,15 +105,15 @@ async def main():
 
 ## Never
 
-- **A secret in `main.py`, servicer code or any source file** — anything
+- **A secret in `main.py`, servicer code or any source file** anything
   in git is leaked.
-- **A `--env=KEY=secret` line in `.rbtrc`** — it's checked in.
+- **A `--env=KEY=secret` line in `.rbtrc`** it's checked in.
   `dev run --env-file=.env` is fine; it's only a path.
-- **Relying on a bare `.env` being auto-loaded** — read only when
+- **Relying on a bare `.env` being auto-loaded** read only when
   `rbt dev run` gets `--env-file=.env` (`.rbtrc` or command line).
 - **`rbt cloud up` after `rbt cloud secret set`**, or one `secret set`
-  per key — each is a redundant rollout.
-- **A `REBOOT_*` or `RBT_*` name** — reserved; `secret set` refuses it.
+  per key: each is a redundant rollout.
+- **A `REBOOT_*` or `RBT_*` name** reserved; `secret set` refuses it.
 
 ## Limits
 
@@ -126,9 +126,9 @@ async def main():
 - **Secrets outlive state**: `rbt cloud down --expunge` keeps them,
   `rbt cloud secret list` answers while the app is down, and the next
   `cloud up` boots with them (reboot-crm, 1.6.0).
-- **Names**: uppercase env identifiers — letters, digits, underscores,
+- **Names**: uppercase env identifiers, letters, digits, underscores,
   not starting with a digit (`rbt cloud secret set --help`, 1.6.0).
-- **`--env-file` is `dev run` only** — not `rbt serve`, not Cloud; a
+- **`--env-file` is `dev run` only** not `rbt serve`, not Cloud; a
   self-hosted `rbt serve` takes secrets from its own environment.
 
 ## Scales as
@@ -145,6 +145,6 @@ async def main():
 
 ## See also
 
-- [`lifecycle-rbtrc.md`](lifecycle-rbtrc.md) — the `--env-file` line
-- [`lifecycle-reboot-cloud.md`](lifecycle-reboot-cloud.md) — deploy order and flags
-- [`../../deploy/SKILL.md`](../../deploy/SKILL.md) — full production deploy
+- [`lifecycle-rbtrc.md`](lifecycle-rbtrc.md), the `--env-file` line
+- [`lifecycle-reboot-cloud.md`](lifecycle-reboot-cloud.md), deploy order and flags
+- [`../../deploy/SKILL.md`](../../deploy/SKILL.md), full production deploy

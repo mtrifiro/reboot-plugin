@@ -3,7 +3,7 @@
 Each `<version>/` directory here holds the migration fragments for
 that Reboot release: the code changes an application must make when
 upgrading past that version, one `.md` file per change. A version
-without a directory needs no code migrations — bumping the version
+without a directory needs no code migrations: bumping the version
 pins and regenerating (which the `upgrade` skill always does) is
 enough.
 

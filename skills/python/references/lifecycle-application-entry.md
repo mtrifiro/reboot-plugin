@@ -80,10 +80,10 @@ async def main():
 
 What each stdlib type registers:
 
-- [`stdlib-ordered-map.md`](stdlib-ordered-map.md) — `ordered_map_library()` alone (it brings its servicers)
-- [`stdlib-queue.md`](stdlib-queue.md) — `queue.servicers()` + the stdlib map library (`Queue` uses a stdlib sorted-map actor)
-- [`stdlib-pubsub.md`](stdlib-pubsub.md) — `pubsub.servicers()` (pulls in `queue.servicers()`) + the stdlib map library
-- [`stdlib-presence.md`](stdlib-presence.md) — `presence.servicers()` (three Servicers; no library factory)
+- [`stdlib-ordered-map.md`](stdlib-ordered-map.md), `ordered_map_library()` alone (it brings its servicers)
+- [`stdlib-queue.md`](stdlib-queue.md), `queue.servicers()` + the stdlib map library (`Queue` uses a stdlib sorted-map actor)
+- [`stdlib-pubsub.md`](stdlib-pubsub.md), `pubsub.servicers()` (pulls in `queue.servicers()`) + the stdlib map library
+- [`stdlib-presence.md`](stdlib-presence.md), `presence.servicers()` (three Servicers; no library factory)
 
 ### One list for the application and every test
 
@@ -113,16 +113,16 @@ def libraries() -> list:
 
 ## Never
 
-- `Application(servicers=[ChatRoomServicer()])` — an instance. Pass the
+- `Application(servicers=[ChatRoomServicer()])`: an instance. Pass the
   **class**; Reboot constructs instances per actor.
-- A servicer list written out again in a test module — a type added
+- A servicer list written out again in a test module: a type added
   to `main.py` and missed there fails only when a scenario calls it,
   with `Method not found!` (a new type missed in six harnesses broke
   every lead import; reboot-crm, 1.6.0).
-- `ChatRoomServicer().serve()` or a sync `main` with no `Application` —
+- `ChatRoomServicer().serve()` or a sync `main` with no `Application`:
   Servicers run only inside the `Application`'s event loop.
 - Omitting a stdlib type's `<name>_library()`, or a library-less
-  type's `servicers()` — a runtime unknown-state-type error on first
+  type's `servicers()`: a runtime unknown-state-type error on first
   call, not a startup check. Only a library missing its
   own dependency library fails at startup (`Missing required libraries: …`).
 
@@ -140,6 +140,6 @@ None known.
 
 ## See also
 
-- [`lifecycle-initialize-hook.md`](lifecycle-initialize-hook.md) — first-run seeding and singletons
-- [`lifecycle-rbtrc.md`](lifecycle-rbtrc.md) — `.rbtrc` points at this file
-- [`stdlib-ordered-map.md`](stdlib-ordered-map.md) — library registration, worked example
+- [`lifecycle-initialize-hook.md`](lifecycle-initialize-hook.md), first-run seeding and singletons
+- [`lifecycle-rbtrc.md`](lifecycle-rbtrc.md), `.rbtrc` points at this file
+- [`stdlib-ordered-map.md`](stdlib-ordered-map.md), library registration, worked example

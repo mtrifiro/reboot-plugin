@@ -44,13 +44,13 @@ def state_id_is_user_id(*, context: ReaderContext, **kwargs):
     return PermissionDenied()
 ```
 
-- **`has_verified_token`** — valid token; does **not** check the user is
+- **`has_verified_token`** valid token; does **not** check the user is
   registered with the app. Baseline gate:
   `allow_if(all=[has_verified_token, can_access])`.
-- **`is_app_internal`** — call from inside the app (servicer, `initialize`,
+- **`is_app_internal`** call from inside the app (servicer, `initialize`,
   scheduled work); external clients always get `PermissionDenied`. Gate for
   internal helpers; `OrderedMap` defaults to `allow_if(all=[is_app_internal])`.
-- **`state_id_is_user_id`** — state ID equals caller's `user_id`, for actors
+- **`state_id_is_user_id`** state ID equals caller's `user_id`, for actors
   that *are* a user. Implies `has_verified_token`.
 
 ```python
@@ -68,7 +68,7 @@ A workflow scheduled on the **same actor**
 bearer token, even when a user's transaction scheduled it:
 
 ```python
-# WRONG — owner-only. Called by alice, `place` schedules `pay`, which runs
+# WRONG: owner-only. Called by alice, `place` schedules `pay`, which runs
 # without a token: it gets `Unauthenticated` and `place` is aborted.
 def authorizer(self):
     return allow_if(all=[state_id_is_user_id])
@@ -76,7 +76,7 @@ def authorizer(self):
 async def place(self, context: TransactionContext, request):
     await self.ref().schedule().pay(context)
 
-# RIGHT — the owner OR an internal call.
+# RIGHT: the owner OR an internal call.
 def authorizer(self):
     return allow_if(any=[state_id_is_user_id, is_app_internal])
 ```
@@ -87,10 +87,10 @@ user-owned actors with background work.
 ## Never
 
 - `has_verified_token` or `state_id_is_user_id` alone on a servicer that
-  other servicers call — a nested call carries **no** `context.auth`, so
+  other servicers call: a nested call carries **no** `context.auth`, so
   both return `Unauthenticated`. Add `is_app_internal` in `any=[...]`
   (`servicer-authorizer.md` § Never).
-- Treat `has_verified_token` as "is a user of this app" — it only checks
+- Treat `has_verified_token` as "is a user of this app": it only checks
   the token.
 
 ## Limits
@@ -110,6 +110,6 @@ user-owned actors with background work.
 
 ## See also
 
-- [`auth-allow-if.md`](auth-allow-if.md) — evaluation order and aggregation
-- [`servicer-authorizer.md`](servicer-authorizer.md) — listing tokenless call paths
-- [`auth-custom-predicates.md`](auth-custom-predicates.md) — predicates beyond these three
+- [`auth-allow-if.md`](auth-allow-if.md), evaluation order and aggregation
+- [`servicer-authorizer.md`](servicer-authorizer.md), listing tokenless call paths
+- [`auth-custom-predicates.md`](auth-custom-predicates.md), predicates beyond these three

@@ -85,9 +85,9 @@ application restarted (reboot-air-141-load-02, 1.4.1).
 
 ## Never
 
-- Benchmark with effect validation on and call it the app's latency —
+- Benchmark with effect validation on and call it the app's latency:
   it re-runs every writer and transaction body (Scales as).
-- Put a cross-actor `Transaction` on a click that must feel instant —
+- Put a cross-actor `Transaction` on a click that must feel instant:
   use a single-actor `Writer` that schedules the follow-up
   (reboot-air-150-09: click-to-confirm 480 ms to about 60 ms, 1.5.0).
 - Read an actor and then write it as two calls, wrap "do this to N
@@ -95,12 +95,12 @@ application restarted (reboot-air-141-load-02, 1.4.1).
   `schedule()` onto N foreign actors from one transaction
   (`servicer-transaction.md` § Never).
 - Issue about 200 writer calls from one transaction behind a UI
-  button — subscribers see nothing until the commit lands (reads as a
+  button: subscribers see nothing until the commit lands (reads as a
   hang); chunk into batches (25 worked; showtime-40, 1.4.1).
-- Run a background loop as a transaction holding a hot actor — user
+- Run a background loop as a transaction holding a hot actor: user
   writers wait behind it; bound per-tick work (showtime-42, 1.4.1).
 - Restart only the app process (SIGTERM, let the watcher respawn) before
-  measuring — every RPC then measured about 50x slower for 15 minutes
+  measuring: every RPC then measured about 50x slower for 15 minutes
   (`Flight.details` 1 ms to 50 ms; reboot-air-141-load-03, 1.4.1,
   undiagnosed). Restart the whole `rbt dev run`.
 
@@ -188,6 +188,6 @@ A transaction is roughly 5-10x a writer.
 
 ## See also
 
-- [`patterns-cross-actor-reads.md`](patterns-cross-actor-reads.md) — reader shapes that avoid fan-out
-- [`servicer-transaction.md`](servicer-transaction.md) — hard transaction limits live there
-- [`testing-harness.md`](testing-harness.md) — harness setup for benchmarks
+- [`patterns-cross-actor-reads.md`](patterns-cross-actor-reads.md), reader shapes that avoid fan-out
+- [`servicer-transaction.md`](servicer-transaction.md), hard transaction limits live there
+- [`testing-harness.md`](testing-harness.md), harness setup for benchmarks

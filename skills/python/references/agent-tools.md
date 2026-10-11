@@ -58,15 +58,15 @@ async def add(x: int, y: int) -> int:
 ## Never
 
 - `async def get_page(run: RunContext[Deps], page_id: str)` under
-  `@agent.tool` — no `WorkflowContext`, so it cannot call
+  `@agent.tool`: no `WorkflowContext`, so it cannot call
   `Page.ref(...)`. Put `context: WorkflowContext` first, `RunContext`
   second.
 - A tool body that is unsafe to run twice (charges a card, sends an
-  email, appends without a key) — in development and tests it does run
+  email, appends without a key): in development and tests it does run
   twice (see Limits).
-- Per-run `toolsets=` built from local closures — they cannot pickle
+- Per-run `toolsets=` built from local closures: they cannot pickle
   and raise `UserError`; define tool functions at module scope.
-- Returning a value that cannot be pickled — the memoized result is
+- Returning a value that cannot be pickled: the memoized result is
   pickled.
 
 ## Limits
@@ -91,6 +91,6 @@ None known.
 
 ## See also
 
-- [`agent-pydantic-ai.md`](agent-pydantic-ai.md) — constructing and running the `Agent`
-- [`rpc-calls.md`](rpc-calls.md) — calling actor methods inside a tool
-- [`servicer-workflow-external.md`](servicer-workflow-external.md) — `at_least_once` and effect validation
+- [`agent-pydantic-ai.md`](agent-pydantic-ai.md), constructing and running the `Agent`
+- [`rpc-calls.md`](rpc-calls.md), calling actor methods inside a tool
+- [`servicer-workflow-external.md`](servicer-workflow-external.md), `at_least_once` and effect validation

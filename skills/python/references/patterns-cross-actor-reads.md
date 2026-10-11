@@ -160,16 +160,16 @@ value (restaurant-app-3, 1.6.0).
 ## Never
 
 - Return `self.state.<collection>` verbatim from a shared reader when
-  items carry other users' identifiers — leaks them (step 5).
+  items carry other users' identifiers: leaks them (step 5).
 - Make an item its own `Type` because it is a domain noun with a status
-  field — atomically co-changed items belong inline (step 1).
-- Keep counters or indexes on a shared actor updated by every hold —
+  field: atomically co-changed items belong inline (step 1).
+- Keep counters or indexes on a shared actor updated by every hold:
   every write queues on its lock; derive in a reader.
-- Compute a user-visible transition only at read time — other viewers
+- Compute a user-visible transition only at read time: other viewers
   never see it; also commit it with a scheduled writer.
-- Subscribe a list page to the detail reader of every row — declare a
+- Subscribe a list page to the detail reader of every row: declare a
   summary reader.
-- Subscribe once per row when the rows share a parent — subscribe to a
+- Subscribe once per row when the rows share a parent: subscribe to a
   fan-out reader on the parent.
 
 ## Limits
@@ -198,6 +198,6 @@ None known.
 
 ## See also
 
-- [`patterns-load-and-benchmarking.md`](patterns-load-and-benchmarking.md) — fan-out and subscription numbers
-- [`state-collections.md`](state-collections.md) — inline collection mechanics
-- [`patterns-react-state.md`](patterns-react-state.md) — hooks and optimistic UI
+- [`patterns-load-and-benchmarking.md`](patterns-load-and-benchmarking.md), fan-out and subscription numbers
+- [`state-collections.md`](state-collections.md), inline collection mechanics
+- [`patterns-react-state.md`](patterns-react-state.md), hooks and optimistic UI

@@ -128,24 +128,24 @@ frontend/dist/
 
 ## Never
 
-- **`CMD ["rbt", "dev", "run"]` in a Cloud image** — dev defaults (no
+- **`CMD ["rbt", "dev", "run"]` in a Cloud image** dev defaults (no
   `--tls=external`, dev-mode auth, watcher loops) are wrong for
   production.
-- **A base image version different from the `reboot==` pin** — the
+- **A base image version different from the `reboot==` pin** the
   image bakes in a specific `rbt` CLI and runtime; a mismatch surfaces
   as obscure protocol or codegen errors on first deploy.
-- **`RUN rbt generate` before `COPY frontend/`** (bundled) — copying
+- **`RUN rbt generate` before `COPY frontend/`** (bundled): copying
   `frontend/` after the generator clobbers its fresh `frontend/api/`
   bindings with the stale local copy.
-- **Production flags on the `CMD` line** — works, but splits truth
+- **Production flags on the `CMD` line** works, but splits truth
   across two files.
-- **A hand-rolled non-Reboot base image** — reinstalling the `rbt` CLI
+- **A hand-rolled non-Reboot base image** reinstalling the `rbt` CLI
   correctly (version, binary location, system deps) is non-trivial.
-- **No `serve run --application-name=<app>`** — Cloud identifies the
+- **No `serve run --application-name=<app>`** Cloud identifies the
   app across deploys by it; without it the first `cloud up` works but
   state persistence gets surprising. (`--name` is the deprecated alias
   and warns.)
-- **`COPY backend/src/` near the top** — every backend edit reinstalls
+- **`COPY backend/src/` near the top** every backend edit reinstalls
   dependencies.
 
 ## Limits
@@ -168,6 +168,6 @@ frontend/dist/
 
 ## See also
 
-- [`lifecycle-reboot-cloud.md`](lifecycle-reboot-cloud.md) — `rbt cloud up` and friends
-- [`lifecycle-rbtrc.md`](lifecycle-rbtrc.md) — `serve run` line syntax
-- [`../../deploy/SKILL.md`](../../deploy/SKILL.md) — end-to-end production deploy
+- [`lifecycle-reboot-cloud.md`](lifecycle-reboot-cloud.md), `rbt cloud up` and friends
+- [`lifecycle-rbtrc.md`](lifecycle-rbtrc.md), `serve run` line syntax
+- [`../../deploy/SKILL.md`](../../deploy/SKILL.md), end-to-end production deploy

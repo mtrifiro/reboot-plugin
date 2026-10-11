@@ -5,7 +5,7 @@ set -euo pipefail
 mkdir -p api/todo/v1 tests design backend/src/servicers
 printf 'dev run --application-name=todo\ngenerate api/ --python=backend/api\n' > .rbtrc
 cat > AGENTS.md <<'MD'
-# Todo — map for a coding agent
+# Todo: map for a coding agent
 
 A Reboot app (Python backend, React web app).
 

@@ -111,7 +111,7 @@ Assert against seed constants (`LAB_SHOWINGS`), not literals (`48`).
 ## Never
 
 - **Concurrent seeding transactions** (`asyncio.gather` over batches,
-  `asyncio.Semaphore(12)`) — transactions sharing actors (index, parent,
+  `asyncio.Semaphore(12)`): transactions sharing actors (index, parent,
   term) queue on each other's locks. Twelve concurrent bulk imports
   stalled indefinitely at 0-2% CPU, nothing logged; sequentially each
   took five to seven seconds (student-sor, 1.5.0). With no reads inside
@@ -122,24 +122,22 @@ Assert against seed constants (`LAB_SHOWINGS`), not literals (`48`).
   `chain.idempotently(f"reg-{theater.id}").register_theater(...)`.
   Creating N distinct actors needs none (cineloop, 1.4.1).
 - **Aliases from values that change between runs** (wall clock, random)
-  — a restarted seed can't resume; use the record's id or date.
-- **One transaction per record** — ~3,600 calls at ~1.5 s each in dev,
+: a restarted seed can't resume; use the record's id or date.
+- **One transaction per record** ~3,600 calls at ~1.5 s each in dev,
   unfinished after five minutes (student-sor, 1.5.0).
 - **Hundreds of creates and one shared `OrderedMap` in one
   transaction** (Limits).
-- **A big `list[Entity]` inline on an actor the seed keeps writing** —
-  every write re-serializes it (8,878 records rewritten per progress
+- **A big `list[Entity]` inline on an actor the seed keeps writing** every write re-serializes it (8,878 records rewritten per progress
   update, client-portal). Unbounded collections go in an `OrderedMap`;
   a domain-bounded list (200 seats on one showing) can stay inline
   ([`state-collections.md`](state-collections.md)).
-- **The full production seed in every test** — only in the few
+- **The full production seed in every test** only in the few
   (merged) tests asserting production size; others seed the minimum
   through an `app_internal=True` context (showtime, cineloop).
-- **Seeding through a user context in a test** — `initialize`-only
+- **Seeding through a user context in a test** `initialize`-only
   methods are usually internal-only (`PermissionDenied`); use
   `rbt.create_external_context(name=..., app_internal=True)`.
-- **Debugging dev state that lived through incompatible designs** —
-  expunge and reseed (`lifecycle-rbtrc.md` § Never).
+- **Debugging dev state that lived through incompatible designs** expunge and reseed (`lifecycle-rbtrc.md` § Never).
 
 ## Limits
 
@@ -151,7 +149,7 @@ Assert against seed constants (`LAB_SHOWINGS`), not literals (`48`).
   (`LOCK_ACQUIRE_DEADLINE_DEFAULT`, 1.6.0 source): an oversized or
   contended seed loops on lock waits rather than failing.
 - **Seeding `User` actors has no public API**; use the semi-private
-  `await UserServicer._authenticated(context, state_id=user_id)` — on
+  `await UserServicer._authenticated(context, state_id=user_id)`: on
   the servicer class (`User._authenticated` doesn't exist); idempotent
   via a fixed key, safe from `initialize` (1.6.0 source).
 - A seed from `initialize` can't act as a user

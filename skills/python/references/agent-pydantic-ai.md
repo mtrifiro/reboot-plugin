@@ -1,7 +1,7 @@
 ---
 title: Call LLMs via the Reboot `Agent`, Never a Raw SDK
 impact: HIGH
-impactDescription: A raw LLM call re-hits the provider on every workflow replay — wasteful, non-deterministic, double-billed
+impactDescription: A raw LLM call re-hits the provider on every workflow replay, wasteful, non-deterministic, double-billed
 tags: agent, llm, pydantic-ai, workflow, memoize, durable
 summary: "Never a raw LLM SDK or model call in a writer/transaction; `reboot.agents.pydantic_ai.Agent` with stable `name=` in a `Workflow`."
 step: servicer
@@ -83,27 +83,27 @@ dependencies = [
 ## Never
 
 - `anthropic.Anthropic().messages.create(...)` or a bare
-  `pydantic_ai.Agent` in a workflow — re-runs on every replay,
+  `pydantic_ai.Agent` in a workflow: re-runs on every replay,
   re-bills, and answers differently, breaking deterministic replay.
-- A model call in a `Transaction` or `Writer` — transactions are
+- A model call in a `Transaction` or `Writer`: transactions are
   retried, so one request bills several times, unmemoized. The `Agent`
   refuses non-workflow contexts.
-- `agent.run("prompt")` (prompt first) — raises `UserError` naming the
+- `agent.run("prompt")` (prompt first): raises `UserError` naming the
   fix.
-- `run_sync` / `run_stream_sync` — raise; Reboot is async-only.
-- Starting an agent run from inside another (e.g. from a tool) —
+- `run_sync` / `run_stream_sync`: raise; Reboot is async-only.
+- Starting an agent run from inside another (e.g. from a tool):
   raises `UserError`.
-- Setting `agent.name` after construction — raises (it would shift
+- Setting `agent.name` after construction: raises (it would shift
   every memo key); construct a new `Agent`.
-- `parallel_execution_mode="parallel"` (pydantic_ai's default) —
+- `parallel_execution_mode="parallel"` (pydantic_ai's default):
   rejected at construction; completion-order events differ across
   replays. Accepted: the Reboot default `"parallel_ordered_events"`, or
   `"sequential"`.
 - Adding `pydantic-ai-slim[anthropic]` or `anthropic` to
-  `pyproject.toml` yourself — a fresh resolve picks an SDK built on
+  `pyproject.toml` yourself: a fresh resolve picks an SDK built on
   `httpx2`, which rejects the `httpx` client Pydantic AI passes.
 - Tool functions or `output_type` classes defined as local closures and
-  passed per run — they must pickle; define them at module scope.
+  passed per run: they must pickle; define them at module scope.
 
 ## Limits
 
@@ -111,7 +111,7 @@ dependencies = [
 - Streaming is drained, not token-by-token: `run_stream`,
   `run_stream_events` and `iter` work, but the model call is drained and
   memoized inside `at_least_once`, so chunks arrive in one batch at the
-  end. A chat UI shows nothing until then (~30–60 s for a long document,
+  end. A chat UI shows nothing until then (~30 to 60 s for a long document,
   mattprd at 1.4.1); no sanctioned side channel for partial output at
   1.6.0.
 - Model calls pass `effect_validation=EffectValidation.DISABLED` (1.6.0
@@ -143,6 +143,6 @@ dependencies = [
 
 ## See also
 
-- [`agent-tools.md`](agent-tools.md) — tools that read and mutate state
-- [`servicer-workflow-external.md`](servicer-workflow-external.md) — `at_least_once` and effect validation
-- [`servicer-workflow-declare.md`](servicer-workflow-declare.md) — declaring and scheduling the workflow
+- [`agent-tools.md`](agent-tools.md), tools that read and mutate state
+- [`servicer-workflow-external.md`](servicer-workflow-external.md), `at_least_once` and effect validation
+- [`servicer-workflow-declare.md`](servicer-workflow-declare.md), declaring and scheduling the workflow

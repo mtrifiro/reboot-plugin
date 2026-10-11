@@ -2,7 +2,7 @@
 # ── Existing fields (keep) ─────────────────────────────────────────
 title: Scheduling from Inside a Workflow       # link text in every generated index
 impact: HIGH                                   # CRITICAL | HIGH | MEDIUM | LOW-MEDIUM | LOW
-impactDescription: One line — what goes wrong if the agent skips this file
+impactDescription: One line, what goes wrong if the agent skips this file
 tags: scheduling, workflow, spawn              # free-text search terms
 summary: "`spawn(when=…)` from a workflow; why `schedule()` is refused there"
                       # one line (≤ 18 words) shown in every generated reading list:
@@ -69,7 +69,7 @@ Sub-headings (`###`) are allowed inside this section only.
 Things that type-check or look right and are wrong. One bullet each,
 the wrong form first, then the one-line reason and the right form.
 
-- `self.ref().schedule(when=…)` from a workflow — a workflow has no
+- `self.ref().schedule(when=…)` from a workflow: a workflow has no
   `self`; use `context.spawn(...)` / `Type.ref(id).spawn(...)`.
 
 ## Limits
@@ -95,7 +95,7 @@ at 1.4.1", "framework design").
 | --- | --- | --- |
 | `StateNotConstructed` | A reader ran against an actor that was never constructed | Construct it first, or catch `<Method>Aborted` |
 
-The left column is the literal string the agent will be holding — copy
+The left column is the literal string the agent will be holding: copy
 it from a real traceback. These rows feed the generated error index.
 "None known." if none.
 
@@ -103,4 +103,4 @@ it from a real traceback. These rows feed the generated error index.
 
 At most three links, each with a five-word reason.
 
-- [`servicer-workflow-calls.md`](servicer-workflow-calls.md) — classify every awaited call
+- [`servicer-workflow-calls.md`](servicer-workflow-calls.md): classify every awaited call

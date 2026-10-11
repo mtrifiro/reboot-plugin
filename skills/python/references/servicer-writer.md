@@ -59,7 +59,7 @@ class AccountServicer(Account.Servicer):
   (`await Account.ref("audit-log").record(context, ...)  # WRONG`). It
   raises `TypeError` (see Errors), even for its own writer via
   `self.ref()` (observed at 1.6.0). Use a `Transaction`.
-- `Other.ref(id).schedule(...)` — scheduling on another actor takes a
+- `Other.ref(id).schedule(...)`: scheduling on another actor takes a
   `TransactionContext` only; mypy reports an overload mismatch
   (reboot-air-150-10, theater-network-19). Schedule a method on `self`
   that reaches the other actor, a `Workflow` if it should not hold this
@@ -103,6 +103,6 @@ class AccountServicer(Account.Servicer):
 
 ## See also
 
-- [`servicer-transaction.md`](servicer-transaction.md) — when a writer can't
-- [`servicer-workflow-external.md`](servicer-workflow-external.md) — where external calls go
-- [`patterns-time-and-randomness.md`](patterns-time-and-randomness.md) — clock and ids in bodies
+- [`servicer-transaction.md`](servicer-transaction.md), when a writer can't
+- [`servicer-workflow-external.md`](servicer-workflow-external.md), where external calls go
+- [`patterns-time-and-randomness.md`](patterns-time-and-randomness.md), clock and ids in bodies

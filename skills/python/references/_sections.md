@@ -19,7 +19,7 @@ This file defines the rule categories for Reboot Python best practices. Rules ar
 ## 2. API (api)
 
 **Impact:** CRITICAL
-**Description:** Pydantic API definition — state models, reader/writer/transaction method factories, the `factory=True` constructor option, and typed error models. The pydantic API file is the source of truth; everything else is generated from it. Also covers schema evolution: the rules to follow when changing the API of an application that has persisted state or has been deployed.
+**Description:** Pydantic API definition, state models, reader/writer/transaction method factories, the `factory=True` constructor option, and typed error models. The pydantic API file is the source of truth; everything else is generated from it. Also covers schema evolution: the rules to follow when changing the API of an application that has persisted state or has been deployed.
 
 ## 3. Servicer (servicer)
 
@@ -29,17 +29,17 @@ This file defines the rule categories for Reboot Python best practices. Rules ar
 ## 4. Agent (agent)
 
 **Impact:** HIGH
-**Description:** Backend LLM calls and AI agents via the durable `reboot.agents.pydantic_ai.Agent` — a replay-safe wrapper over `pydantic_ai.Agent` that memoizes every model and tool call. Constructing and running the agent inside a `WorkflowContext`, and giving it tools with `@agent.tool` / `@agent.tool_plain`.
+**Description:** Backend LLM calls and AI agents via the durable `reboot.agents.pydantic_ai.Agent`, a replay-safe wrapper over `pydantic_ai.Agent` that memoizes every model and tool call. Constructing and running the agent inside a `WorkflowContext`, and giving it tools with `@agent.tool` / `@agent.tool_plain`.
 
 ## 5. Stdlib (stdlib)
 
 **Impact:** HIGH
-**Description:** First-class stdlib state types shipped with Reboot — `OrderedMap`, `Queue`, `Topic` (PubSub), `Presence`, the `Item` value envelope, and `Ciphertext` (envelope encryption / crypto-shredding). One reference per type with method surface and library registration.
+**Description:** First-class stdlib state types shipped with Reboot, `OrderedMap`, `Queue`, `Topic` (PubSub), `Presence`, the `Item` value envelope, and `Ciphertext` (envelope encryption / crypto-shredding). One reference per type with method surface and library registration.
 
 ## 6. Crypto (crypto)
 
 **Impact:** HIGH
-**Description:** Reboot's managed cryptographic root keys (`REBOOT_CRYPTO_ROOT_KEYS`) and HKDF key derivation (`reboot.crypto.root_keys.derive_key`) for building your own key-deriving library/feature — including the rotation control loop and the `Application.use_root_key_version` / `disuse_root_key_version` usage markers. For ready-made encryption-at-rest + crypto-shredding, use the `Ciphertext` stdlib library instead.
+**Description:** Reboot's managed cryptographic root keys (`REBOOT_CRYPTO_ROOT_KEYS`) and HKDF key derivation (`reboot.crypto.root_keys.derive_key`) for building your own key-deriving library/feature, including the rotation control loop and the `Application.use_root_key_version` / `disuse_root_key_version` usage markers. For ready-made encryption-at-rest + crypto-shredding, use the `Ciphertext` stdlib library instead.
 
 ## 7. State (state)
 
@@ -49,7 +49,7 @@ This file defines the rule categories for Reboot Python best practices. Rules ar
 ## 8. Auth (auth)
 
 **Impact:** HIGH
-**Description:** Authorizer composition: `allow()` / `deny()`, `allow_if(all=...)` / `allow_if(any=...)`, the built-in predicates (`has_verified_token`, `is_app_internal`, `state_id_is_user_id`), and writing custom predicates. Also the host-agnostic recipe for acting as the user at an external service — capturing a provider's OAuth tokens via your own endpoints (or, for a service that only issues API keys, encrypting the key with `Ciphertext`), storing OAuth tokens in an `OAuthTokenManager`, and calling the API inside a `Workflow` (`auth-external-api-calls.md`).
+**Description:** Authorizer composition: `allow()` / `deny()`, `allow_if(all=...)` / `allow_if(any=...)`, the built-in predicates (`has_verified_token`, `is_app_internal`, `state_id_is_user_id`), and writing custom predicates. Also the host-agnostic recipe for acting as the user at an external service: capturing a provider's OAuth tokens via your own endpoints (or, for a service that only issues API keys, encrypting the key with `Ciphertext`), storing OAuth tokens in an `OAuthTokenManager`, and calling the API inside a `Workflow` (`auth-external-api-calls.md`).
 
 ## 9. RPC (rpc)
 
@@ -59,7 +59,7 @@ This file defines the rule categories for Reboot Python best practices. Rules ar
 ## 10. Scheduling (scheduling)
 
 **Impact:** MEDIUM
-**Description:** Deferred work via `ref.schedule(when=...).method(context)` — `when=` takes a `timedelta` (relative) or an absolute timezone-aware `datetime`. Recurring / "cron" jobs are built by self-rescheduling from inside a writer method (at an absolute wall-clock time for true cron), optionally dispatching a `Workflow` per run for the durable work.
+**Description:** Deferred work via `ref.schedule(when=...).method(context)`, `when=` takes a `timedelta` (relative) or an absolute timezone-aware `datetime`. Recurring / "cron" jobs are built by self-rescheduling from inside a writer method (at an absolute wall-clock time for true cron), optionally dispatching a `Workflow` per run for the durable work.
 
 ## 11. Testing (testing)
 
@@ -74,4 +74,4 @@ This file defines the rule categories for Reboot Python best practices. Rules ar
 ## 13. React (react)
 
 **Impact:** MEDIUM
-**Description:** What `rbt generate --react=` emits and how a React frontend uses it — the `use<Type>()` hooks, reader and mutation return shapes, typed error classes, and naming rules. Shared by MCP UI and Web App frontends.
+**Description:** What `rbt generate --react=` emits and how a React frontend uses it, the `use<Type>()` hooks, reader and mutation return shapes, typed error classes, and naming rules. Shared by MCP UI and Web App frontends.

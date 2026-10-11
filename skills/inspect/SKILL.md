@@ -1,17 +1,17 @@
 ---
 name: inspect
-description: Inspect the live state of a running Reboot application from the command line with `rbt inspect` — list its state types, list the state IDs (actor IDs) of a type, print one actor's state as JSON. Works against a local `rbt dev run` backend and a deployed Reboot Cloud app via `--application-url` and `--admin-credential`. Use to answer "what state types does this app have?", "which actors of this type exist?", "what is stored in this actor right now?" — debugging persisted state from the terminal instead of the `/__/inspect` web dashboard.
+description: Inspect the live state of a running Reboot application from the command line with `rbt inspect`, list its state types, list the state IDs (actor IDs) of a type, print one actor's state as JSON. Works against a local `rbt dev run` backend and a deployed Reboot Cloud app via `--application-url` and `--admin-credential`. Use to answer "what state types does this app have?", "which actors of this type exist?", "what is stored in this actor right now?": debugging persisted state from the terminal instead of the `/__/inspect` web dashboard.
 argument-hint: "[type list | state list --type=<full.Name> | state get --type=<full.Name> --id=<id>]"
 allowed-tools: Bash, Read
 ---
 
-# inspect — Inspect a Running Reboot Application's State
+# inspect: Inspect a Running Reboot Application's State
 
 > **Version notices:** if `rbt` reports a version mismatch or a newer
 > Reboot, follow the [upgrade skill](../upgrade/SKILL.md).
 
 `rbt inspect` reads (never modifies) the persisted state of a
-**running** app — what the `/__/inspect` web dashboard shows, but
+**running** app: what the `/__/inspect` web dashboard shows, but
 scriptable. Use it for _runtime state_ questions ("did `create` persist
 this field?", "which account IDs exist?", "what does actor `alice` hold
 now?"). To start an app first see the [run skill](../run/SKILL.md); to
@@ -79,7 +79,7 @@ Both match `rbt export` / `rbt import` (see
 `../python/references/lifecycle-reboot-cloud.md`).
 
 - `--application-url` is **required on every command**, local dev
-  included — no default from `.rbtrc` or the dev port (1.6.0 `--help`).
+  included: no default from `.rbtrc` or the dev port (1.6.0 `--help`).
   It's the API URL printed as **"Your API is available at:"**, **not**
   the `/__/inspect` page:
   - **Local dev:** what `rbt dev run` prints (e.g.
@@ -89,7 +89,7 @@ Both match `rbt export` / `rbt import` (see
 - `--admin-credential`: the app's admin secret
   (`SECRET_REBOOT_ADMIN_TOKEN`).
   - **Local dev:** defaults to `dev`; omit it.
-  - **Reboot Cloud:** required — the value set for
+  - **Reboot Cloud:** required, the value set for
     `SECRET_REBOOT_ADMIN_TOKEN` (see
     `../python/references/lifecycle-secrets.md`), or the
     `REBOOT_ADMIN_CREDENTIAL` env var. A `*.rbt.cloud` URL also accepts

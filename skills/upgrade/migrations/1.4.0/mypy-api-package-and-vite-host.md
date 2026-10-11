@@ -18,7 +18,7 @@ reach.
 Look at the project-root `.mypy.ini`. Two things need to be true, and
 in older projects neither is:
 
-- `mypy_path` must include the project-root `api/` directory — the
+- `mypy_path` must include the project-root `api/` directory: the
   one holding the hand-written pydantic API definition, not just the
   generated `backend/api/`. Append `:api` to the existing value, e.g.
   `mypy_path = backend/tests:backend/src:backend/api:api`.
@@ -29,7 +29,7 @@ in older projects neither is:
   `api/<pkg>/v1/`). Repeat per API package.
 
 Together these two mistakes made every import of a state or request
-model — `from <pkg>.v1.<name> import <X>State` — resolve to `Any`.
+model, `from <pkg>.v1.<name> import <X>State`, resolve to `Any`.
 Any annotation mentioning one checked nothing, and a misspelled field
 on `state` passed a green `mypy` run.
 

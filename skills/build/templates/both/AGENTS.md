@@ -1,4 +1,4 @@
-# __Title__ — map for a coding agent
+# __Title__: map for a coding agent
 
 A Reboot app (Python backend, MCP UIs and a web app sharing one frontend).
 Read this first; the Reboot plugin's skills have the rest. Keep this file current: when

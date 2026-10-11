@@ -1,7 +1,7 @@
 ---
 title: The Generated React Client Contract
 impact: HIGH
-impactDescription: The exact hook, mutator, and error shapes `rbt generate --react=` emits — identical for web apps and MCP UIs
+impactDescription: The exact hook, mutator, and error shapes `rbt generate --react=` emits, identical for web apps and MCP UIs
 tags: react, hooks, generated, codegen, errors, typescript, partialRequest, aborted, subscription
 summary: "Mutations resolve to `{ response, aborted }`, never throw; `rbt generate --react=` output: `use<Type>()` overloads, reader returns, naming."
 step: frontend
@@ -112,20 +112,20 @@ asynchronously: guard at the parent, mount the child with a real id.
 
 ## Never
 
-- `try { await foo.baz(…) } catch { … }` as the failure path —
+- `try { await foo.baz(…) } catch { … }` as the failure path:
   failure is in `aborted`, not `catch`. Still wrap the *handler* in `try/finally`
   (id minting, transport teardown, a deadline can throw), or a
   `setBusy(true)` never unwinds.
-- `useFoo({ id: id || '__none__' })` while identity loads — every
+- `useFoo({ id: id || '__none__' })` while identity loads: every
   loading session subscribes to one shared actor.
-- `ReturnType<typeof useFoo>` as a prop type — it's the no-argument
+- `ReturnType<typeof useFoo>` as a prop type: it's the no-argument
   overload (`{ foo, isLoading }`); use `UseFooApi`.
-- `ids.map(id => useFoo({ id }))` — breaks the rules of hooks; render
+- `ids.map(id => useFoo({ id }))`: breaks the rules of hooks; render
   one child per id ([`patterns-react-state.md`](patterns-react-state.md)).
-- `#` in a subscribed actor id — it rides a WebSocket URL and `#`
+- `#` in a subscribed actor id: it rides a WebSocket URL and `#`
   truncates it as a fragment (`Failed to construct 'WebSocket'`); `@`,
   `:`, `~` are safe (observed 1.4.0).
-- An error model with no fields at 1.5.0 or earlier — the client throws at
+- An error model with no fields at 1.5.0 or earlier: the client throws at
   import (blank page); give it one field. Safe at 1.6.0 (codegen
   always emits the `type` literal).
 
@@ -175,7 +175,7 @@ asynchronously: guard at the parent, mount the child with a real id.
 - Setup is ~100ms alone, slow in a burst on `rbt dev run` (48 over
   ~10s, 1.4.1; more in [`patterns-load-and-benchmarking.md`](patterns-load-and-benchmarking.md)):
   give each subscription its own loading state.
-- One page-of-snapshots reader cut first paint from ~5–7s to ~1.5s
+- One page-of-snapshots reader cut first paint from ~5 to 7s to ~1.5s
   (bluesky, 1.4.1); budgets in [`patterns-react-state.md`](patterns-react-state.md).
 
 ## Errors you will see
@@ -198,6 +198,6 @@ asynchronously: guard at the parent, mount the child with a real id.
 
 ## See also
 
-- [`patterns-react-state.md`](patterns-react-state.md) — optimistic UI, deadlines, budgets
-- [`patterns-cross-actor-reads.md`](patterns-cross-actor-reads.md) — aggregating readers, backend side
-- [`api-errors.md`](api-errors.md) — declaring the errors `aborted` carries
+- [`patterns-react-state.md`](patterns-react-state.md), optimistic UI, deadlines, budgets
+- [`patterns-cross-actor-reads.md`](patterns-cross-actor-reads.md), aggregating readers, backend side
+- [`api-errors.md`](api-errors.md), declaring the errors `aborted` carries

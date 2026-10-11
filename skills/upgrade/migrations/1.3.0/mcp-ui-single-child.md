@@ -11,7 +11,7 @@ applies: [mcp-ui]
 Reboot now auto-injects the AI-supplied UI request props (from
 `UI(request=<Model>)` declarations) onto the single child element of
 `RebootClientProvider`, using `React.cloneElement`. As a result, in an
-MCP UI, `RebootClientProvider` must wrap exactly one React element —
+MCP UI, `RebootClientProvider` must wrap exactly one React element:
 your UI App component. A misconfigured tree now throws at render time
 with a message explaining the fix.
 

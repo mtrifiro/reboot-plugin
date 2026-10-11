@@ -12,8 +12,8 @@
 #   `checksums.txt.asc`).
 # - macOS arm64: Tetrate's archive at `archive.tetratelabs.io`
 #   (`.tar.xz` containing the binary). Tetrate is the de facto
-#   third-party distributor of Envoy macOS builds — what `func-e`
-#   consumes — and is the only practical source upstream Envoy
+#   third-party distributor of Envoy macOS builds, what `func-e`
+#   consumes, and is the only practical source upstream Envoy
 #   doesn't publish for macOS. It publishes no digest for the
 #   tarball, so the one pinned below is of the archive as fetched
 #   when the pin was set; it still refuses a changed download.
@@ -35,7 +35,7 @@ SHA256_DARWIN_ARM64="bff2714ebde97297571cbbb1c2c79755038806a4a312261271d31ae9843
 
 # `PLUGIN_DATA` is hardcoded rather than read from `$CLAUDE_PLUGIN_DATA`.
 # Claude Code only sets that env var when it runs something from a
-# plugin entry point — e.g. a hook command. It is *not* set when the
+# plugin entry point: e.g. a hook command. It is *not* set when the
 # agent runs a binary directly via its Bash tool, even when that binary
 # happens to be a shim we ship in `bin/`. Honoring it would mean shims
 # invoked from a hook write to one cache and shims invoked directly by

@@ -65,24 +65,24 @@ while it runs.
 
 ## Never
 
-- `asyncio.create_task(...)` / `asyncio.sleep(...)` for delayed work —
+- `asyncio.create_task(...)` / `asyncio.sleep(...)` for delayed work:
   lost on restart, not transactional.
-- `Account.ref(other_id).schedule(...)` from a **writer** — overloads for
+- `Account.ref(other_id).schedule(...)` from a **writer** overloads for
   another actor accept only `TransactionContext` (mypy reports an opaque
   overload mismatch). Schedule on `self`, or make the method a
   transaction (Writer → Transaction is schema-compatible).
-- `….schedule(when=…)` from a **workflow**, on any ref — use
+- `….schedule(when=…)` from a **workflow**, on any ref: use
   `spawn(when=…)` (`servicer-workflow-declare.md`, "Never").
 - Several scheduled transactions on one actor with the same `when=` (one
-  `expire_hold` per seat) — their two-phase-commit prepares collide and
+  `expire_hold` per seat): their two-phase-commit prepares collide and
   a native assert kills the worker (observed at 1.4.0). Schedule one
   task per logical event covering all the work.
-- A transaction that loops `schedule()` onto N foreign actors — it
+- A transaction that loops `schedule()` onto N foreign actors: it
   crashed the database worker within minutes under contention; fan out
   from a workflow (`servicer-transaction.md` § Never).
-- A naive `datetime` — interpreted in the server's local zone.
+- A naive `datetime`: interpreted in the server's local zone.
 - Relying on a reader that computes "expired" at read time to update
-  other viewers — reactive readers push mutations, not derived values.
+  other viewers: reactive readers push mutations, not derived values.
   Commit the transition with a scheduled writer; keep the read-time
   check as source of truth in case the schedule fires late.
 
@@ -108,8 +108,8 @@ while it runs.
   the actor then schedules on it upgrades its shared lock to exclusive,
   so concurrent chains on one actor collide; give parallel chains their
   own actors (observed at 1.3.0).
-- Dev-mode durable writes cost about 150–200 ms each, globally: about
-  5.5–6.5 constructor-writes/second however arranged (measured at
+- Dev-mode durable writes cost about 150 to 200 ms each, globally: about
+  5.5 to 6.5 constructor-writes/second however arranged (measured at
   1.3.0). Make partial progress usable instead of chasing total time.
 
 ## Errors you will see
@@ -122,6 +122,6 @@ while it runs.
 
 ## See also
 
-- [`scheduling-recurring.md`](scheduling-recurring.md) — recurring and cron jobs
-- [`servicer-workflow-declare.md`](servicer-workflow-declare.md) — starting workflows, spawn
-- [`servicer-transaction.md`](servicer-transaction.md) — transaction participant cost
+- [`scheduling-recurring.md`](scheduling-recurring.md), recurring and cron jobs
+- [`servicer-workflow-declare.md`](servicer-workflow-declare.md), starting workflows, spawn
+- [`servicer-transaction.md`](servicer-transaction.md), transaction participant cost

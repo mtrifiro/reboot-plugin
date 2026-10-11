@@ -1,5 +1,5 @@
 ---
-title: Back Up and Restore — `rbt export`, Expunge, `rbt import`
+title: Back Up and Restore, `rbt export`, Expunge, `rbt import`
 impact: HIGH
 impactDescription: Every breaking API change costs an expunge, and an expunge deletes every user's data unless it was exported first and imported after
 tags: deploy, backup, restore, export, import, expunge, migration, breaking-change, cloud
@@ -12,7 +12,7 @@ verified: 1.6.0
 docs: ""
 ---
 
-# Back Up and Restore — `rbt export`, Expunge, `rbt import`
+# Back Up and Restore: `rbt export`, Expunge, `rbt import`
 
 ## When you are here
 
@@ -62,10 +62,10 @@ with `;` (the next command runs whether it worked or not) or a pipe
 
 At the top of `scripts/restore.py`, once:
 
-- `MUST_BE_EMPTY` — `None` checks every type of the app's own servicers.
+- `MUST_BE_EMPTY`: `None` checks every type of the app's own servicers.
   If `initialize` creates actors on every boot, list only the types a
   fresh boot leaves empty.
-- `BOOT_TASKS` — every `(state type, Method)` the boot starts (a loop
+- `BOOT_TASKS`: every `(state type, Method)` the boot starts (a loop
   `initialize` begins). The import restarts every incomplete task, so
   one left in would run beside the boot's own; the restore leaves it,
   its idempotency records and its pending queue `dequeue` out.
@@ -188,6 +188,6 @@ files, fine to hundreds of thousands of lines.
 
 ## See also
 
-- [`api-schema-evolution.md`](api-schema-evolution.md) — which API changes need this
-- [`lifecycle-reboot-cloud.md`](lifecycle-reboot-cloud.md) — `rbt cloud up`/`down`, secrets
-- [`deploy` skill](../../deploy/SKILL.md) — `scripts/deploy.sh` and the ledger
+- [`api-schema-evolution.md`](api-schema-evolution.md), which API changes need this
+- [`lifecycle-reboot-cloud.md`](lifecycle-reboot-cloud.md), `rbt cloud up`/`down`, secrets
+- [`deploy` skill](../../deploy/SKILL.md), `scripts/deploy.sh` and the ledger

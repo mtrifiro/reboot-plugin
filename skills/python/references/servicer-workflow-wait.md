@@ -147,21 +147,21 @@ await until("Job done", context, is_done)
 ## Never
 
 - `return response if ready else None` (or `0`, `0.0`, `""`) as the
-  "not yet" value — a non-bool resolves at once; return `False`. One app
+  "not yet" value: a non-bool resolves at once; return `False`. One app
   refunded $0.00 without manager approval; another got `""` as a queue
   id.
-- An HTTP call, SDK status check or file read inside the callable — the
+- An HTTP call, SDK status check or file read inside the callable: the
   runtime can't see it change, so the wait hangs forever (or busy-polls).
-- `while True: … await asyncio.sleep(5)` to poll state — not durable;
+- `while True: … await asyncio.sleep(5)` to poll state: not durable;
   use `until`.
 - Changing an `until` callable's return type while instances are
-  running — the memo holds the old type and every retry fails. Change
+  running: the memo holds the old type and every retry fails. Change
   the alias with the type.
 - A callable that calls the same mutating method (e.g. a queue's
-  `try_dequeue`) every time it re-runs — the second call on the same
+  `try_dequeue`) every time it re-runs: the second call on the same
   context is refused. Call it only when it will take something; return
   what it took.
-- A bare `def` inline-writer callback — it must be `async def`.
+- A bare `def` inline-writer callback: it must be `async def`.
 
 ## Limits
 
@@ -188,6 +188,6 @@ await until("Job done", context, is_done)
 
 ## See also
 
-- [`servicer-workflow-loop.md`](servicer-workflow-loop.md) — the loop `until_changes` needs
-- [`servicer-workflow-calls.md`](servicer-workflow-calls.md) — inline write rules
-- [`servicer-workflow-external.md`](servicer-workflow-external.md) — polling external status
+- [`servicer-workflow-loop.md`](servicer-workflow-loop.md), the loop `until_changes` needs
+- [`servicer-workflow-calls.md`](servicer-workflow-calls.md), inline write rules
+- [`servicer-workflow-external.md`](servicer-workflow-external.md), polling external status

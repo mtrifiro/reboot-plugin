@@ -178,22 +178,22 @@ useEffect(() => { /* … */ }, [heldKey]);
 
 ## Never
 
-- `ids.map((id) => useShowing({ id }))` — the hook count changes with
+- `ids.map((id) => useShowing({ id }))`: the hook count changes with
   the list, breaking the rules of hooks; render a child per id.
 - Deriving a visible transition at read time only (a lapsed hold, an
-  expired offer) — nothing is written, so other subscribers aren't
+  expired offer): nothing is written, so other subscribers aren't
   notified (works in one tab, fails in two). Commit it with a scheduled
   writer ([`scheduling-basic.md`](scheduling-basic.md)) for liveness
   and keep the lazy check for correctness if the schedule is late.
-- A derived array or object in a `useEffect` dependency list — spins
+- A derived array or object in a `useEffect` dependency list: spins
   into `Maximum update depth exceeded`; depend on a derived string.
-- `crypto.randomUUID()` unguarded — undefined off a secure origin; use
+- `crypto.randomUUID()` unguarded: undefined off a secure origin; use
   `newId()`.
-- A mutation awaited with no deadline in a `--watch` dev loop — the
+- A mutation awaited with no deadline in a `--watch` dev loop: the
   button spins forever after a restart.
-- A single page-level spinner over many subscriptions — they fill in
+- A single page-level spinner over many subscriptions: they fill in
   progressively; show per-subscription loading.
-- A refetch library or a poll alongside reader hooks — readers already
+- A refetch library or a poll alongside reader hooks: readers already
   push; a poll also spends the per-host connection budget.
 
 ## Limits
@@ -219,6 +219,6 @@ useEffect(() => { /* … */ }, [heldKey]);
 
 ## See also
 
-- [`react-generated-client.md`](react-generated-client.md) — hook, mutator, error shapes
-- [`patterns-cross-actor-reads.md`](patterns-cross-actor-reads.md) — summary reader, backend side
-- [`scheduling-basic.md`](scheduling-basic.md) — commit time-based transitions
+- [`react-generated-client.md`](react-generated-client.md), hook, mutator, error shapes
+- [`patterns-cross-actor-reads.md`](patterns-cross-actor-reads.md), summary reader, backend side
+- [`scheduling-basic.md`](scheduling-basic.md), commit time-based transitions

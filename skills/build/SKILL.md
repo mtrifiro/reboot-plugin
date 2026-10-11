@@ -1,11 +1,11 @@
 ---
 name: build
-description: The shared design-and-build flow every Reboot app with a frontend follows, reached from the app, mcp-ui and web-app skills (use it through one of them, with that front-door skill open) — design phase, state model assessment, the build steps in dependency order (API definition → project shell → servicer → authorizers → frontend → tests → run) and the update flow for an existing app.
+description: The shared design-and-build flow every Reboot app with a frontend follows, reached from the app, mcp-ui and web-app skills (use it through one of them, with that front-door skill open), design phase, state model assessment, the build steps in dependency order (API definition → project shell → servicer → authorizers → frontend → tests → run) and the update flow for an existing app.
 argument-hint: [<app-description>]
 allowed-tools: Bash, Read, Write, Glob, Grep, Edit, AskUserQuestion
 ---
 
-# build — Design and Build a Reboot App
+# build: Design and Build a Reboot App
 
 > **Version notices:** if `rbt` reports a version mismatch or a newer
 > Reboot, follow the [upgrade skill](../upgrade/SKILL.md).
@@ -88,14 +88,14 @@ mode.
 The flow is the **Reboot Flywheel**'s first two stages
 ([`references/flywheel.md`](references/flywheel.md)): **Design** runs
 through Step 1 and ends when the user accepts the domain model and the
-feature files ("Accept the Design"); **Prove** is Steps 2–7, building
+feature files ("Accept the Design"); **Prove** is Steps 2 to 7, building
 to that accepted design. A change that alters the design goes back
 through the acceptance.
 
 <!-- generated:start catalog skill=build -->
 **Lookups**
-- `references/evidence.md` — Evidence for Merge and Promote
-- `references/flywheel.md` — The Reboot Flywheel
+- `references/evidence.md`: Evidence for Merge and Promote
+- `references/flywheel.md`: The Reboot Flywheel
 <!-- generated:end -->
 
 ## Reading References
@@ -132,7 +132,7 @@ instead:
   `patterns-common-gotchas.md` before `site-packages`.
 
 Uncovered? Bound the output: `grep -n … | head -40` or
-`sed -n '<start>,<end>p'` over a known range — never a whole generated
+`sed -n '<start>,<end>p'` over a known range, never a whole generated
 file or an unbounded recursive grep.
 
 ## Settle the Design, Then Build
@@ -214,7 +214,7 @@ waits.
    - The look: the five-line brief (who and on what screen, the task,
      the primary view's question, the accent and its real source or
      "house default, no brand supplied", the type) and the primary
-     view for the task (`web-app/references/ui-design.md`, 01–02).
+     view for the task (`web-app/references/ui-design.md`, 01 to 02).
      Light and dark both designed; web-app: a toggle in the first
      build; mcp-ui: the host's theme (`mcp-ui/references/ui-design.md`).
    - mcp-ui: the `User` type and its methods, which methods get
@@ -245,10 +245,10 @@ The reader hasn't read the skill files; make the design stand alone:
   per-account"). A precise type name is fine when paired with that
   reason; the rule is no bare jargon.
 
-> BAD: `people_index_id: str` — ID of an OrderedMap actor that holds
-> this user's Persons (Shape C from state-collections.md — unbounded).
+> BAD: `people_index_id: str`, ID of an OrderedMap actor that holds
+> this user's Persons (Shape C from state-collections.md, unbounded).
 >
-> GOOD: `people_index_id: str` — points to an OrderedMap that holds
+> GOOD: `people_index_id: str`, points to an OrderedMap that holds
 > this user's Persons. An OrderedMap (rather than an inline list)
 > because a PRM grows without bound and the UI will paginate / sort by
 > recency.
@@ -360,7 +360,7 @@ The Call Graph, which method calls which, stays empty until Step 3
 writes the methods' code, then fills in. If it fails, say so in a
 sentence and keep building.
 
-### Step 1 — API definition
+### Step 1: API definition
 
 Read "Before the API definition". Name the project
 once, in the design: kebab-case `<project>` (`todo-list`) and snake_case
@@ -420,7 +420,7 @@ writes in `design/accepted.json`, and one commit holding them with
 `api/` and the feature files, the base every later model diff measures
 from.
 
-### Step 2 — Project shell
+### Step 2: Project shell
 
 Read "Before the project shell". Copy `templates/<front-door>/` with
 its `copy.sh --merge` (see [`templates/README.md`](templates/README.md));
@@ -473,7 +473,7 @@ lands. Then:
    ([`references/flywheel.md`](references/flywheel.md), "The decisions
    log").
 
-### Step 2a — Run the scenarios red
+### Step 2a: Run the scenarios red
 
 Before any servicer body: read "Before the authorizers" (Step 4's
 list), then declare every servicer class with each method raising
@@ -488,7 +488,7 @@ step not found or a fixture that never started proves nothing.
 acceptance, so the handoff shows it. Then Step 3, one servicer at a
 time, each scenario going green.
 
-### Step 3 — Servicer
+### Step 3: Servicer
 
 Read "Before the servicer". Write `backend/src/servicers/<app>.py`: an
 `async def` per method, context type matching the factory. Writers
@@ -499,7 +499,7 @@ the one list `main.py` and every test module take. Seed in `initialize` per
 mcp-ui: `UserServicer` and `<X>.create(context)` in
 `mcp-ui/references/servicer-patterns.md`.
 
-### Step 4 — Authorizers
+### Step 4: Authorizers
 
 Read "Before the authorizers" (done at Step 2a). **Every servicer has
 carried a real `authorizer()` since its stub; review each against the
@@ -550,15 +550,15 @@ test harness, `rbt serve` and Reboot Cloud deny with `PermissionDenied`
   Reboot's verifier runs first; non-Reboot-minted tokens fall through
   to yours.
 
-### Step 5 — Frontend
+### Step 5: Frontend
 
 Read "Before the frontend".
-1. The template brought the shell — mcp-ui: `frontend/`, one bundle per
+1. The template brought the shell: mcp-ui: `frontend/`, one bundle per
    UI under `frontend/mcp/<name>/`; web-app: `web/`. Versions are pinned
    to what the plugin ships; don't regenerate with
    `npm create vite@latest` (emits React 19 / TypeScript 6).
 2. `npm install` in `frontend/` or `web/`.
-3. `uv run rbt generate` again — the React bindings need `node_modules`.
+3. `uv run rbt generate` again: the React bindings need `node_modules`.
 4. Write the UI from the references.
    mcp-ui: `UI()` bundles per `mcp-ui/references/react-app-tsx.md`;
    copy `vite.config.ts` exactly. web-app: provider, `VITE_REBOOT_URL`,
@@ -575,7 +575,7 @@ Read "Before the frontend".
    with the [`run` skill](../run/SKILL.md) (Step 7 only hands it off),
    then, after the review, `uv run --with playwright python scripts/screenshots.py <routes>` saves every
    route at desktop and phone width, light and dark; open and check each
-   against `ui-design.md` principles 03–09 and its Never list, fix
+   against `ui-design.md` principles 03 to 09 and its Never list, fix
    what fails in one pass, then pin it with a look scenario per page.
 6. **Responsive to the person, by Google's "good" thresholds**
    (Core Web Vitals, and RAIL for input):
@@ -612,7 +612,7 @@ Read "Before the frontend".
    hold them to the same thresholds by keeping each to one reader and a
    small bundle.
 
-### Step 6 — Tests
+### Step 6: Tests
 
 Read "Before the tests". **Write and run every feature's scenarios
 before handoff** (the first prototype's all; later, each feature's as
@@ -654,7 +654,7 @@ brings you back to report it. A run silent for several minutes is
 stuck on a scenario; rerun with `-x -v` to name it. Point the user at the dashboard's Features page (web-app:
 and the browser recordings).
 
-### Step 7 — Run
+### Step 7: Run
 
 Follow the [`run` skill](../run/SKILL.md), the one start procedure;
 never bare `rbt dev run` / `npm run dev`.

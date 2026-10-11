@@ -123,6 +123,6 @@ await account.deposit(context, amount=request.initial_deposit)
 
 ## See also
 
-- [`rpc-constructor-calls.md`](rpc-constructor-calls.md) — how callers invoke a constructor
-- [`lifecycle-initialize-hook.md`](lifecycle-initialize-hook.md) — singletons and replayed creates
-- [`api-methods.md`](api-methods.md) — the exact factory method signature
+- [`rpc-constructor-calls.md`](rpc-constructor-calls.md), how callers invoke a constructor
+- [`lifecycle-initialize-hook.md`](lifecycle-initialize-hook.md), singletons and replayed creates
+- [`api-methods.md`](api-methods.md), the exact factory method signature

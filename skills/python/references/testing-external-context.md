@@ -175,20 +175,20 @@ UI would render, not internal state shape.
 
 ## Never
 
-- **`ReaderContext(...)` / `WriterContext(...)` in a test** — those are
+- **`ReaderContext(...)` / `WriterContext(...)` in a test** those are
   runtime-managed; use `create_external_context`.
-- **Overriding `authorizer()` in a test subclass** — impersonate with
+- **Overriding `authorizer()` in a test subclass** impersonate with
   `create_external_context_as`. Subclassing to mock *behavior* is fine.
-- **Several denied mutations asserted from one context** — a
+- **Several denied mutations asserted from one context** a
   `PermissionDenied` is undeclared, so the context turns uncertain and
   its next mutation fails with `IdempotencyUncertainError`. Use a fresh
   context or `.idempotently("...")` alias per denial; declared errors
   are free (cineloop, 1.4.1).
-- **Polling with `asyncio.sleep`** — that tests the sleep; use
+- **Polling with `asyncio.sleep`** that tests the sleep; use
   `reactively()` or `retrieve`.
-- **`anext()` without `asyncio.wait_for`** — a missing update hangs
+- **`anext()` without `asyncio.wait_for`** a missing update hangs
   the suite.
-- **Patching where a helper is defined** — patch where it is imported.
+- **Patching where a helper is defined** patch where it is imported.
 
 ## Limits
 
@@ -207,6 +207,6 @@ UI would render, not internal state shape.
 
 ## See also
 
-- [`testing-harness.md`](testing-harness.md) — `Reboot()`, `up()`, impersonation
-- [`testing-features.md`](testing-features.md) — custom steps use these calls
-- [`patterns-idempotency.md`](patterns-idempotency.md) — uncertain mutations explained
+- [`testing-harness.md`](testing-harness.md), `Reboot()`, `up()`, impersonation
+- [`testing-features.md`](testing-features.md), custom steps use these calls
+- [`patterns-idempotency.md`](patterns-idempotency.md), uncertain mutations explained

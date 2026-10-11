@@ -1,28 +1,28 @@
 ---
 name: run
-description: Run, stop, restart or reset an existing Reboot application locally. Detects a Web App (`web/`), an MCP UI (`frontend/mcp/`) or both, puts dependencies and secrets in place, then starts every process the app needs — the backend (`rbt dev run`), the frontend dev server and, for an MCP UI, the setup wizard, plus a Cloudflare tunnel only when the MCP client runs elsewhere. Use at the start of a session, whenever the app must come back up, and for a clean stop, restart or `rbt dev expunge`.
+description: Run, stop, restart or reset an existing Reboot application locally. Detects a Web App (`web/`), an MCP UI (`frontend/mcp/`) or both, puts dependencies and secrets in place, then starts every process the app needs: the backend (`rbt dev run`), the frontend dev server and, for an MCP UI, the setup wizard, plus a Cloudflare tunnel only when the MCP client runs elsewhere. Use at the start of a session, whenever the app must come back up, and for a clean stop, restart or `rbt dev expunge`.
 argument-hint: [<project-directory>]
 allowed-tools: Bash, Read, Write, Glob, Grep, Edit, AskUserQuestion
 ---
 
-# run — Run a Reboot Application
+# run: Run a Reboot Application
 
 > **Version notices:** if `rbt` reports a version mismatch or a newer
 > Reboot, follow the [upgrade skill](../upgrade/SKILL.md).
 
 The canonical procedure to start, stop, restart and reset an existing
-Reboot app — typically at the start of a fresh session, when no
+Reboot app: typically at the start of a fresh session, when no
 processes or exported environment survive. It **runs** an app; to
 build one see the [`app` skill](../app/SKILL.md), whose build flow
 defers here to run.
 
-## Step 1 — Locate the project
+## Step 1: Locate the project
 
 Use the directory the user named, or the current one. The project root
 contains `.rbtrc`; if none is obvious, ask. Run every command below
 from the project root.
 
-## Step 2 — Detect the app type
+## Step 2: Detect the app type
 
 | On disk | App type | Frontend dev server runs in |
 | --- | --- | --- |
@@ -34,12 +34,12 @@ from the project root.
 - An API using `mcp=Tool(` with no frontend directory is an MCP UI with
   no frontend (tools only, no `UI()` methods).
 - Never use `mcp=None` as a signal: `mcp=` is required on every method.
-- No match: ask "Is this an MCP UI, a standalone Web App, or both?" —
+- No match: ask "Is this an MCP UI, a standalone Web App, or both?",
   don't guess; the type decides whether the tunnel and wizard start.
 
 "MCP branch" below means MCP UI or Both.
 
-## Step 3 — Dependencies
+## Step 3: Dependencies
 
 - Backend: no `.venv/` → `uv sync`. If `rbt dev run` warns `reboot[dev]`
   is not installed, add `reboot[dev]` at the same pin as `reboot` to the
@@ -49,7 +49,7 @@ from the project root.
 - Frontend: no `node_modules/` in a Step 2 frontend directory →
   `npm install` there.
 
-## Step 4 — Secrets: the git-ignored env file
+## Step 4: Secrets: the git-ignored env file
 
 Apps read secrets from `os.environ`; `rbt dev run` loads them via
 `--env-file`, set once in `.rbtrc`. Before starting the backend:
@@ -63,7 +63,7 @@ Apps read secrets from `os.environ`; `rbt dev run` loads them via
 4. **Fill `.env`** with `KEY=VALUE` lines (e.g.
    `ANTHROPIC_API_KEY=sk-ant-...`). Ask the user for every required
    variable not already in `.env` or the environment. Never start with
-   one missing — the app fails at boot or first use, illegibly.
+   one missing: the app fails at boot or first use, illegibly.
 
 **When `.env` changes:** `rbt dev run` watches its `--env-file` and
 restarts with it re-read (1.6.0 source); shell-exported variables are
@@ -72,7 +72,7 @@ value ignored until a full restart, so if it doesn't show, stop and
 start the backend (see "Stop, restart, reset"). Dev vs. Reboot Cloud
 secrets: `python/references/lifecycle-secrets.md`.
 
-## Step 5 — Start the processes
+## Step 5: Start the processes
 
 Run each process in its own background shell, from the project root.
 
@@ -89,7 +89,7 @@ lsof -nP -iTCP:<port> -sTCP:LISTEN
 If held, inspect it (`ps -o pid,ppid,etime,command -p <pid>`):
 
 - `envoy` or `backend/src/main.py` from this project with parent pid
-  `1`: an orphan — clear it via "Stop, restart, reset" below.
+  `1`: an orphan, clear it via "Stop, restart, reset" below.
 - `scripts/placeholder.py`: the not-running page, which holds the port
   while the app is down; `rbt dev run` and `npm run dev` stop it first.
 - Anything else: not yours; don't kill it. Set `dev run --port=<port>`
@@ -102,10 +102,10 @@ another project's backend or dashboard may hold it (findings-board,
 1.6.0). `scripts/doctor.sh` in the project does these checks, and the
 ones under "Stop, restart, reset", in one command.
 
-### Tunnel — MCP branch, only when the client is elsewhere
+### Tunnel: MCP branch, only when the client is elsewhere
 
 **Skip for a Web App**: it has no MCP clients, and a tunnel publishes
-the dev server (and its `Development()` sign-in) on a public URL —
+the dev server (and its `Development()` sign-in) on a public URL,
 start one only if the user asks for a shareable preview.
 
 For an MCP UI, a client on this machine (Claude Code, Claude Desktop,
@@ -117,7 +117,7 @@ and say in the handoff that its URL is public and exposes the
 `cloudflared` shim in its own background shell:
 
 - `--url http://localhost:<port>`, the `dev run --port=` value in `.rbtrc`.
-- `--metrics localhost:<METRICS_PORT>` — a free port (default `4040`).
+- `--metrics localhost:<METRICS_PORT>`: a free port (default `4040`).
   Once up, `http://localhost:<METRICS_PORT>/quicktunnel` returns the
   `*.trycloudflare.com` URL.
 
@@ -125,7 +125,7 @@ and say in the handoff that its URL is public and exposes the
 cloudflared tunnel --metrics localhost:4040 --url http://localhost:<port>
 ```
 
-### Backend — every app type
+### Backend: every app type
 
 ```sh
 uv run rbt dev run --no-chaos
@@ -135,14 +135,14 @@ uv run rbt dev run --no-chaos
 the Chaos Monkey, which confuses a developer who can't see the backend
 terminal.
 
-### Frontend — every app type with a frontend
+### Frontend: every app type with a frontend
 
 ```sh
 cd frontend && npm run dev   # MCP UI or dual-frontend
 cd web && npm run dev        # standalone Web App
 ```
 
-### Setup wizard — MCP branch only
+### Setup wizard: MCP branch only
 
 An MCP UI's backend serves a **setup wizard** at its root
 (`http://localhost:<port>`) that walks the user through connecting an MCP
@@ -159,15 +159,15 @@ traffic:
      python3 -m webbrowser http://localhost:<port>
    ```
 
-Open it **exactly once, at first startup — never on reloads**: under
+Open it **exactly once, at first startup: never on reloads**: under
 `--watch` the backend reprints its "serving traffic" banner on every
 hot reload, so don't add any reload-driven re-open.
 
 **Skip for a Web App** (no wizard is served). Open it for every
-MCP-branch app, including a **tools-only app** — the wizard is how the
+MCP-branch app, including a **tools-only app** the wizard is how the
 user tries its tools in MCPJam or Claude.
 
-### MCPJam inspector — MCP branch, on demand, never during startup
+### MCPJam inspector: MCP branch, on demand, never during startup
 
 Never start MCPJam when bringing the app up. It is one of the wizard's
 clients (with Claude and ChatGPT); when the user picks it, the wizard
@@ -188,15 +188,15 @@ mcpjam-inspector --url http://localhost:<port>/mcp --oauth
 
 Either way it binds the fixed port 6274.
 
-## Step 6 — Hand off
+## Step 6: Hand off
 
 Confirm every process is up from its logs, then give the user:
 
 - the app's inspect-page URL (`rbt inspect` reads the same state from
-  the CLI — see the [inspect skill](../inspect/SKILL.md));
+  the CLI: see the [inspect skill](../inspect/SKILL.md));
 - MCP UI: the setup-wizard URL (`http://localhost:<port>`, already open)
   and a first prompt (e.g. "Create a new todo list and show it to me").
-  No MCPJam URL — it isn't running until picked in the wizard;
+  No MCPJam URL: it isn't running until picked in the wizard;
 - Web App: the frontend dev-server URL and a first page to open;
 - Both: all of the above.
 

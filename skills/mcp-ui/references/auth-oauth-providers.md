@@ -1,5 +1,5 @@
 ---
-title: OAuth Providers — Choosing a Production Provider
+title: OAuth Providers, Choosing a Production Provider
 impact: HIGH
 impactDescription: The provider you launch with fixes your user-ID namespace; switching providers later strands all user-keyed state, so choose deliberately before you have production users
 tags: auth, oauth, development, anonymous, google, github, auth0, ory, provider, production, migration, claims, consent
@@ -12,7 +12,7 @@ verified: 1.6.0
 docs: ""
 ---
 
-# OAuth Providers — Choosing a Production Provider
+# OAuth Providers: Choosing a Production Provider
 
 ## When you are here
 
@@ -25,7 +25,7 @@ calling a provider's API as the user: `auth-store-tokens.md`,
 ## Do this
 
 `oauth=` takes a selector: `OAuthProviderByEnvironment(dev=..., prod=...)`
-— fake sign-in locally, real provider elsewhere, one `main.py`:
+, fake sign-in locally, real provider elsewhere, one `main.py`:
 
 ```python
 import os
@@ -74,11 +74,11 @@ methods are chosen in Auth0. `Ory` `domain=` is the project
 (`your-slug.projects.oryapis.com`). Servicers and rules are
 provider-agnostic; only `main.py` changes.
 
-**Credentials are the user's job — tell them.** App registration, client
+**Credentials are the user's job: tell them.** App registration, client
 ID / secret and callback URL happen in the provider's console; nothing
 works until they do:
 
-- **Google**: [Setting up OAuth 2.0](https://support.google.com/cloud/answer/6158849) — an OAuth client ID of type "Web application".
+- **Google**: [Setting up OAuth 2.0](https://support.google.com/cloud/answer/6158849), an OAuth client ID of type "Web application".
 - **GitHub**: [Creating an OAuth app](https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/creating-an-oauth-app) (a **GitHub App** with expiring user tokens if you need refresh tokens).
 - **Auth0**: a **Regular Web Application** in the [dashboard](https://auth0.com/docs/get-started/auth0-overview/create-applications); enable upstream connections on its Connections tab.
 - **Ory**: an **OAuth2 client** in the [Ory Console](https://www.ory.sh/docs/oauth2-oidc/authorization-code-flow) with the authorization-code grant and `openid` (plus `email` / `profile` for requested claims, `offline_access` if used).
@@ -99,7 +99,7 @@ reserved): locally `export ...` or `--env=NAME=...`; Reboot Cloud
 to `User.set_claims` on every sign-in; the provider requests the scopes
 and rejects undeliverable claims at construction. Without `claims=`,
 `set_claims` never runs; with them, override it as a full replace (the
-generated default raises `NotImplementedError`) —
+generated default raises `NotImplementedError`):
 `python/references/auth-claims.md`.
 
 `Ory` also takes `webhook_secret=` (requires `claims=`) for an Ory Action
@@ -112,28 +112,28 @@ confirm `state_id_is_user_id` rules accept the owner and reject others.
 
 ## Never
 
-- Switch providers once you have real users — no shared ID space, so
+- Switch providers once you have real users: no shared ID space, so
   every user ID changes, stranding `state_id=user_id` state (same human,
   fresh empty actor), `state_id_is_user_id` rules, `User`-typed actors,
   user-keyed indexes. No secure migration proves old-ID data belongs to
   a new account.
-- Launch on `Anonymous()` "for now" — its IDs are unauthenticated
+- Launch on `Anonymous()` "for now": its IDs are unauthenticated
   throwaways, so "claim your data" later is guesswork or identity theft.
   Pick the real provider before any production state (even an internal
   pilot) and start clean.
-- Ship `Development()` — real customers must never see the fake picker.
-- Change which Auth0 connections you offer casually — it can change
+- Ship `Development()`: real customers must never see the fake picker.
+- Change which Auth0 connections you offer casually: it can change
   users' `sub`s.
 - Hard-code the client ID / secret in `main.py`, commit them, or put
   them in `.rbtrc` (checked into git).
-- `os.environ["..."]` for a `prod=`-only provider — the constructor runs
+- `os.environ["..."]` for a `prod=`-only provider: the constructor runs
   under `rbt dev` too. Use `os.environ.get(...)`; the provider rejects an
   empty `client_id` / `client_secret` only when selected, so production
   still fails fast.
-- Trust the client name on the consent screen — it is attacker-chosen;
+- Trust the client name on the consent screen: it is attacker-chosen;
   the `redirect_uri` host is the signal.
 - Build profiles, password resets, or MFA yourself on `Google` /
-  `GitHub` — use `Auth0`.
+  `GitHub`: use `Auth0`.
 
 ## Limits
 
@@ -171,6 +171,6 @@ confirm `state_id_is_user_id` rules accept the owner and reject others.
 
 ## See also
 
-- [`auth-custom-oauth-provider.md`](auth-custom-oauth-provider.md) — when no provider fits
-- [`auth-store-tokens.md`](auth-store-tokens.md) — calling the provider's API
-- [`python/references/auth-claims.md`](../../python/references/auth-claims.md) — `set_claims` rules
+- [`auth-custom-oauth-provider.md`](auth-custom-oauth-provider.md), when no provider fits
+- [`auth-store-tokens.md`](auth-store-tokens.md), calling the provider's API
+- [`python/references/auth-claims.md`](../../python/references/auth-claims.md), `set_claims` rules

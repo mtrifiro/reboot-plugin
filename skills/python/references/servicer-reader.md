@@ -53,14 +53,14 @@ class ChatRoomServicer(ChatRoom.Servicer):
   never persisted (observed at 1.6.0: a reader set a field to 999 and
   returned it; the next read saw the old value). Use a `Writer` or
   `Transaction`.
-- Calling a `Writer`, `Transaction` or constructor — a reader context
+- Calling a `Writer`, `Transaction` or constructor: a reader context
   calls only readers (`rpc-calls.md`); cross-actor work is a
   `Transaction`.
 - Computing "mine" from `context.auth` in a reader another reader
-  calls — the inner call is app-internal with `context.auth` `None`,
+  calls: the inner call is app-internal with `context.auth` `None`,
   silently wrong. Pass the viewer explicitly (`servicer-authorizer.md`
   § Never).
-- `self.state_id` — use `self.ref().state_id` (`rpc-refs.md`).
+- `self.state_id`: use `self.ref().state_id` (`rpc-refs.md`).
 
 ## Limits
 
@@ -88,6 +88,6 @@ class ChatRoomServicer(ChatRoom.Servicer):
 
 ## See also
 
-- [`patterns-cross-actor-reads.md`](patterns-cross-actor-reads.md) — fan-out depth, materialize on write
-- [`servicer-authorizer.md`](servicer-authorizer.md) — nested calls carry no identity
-- [`rpc-calls.md`](rpc-calls.md) — which context calls which method
+- [`patterns-cross-actor-reads.md`](patterns-cross-actor-reads.md), fan-out depth, materialize on write
+- [`servicer-authorizer.md`](servicer-authorizer.md), nested calls carry no identity
+- [`rpc-calls.md`](rpc-calls.md), which context calls which method

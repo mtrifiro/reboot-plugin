@@ -3,8 +3,8 @@
 // One config drives three jobs. The dev server is selected by
 // `command === "serve"`; the two build shapes are selected by the
 // `RBT_BUILD_TARGET` env var, set per UI by `build.mjs`. `mode` keeps
-// its conventional Vite values — `development` (serve) / `production`
-// (build) — so the matching `.env.<mode>` files load as usual:
+// its conventional Vite values, `development` (serve) / `production`
+// (build), so the matching `.env.<mode>` files load as usual:
 //
 //   * `vite` (serve): a single dev server that delivers HMR for every
 //     `mcp/<name>` UI AND the standalone `web/` SPA, all under
@@ -30,7 +30,7 @@ import { viteSingleFile } from "vite-plugin-singlefile";
 // index.html serving, which expects `/__/frontend/web/`, so it 404s.
 // Redirect the slash-less form to the canonical trailing-slash form so
 // the `web/` SPA and each `mcp/<name>` UI load with or without the
-// trailing slash — matching how the framework's dist-mode server
+// trailing slash: matching how the framework's dist-mode server
 // behaves. Only a path that resolves to a real directory with an
 // `index.html` is redirected, so Vite's own internal module URLs
 // (`@vite/client`, `@react-refresh`) and source or asset files fall
@@ -138,7 +138,7 @@ export default defineConfig(({ command }) => {
   // same server. It reaches the backend via `VITE_REBOOT_URL` (see
   // `web/.env.development`) rather than its own origin, so opening it
   // straight from this dev server exercises the real cross-origin
-  // frontend/backend path — the same shape as a production deploy.
+  // frontend/backend path: the same shape as a production deploy.
   //
   // Hot Module Replacement works automatically: Vite's client connects
   // to the page's origin, and Envoy proxies WebSocket upgrades to
@@ -172,7 +172,7 @@ export default defineConfig(({ command }) => {
   }
 
   // Which UI a build targets is read from `RBT_BUILD_TARGET` (set by
-  // `build.mjs`), not Vite's `mode` — so `mode` stays `production`
+  // `build.mjs`), not Vite's `mode`: so `mode` stays `production`
   // and the `web/` build below reads `web/.env.production`.
   const target = process.env.RBT_BUILD_TARGET ?? "";
 

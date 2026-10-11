@@ -1,8 +1,8 @@
-# __Title__ — Reboot findings
+# __Title__: Reboot findings
 
 Where building this app on Reboot surprised you: a skill was wrong,
 silent, or hard to find; the framework behaved unexpectedly; something
-worked better than expected. Append an item the moment it happens —
+worked better than expected. Append an item the moment it happens:
 especially when **nothing in the skills says so**. The `report` skill
 in the Reboot plugin turns these items into issues for the Reboot team
 once you approve them.
@@ -32,7 +32,7 @@ you at the wrong file. -->
 
 <!-- Keep these too: they show what not to change. -->
 
-<!-- Item template — copy under the right heading:
+<!-- Item template: copy under the right heading:
 
 ### 🟡 <one-line title>
 

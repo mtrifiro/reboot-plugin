@@ -49,7 +49,7 @@ Backend-only: copy `web-app`, delete `web/` and the `web/` lines of
 
 Why:
 
-- **`pyproject.toml`** — runtime dep only `reboot==1.6.0` (what an app
+- **`pyproject.toml`** runtime dep only `reboot==1.6.0` (what an app
   packaged for `rbt serve` installs); `dev` group: `reboot[dev]==1.6.0`
   (runs `reboot.bdd` and the dashboard; `rbt dashboard` refuses to start
   without it, `rbt dev run` warns), `mypy`, `pytest`, `types-protobuf`.
@@ -58,13 +58,13 @@ Why:
   installs deps and the default `dev` group into `.venv` without
   building the app. LLM SDKs are extras: `reboot[anthropic]==1.6.0`
   ([`agent-pydantic-ai.md`](agent-pydantic-ai.md)).
-- **`.gitignore`** — `.rbt/` (dev state), generated `backend/api/` and
+- **`.gitignore`** `.rbt/` (dev state), generated `backend/api/` and
   React output (`frontend/api/` or `web/src/api/`), `.env`,
   `*.recordings/`, venv and caches, `node_modules/`, the frontend build.
   Keep the frontend paths matching `.rbtrc`'s `generate --react=`. A
   fresh clone (and CI) runs `rbt generate` before anything imports or
   type-checks; `rbt dev run` regenerates on its own.
-- **`.mypy.ini`** — with no `__init__.py`,
+- **`.mypy.ini`** with no `__init__.py`,
   `mypy_path = tests:backend/src:backend/api:api` plus
   `explicit_package_bases` lets mypy resolve
   `from <app>.v1.<app>_rbt import ...`; the root `api` entry resolves the
@@ -103,7 +103,7 @@ class) or a misspelled field on one (`has no attribute`), never via
 
 ## Never
 
-- `__init__.py` anywhere — not in `api/` (confuses `rbt generate`'s
+- `__init__.py` anywhere: not in `api/` (confuses `rbt generate`'s
   package detection), `backend/` or `tests/`. mypy resolves imports via
   `explicit_package_bases`, pytest via `pytest.ini`, and `rbt` sets the
   runtime `PYTHONPATH`.
@@ -131,7 +131,7 @@ class) or a misspelled field on one (`has no attribute`), never via
 
 ## Scales as
 
-- mypy on the template: seconds; the suite on a real app: minutes —
+- mypy on the template: seconds; the suite on a real app: minutes,
   type-check first. Generated `_rbt.py` grows with the API (~14,000
   lines for the two-type template at 1.6.0); the ignore stanza skips it.
 
@@ -144,6 +144,6 @@ class) or a misspelled field on one (`has no attribute`), never via
 
 ## See also
 
-- [`lifecycle-rbtrc.md`](lifecycle-rbtrc.md) — the `.rbtrc` format
-- [`testing-project-setup.md`](testing-project-setup.md) — `pytest.ini` and test layout
-- [`build/templates/README.md`](../../build/templates/README.md) — every template file explained
+- [`lifecycle-rbtrc.md`](lifecycle-rbtrc.md), the `.rbtrc` format
+- [`testing-project-setup.md`](testing-project-setup.md), `pytest.ini` and test layout
+- [`build/templates/README.md`](../../build/templates/README.md), every template file explained

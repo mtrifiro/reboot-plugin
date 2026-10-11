@@ -125,7 +125,7 @@ class UserServicer(User.Servicer):
 
 Register `ordered_map_library()` in `Application(libraries=[...])`.
 
-**Every cross-`Type` reference is a persisted ID field** — user types and
+**Every cross-`Type` reference is a persisted ID field** user types and
 every stdlib type (`OrderedMap`, `Queue`, `Item`, `Presence`, `Topic`): a
 `<thing>_id: str` on the parent, allocated once in the constructor, used
 as `X.ref(self.state.<thing>_id)`. Because: the schema documents the
@@ -136,25 +136,25 @@ constructor marks the moment of ownership.
 ## Never
 
 - `UserState.people: list[Person]` when `Person` has methods,
-  lifecycle or nested events — flattens N actors into one. Make it a
+  lifecycle or nested events: flattens N actors into one. Make it a
   `Type`; Shape B or C.
-- `Type(state=X)` *and* `list[X]` / `dict[str, X]` as a state field —
+- `Type(state=X)` *and* `list[X]` / `dict[str, X]` as a state field:
   the "state inside state" regression (`state-nested-models.md`).
-- `list[str]` for an unbounded collection "because it's simpler" — the
+- `list[str]` for an unbounded collection "because it's simpler": the
   migration rewrites every parent method. Shape C.
 - A `MAX_ITEMS` constant so an open-ended or synced collection fits a
-  `list` — truncates data. Cap the view in a reader.
-- An externally-synced collection as `list[Sub]` on one actor — each
+  `list`: truncates data. Cap the view in a reader.
+- An externally-synced collection as `list[Sub]` on one actor: each
   sync rewrites the list; the actor grows toward the state-size limit.
-- `OrderedMap` for a clearly bounded, sub-dozen collection — wasted
+- `OrderedMap` for a clearly bounded, sub-dozen collection: wasted
   hop; Shape A or B.
 - Splitting items that one action must change together into separate
-  `Type`s — a single-actor writer becomes a multi-actor transaction.
+  `Type`s: a single-actor writer becomes a multi-actor transaction.
 - `OrderedMap.ref(f"{self.ref().state_id}-drafts")` (or
-  `context.state_id` in a workflow) — runs, but hides the edge from the
+  `context.state_id` in a workflow): runs, but hides the edge from the
   schema and repeats a magic string. Persist a `<thing>_index_id`.
 - Adding a new `<thing>_index_id` to a type that already has actors and
-  allocating it only in the `factory=True` constructor — a no-op on
+  allocating it only in the `factory=True` constructor: a no-op on
   existing actors, so it stays `""` and `OrderedMap.ref("")` raises
   `InvalidStateRefError`. Allocate lazily where first needed
   (`if self.state.people_index_id == "": ...`); readers treat `""` as
@@ -195,6 +195,6 @@ constructor marks the moment of ownership.
 
 ## See also
 
-- [`stdlib-ordered-map.md`](stdlib-ordered-map.md) — Shape C API and pagination
-- [`state-actor-decomposition.md`](state-actor-decomposition.md) — split one actor by concern
-- [`api-schema-evolution.md`](api-schema-evolution.md) — adding fields to live state
+- [`stdlib-ordered-map.md`](stdlib-ordered-map.md), Shape C API and pagination
+- [`state-actor-decomposition.md`](state-actor-decomposition.md), split one actor by concern
+- [`api-schema-evolution.md`](api-schema-evolution.md), adding fields to live state

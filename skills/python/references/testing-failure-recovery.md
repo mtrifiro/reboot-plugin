@@ -1,5 +1,5 @@
 ---
-title: Test Failure Recovery — `rbt.down()` and `rbt.up(revision=...)`
+title: Test Failure Recovery, `rbt.down()` and `rbt.up(revision=...)`
 impact: MEDIUM
 impactDescription: Durability is the reason to build on Reboot; a suite that never restarts the app never tests it
 tags: testing, recovery, restart, down, up, revision, crash, effect-validation, exactly-once, mocking, tasks, workflows, idempotency
@@ -12,7 +12,7 @@ verified: 1.6.0
 docs: ""
 ---
 
-# Test Failure Recovery — `rbt.down()` and `rbt.up(revision=...)`
+# Test Failure Recovery: `rbt.down()` and `rbt.up(revision=...)`
 
 ## When you are here
 
@@ -126,30 +126,28 @@ otherwise the callable runs twice and the **second** result is memoized.
 
 ### What's worth a recovery test
 
-- **A spawned task** — canceled at `down()`, picked up on `up()`;
+- **A spawned task** canceled at `down()`, picked up on `up()`;
   assert it completes and its effect happened once.
-- **A `Workflow`** — its body replays from the top; assert finished
+- **A `Workflow`** its body replays from the top; assert finished
   steps did not repeat: writer/transaction calls under
   `.per_workflow(...)` / `.per_iteration(...)`, and any
   `at_least_once` / `at_most_once` call.
-- **`schedule()`d work** — still fires after a restart spanning its due time.
-- **A half-finished multi-actor transaction** — fully applied or fully
+- **`schedule()`d work** still fires after a restart spanning its due time.
+- **A half-finished multi-actor transaction** fully applied or fully
   rolled back, never half.
 
 ## Never
 
-- **A test that "the data is still there" after a restart** —
-  that re-tests Reboot's guarantee, not the app.
-- **`revision=` together with `application=` / `servicers=`** — the
+- **A test that "the data is still there" after a restart** that re-tests Reboot's guarantee, not the app.
+- **`revision=` together with `application=` / `servicers=`** the
   revision already carries the configuration; pass it alone.
-- **A second `up()` without `down()`** — refused while the app is up.
+- **A second `up()` without `down()`** refused while the app is up.
 - **Awaiting a unary call from the test's context while the app is
-  down** — an `ExternalContext` retries `Unavailable` without limit, so
+  down** an `ExternalContext` retries `Unavailable` without limit, so
   it waits instead of failing; `up()` before the next call.
-- **A stand-in for an external call that answers from a counter** —
-  under effect validation `at_least_once` keeps the second answer.
+- **A stand-in for an external call that answers from a counter** under effect validation `at_least_once` keeps the second answer.
   Derive the answer from the input.
-- **Overriding `authorizer()` in a stalling subclass** — mock behavior
+- **Overriding `authorizer()` in a stalling subclass** mock behavior
   only.
 
 ## Limits
@@ -180,6 +178,6 @@ otherwise the callable runs twice and the **second** result is memoized.
 
 ## See also
 
-- [`testing-harness.md`](testing-harness.md) — `Reboot()`, `up()`, effect validation default
-- [`servicer-workflow-calls.md`](servicer-workflow-calls.md) — what replays and what reruns
-- [`testing-external-context.md`](testing-external-context.md) — mocking by import location
+- [`testing-harness.md`](testing-harness.md), `Reboot()`, `up()`, effect validation default
+- [`servicer-workflow-calls.md`](servicer-workflow-calls.md), what replays and what reruns
+- [`testing-external-context.md`](testing-external-context.md), mocking by import location

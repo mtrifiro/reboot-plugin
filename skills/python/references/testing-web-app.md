@@ -256,25 +256,25 @@ CI without a browser or `node_modules` passes
 
 ## Never
 
-- **A CSS selector or a test id on a button** — it means the button
+- **A CSS selector or a test id on a button** it means the button
   has no name; fix the markup.
-- **A second `opens the web app` to test a reload** — it is a fresh
+- **A second `opens the web app` to test a reload** it is a fresh
   profile with empty storage (no reload step exists); it means only
   "the same user on another machine".
-- **A saved value in an `opens the web app at` path** — taken
+- **A saved value in an `opens the web app at` path** taken
   literally, `"/l/<lead id>"` loads a nonexistent id. Reach the page by
   clicking.
-- **`saves the text of ...` after `Then`** — it is a `When`; under
+- **`saves the text of ...` after `Then`** it is a `When`; under
   `Then` / `And` it fails "Step definition is not found".
-- **`sees "55"` when the text appears twice** — a Playwright
+- **`sees "55"` when the text appears twice** a Playwright
   strict-mode violation. Save it via `data-testid`, or scope with
   `in the "..." table`.
-- **`` fills ... with `Alice` ``** — the value is JSON; write
+- **`` fills ... with `Alice` ``** the value is JSON; write
   `` `"Alice"` ``.
 - **Quoted web text containing ` has ` or ` with `** ("Bad state has
-  real consequences") — a catch-all step swallows it and fails "Almost:
+  real consequences"): a catch-all step swallows it and fails "Almost:
   each clause goes in backticks". Rename the label.
-- **`scope="module"` on the `frontend` fixture** — the second scenario
+- **`scope="module"` on the `frontend` fixture** the second scenario
   fails `already serving`.
 
 ## Limits
@@ -308,6 +308,6 @@ CI without a browser or `node_modules` passes
 
 ## See also
 
-- [`testing-features.md`](testing-features.md) — backend steps, saved values
-- [`../../web-app/SKILL.md`](../../web-app/SKILL.md) — building the page
-- [`../../dashboard/SKILL.md`](../../dashboard/SKILL.md) — recordings on the Features page
+- [`testing-features.md`](testing-features.md), backend steps, saved values
+- [`../../web-app/SKILL.md`](../../web-app/SKILL.md), building the page
+- [`../../dashboard/SKILL.md`](../../dashboard/SKILL.md), recordings on the Features page

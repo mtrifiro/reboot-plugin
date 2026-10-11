@@ -1,7 +1,7 @@
 ---
-title: Project Shell — MCP UI Deltas
+title: Project Shell, MCP UI Deltas
 impact: CRITICAL
-impactDescription: The shell files (`.rbtrc`, `pyproject.toml`, `.python-version`, `main.py`) wire the build, the dev server, the HMR routing, and the entry point — wrong shapes break either codegen or live reload before the app even boots.
+impactDescription: The shell files (`.rbtrc`, `pyproject.toml`, `.python-version`, `main.py`) wire the build, the dev server, the HMR routing, and the entry point, wrong shapes break either codegen or live reload before the app even boots.
 tags: project, shell, rbtrc, pyproject, python-version, main, application-entry, hmr, dist, template
 summary: "Dropping `oauth=` fails startup; copy `build/templates/mcp-ui/`: `.rbtrc` with `--default-config=hmr`, `:hmr`/`:dist` configs, `example_prompts=`."
 step: shell
@@ -11,7 +11,7 @@ verified: 1.6.0
 docs: ""
 ---
 
-# Project Shell — MCP UI Deltas
+# Project Shell: MCP UI Deltas
 
 ## When you are here
 
@@ -33,11 +33,11 @@ Copy the template; do not retype these files
 <plugin>/skills/build/templates/copy.sh mcp-ui . <project> <app> "<Title>"
 ```
 
-- **`.python-version`** — `3.12`; leave it.
-- **`pyproject.toml`** — `reboot==1.6.0`, dev group `reboot[dev]==1.6.0`
+- **`.python-version`** `3.12`; leave it.
+- **`pyproject.toml`** `reboot==1.6.0`, dev group `reboot[dev]==1.6.0`
   (tests and dashboard). Add a runtime dependency only when your code
   imports it (`httpx`, `uuid7`, …).
-- **`.rbtrc`** — adds `dev run --default-config=hmr` and two configs:
+- **`.rbtrc`** adds `dev run --default-config=hmr` and two configs:
   `dev run:hmr --frontend-host=http://localhost:4444` routes Envoy's
   `/__/frontend/**` to the Vite dev server (`cd frontend && npm run dev`);
   `dev run:dist --frontend-dist-path=frontend/dist` serves the built
@@ -46,9 +46,9 @@ Copy the template; do not retype these files
   `--env-file`, the `:hmr`/`:dist` configs); Reboot Cloud runs
   `CMD ["rbt", "serve", "run"]`
   ([`lifecycle-dockerfile.md`](../../python/references/lifecycle-dockerfile.md)).
-- **`backend/src/example_prompts.py`** — the `ExamplePrompt`s the
+- **`backend/src/example_prompts.py`** the `ExamplePrompt`s the
   root-page wizard offers; rewrite them for the app (below).
-- **`backend/src/main.py`** — takes `SERVICERS` and `libraries()` from
+- **`backend/src/main.py`** takes `SERVICERS` and `libraries()` from
   `backend/src/servicers/registry.py` (`User` plus each application
   type, the one list the tests take too), passes `example_prompts=`, and sets
   `oauth=OAuth(provider=OAuthProviderByEnvironment(dev=Development(),
@@ -78,14 +78,14 @@ a "show me / open …" turn that renders a `UI()` (rule: `SKILL.md`,
 
 ## Never
 
-- `dev run --default=hmr` — the flag is `--default-config=hmr`.
-- `generate --react-extensions` in `.rbtrc` — Vite and `tsc`
+- `dev run --default=hmr`: the flag is `--default-config=hmr`.
+- `generate --react-extensions` in `.rbtrc`: Vite and `tsc`
   (`moduleResolution: "bundler"`) resolve `frontend/api/` without `.js`
   extensions. Needed only for a webpack/`ts-loader` bundler or a
   `--nodejs`/`--web` target sharing the React output directory (neither
   produced here); `rbt generate` rejects it alongside a future `--mobile`
   client (Metro cannot resolve `.js`-suffixed imports).
-- `dev run --name=<project>` — deprecated alias of `--application-name`;
+- `dev run --name=<project>`: deprecated alias of `--application-name`;
   warns on every start.
 - Dropping `oauth=` from `main.py`: the `User` type is auto-constructed,
   and auto-construct servicers fail at startup without it.
@@ -114,6 +114,6 @@ Not measured.
 
 ## See also
 
-- [`react-scaffolding.md`](react-scaffolding.md) — the `frontend/` half
-- [`lifecycle-project-setup.md`](../../python/references/lifecycle-project-setup.md) — shared layout and `.mypy.ini`
-- [`build/templates/README.md`](../../build/templates/README.md) — every template file explained
+- [`react-scaffolding.md`](react-scaffolding.md), the `frontend/` half
+- [`lifecycle-project-setup.md`](../../python/references/lifecycle-project-setup.md), shared layout and `.mypy.ini`
+- [`build/templates/README.md`](../../build/templates/README.md), every template file explained

@@ -86,19 +86,19 @@ implicitly; on a type with a `factory=True` constructor it aborts
 
 ## Never
 
-- Assume a reader on a missing actor returns zero-valued state — it
+- Assume a reader on a missing actor returns zero-valued state: it
   aborts, so "empty field means unknown" validation fails only in the
   negative-path test. Wrap cross-actor reads in the probe unless the
   caller guarantees existence; decide what a failed decorative lookup
   means (default it) first.
-- `self.state_id` — `AttributeError: 'XServicer' object has no
+- `self.state_id`: `AttributeError: 'XServicer' object has no
   attribute 'state_id'`. Use `self.ref().state_id` (`context.state_id`
   in a workflow).
-- `ChatRoomServicer().send(...)` — servicer instances belong to Reboot;
+- `ChatRoomServicer().send(...)`: servicer instances belong to Reboot;
   call through `ChatRoom.ref(id)`.
 - One ref used from two contexts (e.g. `program =
   Program.ref("BS-CS")`, called as the registrar and again as a second
-  user) — `MixedContextsError` even without concurrency. Keep the ID;
+  user): `MixedContextsError` even without concurrency. Keep the ID;
   call `Program.ref(id)` inline per context.
 - Expect `Service.create(...)` / a factory on an existing actor to rerun
   its body (`rpc-constructor-calls.md` § Never). A field added to
@@ -107,7 +107,7 @@ implicitly; on a type with a `factory=True` constructor it aborts
   character(s) long` when used as a ref); allocate lazily:
   `if self.state.x == "": ...`.
 - Expect the caller's identity to travel through a ref call from inside
-  a servicer — it does not (`servicer-authorizer.md`).
+  a servicer: it does not (`servicer-authorizer.md`).
 
 ## Limits
 
@@ -141,6 +141,6 @@ implicitly; on a type with a `factory=True` constructor it aborts
 
 ## See also
 
-- [`rpc-calls.md`](rpc-calls.md) — kwargs, gather, call conventions
-- [`rpc-constructor-calls.md`](rpc-constructor-calls.md) — constructing actors, idempotently
-- [`servicer-authorizer.md`](servicer-authorizer.md) — nested calls carry no identity
+- [`rpc-calls.md`](rpc-calls.md), kwargs, gather, call conventions
+- [`rpc-constructor-calls.md`](rpc-constructor-calls.md), constructing actors, idempotently
+- [`servicer-authorizer.md`](servicer-authorizer.md), nested calls carry no identity

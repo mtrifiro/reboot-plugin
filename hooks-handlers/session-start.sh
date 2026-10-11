@@ -40,7 +40,7 @@ fi
 # Both variables are required to write a meaningful line: an env file
 # to append to, and the plugin root whose `bin/` goes on PATH. When
 # either is missing this is a silent, successful no-op, since a
-# non-zero status — an unset-variable abort under `set -u`, say —
+# non-zero status, an unset-variable abort under `set -u`, say,
 # surfaces to the developer as a hook error.
 if [ -z "${CLAUDE_ENV_FILE:-}" ] || [ -z "${CLAUDE_PLUGIN_ROOT:-}" ]; then
     exit 0

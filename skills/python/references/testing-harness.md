@@ -196,10 +196,10 @@ or one transaction covering every actor involved.
   authorizers. Mocking *non-auth* behavior by subclass is fine (an
   external call, the clock: route every wall-clock read through one
   module-level `_now()` and patch that).
-- **Reusing a context after asserting a denial** — its next mutation
+- **Reusing a context after asserting a denial** its next mutation
   raises `IdempotencyUncertainError` (`testing-external-context.md` §
   Never; student-sor, 1.5.0).
-- **Holding a `ref()` across two contexts**, even serially — a
+- **Holding a `ref()` across two contexts**, even serially: a
   `WeakReference` binds to the first context that uses it. Hold ids;
   call `Type.ref(id)` inline per call.
 - **Reusing actor ids across tests.** Embed `self.id()` in actor ids

@@ -103,22 +103,21 @@ dev run:dist --frontend-dist-path=frontend/dist
 ## Never
 
 - **YAML in `.rbtrc`** (`generate:` / `dev:` blocks with nested keys).
-- **`dev run --name=<app>`** — write `--application-name=<app>`; fix
+- **`dev run --name=<app>`** write `--application-name=<app>`; fix
   old `--name` lines rather than living with the warning.
-- **`rbt dev expunge` without `--yes` from a script or agent shell** —
-  with no terminal its confirmation prompt blocks forever (reboot-crm,
+- **`rbt dev expunge` without `--yes` from a script or agent shell** with no terminal its confirmation prompt blocks forever (reboot-crm,
   1.6.0).
-- **`rbt dev expunge` while `rbt dev run` is live** — the server holds
+- **`rbt dev expunge` while `rbt dev run` is live** the server holds
   the deleted RocksDB directory and loops on an IO error every second.
   Stop, expunge, start ([`run` skill](../../run/SKILL.md)).
-- **Two `rbt dev run`s over one state directory** — they crash-loop on
+- **Two `rbt dev run`s over one state directory** they crash-loop on
   the RocksDB LOCK; kill the old one and wait.
 - **Debugging dev state that lived through incompatible API changes**
-  (changed method kinds, tasks pointing at reworked methods) — native
+  (changed method kinds, tasks pointing at reworked methods): native
   asserts and context-type errors on task replay. Stop the app,
   `rbt dev expunge --application-name=<name> --yes`, reseed, reload open
   tabs (theater-network, 1.4.0).
-- **A literal secret on a `--env=KEY=secret` line** — `.rbtrc` is
+- **A literal secret on a `--env=KEY=secret` line** `.rbtrc` is
   checked in. `dev run --env-file=.env` is fine; it's only a path.
 
 ## Limits
@@ -131,7 +130,7 @@ dev run:dist --frontend-dist-path=frontend/dist
   `uv run --project <repo> rbt dev run`. The venv's `rbt` run directly
   can't find `protoc-gen-reboot_python`, which only `uv run` puts on
   `PATH` (reboot-crm, 1.6.0).
-- **`--env-file` is `dev run` only** — not `rbt serve` or Reboot Cloud;
+- **`--env-file` is `dev run` only** not `rbt serve` or Reboot Cloud;
   production secrets use `rbt cloud secret set`
   ([`lifecycle-secrets.md`](lifecycle-secrets.md)).
 - **A `backend/src/` edit once didn't restart the app** despite
@@ -155,6 +154,6 @@ dev run:dist --frontend-dist-path=frontend/dist
 
 ## See also
 
-- [`../../run/SKILL.md`](../../run/SKILL.md) — stop, restart, expunge procedure
-- [`lifecycle-secrets.md`](lifecycle-secrets.md) — dev and Cloud secrets
-- [`lifecycle-dockerfile.md`](lifecycle-dockerfile.md) — production `serve run` block
+- [`../../run/SKILL.md`](../../run/SKILL.md), stop, restart, expunge procedure
+- [`lifecycle-secrets.md`](lifecycle-secrets.md), dev and Cloud secrets
+- [`lifecycle-dockerfile.md`](lifecycle-dockerfile.md), production `serve run` block

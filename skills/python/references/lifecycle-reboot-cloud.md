@@ -1,7 +1,7 @@
 ---
 title: Deploy on Reboot Cloud
 impact: MEDIUM
-impactDescription: Production deployment target — needed when an app graduates beyond `rbt dev run` or a single-machine `rbt serve`.
+impactDescription: Production deployment target, needed when an app graduates beyond `rbt dev run` or a single-machine `rbt serve`.
 tags: deploy, cloud, rbt-cloud, scaling, secrets, dockerfile, api-key, docker
 summary: "Dev lets through calls Cloud denies (`PermissionDenied`); `rbt cloud up`/`down`, secrets, logs, access; Cloud vs `rbt serve`."
 step: deploy
@@ -97,12 +97,12 @@ only on first deploy. See
 
 ## Never
 
-- **`rbt cloud down` to roll back or pause** — at 1.6.0 it always
+- **`rbt cloud down` to roll back or pause** at 1.6.0 it always
   expunges; `--no-expunge` is refused. Roll forward with `rbt cloud up`.
-- **`rbt cloud down --expunge` to change size** — resizing is
+- **`rbt cloud down --expunge` to change size** resizing is
   non-destructive (Limits).
 - **Dropping `--organization` after the first deploy** (Errors).
-- **`--api-key=<key>` on the command line** — even `--api-key=$VAR` is
+- **`--api-key=<key>` on the command line** even `--api-key=$VAR` is
   visible in `ps`; use `REBOOT_CLOUD_API_KEY`.
 
 ## Limits
@@ -144,6 +144,6 @@ only on first deploy. See
 
 ## See also
 
-- [`lifecycle-dockerfile.md`](lifecycle-dockerfile.md) — the image `up` builds
-- [`lifecycle-secrets.md`](lifecycle-secrets.md) — Cloud secrets and ordering
-- [`../../deploy/SKILL.md`](../../deploy/SKILL.md) — frontend, domain, `allowed_origins`
+- [`lifecycle-dockerfile.md`](lifecycle-dockerfile.md), the image `up` builds
+- [`lifecycle-secrets.md`](lifecycle-secrets.md), Cloud secrets and ordering
+- [`../../deploy/SKILL.md`](../../deploy/SKILL.md), frontend, domain, `allowed_origins`

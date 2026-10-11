@@ -89,5 +89,5 @@ None known.
 
 ## See also
 
-- [`react-app-tsx.md`](react-app-tsx.md) — the UI's component and hooks
-- [`../../web-app/references/ui-design.md`](../../web-app/references/ui-design.md) — the brief and design principles
+- [`react-app-tsx.md`](react-app-tsx.md), the UI's component and hooks
+- [`../../web-app/references/ui-design.md`](../../web-app/references/ui-design.md), the brief and design principles

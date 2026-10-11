@@ -159,20 +159,20 @@ class KeyManagerServicer(KeyManager.Servicer):
 
 ## Never
 
-- Hard-coding a `version` for new material — always
+- Hard-coding a `version` for new material: always
   `active_version()`.
-- Changing `info` or `length` after shipping — every derived key
+- Changing `info` or `length` after shipping: every derived key
   changes, orphaning everything derived or encrypted.
-- A bare `consumer` like `"default"` — app-global, so two libraries
+- A bare `consumer` like `"default"`: app-global, so two libraries
   could retire each other's version. Namespace it, per instance if
   several (`f"my.app.notes:{manager_id}"`).
-- Disusing the active version — it is always in use.
+- Disusing the active version: it is always in use.
 - Clearing a marker before removing the version from your own
   `consuming_versions`, or adding the version locally before setting
-  its marker — markers must stay a superset of what you hold; an early
+  its marker: markers must stay a superset of what you hold; an early
   disuse loses data.
 - `use` / `disuse` from the `watch` loop without `.per_iteration(...)`.
-- Rolling your own envelope encryption — use `Ciphertext`.
+- Rolling your own envelope encryption: use `Ciphertext`.
 
 ## Limits
 
@@ -203,6 +203,6 @@ class KeyManagerServicer(KeyManager.Servicer):
 
 ## See also
 
-- [`stdlib-ciphertext.md`](stdlib-ciphertext.md) — the reference implementation; usually what you want
-- [`servicer-workflow-loop.md`](servicer-workflow-loop.md) — the `watch` loop's iterations
-- [`servicer-workflow-wait.md`](servicer-workflow-wait.md) — `until` for the stale-version park
+- [`stdlib-ciphertext.md`](stdlib-ciphertext.md), the reference implementation; usually what you want
+- [`servicer-workflow-loop.md`](servicer-workflow-loop.md), the `watch` loop's iterations
+- [`servicer-workflow-wait.md`](servicer-workflow-wait.md), `until` for the stale-version park

@@ -3,9 +3,9 @@
 This directory collects **migration fragments**: instructions for
 upgrading an existing Reboot application past a not-yet-released
 change. If your PR changes something that existing applications must
-react to — an API rename, a changed default, a new required file, a
+react to, an API rename, a changed default, a new required file, a
 `.rbtrc` change, anything a `reboot==<old>` app would have to do
-beyond bumping its pin and regenerating — add a fragment **in the
+beyond bumping its pin and regenerating, add a fragment **in the
 same PR**. A fragment is only warranted when an existing app must
 _do_ something; a change that asks nothing of existing apps needs
 no fragment. Migration fragments are not a changelog.
@@ -34,7 +34,7 @@ rename the call to `.baz(`. Arguments are unchanged.
 ```
 
 Do NOT include "bump the version pin", "run `rbt generate`", or "run
-the tests" steps — the `upgrade` skill always does those once at the
+the tests" steps: the `upgrade` skill always does those once at the
 end of an upgrade.
 
 At release time, `make versions` (via

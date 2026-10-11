@@ -27,10 +27,10 @@
 #     set it to the plugin's real install path when invoking these
 #     hooks; without it the `.../skills/` prefix check is
 #     meaningless.
-#   - No argument may contain `..` — that would let a path step
+#   - No argument may contain `..`: that would let a path step
 #     out of whatever directory it was checked against.
 #
-# For Bash, the command is split — on `;` `&&` `||` `|` — into
+# For Bash, the command is split, on `;` `&&` `||` `|`, into
 # parts validated independently. A part with a metacharacter that
 # could chain, redirect, or interpolate (`&` `<` `>` `` ` `` `$`
 # `(` `)` `\`) is never approved. Every part must match category
@@ -48,8 +48,8 @@
 # Anything not matching exits silently with status 0; Claude Code
 # then falls back to the normal permission prompt.
 
-# Adding a local directory as the marketplace source — what
-# `install.sh` does when run from a checkout — leaves a trailing slash
+# Adding a local directory as the marketplace source, what
+# `install.sh` does when run from a checkout, leaves a trailing slash
 # on the root. Strip it, so the `"${CLAUDE_PLUGIN_ROOT}/skills/"`
 # prefixes below don't end in `//` and match nothing: the agent
 # normalizes the paths it sends, so nothing can match a `//` prefix.
@@ -102,8 +102,8 @@ emit_allow() {
     echo '{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"allow"}}'
 }
 
-# Extract a top-level string field from the input JSON. Naive sed parse
-# — fine for Claude Code's flat tool_input shape (no escaped quotes in
+# Extract a top-level string field from the input JSON. A naive sed parse
+# is fine for Claude Code's flat tool_input shape (no escaped quotes in
 # paths). A value holding an escaped quote keeps its backslash, which
 # the metacharacter screen below rejects.
 field() {
@@ -250,7 +250,7 @@ mcpjam_args_ok() {
     [ "$expect_url" -eq 0 ]
 }
 
-# True (0) when $1 — resolved against $cwd when relative — sits
+# True (0) when $1, resolved against $cwd when relative, sits
 # inside a Reboot project: that directory, or any ancestor, holds
 # a `.rbtrc`. Gates auto-approval of the `run` skill's Reboot dev
 # commands; outside a project they fall through to the prompt.
@@ -291,7 +291,7 @@ case "$tool" in
         is_in_plugin "$path" && emit_allow
         ;;
     LS|Glob|Grep)
-        # All three take a `path` parameter (optional for Glob/Grep —
+        # All three take a `path` parameter (optional for Glob/Grep,
         # if absent the field is empty and is_in_plugin will reject).
         path=$(field path)
         has_traversal "$path" && exit 0
@@ -334,17 +334,17 @@ case "$tool" in
         #       plugin's skills and whose flags are on its list (the
         #       producer side of a pipeline, or a standalone op);
         #
-        #   (b) a pure stdin filter — head, tail, wc, sort, uniq —
+        #   (b) a pure stdin filter, head, tail, wc, sort, uniq,
         #       with flags from its list and bare counts only. Covers
         #       `… | head -50`, `… | wc -l`; rejects `… | head x.txt`
         #       and `… | sort -o file`;
         #
-        #   (c) a bare `cd` — no side effects of its own; it only
+        #   (c) a bare `cd`, no side effects of its own; it only
         #       moves the working directory tracked in `effective_dir`
         #       so the Reboot project gate below sees the right place;
         #
         #   (d) a Reboot dev command the `run` or `dashboard` skill
-        #       issues — gated on `in_reboot_project` and on the flags
+        #       issues, gated on `in_reboot_project` and on the flags
         #       that command may take.
         #
         # A `cd` part is safe but is not itself a "real op", so a
@@ -401,14 +401,14 @@ case "$tool" in
                         esac
                         ;;
                     'uv sync' | 'uv sync '*)
-                        # `run` skill — backend dependency install.
+                        # `run` skill: backend dependency install.
                         in_reboot_project "$effective_dir" || exit 1
                         args_ok "${trimmed#uv sync}" \
                             "--quiet --frozen --locked --all-groups --no-dev" q || exit 1
                         approved=$((approved + 1))
                         ;;
                     'npm install' | 'npm install '*)
-                        # `run` skill — frontend dependency install.
+                        # `run` skill: frontend dependency install.
                         # Never a package name, `-g` or a registry.
                         in_reboot_project "$effective_dir" || exit 1
                         args_ok "${trimmed#npm install}" \
@@ -416,27 +416,27 @@ case "$tool" in
                         approved=$((approved + 1))
                         ;;
                     'npm run dev' | 'npm run dev '*)
-                        # `run` skill — frontend dev server.
+                        # `run` skill: frontend dev server.
                         in_reboot_project "$effective_dir" || exit 1
                         args_ok "${trimmed#npm run dev}" \
                             "-- --host --strictPort --port --port=" "" || exit 1
                         approved=$((approved + 1))
                         ;;
                     'uv run rbt dev run' | 'uv run rbt dev run '*)
-                        # `run` skill — start the Reboot backend.
+                        # `run` skill: start the Reboot backend.
                         in_reboot_project "$effective_dir" || exit 1
                         rbt_args_ok "${trimmed#uv run rbt dev run}" || exit 1
                         approved=$((approved + 1))
                         ;;
                     'uv run rbt dashboard' | 'uv run rbt dashboard '*)
-                        # `dashboard` skill — start the developer
+                        # `dashboard` skill: start the developer
                         # dashboard while an app is being built.
                         in_reboot_project "$effective_dir" || exit 1
                         rbt_args_ok "${trimmed#uv run rbt dashboard}" || exit 1
                         approved=$((approved + 1))
                         ;;
                     'cloudflared tunnel '* )
-                        # `run` skill — start the Cloudflare quick tunnel before `rbt dev run`.
+                        # `run` skill: start the Cloudflare quick tunnel before `rbt dev run`.
                         in_reboot_project "$effective_dir" || exit 1
                         args="${trimmed#cloudflared tunnel }"
                         # Require exactly: --metrics localhost:<port> and --url http://localhost:<port> (either order).
@@ -457,7 +457,7 @@ case "$tool" in
                         approved=$((approved + 1))
                         ;;
                     'npx @mcpjam/inspector@'* | mcpjam-inspector | 'mcpjam-inspector '*)
-                        # `run` skill — MCPJam inspector for MCP UIs, via
+                        # `run` skill, MCPJam inspector for MCP UIs, via
                         # the plugin's `mcpjam-inspector` shim or a pinned
                         # `npx @mcpjam/inspector@<version>`; only the
                         # `--url`, `--oauth` and `--no-open` arguments.

@@ -90,17 +90,17 @@ Registered providers request the needed OAuth scopes automatically.
 
 ## Never
 
-- `Development()` with no `claims=` while expecting identity — the app
+- `Development()` with no `claims=` while expecting identity: the app
   sees only `dev-{hash}`, `set_claims` never runs, nothing warns.
-- Override `set_claims(self, context, state, request)` — mypy:
+- Override `set_claims(self, context, state, request)`: mypy:
   `Signature of "set_claims" incompatible with supertype`. Use
   `(self, context, request)` and `self.state`.
-- Request claims without overriding `set_claims` — the generated
+- Request claims without overriding `set_claims`: the generated
   default raises `NotImplementedError` at sign-in.
-- Declare `set_claims` (or `create`) in the `User` API — both are
+- Declare `set_claims` (or `create`) in the `User` API: both are
   reserved and injected; override in the servicer.
-- Merge claims into existing state — each delivery is the whole truth.
-- Key roles or a directory by `Development()` user IDs — opaque, per-app,
+- Merge claims into existing state: each delivery is the whole truth.
+- Key roles or a directory by `Development()` user IDs: opaque, per-app,
   changed by an expunge; only five identities (Alice, Ben, Carlos, Dani,
   Esi). Key by the `email` claim, verified; look up the user ID at runtime.
 - Link a sign-in to a roster entry, invitation or any email-keyed
@@ -148,6 +148,6 @@ Registered providers request the needed OAuth scopes automatically.
 
 ## See also
 
-- [`auth-roles.md`](auth-roles.md) — a staff roster: roles, invitations, the first admin
-- [`servicer-authorizer.md`](servicer-authorizer.md) — rules, app-internal paths
-- [`testing-harness.md`](testing-harness.md) — deliver claims in tests
+- [`auth-roles.md`](auth-roles.md), a staff roster: roles, invitations, the first admin
+- [`servicer-authorizer.md`](servicer-authorizer.md), rules, app-internal paths
+- [`testing-harness.md`](testing-harness.md), deliver claims in tests

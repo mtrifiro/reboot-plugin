@@ -59,7 +59,7 @@ await asyncio.gather(
 
 ## Never
 
-- `await account.deposit(context, DepositRequest(amount=100))` — use
+- `await account.deposit(context, DepositRequest(amount=100))`: use
   kwargs. At 1.6.0 a wrapper of the method's own request type
   (`Account.DepositRequest`, i.e. the API module's `DepositRequest`)
   runs and neither mypy nor the runtime rejects it, but the framework's
@@ -67,29 +67,29 @@ await asyncio.gather(
   slot is typed `Any` for pydantic APIs, so a wrong object passes mypy
   (verified at 1.6.0).
 - A `dict` or different model in that slot
-  (`deposit(context, {"amount": 1})`) — passes mypy, then raises a bare
+  (`deposit(context, {"amount": 1})`): passes mypy, then raises a bare
   `AssertionError` with no message (observed at 1.6.0).
 - `deposit(request)` without the context, or a request in the options
-  slot — `TypeError: Unexpected use of request type`.
+  slot: `TypeError: Unexpected use of request type`.
 - A writer calling another actor's writer (or its own via `self.ref()`)
-  — mypy `No overload variant matches argument types "WriterContext",
+: mypy `No overload variant matches argument types "WriterContext",
   ...`; at runtime the `TypeError` in Errors.
-- Plain dicts for a `list[Model]` kwarg — the runtime coerces them,
+- Plain dicts for a `list[Model]` kwarg: the runtime coerces them,
   mypy rejects them (`List item 0 has incompatible type
   "dict[str, Any]"; expected "PassengerAssignment"`, reboot-air-150-06,
   1.5.0). Build the nested `Model` from the API module
   (`api/<pkg>/v1/<name>.py`); `<Type>.<Model>` exists only for request
   and response types.
-- Forwarding `**kwargs: dict[str, str]` into a generated method — mypy
+- Forwarding `**kwargs: dict[str, str]` into a generated method: mypy
   fails every overload; type them as a `TypedDict` (student-sor-15,
   1.5.0).
-- Relying on the caller's identity in the callee — a call from a
+- Relying on the caller's identity in the callee: a call from a
   servicer is app-internal, `context.auth` is `None`, and anything
   stamped from it (audit entry, owner) is silently dropped
   (reboot-crm-02, 1.6.0). Pass identity as a request field
   (`servicer-authorizer.md` § Never).
 - A writer cycle: a transaction on A calls a writer on B while a
-  transaction on B calls a writer on A — concurrent requests deadlock
+  transaction on B calls a writer on A, concurrent requests deadlock
   (`state-actor-decomposition.md` § Never).
 
 ## Limits
@@ -115,6 +115,6 @@ await asyncio.gather(
 
 ## See also
 
-- [`rpc-refs.md`](rpc-refs.md) — getting refs and actor ids
-- [`rpc-constructor-calls.md`](rpc-constructor-calls.md) — creating actors, the returned tuple
-- [`servicer-authorizer.md`](servicer-authorizer.md) — nested calls carry no identity
+- [`rpc-refs.md`](rpc-refs.md), getting refs and actor ids
+- [`rpc-constructor-calls.md`](rpc-constructor-calls.md), creating actors, the returned tuple
+- [`servicer-authorizer.md`](servicer-authorizer.md), nested calls carry no identity

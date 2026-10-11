@@ -60,16 +60,16 @@ async def control_loop(
 
 ## Never
 
-- `while True:` in a workflow — no iteration boundary, so replay re-runs
+- `while True:` in a workflow: no iteration boundary, so replay re-runs
   every iteration from the start.
-- Renaming the loop alias after work has started — it is the replay
+- Renaming the loop alias after work has started: it is the replay
   correlation key; renaming invalidates progress tracking.
 - A second `context.loop(...)` in the same workflow, sequential or
-  nested — raises. Split into two workflows.
-- `await asyncio.sleep(n)` between iterations for pacing — use
+  nested: raises. Split into two workflows.
+- `await asyncio.sleep(n)` between iterations for pacing: use
   `interval=`.
 - A `break` decision derived from a non-memoized external read or the
-  clock — the last iteration re-runs (see Limits) and must break again.
+  clock: the last iteration re-runs (see Limits) and must break again.
   Base it on memoized values or Reboot state.
 
 ## Limits
@@ -96,6 +96,6 @@ async def control_loop(
 
 ## See also
 
-- [`servicer-workflow-wait.md`](servicer-workflow-wait.md) — `until_changes` per iteration
-- [`stdlib-queue.md`](stdlib-queue.md) — the queue a consumer loop drains
-- [`scheduling-recurring.md`](scheduling-recurring.md) — wall-clock recurring jobs
+- [`servicer-workflow-wait.md`](servicer-workflow-wait.md), `until_changes` per iteration
+- [`stdlib-queue.md`](stdlib-queue.md), the queue a consumer loop drains
+- [`scheduling-recurring.md`](scheduling-recurring.md), wall-clock recurring jobs

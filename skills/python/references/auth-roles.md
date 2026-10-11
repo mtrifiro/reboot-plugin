@@ -227,6 +227,6 @@ token with no claims), over the harness's
 
 ## See also
 
-- [`auth-custom-predicates.md`](auth-custom-predicates.md) — the predicates' shape and per-method rules
-- [`auth-claims.md`](auth-claims.md) — requesting `email_verified`, `set_claims`
-- [`testing-harness.md`](testing-harness.md) — a token with claims in a test
+- [`auth-custom-predicates.md`](auth-custom-predicates.md), the predicates' shape and per-method rules
+- [`auth-claims.md`](auth-claims.md), requesting `email_verified`, `set_claims`
+- [`testing-harness.md`](testing-harness.md), a token with claims in a test

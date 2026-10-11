@@ -57,7 +57,7 @@ the tickets it names, when the feature files name any>
 
 ## Scenarios
 12 passed, 0 failed, 2 @wip, 1 @blocked (full suite at abc1234).
-@blocked: <scenario> — <why>
+@blocked: <scenario>: <why>
 
 ## Design accepted
 <the model diff's verdict: "Yes, at abc1234 on 2026-10-10", or
@@ -136,5 +136,5 @@ the deploy in question.
 
 ## See also
 
-- [`flywheel.md`](flywheel.md) — the stages and the routing rule
-- [`../../deploy/SKILL.md`](../../deploy/SKILL.md) — the deploy itself
+- [`flywheel.md`](flywheel.md), the stages and the routing rule
+- [`../../deploy/SKILL.md`](../../deploy/SKILL.md), the deploy itself

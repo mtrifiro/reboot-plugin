@@ -131,23 +131,23 @@ element with no envelope Model.
 
 ## Never
 
-- `board: str = Field(tag=1)` with no default — the initial state is
+- `board: str = Field(tag=1)` with no default: the initial state is
   built with `model_construct()`, which skips undeclared defaults; the
   first read raises `AttributeError: 'GameState' object has no
   attribute 'board'`.
-- `turn: str = Field(tag=1, default="r")`, `default=1.0`, `default=2` —
+- `turn: str = Field(tag=1, default="r")`, `default=1.0`, `default=2`:
   rejected at import. Zero default; set `"r"` in the constructor.
 - `Field(tag=N, default_factory=AccountCard)` or
-  `Field(tag=N, default=AccountCard())` for a nested `Model` — both
+  `Field(tag=N, default=AccountCard())` for a nested `Model`: both
   refused; use `Optional[AccountCard] = Field(tag=N, default=None)`.
-- `history: list[str] = Field(tag=3, default=[])` — use
+- `history: list[str] = Field(tag=3, default=[])`: use
   `default_factory=list`.
-- `User.CreateGameResponse` for method `create_checkers_game` —
+- `User.CreateGameResponse` for method `create_checkers_game`:
   `AttributeError: type object 'User' has no attribute
   'CreateGameResponse'`. PascalCase the method name exactly.
-- `description="The balance."` — restates the annotation; say what
+- `description="The balance."`: restates the annotation; say what
   the number is and what is true of it.
-- `Model`s or a `Type` defined but never wired into `API(...)` — they
+- `Model`s or a `Type` defined but never wired into `API(...)`: they
   never reach the generator, with no error.
 
 ## Limits
@@ -197,6 +197,6 @@ element with no envelope Model.
 
 ## See also
 
-- [`api-methods.md`](api-methods.md) — factories, options, servicer signatures
-- [`state-scalar-fields.md`](state-scalar-fields.md) — scalar zero values, constructor-set values
-- [`api-schema-evolution.md`](api-schema-evolution.md) — changing a persisted API
+- [`api-methods.md`](api-methods.md), factories, options, servicer signatures
+- [`state-scalar-fields.md`](state-scalar-fields.md), scalar zero values, constructor-set values
+- [`api-schema-evolution.md`](api-schema-evolution.md), changing a persisted API
