@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # A Reboot todo app after its first build: one commit on main, the
-# accepted design recorded, no workflow chosen in AGENTS.md.
+# accepted design recorded, and AGENTS.md's Workflow line as every
+# scaffold ships it (templates/*/AGENTS.md): not chosen yet.
 set -euo pipefail
 mkdir -p api/todo/v1 tests design backend/src/servicers
 printf 'dev run --application-name=todo\ngenerate api/ --python=backend/api\n' > .rbtrc
@@ -13,6 +14,12 @@ A Reboot app (Python backend, React web app).
 
 - **Test:** `uv run pytest`.
 - **Deploy:** `scripts/deploy.sh`, with the plugin's `deploy` skill.
+- **Workflow:** not chosen yet. At the first change after the first
+  build the agent asks whether changes go straight onto `main` or onto
+  a branch each, and writes the answer here. A push to `main` is
+  refused unless the last full run passed on that exact tree
+  (`.githooks/pre-push`; a clone runs `git config core.hooksPath
+  .githooks` once).
 MD
 cat > api/todo/v1/todo.py <<'PY'
 from reboot.api import API, Field, Methods, Model, Reader, Type, Writer
