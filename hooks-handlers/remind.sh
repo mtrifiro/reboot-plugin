@@ -18,8 +18,10 @@
 # `hookSpecificOutput.additionalContext` output shape, which each CLI
 # records into the conversation for the model's next request.
 #
-# The reminder is scoped to Reboot projects: it is emitted only when
-# the session's working directory, or an ancestor, holds a `.rbtrc`.
+# The reminder is scoped to Reboot projects: it is emitted when the
+# session's working directory, or an ancestor, holds a `.rbtrc`, or,
+# on a prompt, when the prompt names Reboot (a build's first lines
+# come before its `.rbtrc` exists).
 # The plugin is typically installed globally, so this handler runs in
 # every session, including ones that have nothing to do with Reboot;
 # those stay reminder-free.
@@ -74,7 +76,18 @@ in_reboot_project() {
     [ -f "/.rbtrc" ]
 }
 
-in_reboot_project || exit 0
+# A build starts in an empty folder, before any `.rbtrc` exists, and
+# its first lines to the user are written then: a prompt that names
+# Reboot gets the reminder too.
+mentions_reboot() {
+    field prompt | grep -qi 'reboot'
+}
+
+event=$(field hook_event_name)
+
+if ! in_reboot_project; then
+    [ "$event" = UserPromptSubmit ] && mentions_reboot || exit 0
+fi
 
 # First line of the reminder. The UserPromptSubmit throttle greps the
 # transcript tail for it: both CLIs record every injected copy into
@@ -86,8 +99,6 @@ sentinel='[reboot-plugin-reminder]'
 # line is one conversation entry (a user or assistant message or a
 # tool result), so this is roughly twenty tool round-trips.
 tail_lines=40
-
-event=$(field hook_event_name)
 
 case "$event" in
     SessionStart)

@@ -7,22 +7,24 @@ allowed-tools: Bash, Read, Write, Glob, Grep, Edit
 
 # app — Build a Reboot Application
 
+**Voice, before anything else.** Everything said to the user, from
+the first line of the session to the handoff, is a statement of fact
+about the app, never the first person: no I, me, my, we or us. Not
+"I'll model each suite as its own actor" but "Each suite is its own
+actor"; not "I'll build a quick prototype first" but "A quick prototype
+of the whole hotel comes first". The subject is the app, the design,
+the build or the prototype, and "you" is the user. Say more, not less,
+at the level of the domain: each step ends in two or three statements
+about their objects, rules and roles and the decisions between them,
+never an account of what was done, never what comes next, never which
+reference or step is in hand. A sentence that starts with I is
+rewritten before it is sent.
+
 A **front door** is the way people reach a Reboot app's backend: the
 interface they use to get to its data and actions. There are two: a
 **web app** (a website in a browser) and an **MCP UI** (tools and views
 inside an AI chat app such as Claude or ChatGPT). An app can have
 either or both; the backend behind them is the same.
-
-**Voice.** Everything said to the user, from the first line of the
-session to the handoff, is in the build's voice, never the first
-person: no I, me, my, we or us. The subject is the app, the design, the
-build or the prototype ("the prototype is going up first", "next: the
-servicers"), and "you" is the user. Say more, not less, and say it at
-the level of the domain: the user reads the build as it happens, and
-each step ends in two or three statements of fact about their objects,
-rules and roles and the decisions between them, never an account of
-what was done, never what comes next, never which reference or step is
-in hand. A sentence that starts with I is rewritten before it is sent.
 
 Decide which front door to build first, then build it with the
 [`build` skill](../build/SKILL.md) plus the matching front-door skill
