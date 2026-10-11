@@ -223,6 +223,37 @@ async function summarize(
   await showTask($, kind === 'request' ? { ...seen, done: null } : seen)
 }
 
+// Narration summaries at most once per gap: each is a model call on the
+// session's credentials, and the model narrates between every tool
+// call. The newest text waits for the next slot; nothing is asked for
+// while the band is hidden.
+const NARRATION_GAP_MS = 10_000
+let narrationAt = -Infinity // when the last narration summary was asked for
+let narrationWaiting: string | null = null // the newest narration, while a slot is booked
+
+async function summarizeNarration($: EngineInterface, text: string) {
+  if (await read($, isHidden)) return
+  if (narrationWaiting !== null) {
+    narrationWaiting = text
+    return
+  }
+  const now = await $.clock.now()
+  const wait = narrationAt + NARRATION_GAP_MS - now
+  if (wait <= 0) {
+    narrationAt = now
+    void summarize($, text, 'narration')
+    return
+  }
+  narrationWaiting = text
+  void $.clock.after(wait, async () => {
+    const pending = narrationWaiting
+    narrationWaiting = null
+    if (pending === null) return
+    narrationAt = await $.clock.now()
+    void summarize($, pending, 'narration')
+  })
+}
+
 /**
  * Opens `url` in the person's browser. A Link to a local http: address draws
  * as plain text on a remote surface (the desktop app), so the band's links
@@ -585,7 +616,7 @@ export const register: Register = on => {
     // Never "Idle" while a turn runs: until the summary names the
     // work, Now says the request is being worked on.
     await update($, activity, shown => ({ justCompleted: shown?.justCompleted ?? null, now: STARTING }))
-    if (e.text.trim()) void summarize($, e.text, 'request', kind === null)
+    if (e.text.trim() && !(await read($, isHidden))) void summarize($, e.text, 'request', kind === null)
 
     return next(e)
   }).catch(($, e, next) => next(e))
@@ -602,7 +633,7 @@ export const register: Register = on => {
         await update($, awaitingAcceptance, () => true)
         $.ui.toast('The design, for your review')
       }
-      if (isWorthSummarizing(text) && (await isEngaged($, false))) void summarize($, text, 'narration')
+      if (isWorthSummarizing(text) && (await isEngaged($, false))) await summarizeNarration($, text)
     }
 
     return appended

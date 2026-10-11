@@ -460,6 +460,44 @@ test('a recorded run killed mid-way shows as stopped within seconds, not as stil
   expect(await after.findAll({ type: 'Text', text: /So far/ })).toEqual([])
 })
 
+test('narration is summarized at most once per gap, and not while the band is hidden', async ($, on) => {
+  let summaries = 0
+  on('ui.render', { component: 'AbovePrompt' }, ($, e) => {
+    const { Box } = $.ui.resolve(e)
+
+    return h(Box, {}) as never
+  })
+  on('fs.exists', () => ({ value: false }) as never)
+  on('clock.now', () => ({ value: 1000 }) as never)
+  // The booked slot never comes round within the test.
+  on('clock.after', () => new Promise<never>(() => {}) as never)
+  on('model.complete', () => {
+    summaries++
+    return { value: { isAnswered: true, text: 'NOW: Writing the servicers\nDONE: NONE' } } as never
+  })
+  on('prompt.submit', ($, e) => ({ text: e.text }) as never)
+  on('tool.call', () => ({ result: {}, text: 'ok' }) as never)
+  const narrate = (text: string, uuid: string) =>
+    $.session.append({
+      message: { type: 'assistant', content: [{ type: 'text', text }] },
+      door: 'response',
+      origin: { kind: 'model', model: 'test' },
+      uuid,
+    } as never)
+
+  await $.tool.call({ tool: 'Skill', skill: 'reboot:build' })
+  await narrate('Now writing the servicers for the rooms and the bookings, one method at a time.', 'n-1')
+  await narrate('Now writing the authorizers for every servicer, the rules from the design.', 'n-2')
+  await wait(50)
+  expect(summaries).toBe(1)
+
+  await $.command.run({ command: 'reboot-progress', args: 'hide' } as never)
+  await narrate('Now running the scenarios red before any servicer body exists.', 'n-3')
+  await $.prompt.submit({ text: 'Run the full suite and tell me what fails.' } as never)
+  await wait(50)
+  expect(summaries).toBe(1)
+})
+
 test('a session outside a Reboot project draws nothing and asks for no summary', async ($, on) => {
   let summaries = 0
   on('ui.render', { component: 'AbovePrompt' }, ($, e) => {

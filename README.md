@@ -181,7 +181,8 @@ differ because of Codex limitations:
 - **No mods.** Installing `reboot` in Claude Code also installs a
   mod (a function-hook plugin in `mods/`, listed as its dependency):
   `reboot-progress` shows, above the prompt, a sentence on what Claude
-  is working on (summarized by Sonnet from its narration), the build's
+  is working on (summarized by Sonnet from its narration, at most one
+  call every ten seconds, on your credentials), the build's
   progress, buttons for the dashboard and the app, and how far a test
   run or a deploy is. See [`mods/README.md`](mods/README.md). Codex's
   catalog doesn't list it, and the band has no Codex equivalent.
