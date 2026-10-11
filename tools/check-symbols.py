@@ -3,7 +3,8 @@
 
 Extracts, from every SKILL.md and reference:
 
-* `from reboot… import A, B` and `import reboot…` lines in code blocks,
+* `from reboot… import A, B` and `import reboot…` lines in code blocks
+  and the same for `rbt…`, which the reboot wheel also installs,
 * dotted `reboot.x.y.Z` names in inline code,
 * `Name.method(` calls where `Name` was imported from `reboot…` in the
   same file (e.g. `OrderedMap.ref(`, `Queue.create(`),
@@ -35,8 +36,8 @@ EXTRAS = "anthropic,dev"
 PYTHON = "3.12"
 
 FENCE = re.compile(r"^\s*(```+|~~~+)")
-FROM_IMPORT = re.compile(r"^\s*from\s+(reboot(?:\.\w+)*)\s+import\s+(.+)$")
-IMPORT = re.compile(r"^\s*import\s+(reboot(?:\.\w+)*)")
+FROM_IMPORT = re.compile(r"^\s*from\s+((?:reboot|rbt)(?:\.\w+)*)\s+import\s+(.+)$")
+IMPORT = re.compile(r"^\s*import\s+((?:reboot|rbt)(?:\.\w+)*)\b")
 INLINE_DOTTED = re.compile(r"`(reboot(?:\.\w+)+)`")
 INCORRECT = re.compile(r"incorrect|don'?t|never|wrong|\bbad\b|avoid|removed|before:?\s*$", re.IGNORECASE)
 

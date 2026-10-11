@@ -45,6 +45,7 @@ BLOCK = re.compile(
 )
 REQUIRED = ("title", "summary", "step", "applies", "always", "verified")
 LISTED: set[str] = set()  # every reference some generated region names
+ON_LIST: set[str] = set()  # every reference a reading-list or always region names
 
 
 def display(ref: Ref, host_skill: str) -> str:
@@ -71,6 +72,7 @@ def render(kind: str, args: dict, host_skill: str, refs: list[Ref]) -> str:
             raise ValueError(f"bad reading-list args {args}")
         items = reading_list(refs, fd, step)
         LISTED.update(r.rel for r in items)
+        ON_LIST.update(r.rel for r in items)
         if not items:
             return "_No references for this step._\n"
         return "".join(bullet(r, host_skill, fd) + "\n" for r in items)
@@ -78,6 +80,7 @@ def render(kind: str, args: dict, host_skill: str, refs: list[Ref]) -> str:
         fd = args["front-door"]
         items = always_list(refs, fd)
         LISTED.update(r.rel for r in items)
+        ON_LIST.update(r.rel for r in items)
         return "".join(bullet(r, host_skill, fd) + "\n" for r in items)
     if kind == "catalog":
         skill = args.get("skill", host_skill)
@@ -262,7 +265,29 @@ def stage_errors(path: Path) -> list[str]:
     return errors
 
 
-def check_invariants(refs: list[Ref], listed: set[str]) -> tuple[list[str], list[str]]:
+def off_list_problems(refs: list[Ref], on_list: set[str]) -> tuple[list[str], list[str]]:
+    """A reference with a build step that no reading list names.
+
+    A catalog line is not a reading list: a build reads the lists, so a
+    file with step api..tests on none of them is never read when it
+    matters. That is an error. A file reached through a router (via:) is
+    read from the router. Step any, run or deploy has no reading list of
+    its own yet, so such a file is reported once, as a warning."""
+    errors: list[str] = []
+    warnings: list[str] = []
+    for r in refs:
+        if r.rel in on_list or r.via:
+            continue
+        if r.step in BUILD_STEPS:
+            errors.append(f"{r.rel}: step {r.step} but on no reading list "
+                          f"(check applies:, when: and always:)")
+        elif r.step in STEPS:
+            warnings.append(f"{r.rel}: step {r.step}, on no reading list")
+    return errors, warnings
+
+
+def check_invariants(refs: list[Ref], listed: set[str],
+                     on_list: set[str] | None = None) -> tuple[list[str], list[str]]:
     errors: list[str] = []
     warnings: list[str] = []
     known = {p for p, _ in concepts()}
@@ -307,8 +332,12 @@ def check_invariants(refs: list[Ref], listed: set[str]) -> tuple[list[str], list
         if not any(r.skill == "python" and r.concept == prefix for r in refs):
             errors.append(f"_sections.md: concept {heading!r} ({prefix}) has no reference")
 
+    off_errors, off_warnings = off_list_problems(refs, ON_LIST if on_list is None else on_list)
+    errors += off_errors
+    warnings += off_warnings
+    reported = {w.split(":", 1)[0] for w in off_warnings + off_errors}
     for r in refs:
-        if r.rel not in listed and not r.via:
+        if r.rel not in listed and not r.via and r.rel not in reported:
             warnings.append(f"{r.rel}: not listed in any generated index")
     return errors, warnings
 

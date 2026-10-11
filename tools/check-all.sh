@@ -30,6 +30,13 @@ python3 tests/templates/api_lint_test.py -q
 python3 tests/templates/doctor_test.py -q
 python3 tests/shims/rbt_test.py -q
 python3 tests/hooks/suite_guard_test.py -q
+python3 tests/tools/gen_index_test.py -q
+python3 tests/tools/findings_test.py -q
+python3 tests/tools/lint_frontmatter_test.py -q
+python3 tests/tools/check_manifests_test.py -q
+python3 tests/tools/check_cli_test.py -q
+python3 tests/tools/check_symbols_test.py -q
+python3 tests/tools/run_evals_test.py -q
 if command -v shellcheck >/dev/null 2>&1; then
     shellcheck install.sh hooks/*.sh hooks-handlers/*.sh lib/*.sh bin/* tools/*.sh \
         skills/build/templates/copy.sh skills/build/templates/*/scripts/*.sh \

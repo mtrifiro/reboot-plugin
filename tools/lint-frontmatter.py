@@ -18,14 +18,25 @@ from pathlib import Path
 
 from reflib import FRONT_DOORS, ROOT, parse_frontmatter
 
-SKIP_DIRS = {".git", "node_modules", ".gstack", "dist", "__pycache__"}
+# Skipped at the repo root only.
+SKIP_ROOT_DIRS = {".git", ".gstack"}
+# Build and tool output, skipped only inside a template or a mod, where a
+# test run or an install leaves it. Anywhere else a Markdown file in one
+# of these is checked like any other.
+GENERATED_DIRS = {"node_modules", "dist", ".venv", ".pytest_cache", ".mypy_cache", "__pycache__"}
 SKIP_PREFIXES = ("evals/results/", "plugins/")  # plugins/reboot links to the repo root
 
 # Files that deliberately have no front matter.
 EXEMPT = (
     # GitHub renders front matter as a table on a directory's landing page.
     "README.md",
-    "*/README.md",
+    "evals/README.md",
+    "findings/README.md",
+    "mods/README.md",
+    "tools/README.md",
+    "skills/build/templates/README.md",
+    "skills/upgrade/migrations/README.md",
+    "skills/upgrade/migrations/*/README.md",
     # Copied verbatim into every new project (copy.sh): the user's file.
     "skills/build/templates/*/FINDINGS.md",
     "skills/build/templates/*/AGENTS.md",
@@ -49,11 +60,23 @@ KINDS = ("migration", "index", "report", "backlog")
 AUDIENCES = ("agent", "maintainer")
 
 
+def skipped(parts: tuple[str, ...]) -> bool:
+    """Whether a file at these path parts (relative to the root) is skipped."""
+    dirs = parts[:-1]
+    if dirs and dirs[0] in SKIP_ROOT_DIRS:
+        return True
+    if dirs[:3] == ("skills", "build", "templates") and len(dirs) > 3:
+        return bool(GENERATED_DIRS.intersection(dirs[4:]))
+    if dirs[:1] == ("mods",) and len(dirs) > 1:
+        return bool(GENERATED_DIRS.intersection(dirs[2:]))
+    return False
+
+
 def markdown_files() -> list[Path]:
     out = []
     for path in sorted(ROOT.rglob("*.md")):
         rel = path.relative_to(ROOT)
-        if SKIP_DIRS.intersection(rel.parts[:-1]):
+        if skipped(rel.parts):
             continue
         if rel.as_posix().startswith(SKIP_PREFIXES):
             continue

@@ -20,6 +20,8 @@ skills front-load (which front door, the design) and before any code.
 | `design-roles` | Assumes first; a hotel with front desk and housekeeping: the design names the roles and enforces in the backend which methods each may call; roles on one roster, a sign-in linked only on a verified email, the first admin named; dev-only demo data |
 | `design-accept-gate` | The review on the first prototype: the agent assumes what the brief leaves open and says it builds something simple first, designs the whole initial prototype saying each object and decision with its why, maps each rule to its owner, method, kind and caller, lists what goes beyond the brief, puts the user's acceptance at the running prototype's handoff, explains the Reboot ideas behind the model in the app's own terms, and says nothing in the first person. `explains-the-stop` (the review's plain words: what it covers and the answers it takes) runs on the plugin arm only, so it is reported under the with-without ablation and scored when the baseline arm is off |
 | `design-skip-gate` | Told up front to build without stopping: the design is still shown, nothing waits, the build teaches Reboot as it goes, and nothing is said in the first person |
+| `workflow-ask-once` | A todo app after its first build, with no workflow line in AGENTS.md: the first change asks whether changes go onto `main` or a branch each, before any edit, and pushes or opens nothing unasked |
+| `workflow-recorded` | The same app with `Workflow: main` recorded in AGENTS.md: the change goes onto `main` and nothing asks about branches again |
 
 Plain Claude also builds a web app without asking on the `route-*`
 prompts, so those cases guard against regressions more than they show a
@@ -38,7 +40,8 @@ first: `design-skip-gate` 1.00 and 0.33; `design-look-triage` 0.87 and
 and 0.00; `design-roles` 0.60 and 0.33. On the accept gate the plugin's
 gain is the assumptions said up front, the rule mapping and the review
 placed on the running app, in every run (measured before the whole
-prototype replaced one feature first; `narrates-objects` has not run). Plain
+prototype replaced one feature first). `narrates-objects` has since
+passed 3 of 3 with the plugin on three runs of the case. Plain
 Claude also asks before it builds in a planning session, so
 `waits-for-acceptance` guards against a regression more than it shows
 a gain. An earlier wording of that
@@ -70,11 +73,15 @@ tools/run-evals.sh --tag routing --runs 1 # a quick pass
 tools/run-evals.sh --case design-ready-for-both
 ```
 
-The script wraps the working tree as a plugin (the repo has no
-`plugin.json`; the mods are not under eval, and every run is a read-only
-planning session, so the feature skill's red-then-green loop, the schema
+The script wraps the working tree as a plugin (the copies of the
+skills and the hooks need a plugin of their own; the mods are not under
+eval, and every run is a read-only planning session, so the feature skill's red-then-green loop, the schema
 guard and the run, deploy and report skills have no eval yet) and copies
 results into `evals/results/` (gitignored).
+The `workflow-*` cases start from a fixture (`scaffold_script`), which
+the runner skips without `--scaffold`, so the script adds `--scaffold`
+whenever a selected case has one, unless you pass `--scaffold` or
+`--no-scaffold` yourself.
 Each run is a full Claude session on your credentials; the default model
 is your session's. Add `--max-cost-usd <n>` to cap a run.
 

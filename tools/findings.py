@@ -5,10 +5,14 @@ Checks every item's frontmatter against the schema in
 findings/README.md, then prints counts by target, status, cluster and
 tag, and the list of open plugin items per skill/reference.
 
-A `Resolved` item must have a `resolved_by` of the form
-"<path under skills/> § <section heading>", and that heading must exist
-in that file; an item tagged `contradiction` that names two or more files must
-resolve to sections in at least two files.
+A `Resolved` item must have a `resolved_by` that names something that
+exists: "<path under skills/> § <section heading>" (a heading outside
+code fences), or a mechanism: a path under skills/build/templates/, or
+a repo path whose first segment is hooks, hooks-handlers, bin, lib,
+tools or evals, with an optional "§ <name>" (a heading, a function, or
+an eval case's grader). An optional `mechanism:` field says which kind
+of fix closed it. An item tagged `contradiction` that names two or more
+files must resolve to sections in at least two files.
 
 Usage:
     tools/findings.py               # summary; exit 1 on schema errors
@@ -34,13 +38,17 @@ SKILLS = ROOT / "skills"
 
 REQUIRED = ("id", "project", "source", "reboot_version", "severity", "target",
             "names", "tags", "cluster", "still_applies", "status", "resolved_by")
-OPTIONAL = ("duplicate_of",)
+OPTIONAL = ("duplicate_of", "mechanism")
 ENUMS = {
     "severity": {"red", "yellow", "green", "unrated"},
     "target": {"plugin", "framework", "cloud", "bdd", "primer", "positive"},
     "still_applies": {"yes", "no", "unknown"},
     "status": {"Open", "Resolved", "Obsolete"},
 }
+MECHANISMS = {"row", "template", "check", "hook", "shim", "tool", "prose", "eval"}
+# A resolved_by whose first segment is one of these is a repo path, not a
+# path under skills/.
+MECHANISM_ROOTS = ("hooks", "hooks-handlers", "bin", "lib", "tools", "evals")
 TAGS = {"negative-space", "contradiction", "error-text", "version-drift", "scaffold",
         "seeding", "cost", "pattern", "operations", "index-gap", "builder-drift",
         "auth", "testing", "frontend"}
@@ -74,16 +82,57 @@ def parse(path: Path) -> dict:
     return data
 
 
-def heading_exists(ref: str) -> bool:
-    if "§" not in ref:
-        return False
-    path, section = (part.strip() for part in ref.split("§", 1))
-    file = SKILLS / path
-    if not file.exists():
-        return False
-    headings = [l.lstrip("#").strip().lower() for l in file.read_text().splitlines()
-                if l.startswith("#")]
-    return section.lower() in headings
+def markdown_headings(text: str) -> list[str]:
+    """Headings outside fenced code blocks, lowercased."""
+    out, fence = [], ""
+    for line in text.splitlines():
+        stripped = line.lstrip()
+        marker = stripped[:3]
+        if marker in ("```", "~~~"):
+            if not fence:
+                fence = marker
+            elif marker == fence:
+                fence = ""
+            continue
+        if not fence and line.startswith("#"):
+            out.append(line.lstrip("#").strip().lower())
+    return out
+
+
+def section_exists(file: Path, section: str) -> bool:
+    """`section` names a heading, a function or class, or a grader in `file`."""
+    if file.is_dir():
+        # An eval case: the section is one of its graders.
+        return (file / "graders" / f"{section}.md").is_file()
+    text = file.read_text(encoding="utf-8", errors="replace")
+    name = re.escape(section)
+    if file.suffix == ".md":
+        return section.lower() in markdown_headings(text)
+    if file.suffix == ".py":
+        return re.search(rf"^\s*(?:async\s+)?(?:def|class)\s+{name}\b", text, re.M) is not None
+    if file.suffix == ".sh" or re.match(r"#!.*\b(?:ba|z)?sh\b", text):
+        return re.search(rf"^\s*(?:function\s+{name}\b|{name}\s*\(\s*\))", text, re.M) is not None
+    if file.suffix in (".js", ".mjs", ".ts"):
+        return re.search(rf"\bfunction\s+{name}\b|\b(?:const|let|var)\s+{name}\s*=",
+                         text) is not None
+    return re.search(rf"\b{name}\b", text) is not None
+
+
+def resolution_error(ref: str) -> str | None:
+    """Why a `resolved_by` entry names nothing that exists, or None."""
+    path, _, section = (part.strip() for part in ref.partition("§"))
+    mechanism_root = path.split("/", 1)[0] in MECHANISM_ROOTS
+    file = (ROOT if mechanism_root else SKILLS) / path
+    is_case = mechanism_root and path.split("/", 1)[0] == "evals" and file.is_dir()
+    if not path or not (file.is_file() or is_case):
+        return f"resolved_by names a missing file: {ref!r}"
+    if not section:
+        if mechanism_root or path.startswith("build/templates/"):
+            return None
+        return f"resolved_by names no section (add '§ <heading>'): {ref!r}"
+    if not section_exists(file, section):
+        return f"resolved_by points at a missing section: {ref!r}"
+    return None
 
 
 def validate(item: dict, ids: set[str] | None = None,
@@ -109,6 +158,8 @@ def validate(item: dict, ids: set[str] | None = None,
     for key, allowed in ENUMS.items():
         if key in item and item[key] not in allowed:
             errors.append(f"{key}={item[key]!r} not in {sorted(allowed)}")
+    if item.get("mechanism") and item["mechanism"] not in MECHANISMS:
+        errors.append(f"mechanism={item['mechanism']!r} not in {sorted(MECHANISMS)}")
     for tag in item.get("tags", []):
         if tag not in TAGS:
             errors.append(f"unknown tag {tag!r}")
@@ -117,8 +168,9 @@ def validate(item: dict, ids: set[str] | None = None,
         if not refs:
             errors.append("Resolved without resolved_by")
         for ref in refs:
-            if not heading_exists(ref):
-                errors.append(f"resolved_by points at a missing section: {ref!r}")
+            error = resolution_error(ref)
+            if error:
+                errors.append(error)
         # A contradiction between two files must show both now agree; one
         # between a file and the runtime is closed by fixing that file. A
         # duplicate carries its canonical's resolution as it is.

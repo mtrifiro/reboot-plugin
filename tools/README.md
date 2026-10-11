@@ -17,13 +17,14 @@ the plugin pins.
 | `lint-frontmatter.py` | Front matter on every other Markdown file (below) | a file has no front matter block, or lacks its category's keys |
 | `run-evals.sh` | Behavior: what a fresh agent decides with and without the plugin (`evals/`, via `claude plugin eval`) | not run in CI (it costs model calls); exits 1 if a case scores under `--threshold` |
 | `style-check.py` | The four template stylesheets agree (web is the source; MCP adds `.ui`); `--browser` renders `style-check.html`, a page using every class, at 320/375/1280 px in light and dark (`--screenshots DIR` saves PNGs) | a copy drifts; the page overflows a screen or cuts off a short label |
-| `findings.py` | Schema + summary of `findings/`; `--todo` lists the open items with the fixes the combined report names, grouped by file, with a mechanism to try | an item breaks the schema, or a `resolved_by` section doesn't exist |
-| `check-manifests.py` | The JSON manifests parse; the Reboot version pins (`VERSION`, the manifests, `bin/rbt`, the templates' `pyproject.toml`) agree | a manifest doesn't parse, or two pins differ |
+| `findings.py` | Schema + summary of `findings/`; `--todo` lists the open items with the fixes the combined report names, grouped by file, with a mechanism to try | an item breaks the schema, or a `resolved_by` names a file, section, function or grader that doesn't exist (`findings/README.md`) |
+| `check-manifests.py` | The JSON manifests parse; the Reboot version pins (`VERSION`, the manifests, `bin/rbt`, the templates' `pyproject.toml`) agree; each marketplace entry with a local source matches that plugin's own manifest (name, and version: a Claude marketplace entry must carry one); the Codex marketplace names only plugins the Claude one has | a manifest doesn't parse, two pins differ, or an entry and its plugin disagree |
 | `check-mods.sh` | Each mod in `mods/` as the engine reads it: `claude plugin validate`, then its `*.test.ts` with `claude plugin test` | validation or a test fails |
+| `check-facts.py` | Facts (inline code, error texts, Never leads, numbers, link targets) under `skills/` at a git revision (`--base`, default `HEAD`) that the working tree no longer has anywhere | not in `check-all.sh`: a review aid during a rewrite; exits 1 when a fact is gone |
 | `package-plugin.sh` | Zips the committed plugin (manifest, skills, hooks, shims, README) as a `.plugin` file the Claude app installs from a chat; `dependencies` dropped since the app runs no mods | (not a check) |
 
 `check-all.sh` runs them in order, with the tests in `tests/` (the
-hooks, the template copy script) and `shellcheck` over every shell script (`--full` adds
+hooks, the shims, the templates, and these tools in `tests/tools/`) and `shellcheck` over every shell script (`--full` adds
 the CLI, symbol, template-build and rendered-style checks, and the mods
 when `claude` is on PATH); `.github/workflows/skills-checks.yml` runs
 the fast set, the mods and the full set on every pull request.
@@ -35,10 +36,14 @@ the fast set, the mods and the full set on every pull request.
 ## Front matter
 
 Every `.md` starts with a YAML front matter block (flat `key: value`
-lines and inline `[a, b]` lists), except two kinds of file:
-`README.md` files, because GitHub shows front matter as a table on a
-directory's landing page, and `build/templates/*/FINDINGS.md`, which
-`copy.sh` copies into the user's project. `lint-frontmatter.py` checks
+lines and inline `[a, b]` lists), except two kinds of file: the
+`README.md` files listed in `EXEMPT` (the root, `evals/`, `findings/`,
+`mods/`, `tools/`, `skills/build/templates/` and the migrations'),
+because GitHub shows front matter as a table on a directory's landing
+page, and the templates' `FINDINGS.md`, `AGENTS.md`, `CLAUDE.md` and
+`deploy/api-exceptions.md`, which `copy.sh` copies into the user's
+project. Build output (`node_modules`, `dist`, `.venv`, the caches) is
+skipped only inside a template or a mod. `lint-frontmatter.py` checks
 each category's required keys; the full rules live with its owner:
 
 | Files | Required keys | Full rules |

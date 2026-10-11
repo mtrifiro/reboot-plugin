@@ -33,7 +33,8 @@ cluster: "4.1"           # proposal change or task this lands in (4.1–4.6, A�
 duplicate_of: ""         # id of the canonical item for the same gap; omit when canonical. A duplicate carries its canonical's status
 still_applies: unknown   # yes | no | unknown, as judged at import against the skills at 1.6.0 (a snapshot; `status` is current)
 status: Open             # Open | Resolved | Obsolete
-resolved_by: ""          # "<path> § <section>" once Resolved
+resolved_by: ""          # "<path> § <section>" once Resolved; see below
+mechanism: ""            # optional: row | template | check | hook | shim | tool | prose | eval
 ---
 
 # <one-line title>
@@ -75,3 +76,24 @@ rejects), `scaffold` (a pasted template file is wrong), `seeding`,
 `index-gap` (fact exists but no reading list points at it),
 `builder-drift` (mcp-ui / web-app copies disagree), `auth`, `testing`,
 `frontend`.
+
+### `resolved_by` and `mechanism`
+
+`resolved_by` lists what closed the item, separated by `; `. Each entry
+must name something that exists (`tools/findings.py --check`):
+
+- A path under `skills/` with `§ <heading>`: prose. The heading must
+  exist outside code fences. The `§` part is required.
+- A path under `skills/build/templates/`: a template file. `§` is
+  optional.
+- A repo path whose first segment is `hooks`, `hooks-handlers`, `bin`,
+  `lib`, `tools` or `evals`: a check, hook, shim, tool or eval. `§` is
+  optional. With it, `§` names a heading in a `.md` file, a `def` or
+  `class` in a `.py` file, a function in a shell script, or a grader
+  of an eval case (`evals/<case> § <grader>`, for
+  `evals/<case>/graders/<grader>.md`).
+
+`mechanism` is optional and says which kind of fix closed the item:
+`row` (an Errors table row), `template`, `check`, `hook`, `shim`,
+`tool`, `prose` or `eval`. Set it when an item is resolved; existing
+items are not flipped in bulk.

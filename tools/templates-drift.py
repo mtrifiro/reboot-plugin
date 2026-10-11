@@ -53,7 +53,8 @@ DIFFERS = {
     "scripts/page_timing.py": "where the web app's build is served",
     "scripts/screenshots.py": "where the web app is served",
     "tests/backup_restore_test.py": "the sample state type",
-    "tests/conftest.py": "the sample app's fixtures",
+    "tests/conftest.py": "the web front doors add the browser look checks (fit a phone screen, "
+                         "no loading text, own fonts, light and dark, no clipped labels)",
     "tests/counting.feature": "the sample scenarios",
 }
 

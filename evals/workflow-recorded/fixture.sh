@@ -13,7 +13,7 @@ A Reboot app (Python backend, React web app).
 
 - **Test:** `uv run pytest`.
 - **Deploy:** `scripts/deploy.sh`, with the plugin's `deploy` skill.
-- **Workflow:** main. Changes go straight onto `main`; no branches.
+- **Workflow:** main
 MD
 cat > api/todo/v1/todo.py <<'PY'
 from reboot.api import API, Field, Methods, Model, Reader, Type, Writer

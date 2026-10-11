@@ -8,14 +8,22 @@ onto the same one. Nothing else enforces that these say the same
 thing, so this does:
 
 * `VERSION`
-* `.claude-plugin/marketplace.json` (`metadata.version`, and the
-  `reboot` entry's `version` if it has one)
+* `.claude-plugin/marketplace.json` (`metadata.version`)
 * `.codex-plugin/plugin.json`
 * `bin/rbt` (`REBOOT_VERSION=`)
 * `skills/build/templates/*/pyproject.toml` (`reboot==`, `reboot[dev]==`)
 
-A marketplace entry with a local `source` and a `version` must also
-agree with that plugin's own `plugin.json` (the mods).
+Each entry of `.claude-plugin/marketplace.json` with a local `source`
+must match that plugin's own `.claude-plugin/plugin.json`: the same
+`name`, and the same `version`. An entry with no version fails. The one
+exception is the `reboot` plugin at the repo root, which has no version
+in its entry or its `plugin.json`: a versioned install is keyed by the
+version, and a local commit would no longer reach it.
+
+`.agents/plugins/marketplace.json` (Codex) must have the Claude
+marketplace's `name`; each local `source.path` must hold a
+`.codex-plugin/plugin.json` with the entry's name, and every plugin it
+lists must also be in the Claude marketplace.
 
 Usage:
     tools/check-manifests.py        # exit 1 on a parse error or a disagreement
@@ -68,6 +76,69 @@ def grep(rel: str, pattern: str, problems: list[str]) -> list[tuple[str, str]]:
     return found
 
 
+def own_manifest(source: str, kind: str) -> tuple[str, dict | None]:
+    """(relative path, parsed JSON or None) of the plugin.json under `source`."""
+    path = (ROOT / source / kind / "plugin.json").resolve()
+    shown = str(Path(source) / kind / "plugin.json")
+    try:
+        return shown, json.loads(path.read_text(encoding="utf-8"))
+    except (FileNotFoundError, NotADirectoryError):
+        return shown, None
+    except json.JSONDecodeError:
+        return shown, {}
+
+
+def is_root(source: str) -> bool:
+    return (ROOT / source).resolve() == ROOT.resolve()
+
+
+def claude_entry_problems(market: dict) -> list[str]:
+    where = ".claude-plugin/marketplace.json"
+    problems = []
+    for entry in market.get("plugins", []):
+        name, source = entry.get("name"), entry.get("source")
+        if not isinstance(source, str) or not source.startswith("."):
+            continue  # not a local plugin
+        shown, own = own_manifest(source, ".claude-plugin")
+        if own is None:
+            problems.append(f"{where}: {name}'s source has no {shown}")
+            continue
+        if own.get("name") != name:
+            problems.append(f"{where}: entry {name!r}, but {shown} names {own.get('name')!r}")
+        if is_root(source):
+            for label, doc in ((f"{where}: {name}", entry), (shown, own)):
+                if "version" in doc:
+                    problems.append(f"{label} has a version; the root plugin has none "
+                                    f"(an install keyed by version misses local commits)")
+            continue
+        if "version" not in entry:
+            problems.append(f"{where}: {name} has no version ({shown} says {own.get('version')})")
+        elif own.get("version") != entry["version"]:
+            problems.append(f"{where}: {name} is {entry['version']}, {shown} says "
+                            f"{own.get('version')}")
+    return problems
+
+
+def codex_marketplace_problems(codex: dict, market: dict) -> list[str]:
+    where = ".agents/plugins/marketplace.json"
+    problems = []
+    if codex.get("name") != market.get("name"):
+        problems.append(f"{where}: name {codex.get('name')!r}, but the Claude marketplace "
+                        f"is {market.get('name')!r}")
+    claude_names = {e.get("name") for e in market.get("plugins", [])}
+    for entry in codex.get("plugins", []):
+        name, source = entry.get("name"), entry.get("source") or {}
+        if name not in claude_names:
+            problems.append(f"{where}: {name} is not in .claude-plugin/marketplace.json")
+        if isinstance(source, dict) and source.get("source") == "local":
+            shown, own = own_manifest(source.get("path", ""), ".codex-plugin")
+            if own is None:
+                problems.append(f"{where}: {name}'s path has no {shown}")
+            elif own.get("name") != name:
+                problems.append(f"{where}: entry {name!r}, but {shown} names {own.get('name')!r}")
+    return problems
+
+
 def main() -> int:
     problems: list[str] = []
     docs = {rel: load(rel, problems) for rel in MANIFESTS}
@@ -86,23 +157,10 @@ def main() -> int:
     if market is not None:
         pins.append((".claude-plugin/marketplace.json: metadata.version",
                      str((market.get("metadata") or {}).get("version"))))
-        for entry in market.get("plugins", []):
-            name = entry.get("name")
-            if name == "reboot" and "version" in entry:
-                pins.append((f".claude-plugin/marketplace.json: plugins[{name}].version",
-                             str(entry["version"])))
-            source = entry.get("source")
-            if "version" in entry and isinstance(source, str):
-                own = ROOT / source / ".claude-plugin" / "plugin.json"
-                if own.is_file():
-                    try:
-                        own_version = json.loads(own.read_text(encoding="utf-8")).get("version")
-                    except json.JSONDecodeError:
-                        own_version = None  # reported above if it is a listed manifest
-                    if own_version != entry["version"]:
-                        problems.append(
-                            f".claude-plugin/marketplace.json: {name} is {entry['version']}, "
-                            f"{own.relative_to(ROOT)} says {own_version}")
+        problems += claude_entry_problems(market)
+    codex_market = docs.get(".agents/plugins/marketplace.json")
+    if market is not None and codex_market is not None:
+        problems += codex_marketplace_problems(codex_market, market)
 
     versions = {v for _, v in pins}
     if len(versions) > 1:

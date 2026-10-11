@@ -118,6 +118,18 @@ def is_rbtrc_line(line: str) -> bool:
     )
 
 
+PLACEHOLDER = r"(?:<[^>]*>|…|\.\.\.)"
+
+
+def strip_placeholders(command: str) -> str:
+    """Drop placeholders from an inline command, keeping the flags.
+
+    `--name=<name>` keeps `--name` so the flag is still checked; a token
+    that is only a placeholder (`<file>`, `...`) is dropped."""
+    command = re.sub(rf"(--[a-z][a-z0-9-]*)=\S*{PLACEHOLDER}\S*", r"\1", command)
+    return re.sub(rf"\S*{PLACEHOLDER}\S*", "", command)
+
+
 def scan(path: Path) -> list[Finding]:
     findings: list[Finding] = []
     rel = str(path.relative_to(ROOT))
@@ -157,10 +169,7 @@ def scan(path: Path) -> list[Finding]:
                 emit(line, lineno, block_incorrect)
         else:
             for m in INLINE.finditer(raw):
-                command = m.group(1)[4:]
-                if "<" in command or "…" in command or "..." in command:
-                    command = re.sub(r"\S*(<[^>]*>|…|\.\.\.)\S*", "", command)
-                emit(command, i, bool(INCORRECT.search(raw)))
+                emit(strip_placeholders(m.group(1)[4:]), i, bool(INCORRECT.search(raw)))
     return findings
 
 

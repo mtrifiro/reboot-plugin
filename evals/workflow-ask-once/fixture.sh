@@ -13,9 +13,6 @@ A Reboot app (Python backend, React web app).
 
 - **Test:** `uv run pytest`.
 - **Deploy:** `scripts/deploy.sh`, with the plugin's `deploy` skill.
-- **Workflow:** not chosen yet. At the first change after the first
-  build the agent asks whether changes go straight onto `main` or onto
-  a branch each, and writes the answer here.
 MD
 cat > api/todo/v1/todo.py <<'PY'
 from reboot.api import API, Field, Methods, Model, Reader, Type, Writer
