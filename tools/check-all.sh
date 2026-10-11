@@ -41,12 +41,21 @@ python3 tests/tools/check_manifests_test.py -q
 python3 tests/tools/check_cli_test.py -q
 python3 tests/tools/check_symbols_test.py -q
 python3 tests/tools/run_evals_test.py -q
+# CI has shellcheck; without it, the same binary from the shellcheck-py
+# wheel through the plugin's uvx, so a shell finding fails here first.
+sc=""
 if command -v shellcheck >/dev/null 2>&1; then
-    shellcheck install.sh hooks/*.sh hooks-handlers/*.sh lib/*.sh bin/* tools/*.sh \
+    sc="shellcheck"
+elif bin/uvx --from shellcheck-py==0.11.0.1 shellcheck --version >/dev/null 2>&1; then
+    sc="bin/uvx --from shellcheck-py==0.11.0.1 shellcheck"
+else
+    echo "check-all: shellcheck is not installed and uvx cannot fetch it; skipped (CI runs it)" >&2
+fi
+if [ -n "$sc" ]; then
+    # shellcheck disable=SC2086  # $sc is a command and its arguments
+    $sc install.sh hooks/*.sh hooks-handlers/*.sh lib/*.sh bin/* tools/*.sh \
         skills/build/templates/copy.sh skills/build/templates/*/scripts/*.sh \
         skills/build/templates/*/deploy/before-backend skills/build/templates/*/.githooks/*
-else
-    echo "check-all: shellcheck is not installed; skipped (CI runs it)" >&2
 fi
 if [ "${1:-}" = "--full" ]; then
     python3 tools/check-cli.py

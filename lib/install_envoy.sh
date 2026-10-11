@@ -75,6 +75,7 @@ case "$os_name-$arch_name" in
         # Docker on its own; the variable makes it.
         printf '\033[1;31m[reboot-plugin]\033[0m unsupported platform for Envoy: %s-%s (no %s build is published for it)\n' \
             "$os_name" "$arch_name" "$ENVOY_VERSION" >&2
+        # shellcheck disable=SC2016  # the backticks are printed, not run
         printf '\033[1;31m[reboot-plugin]\033[0m run Envoy in Docker instead: start Docker and `export REBOOT_LOCAL_ENVOY_MODE=docker` before `rbt dev run`\n' >&2
         exit 1
         ;;
