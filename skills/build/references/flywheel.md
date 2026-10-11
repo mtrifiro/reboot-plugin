@@ -149,16 +149,16 @@ pass; the merge needs the last one"). The stage's name appears once, in
 a clause that says what it is for, never as a label; no chapter numbers
 or links. The models below are the hotel; write yours.
 
-> **The first prototype is running, for your review.** Booking a room
-> is up at http://localhost:9991; all 4 scenarios pass. It is built on
+> **The first prototype is running, for your review.** The app is up
+> at http://localhost:9991; all 12 scenarios pass. It is built on
 > the simplest assumptions, so there is something real to review the
 > architecture, the rules and the feature set on: `Room` owns "booked
 > at most once per night", `Reservation.create` books every room or
 > none and is called only by the app, guests sign in with the
 > development picker, and the data is disposable. Reboot keeps each
 > room as its own actor and runs its methods one at a time, which is
-> what makes the first rule hold. Cancellations and
-> the housekeeping view are next, one at a time. The look: violet on
+> what makes the first rule hold. Anything the brief left out is a new
+> feature, agreed and added one at a time. The look: violet on
 > paper, the house default since you named no brand; name one, or a
 > site, and it gets read. Try the screens the way a guest would: this
 > is the cheapest moment to change any of it. Take your time; the
@@ -227,9 +227,9 @@ the card. Under 60 columns, so it never wraps.
 - Writing a feature's implementation, after the first prototype, before
   its slice of the design is accepted, unless the user said up front to
   build without stopping. "No answer is not acceptance."
-- Building a second feature before the first prototype runs and is
-  handed off, or writing every feature's file before the first one
-  runs: the rest wait in the backlog and come one at a time.
+- Creating an object or choosing a method kind without saying so:
+  every object and every decision is said as it is made, in the user's
+  nouns, with its why.
 - Folding a rule change into a "fix": a reworded `Rule:`, a changed
   declaration or a loosened authorizer is a Design change however small
   the diff.

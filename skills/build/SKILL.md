@@ -71,11 +71,12 @@ method types mean regenerating a dozen or more files.
 ### Design Phase
 
 The first prototype comes before the questions: take the simplest
-assumption for what the brief leaves open, build the one feature the
-app exists for, and hold the review on the running prototype. From
-there, design is a conversation in slices: agree one feature, show the
-slice of the model it adds, build it, hand it off. "Just build it",
-said up front, skips the reviews' waits too.
+assumption for what the brief leaves open, design the whole app's
+objects and methods, build the initial prototype complete, saying each
+object and each decision as it is made, and hold the review on the
+running prototype. From there, design is a conversation in slices:
+agree one feature, show the slice of the model it adds, build it, hand
+it off. "Just build it", said up front, skips the reviews' waits too.
 
 0. **Assumptions first.** For what the brief leaves open (who uses it
    and how they sign in; the one thing the primary view answers; what
@@ -89,17 +90,20 @@ said up front, skips the reviews' waits too.
    going up first, to review the architecture, the business rules and
    the feature set on. "Keep the data", said at any point, writes
    `keep since <date>` on the `Data:` line, committed.
-1. **One feature first, then a slice per feature.** Name, in the
-   user's words, the one feature the app exists for: **the first
-   prototype**. Write its `@wip` feature file now, from the assumptions
-   (the [`feature` skill](../feature/SKILL.md)'s Step 2; its Step 2a is
-   this flow's Step 2a); the rest go to the backlog in
-   `design/design.md`, one line each in the proposed order. After the
-   prototype's review, each later feature follows the feature skill's
-   Step 1: agree on it in plain English, show the slice of the domain
-   model it adds, as rows of the review table under the rows so far,
-   build it, hand it off, and ask what comes next. More than three or
-   four features: say so and propose the order.
+1. **The whole app, said object by object.** Write every capability's
+   `@wip` feature file from the assumptions (the [`feature`
+   skill](../feature/SKILL.md)'s Step 2; its Step 2a is this flow's
+   Step 2a). Then, as the domain model takes shape (items 3 and 4), say
+   each object as it is created, in the user's nouns: what it is, why it
+   is its own object, its methods with their kinds and who may call
+   each, and the choice set aside ("`Night` rather than a calendar on
+   `Room`: a room's calendar grows without bound"). Say each decision
+   the moment it is made, with what it buys or costs; the decisions log
+   keeps them (Step 2, item 5). After the prototype's review, each later
+   feature follows the feature skill's Step 1: agree on it in plain
+   English, show the slice of the domain model it adds, as rows of the
+   review table under the rows so far, build it, hand it off, and ask
+   what comes next.
 2. **Implement the brief literally** — the interactions the user
    described, not a pattern "common on sites like this". List any
    deviation (extra confirm step, staging area, batching) with its
@@ -153,10 +157,9 @@ said up front, skips the reviews' waits too.
    - web-app: the SPA's pages and the methods each calls; the visual
      brief per `web-app/references/ui-design.md`.
 5. Write the design, as you state it, to `design/design.md` in the
-   project, a slice at a time: the same words the user reads, every
-   choice with its why, the deviations from the brief, the alternatives
-   set aside, and the backlog: the features not yet built, one line
-   each in order. Keep it current as the design changes; it
+   project, as it takes shape: the same words the user reads, every
+   choice with its why, the deviations from the brief and the
+   alternatives set aside. Keep it current as the design changes; it
    is what "Accept the Design" asks them to accept, and it stays in the
    repository when the conversation is gone, a build without stopping
    included.
@@ -275,16 +278,17 @@ web-app (summary vs. detail readers, aggregation, per-caller views):
 **Run all commands from the application directory**; before each step,
 read its front-door reading list. Step 1 closes the first prototype's
 design; its acceptance comes with the running prototype (Step 7), and
-from the second feature on "Accept the Design" sits before each
-feature's implementation.
+from then on "Accept the Design" sits before each feature's
+implementation.
 
-**The first prototype is one feature, running within fifteen minutes
-of the brief.** Steps 1 to 7 build that feature alone: its state
-types, its methods, its page or tool, its scenarios. Note the time at
-the start; a step that runs past ten minutes stops and says what is
-taking the time and what it proposes to cut. Until the app has a
-second feature there is no screenshot pass and no page timing (Step
-5), and the suite is the feature's scenarios.
+**The first prototype is the whole design, built straight through and
+said as it goes.** Steps 1 to 7 build every feature file's model,
+methods, pages or tools and scenarios. Each step's narration names the
+object, method or file being written and the decision behind it, in
+the user's nouns, as it happens; a step that runs past ten minutes
+says what is taking the time and what it would cut. The first
+prototype skips the screenshot pass and page timing (Step 5); they
+come with the first update after the review.
 
 **Teach as you build.** The first build is the user's first look at
 Reboot: at each step, one or two sentences in their nouns on the idea
@@ -345,8 +349,8 @@ design's words:
 
 Every rule in a feature file gets a row; a rule with no owner, method
 or scenario is a gap to name, not to fill silently. List the feature
-file by path, the assumptions as made, and the backlog in order, and
-point at the dashboard's Models and Features pages.
+files by path and the assumptions as made, and point at the
+dashboard's Models and Features pages.
 Under the table, **Beyond the brief**: one line per interaction, rule or
 status the design adds to or changes from what the user asked, with its
 reason, so they accept those too; `design/review.md` records their
@@ -397,7 +401,7 @@ copies `templates/both/`. Then:
    each new state type, UI, route or script adds its row.
 5. **Record the design.** `design/design.md` is the design as assumed
    (Design Phase, item 5). Write `design/review.md` (the review table,
-   the feature file by path) and the first entry in
+   the feature files by path) and the first entry in
    `design/decisions.md` (below), and commit `api/`, `tests/*.feature`
    and `design/` with the scaffold as `Design assumed: <title>`, the
    project's first commit. When the user accepts at the first handoff
@@ -512,7 +516,7 @@ Read "Before the frontend".
    404 on every page). An MCP UI needs none: the host frames it.
 5. `npm run build` there (sanity check). web-app: start the app now
    with the [`run` skill](../run/SKILL.md) (Step 7 only hands it off),
-   then, from the second feature on, `uv run --with playwright python scripts/screenshots.py <routes>` saves every
+   then, after the review, `uv run --with playwright python scripts/screenshots.py <routes>` saves every
    route at desktop and phone width, light and dark; open and check each
    against `ui-design.md` principles 03–09 and its Never list, fix
    what fails in one pass, then pin it with a look scenario per page.
@@ -526,7 +530,7 @@ Read "Before the frontend".
      shows its pending state at once, the result follows. Never block
      a handler on work the person didn't ask to wait for.
 
-   From the second feature on, time the loads on every route, cold and warm, against the local
+   After the review, time the loads on every route, cold and warm, against the local
    backend with the demo data. web-app: with the app running, on the
    production build, not Vite's dev server:
 
@@ -553,9 +557,9 @@ Read "Before the frontend".
 
 ### Step 6 — Tests
 
-Read "Before the tests". **Write and run the feature's scenarios
-before handoff** (the first prototype's one feature; later, each
-feature's as it is built), in the built-in steps of
+Read "Before the tests". **Write and run every feature's scenarios
+before handoff** (the first prototype's all; later, each feature's as
+it is built), in the built-in steps of
 `python/references/testing-features.md`:
 - mcp-ui: every action the user should _do_ through the tool surface
   ("add an item and see it listed"), calling the methods the tools call.
@@ -626,12 +630,12 @@ cards"), then:
    when there are any, offer the [`report` skill](../report/SKILL.md).
 6. Unless the user asked for only one front door, the one-line offer of
    the other (`app` skill, "At handoff").
-7. The backlog's next feature, proposed; the user picks.
+7. What to add next, proposed; the user picks.
 
 ## Update Flow
 
-A backlog feature comes here one at a time: agreed, sliced, built, run
-and handed off, about ten minutes each, before the next.
+A feature after the review comes here one at a time: agreed, sliced,
+built, run and handed off, before the next.
 
 1. Read `.rbtrc`, `design/design.md` and `design/decisions.md`, the
    API definition, servicer, `main.py` and the frontend entry (mcp-ui:

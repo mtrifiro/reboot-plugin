@@ -61,10 +61,10 @@ an API:
   flow, if that is how the feature is used.
 
 Ask whether that is the feature; iterate on the English until they
-agree — the file follows the words. In a build, the first feature is
-the first prototype: its file is written from the build's assumptions
-and reviewed running, while the rest wait in the design's backlog. Each
-later feature is one slice of the design conversation: agreed here, its
+agree — the file follows the words. In a build, the first prototype's
+features are written from the build's assumptions and reviewed
+running. Each later feature after that is one slice of the design
+conversation: agreed here, its
 slice of the domain model shown, then "Accept the Design", where the
 user accepts the rules, their scenarios and the domain model together,
 before any implementation.
