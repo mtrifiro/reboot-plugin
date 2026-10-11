@@ -38,6 +38,9 @@ trainer"). An existing project skips it.
 >    each, shown as a map of the app.
 > 4. A working prototype of the whole scope, built to those features.
 > 5. Your review on the running app, then new features one at a time.
+>
+> Interrupt at any time. Questions along the way are welcome, and the
+> build answers each one before it goes on.
 
 **Voice, before anything else.** Everything said to the user, from
 the first line of the session to the handoff, is a statement of fact
