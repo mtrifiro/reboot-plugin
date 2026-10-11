@@ -305,12 +305,12 @@ dashboard shows the model and the features, and `rbt inspect` reads
 what is stored. A term the user asks about gets the reference's
 answer, in their words.
 
-**Once the first feature file exists (Design Phase, item 1), start the
-developer dashboard** with the [`dashboard` skill](../dashboard/SKILL.md):
-its Features page shows the rules and scenarios as they are written,
-its Models page the API once Step 1 writes it (it stubs
-`pyproject.toml` / `.rbtrc` if absent; earlier it shows an empty
-model). If it fails, say so in a sentence and keep building.
+**Once Step 1 has written the API file, start the developer
+dashboard** with the [`dashboard` skill](../dashboard/SKILL.md): it
+opens on its Models page, which has the model to show from then on,
+and its Features page has the feature files (it stubs `pyproject.toml`
+/ `.rbtrc` if absent). Started earlier, it opens on "Waiting for your
+API". If it fails, say so in a sentence and keep building.
 
 ### Step 1 — API definition
 
