@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """Tests for skills/build/templates/copy.sh: a plain copy, the refusal,
 and `--merge` (the build flow's Step 2: keep the project's files,
-replace the dashboard's stubs).
+replace the dashboard's stubs); a plain copy keeps the destination's
+own .venv and node_modules; a project in no repository gets one, with
+the hooks path set.
 
     python3 tests/templates/copy_test.py
 """
@@ -79,6 +81,34 @@ class CopyTest(unittest.TestCase):
             ["grep", "-rl", r"__project__\|__app__\|__Title__\|__Initial__", str(self.dest)],
             capture_output=True, text=True).stdout
         self.assertEqual(leftovers, "", "no placeholder survives")
+
+    def test_plain_copy_keeps_the_destinations_own_environment(self) -> None:
+        for name in (".venv", "node_modules", "dist", ".reboot"):
+            (self.dest / name).mkdir(parents=True)
+            (self.dest / name / "x").write_text("mine\n")
+        r = run("web-app", str(self.dest), "todo-list", "todo_list", "Todo List")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        for name in (".venv", "node_modules", "dist", ".reboot"):
+            self.assertEqual((self.dest / name / "x").read_text(), "mine\n", name)
+
+    def git(self, *args: str) -> str:
+        return subprocess.run(["git", "-C", str(self.dest), *args],
+                              capture_output=True, text=True).stdout.strip()
+
+    def test_a_project_in_no_repository_gets_one_with_the_hooks(self) -> None:
+        r = run("web-app", str(self.dest), "todo-list", "todo_list", "Todo List")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertTrue((self.dest / ".git").is_dir())
+        self.assertEqual(self.git("symbolic-ref", "HEAD"), "refs/heads/main")
+        self.assertEqual(self.git("config", "core.hooksPath"), ".githooks")
+
+    def test_a_project_inside_another_repository_is_left_alone(self) -> None:
+        outer = Path(self.tmp.name)
+        subprocess.run(["git", "-C", str(outer), "init", "-q"], check=True)
+        r = run("web-app", str(self.dest), "todo-list", "todo_list", "Todo List")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertFalse((self.dest / ".git").exists())
+        self.assertEqual(self.git("config", "--local", "core.hooksPath"), "")
 
 
 if __name__ == "__main__":

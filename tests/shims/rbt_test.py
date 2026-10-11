@@ -6,7 +6,10 @@ held state lock refuses `dev expunge` and `dev run`, naming the holder;
 `dashboard` gets the Node heap; a project with its own `.venv` runs
 that `rbt`, with a notice when its Reboot differs from the pin; the
 shim finds its root through a symlink and names `lib/` when it is
-missing.
+missing; `uv run rbt` (REBOOT_UV_RUN, set by the uv shim) passes the
+guards before it reaches `uv run`; the venv route applies the
+known-defect patches unless REBOOT_SKIP_PATCHES is set; the project's
+API lint runs before `generate` and a failure refuses it.
 
     python3 tests/shims/rbt_test.py
 """
@@ -25,6 +28,10 @@ RBT = ROOT / "bin" / "rbt"
 FAKE_UVX = "#!/bin/sh\necho \"uvx $*\"\necho \"NODE_OPTIONS=${NODE_OPTIONS:-}\"\n"
 FAKE_OWN = "#!/bin/sh\nexit 0\n"
 FAKE_VENV_RBT = "#!/bin/sh\necho \"venv-rbt $*\"\necho \"PATH=$PATH\"\n"
+FAKE_UV = "#!/bin/sh\necho \"uv $*\"\necho \"REBOOT_UV_RUN=${REBOOT_UV_RUN:-}\"\n"
+FAKE_PATCH = "import sys\nprint('patched', *sys.argv[1:])\n"
+FAILING_LINT = "import sys\nprint('api/x.py:1: bad')\nsys.exit(1)\n"
+PASSING_LINT = "print('api_lint: pass')\n"
 
 
 class RbtShimTest(unittest.TestCase):
@@ -154,6 +161,106 @@ class RbtShimTest(unittest.TestCase):
         self.assertEqual(r.returncode, 1)
         self.assertIn("lib/ is missing", r.stderr)
         self.assertIn("CLAUDE_PLUGIN_ROOT", r.stderr)
+
+    # `uv run rbt`, routed here by the uv shim.
+
+    def uv_run(self, *args: str, cwd: Path | None = None, **env: str) -> subprocess.CompletedProcess:
+        uv = Path(self.tmp) / "real-uv"
+        if not uv.exists():
+            self.write(uv, FAKE_UV)
+        return self.rbt(*args, cwd=cwd, REBOOT_UV_RUN=str(uv), **env)
+
+    def test_uv_run_passes_through_to_uv(self) -> None:
+        r = self.uv_run("generate", "--help", cwd=self.project)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("uv run rbt generate --help", r.stdout)
+        self.assertIn("REBOOT_UV_RUN=\n", r.stdout, "unset, so a nested rbt does not loop")
+
+    def test_uv_run_expunge_without_a_terminal_is_refused(self) -> None:
+        r = self.uv_run("dev", "expunge", cwd=self.project)
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("would wait forever", r.stderr)
+        self.assertEqual(r.stdout, "", "uv never ran")
+
+    @unittest.skipUnless(shutil.which("lsof"), "lsof is not installed")
+    def test_uv_run_under_a_held_lock_is_refused(self) -> None:
+        pid = self.hold_lock()
+        r = self.uv_run("dev", "run", cwd=self.project, REBOOT_LOCK_WAIT="1")
+        self.assertEqual(r.returncode, 1)
+        self.assertIn(f"still held by pid {pid}", r.stderr)
+        self.assertEqual(r.stdout, "", "uv never ran")
+
+    # Known-defect patches on the venv route.
+
+    def make_venv(self) -> None:
+        venv = self.project / ".venv"
+        (venv / "bin").mkdir(parents=True)
+        self.write(venv / "bin" / "rbt", FAKE_VENV_RBT)
+
+    def test_the_venv_route_applies_the_patches(self) -> None:
+        self.make_venv()
+        (self.plugin / "lib" / "patch_reboot.py").write_text(FAKE_PATCH)
+        r = self.rbt("dev", "run", cwd=self.project, REBOOT_LOCK_WAIT="1")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn(f"patched --quiet {os.path.realpath(self.project)}\n", r.stdout)
+        self.assertIn("venv-rbt dev run", r.stdout)
+        r = self.rbt("dev", "run", cwd=self.project, REBOOT_LOCK_WAIT="1", REBOOT_SKIP_PATCHES="1")
+        self.assertNotIn("patched", r.stdout)
+        self.assertIn("venv-rbt dev run", r.stdout)
+
+    def test_uv_run_applies_the_patches_first(self) -> None:
+        (self.plugin / "lib" / "patch_reboot.py").write_text(FAKE_PATCH)
+        r = self.uv_run("dev", "run", cwd=self.project, REBOOT_LOCK_WAIT="1")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn(f"patched --quiet {os.path.realpath(self.project)}\nuv run rbt dev run", r.stdout)
+        r = self.uv_run("dev", "run", cwd=self.project, REBOOT_LOCK_WAIT="1", REBOOT_SKIP_PATCHES="1")
+        self.assertNotIn("patched", r.stdout)
+
+    def test_the_venv_route_runs_without_the_patcher(self) -> None:
+        self.make_venv()
+        r = self.rbt("dev", "run", cwd=self.project, REBOOT_LOCK_WAIT="1")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("venv-rbt dev run", r.stdout)
+
+    def test_a_failing_patcher_does_not_stop_rbt(self) -> None:
+        self.make_venv()
+        (self.plugin / "lib" / "patch_reboot.py").write_text("import sys\nsys.exit(3)\n")
+        r = self.rbt("dev", "run", cwd=self.project, REBOOT_LOCK_WAIT="1")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("venv-rbt dev run", r.stdout)
+
+    # The API lint before generate (decision 3).
+
+    def lint(self, text: str) -> None:
+        (self.project / "scripts").mkdir(exist_ok=True)
+        (self.project / "scripts" / "api_lint.py").write_text(text)
+
+    def test_a_failing_api_lint_refuses_generate(self) -> None:
+        self.lint(FAILING_LINT)
+        r = self.rbt("generate", cwd=self.project)
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("api/x.py:1: bad", r.stderr)
+        self.assertIn("REBOOT_SKIP_API_LINT=1", r.stderr)
+        self.assertEqual(r.stdout, "", "generate never ran")
+        r = self.uv_run("generate", cwd=self.project)
+        self.assertEqual(r.returncode, 1, "uv run rbt generate is refused too")
+
+    def test_a_passing_api_lint_lets_generate_run(self) -> None:
+        self.lint(PASSING_LINT)
+        r = self.rbt("generate", cwd=self.project)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn(" rbt generate", r.stdout)
+        self.assertNotIn("api_lint", r.stdout + r.stderr, "quiet when it passes")
+
+    def test_the_api_lint_is_skipped_on_request_and_for_help(self) -> None:
+        self.lint(FAILING_LINT)
+        r = self.rbt("generate", cwd=self.project, REBOOT_SKIP_API_LINT="1")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn(" rbt generate", r.stdout)
+        r = self.rbt("generate", "--help", cwd=self.project)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        r = self.rbt("dev", "run", cwd=self.project, REBOOT_LOCK_WAIT="1")
+        self.assertEqual(r.returncode, 0, "only generate runs the lint")
 
 
 if __name__ == "__main__":

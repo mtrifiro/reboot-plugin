@@ -311,6 +311,14 @@ class ModelDiffTest(unittest.TestCase):
         report = model_diff.markdown(self.base[:7], "HEAD", self.changes("HEAD"))
         self.assertIn("**3 design changes**", report)
 
+    def test_a_path_with_a_space(self) -> None:
+        spaced = self.root / "tests" / "late check-out.feature"
+        spaced.write_text(FEATURE_BEFORE)
+        git(self.root, "add", ".")
+        git(self.root, "commit", "-q", "-m", "spaced")
+        self.assertIn("tests/late check-out.feature",
+                      model_diff.files_at("HEAD", "tests", ".feature"))
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -19,7 +19,10 @@
 # the fix; `dev expunge` and a second `dev run` while a backend holds
 # the application's state lock would loop or crash-loop, so they are
 # refused naming the holder; `dashboard` gets the Node heap pyright
-# needs on a mid-sized app.
+# needs on a mid-sized app. `generate` runs the project's API lint
+# first and stops when it fails. `uv run rbt` comes through here too
+# (the uv shim sends it, with REBOOT_UV_RUN naming the real uv), so the
+# guards hold for it.
 
 set -eu
 
@@ -128,9 +131,43 @@ done
         ;;
 esac
 
+# Decision 3 of docs/findings-ingestion.md: the project's API lint runs
+# before every `generate`, and a failing lint refuses the generate.
+# REBOOT_SKIP_API_LINT=1 skips it.
+if [ "$wants_help" = 0 ] && [ "${1:-}" = generate ] && [ -n "$project" ] \
+    && [ -f "$project/scripts/api_lint.py" ] && [ "${REBOOT_SKIP_API_LINT:-}" != 1 ]; then
+    python="python3"
+    [ -x "$project/.venv/bin/python" ] && python="$project/.venv/bin/python"
+    if ! lint="$(cd "$project" && "$python" scripts/api_lint.py 2>&1)"; then
+        printf '%s\n' "$lint" >&2
+        echo "rbt: generate refused; fix the API lint's findings above, or set REBOOT_SKIP_API_LINT=1." >&2
+        exit 1
+    fi
+fi
+
+# Known-defect patches to the project's installed Reboot (decision 1 of
+# docs/findings-ingestion.md); REBOOT_SKIP_PATCHES=1 skips them. Never
+# fails this shim.
+patch_venv() {
+    [ -n "$project" ] && [ -f "$PLUGIN_ROOT/lib/patch_reboot.py" ] || return 0
+    [ -n "${REBOOT_SKIP_PATCHES:-}" ] || python3 "$PLUGIN_ROOT/lib/patch_reboot.py" --quiet "$project" || true
+}
+
 # Record which agent session owns a long-running dev command; see
 # `lib/own.sh`. Never fails this shim.
 "$PLUGIN_ROOT/lib/own.sh" $$ rbt "$@" || true
+
+# `uv run rbt` reaches here through the uv shim, which names the real uv
+# in REBOOT_UV_RUN: the guards above have run, so hand the command back
+# to `uv run`, which syncs the environment and runs its `rbt`.
+# Unset, so an `rbt` that `uv run` finds back on PATH takes the usual
+# route instead of looping.
+if [ -n "${REBOOT_UV_RUN:-}" ]; then
+    uv_run="$REBOOT_UV_RUN"
+    unset REBOOT_UV_RUN
+    patch_venv
+    exec "$uv_run" run rbt "$@"
+fi
 
 if [ -n "$project" ] && [ -x "$project/.venv/bin/rbt" ]; then
     # The project's own install. Its `bin/` goes first on PATH, as
@@ -148,6 +185,7 @@ if [ -n "$project" ] && [ -x "$project/.venv/bin/rbt" ]; then
     PATH="$project/.venv/bin:$PATH"
     VIRTUAL_ENV="$project/.venv"
     export PATH VIRTUAL_ENV
+    patch_venv
     exec "$project/.venv/bin/rbt" "$@"
 fi
 

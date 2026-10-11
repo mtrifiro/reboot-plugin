@@ -206,6 +206,59 @@ class OrphansTest(unittest.TestCase):
         self.run_hook(min_age=3600)
         self.assertFalse(os.path.exists(path))
 
+    def dead_rbt(self, pgid: bool = True) -> tuple:
+        """A stand-in `rbt dev run` in a process group of its own that
+        starts an app's `main.py` and exits, leaving it under pid 1.
+        Recorded the way `lib/own.sh` does, with or without the group.
+        Returns (rbt pid, main.py pid, record path)."""
+        child = os.path.join(self.tmp, f"child.{time.time()}")
+        rbt = subprocess.Popen(
+            ["bash", "-c",
+             f'exec -a "python {self.project}/backend/src/main.py" sleep 600 & '
+             f'echo $! >"{child}"; read line'],
+            cwd=self.project, stdin=subprocess.PIPE, stdout=subprocess.DEVNULL,
+            start_new_session=True,
+        )
+        def read() -> str:
+            if not os.path.exists(child):
+                return ""
+            with open(child) as f:
+                return f.read().strip()
+
+        for _ in range(100):
+            if read():
+                break
+            time.sleep(0.05)
+        main = int(read())
+        self.pids.append(main)
+        path = os.path.join(self.owners, str(rbt.pid))
+        with open(path, "w") as f:
+            f.write(
+                f"pid={rbt.pid}\nstarted={lstart(rbt.pid)}\nowner={os.getpid()}\n"
+                f"owner_started={lstart(os.getpid())}\nsession=s\nkind=app\n"
+                + (f"pgid={rbt.pid}\n" if pgid else "")
+                + f"cwd={self.project}\n"
+            )
+        assert rbt.stdin is not None
+        rbt.stdin.close()
+        rbt.wait()
+        time.sleep(0.3)
+        return rbt.pid, main, path
+
+    def test_what_a_dead_rbt_left_is_reported_at_once(self) -> None:
+        for pgid in (True, False):
+            with self.subTest(pgid=pgid):
+                rbt, main, path = self.dead_rbt(pgid=pgid)
+                line = self.line_for(self.run_hook(min_age=3600), main)
+                self.assertIsNotNone(line, "reported at once, not after the age rule")
+                self.assertIn(f"its rbt (pid {rbt}) has exited", line or "")
+                self.assertIn("(app)", line or "")
+                self.assertTrue(os.path.exists(path), "the record stays while its survivors run")
+                subprocess.run(["kill", "-9", str(main)], check=True)
+                time.sleep(0.2)
+                self.run_hook(min_age=3600)
+                self.assertFalse(os.path.exists(path), "deleted once nothing is left")
+
     def test_whole_group_is_reported_top_first(self) -> None:
         # A shell left by the agent's Bash tool, running the app.
         script = (
@@ -294,6 +347,9 @@ class OwnTest(unittest.TestCase):
                 self.assertEqual(record["owner"], str(me))
                 self.assertEqual(record["owner_started"], lstart(me))
                 self.assertEqual(record["session"], "the-session")
+                self.assertEqual(record["pgid"], subprocess.run(
+                    ["ps", "-o", "pgid=", "-p", str(self.proc.pid)],
+                    capture_output=True, text=True).stdout.strip())
                 os.remove(os.path.join(self.owners, str(self.proc.pid)))
 
     def test_ignores_short_commands(self) -> None:

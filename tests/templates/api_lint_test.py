@@ -104,6 +104,16 @@ class ApiLintTest(unittest.TestCase):
         self.assertIn("quoted forward reference", r.stdout)
         self.assertIn("Python 3.10", r.stdout)
 
+    def test_a_literals_values_are_not_forward_references(self) -> None:
+        for annotation in ('Literal["open", "closed"]', 'Optional[typing.Literal["open"]]'):
+            with self.subTest(annotation):
+                r = self.lint(CLEAN.replace("nights: list[str]", f"status: {annotation}")
+                              .replace("default_factory=list", 'default="open"'))
+                self.assertEqual(r.returncode, 0, r.stdout)
+        r = self.lint(CLEAN.replace("nights: list[str]", 'nights: dict[Literal["a"], "Night"]'))
+        self.assertEqual(r.returncode, 1, "a quoted reference beside a Literal is still refused")
+        self.assertIn("'Night'", r.stdout)
+
     def test_syntax_past_python_3_10(self) -> None:
         r = self.lint(CLEAN + "\ntype Alias = int\n")
         self.assertEqual(r.returncode, 1)

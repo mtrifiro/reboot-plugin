@@ -167,20 +167,44 @@ describe('paths, commands and .rbtrc', () => {
   })
 
   test('shell commands that rewrite an API file', () => {
+    const edits = (command: string, cwd = '/p') =>
+      bashEditsApi(command, cwd, '/p', path => ['/p/backend', '/p/backend/x.py'].includes(path))
     for (const command of [
       "sed -i '' 's/old/new/' api/todo/v1/todo.py",
       'sed -i.bak -e s/a/b/ api/todo/v1/todo.py',
       "perl -pi -e 's/a/b/' api/todo/v1/todo.py",
       'cat > api/todo/v1/todo.py <<EOF\nx\nEOF',
       'echo x >> api/todo/v1/todo.py',
+      'echo x 2>/dev/null >| /p/api/todo/v1/todo.py',
       'mv /tmp/todo.py api/todo/v1/todo.py',
+      'mv api/todo/v1/todo.py /tmp/',
       'cp api/todo/v1/todo.py.bak api/todo/v1/todo.py',
       'rm api/todo/v1/todo.py',
+      'rm -rf api',
+      'rm -rf .',
+      'rm -rf ../p',
+      'rm -rf a*',
+      'ln -sf /tmp/x.py api/todo/v1/todo.py',
       'git checkout -- api/todo/v1/todo.py',
+      'git checkout HEAD~1 -- .',
+      'git checkout main',
+      'git checkout -b feature origin/main',
       'git restore api/todo/v1/todo.py',
+      'git restore --staged --worktree api/',
+      'git stash',
+      'git stash pop',
+      'git reset --hard HEAD~1',
+      'git -C /p reset --keep',
       'python3 gen.py | tee api/todo/v1/todo.py',
+      // A directory change first.
+      'cd api/todo/v1 && cp /tmp/x.py todo.py',
+      'cd api; sed -i s/a/b/ todo/v1/todo.py',
+      'cd /p/api/todo/v1\nrm todo.py',
+      'pushd api/todo && rm v1/todo.py; popd',
+      'cd backend && cp x.py ../api/todo/v1/todo.py',
+      'FOO=1 sudo cp x.py api/todo/v1/todo.py',
     ]) {
-      expect([command, bashEditsApi(command)]).toEqual([command, true])
+      expect([command, edits(command)]).toEqual([command, true])
     }
     for (const command of [
       'cat api/todo/v1/todo.py',
@@ -189,9 +213,31 @@ describe('paths, commands and .rbtrc', () => {
       'git diff api/todo/v1/todo.py',
       'uv run mypy backend/ tests/',
       'sed -i s/a/b/ backend/src/servicers/todo.py',
+      'echo x > notes.txt 2>&1',
+      'rm -rf node_modules .rbt/dev',
+      'git checkout -b feature',
+      'git checkout backend/x.py',
+      'git checkout -- backend/',
+      'git restore --staged api/todo/v1/todo.py',
+      'git stash list',
+      'git stash show -p',
+      'git stash push -- backend/',
+      'git reset HEAD~1',
+      'git status',
+      // The subshell's directory change ends with it.
+      '(cd api/todo/v1 && ls) && cp /tmp/x.py todo.py',
+      'cd /tmp && rm -rf api',
+      // A heredoc's body is data.
+      "python3 - <<'EOF'\nimport os\nos.system('rm -rf .')\nEOF",
+      "cat <<EOF > notes.md\nrm -rf api\nEOF",
     ]) {
-      expect([command, bashEditsApi(command)]).toEqual([command, false])
+      expect([command, edits(command)]).toEqual([command, false])
     }
+    // From inside api/, a write to the current directory counts.
+    expect(edits('cp /tmp/x.py .', '/p/api/todo/v1')).toBe(true)
+    // Without the project's root, only an API file's shape counts.
+    expect(bashEditsApi('rm api/todo/v1/todo.py', '/p')).toBe(true)
+    expect(bashEditsApi('rm -rf .', '/p')).toBe(false)
   })
 
   test('type spellings', () => {

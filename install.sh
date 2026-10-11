@@ -97,6 +97,9 @@ INSTALLED_FOR=()
 # being piped from curl), echo that directory.
 plugin_checkout_dir() {
     local dir
+    # Piped into bash (`curl ... | bash`), there is no source file, and
+    # bash 3.2 under `set -u` treats the empty BASH_SOURCE as unbound.
+    [ -n "${BASH_SOURCE[0]:-}" ] || return 1
     dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd)" || return 1
     if [ -f "$dir/skills/app/SKILL.md" ] && [ -d "$dir/bin" ]; then
         echo "$dir"
@@ -173,8 +176,12 @@ codex_plugin_path() {
     # Output columns: PLUGIN STATUS VERSION PATH. Field 1 is the plugin
     # selector; the last absolute path on a matching row is the install
     # location. A field-equality match avoids the awk `\b` portability
-    # trap (POSIX awk treats `\b` as a literal `b`).
-    codex plugin list 2>/dev/null \
+    # trap (POSIX awk treats `\b` as a literal `b`). A failing listing
+    # prints nothing (the caller says so) rather than ending the script
+    # under `set -e` and `pipefail`.
+    local listing
+    listing="$(codex plugin list 2>/dev/null)" || return 0
+    printf '%s\n' "$listing" \
         | awk -v name="${PLUGIN_NAME}@${MARKETPLACE_NAME}" '
             $1 == name {
                 for (i=NF; i>=1; i--) if ($i ~ "^/") { print $i; exit }

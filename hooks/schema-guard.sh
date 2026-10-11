@@ -6,8 +6,9 @@
 # PostToolUse (Read and Bash) and PreCompact (the Claude app's hook
 # schema lists PreCompact and not PostCompact; the guard takes both).
 #
-# A payload that names neither an API definition file
-# (`api/<pkg>/v1/<name>.py`) nor the rules file, and isn't a
+# A payload that mentions no `api` (an API definition file, the rules
+# file, a `cd api/...`), no git command that replaces the working tree
+# (stash, reset, checkout, restore, switch, clean), and isn't a
 # compaction, exits at once, so most tool calls never start Node.
 #
 # Fails open: no plugin root, no Node, or an error in the script lets
@@ -19,7 +20,8 @@ root="${root%/}"
 
 input=$(cat)
 case "$input" in
-    *api/*/v1/*.py* | *api-schema-evolution.md* | *'"PreCompact"'* | *'"PostCompact"'*) ;;
+    *api* | *git*stash* | *git*reset* | *git*checkout* | *git*restore* | *git*switch* | *git*clean* \
+        | *'"PreCompact"'* | *'"PostCompact"'*) ;;
     *) exit 0 ;;
 esac
 

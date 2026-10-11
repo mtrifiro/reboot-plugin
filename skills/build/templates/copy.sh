@@ -154,12 +154,17 @@ JUNK_FILES='-name .DS_Store -o -name .last-run.json -o -name .suite-running'
 
 mkdir -p "$DEST"
 if [ "$MERGE" = 0 ]; then
-  # `/.` copies dotfiles (.rbtrc, .gitignore, ...) too.
-  cp -R "$SRC/." "$DEST/"
+  # Staged in a temporary directory and cleaned there, so the junk
+  # sweep never touches the destination's own .venv, node_modules,
+  # dist or .reboot. `/.` copies dotfiles (.rbtrc, .gitignore, ...) too.
+  STAGE="$(mktemp -d "${TMPDIR:-/tmp}/reboot-copy.XXXXXX")"
+  trap 'rm -rf "$STAGE"' EXIT
+  cp -R "$SRC/." "$STAGE/"
   # shellcheck disable=SC2086  # the expressions are lists of find predicates
-  find "$DEST" \( $JUNK_DIRS \) -prune -exec rm -rf {} + 2>/dev/null
+  find "$STAGE" \( $JUNK_DIRS \) -prune -exec rm -rf {} + 2>/dev/null
   # shellcheck disable=SC2086
-  find "$DEST" \( $JUNK_FILES \) -type f -delete
+  find "$STAGE" \( $JUNK_FILES \) -type f -delete
+  cp -R "$STAGE/." "$DEST/"
 else
   # File by file, with `__app__` already renamed in the destination
   # path so Step 1's API file is recognized as already there.
@@ -214,9 +219,21 @@ for file in .rbtrc web/vite.config.ts frontend/vite.config.ts web/.env.developme
 done
 
 # A repository runs the hooks in .githooks/ (the pre-push gate for a
-# `main` workflow); a clone sets this itself (AGENTS.md).
-if [ -d "$DEST/.githooks" ] && [ "$(git -C "$DEST" rev-parse --show-toplevel 2>/dev/null || true)" = "$(cd "$DEST" && pwd -P)" ]; then
-  git -C "$DEST" config core.hooksPath .githooks
+# `main` workflow); a clone sets this itself (AGENTS.md). A project in
+# no repository gets its own, on `main`, so the gate holds from the
+# first commit. One inside another repository is left alone.
+if [ -d "$DEST/.githooks" ] && command -v git >/dev/null 2>&1; then
+  if ! git -C "$DEST" rev-parse --show-toplevel >/dev/null 2>&1; then
+    if ! git -C "$DEST" init -q -b main 2>/dev/null; then
+      # A git older than 2.28 has no `-b`.
+      git -C "$DEST" init -q
+      git -C "$DEST" symbolic-ref HEAD refs/heads/main
+    fi
+    echo "Started a git repository in $DEST (branch main)"
+  fi
+  if [ "$(git -C "$DEST" rev-parse --show-toplevel 2>/dev/null || true)" = "$(cd "$DEST" && pwd -P)" ]; then
+    git -C "$DEST" config core.hooksPath .githooks
+  fi
 fi
 
 if [ "$MERGE" = 1 ]; then

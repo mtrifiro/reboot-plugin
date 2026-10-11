@@ -40,4 +40,7 @@ fi
 # (so the env file captures the plugin's absolute path from the time the
 # hook ran), while `$PATH` must stay literal so the agent's shell
 # expands it later against whatever PATH is in effect at that moment.
-echo "export PATH=\"${CLAUDE_PLUGIN_ROOT}/bin:\$PATH\"" >> "$CLAUDE_ENV_FILE"
+# Written once: SessionStart fires again on resume, clear and compaction,
+# and each extra copy would put `bin/` on PATH once more.
+line="export PATH=\"${CLAUDE_PLUGIN_ROOT}/bin:\$PATH\""
+grep -qxF "$line" "$CLAUDE_ENV_FILE" 2>/dev/null || echo "$line" >> "$CLAUDE_ENV_FILE"

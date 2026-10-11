@@ -14,7 +14,10 @@ Step 5, says how), not Vite's dev server. The first run needs a browser:
 `uv run --with playwright playwright install chromium`."""
 
 import argparse
+import socket
 import sys
+import time
+from urllib.parse import urlsplit
 
 from playwright.sync_api import Page, sync_playwright
 
@@ -64,6 +67,26 @@ def load(page: Page, url: str) -> tuple[float, float, float]:
     return float(content), float(lcp), float(cls)
 
 
+WAIT_S = 60
+
+
+def wait_for(base: str, timeout: float = WAIT_S) -> bool:
+    """Whether something answers on the base URL's host and port within
+    `timeout` seconds (a preview build takes a moment to come up)."""
+    parts = urlsplit(base)
+    host = parts.hostname or "localhost"
+    port = parts.port or (443 if parts.scheme == "https" else 80)
+    deadline = time.monotonic() + timeout
+    while True:
+        try:
+            with socket.create_connection((host, port), timeout=1):
+                return True
+        except OSError:
+            if time.monotonic() >= deadline:
+                return False
+            time.sleep(0.5)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("routes", nargs="*", default=["/"])
@@ -72,6 +95,10 @@ def main() -> int:
     parser.add_argument("--runs", type=int, default=5, help="warm loads per route")
     args = parser.parse_args()
     base = args.base.rstrip("/")
+    if not wait_for(base):
+        print(f"page_timing: nothing answers on {base} after {WAIT_S} s; start the preview "
+              "build first (build skill, Step 5)", file=sys.stderr)
+        return 1
 
     with sync_playwright() as p:
         browser = p.chromium.launch()

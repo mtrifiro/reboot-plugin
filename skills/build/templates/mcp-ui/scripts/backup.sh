@@ -2,7 +2,8 @@
 #
 # Export everything the application holds, so an expunge is not a loss.
 #
-#   scripts/backup.sh dev     the local `rbt dev run` ($REBOOT_DEV_URL, or :9991)
+#   scripts/backup.sh dev     the local `rbt dev run` ($REBOOT_DEV_URL, or the
+#                             `dev run --port=` .rbtrc names, else :9991)
 #   scripts/backup.sh prod    Reboot Cloud: the API address deploy/ledger.jsonl
 #                             records, the key in .deploy.env
 #
@@ -40,8 +41,10 @@ esac
 die() { echo "backup: $*" >&2; exit 1; }
 
 if [ "$env_name" = dev ]; then
-  # `rbt export` defaults to the dev admin credential.
-  url="${REBOOT_DEV_URL:-http://localhost:9991}"
+  # `rbt export` defaults to the dev admin credential. The port is the
+  # project's own, from .rbtrc (copy.sh chose it).
+  port="$(sed -n 's/^dev run --port=\([0-9]*\).*/\1/p' .rbtrc 2>/dev/null | head -n 1 || true)"
+  url="${REBOOT_DEV_URL:-http://localhost:${port:-9991}}"
 else
   [ -f .deploy.env ] || die "no .deploy.env with REBOOT_CLOUD_API_KEY (the deploy skill writes it)."
   # The Cloud API key doubles as the admin credential for `*.rbt.cloud`

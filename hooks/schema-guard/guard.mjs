@@ -11,8 +11,9 @@
 //     change; an edit that is fine still waits until the session has
 //     read all of `api-schema-evolution.md`.
 //   - PreToolUse on Bash: refuses a shell command that rewrites an API
-//     file (`sed -i`, a redirect, `mv`, `git checkout`, ...), which the
-//     check above can't see.
+//     file (`sed -i`, a redirect, `mv`, `cd api/... && cp`, `git
+//     checkout`, `git stash`, `git reset --hard`, ...), which the check
+//     above can't see.
 //   - PostToolUse on Read and Bash: records which lines of the rules
 //     file were shown (a Read, `cat`, `sed -n 'a,bp'`, `head`, `tail`),
 //     so the rules count as read once every line has been, over one
@@ -413,9 +414,10 @@ export function handle(e) {
     return null
   }
 
-  if (e.tool_name === 'Bash' && bashEditsApi(command)) {
+  if (e.tool_name === 'Bash') {
     const root = projectOf(`${cwd}/.`)
-    const state = root && stateOf(root)
+    if (!root || !bashEditsApi(command, cwd, root, existsSync)) return null
+    const state = stateOf(root)
     if (!state) return null
     return deny(
       `${NAME}: this app has persisted state (${state}), and this command rewrites an API ` +

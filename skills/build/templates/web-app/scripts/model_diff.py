@@ -84,8 +84,9 @@ def files_at(rev: str | None, folder: str, suffix: str) -> dict[str, str]:
             for p in sorted(base.rglob(f"*{suffix}"))
             if "__pycache__" not in p.parts
         } if base.is_dir() else {}
-    names = git("ls-tree", "-r", "--name-only", rev, "--", folder).split()
-    return {n: git("show", f"{rev}:{n}") for n in names if n.endswith(suffix)}
+    # NUL-separated and unquoted, so a path with a space stays whole.
+    names = git("ls-tree", "-r", "-z", "--name-only", rev, "--", folder).split("\0")
+    return {n: git("show", f"{rev}:{n}") for n in names if n and n.endswith(suffix)}
 
 
 # -- the accepted design ---------------------------------------------------

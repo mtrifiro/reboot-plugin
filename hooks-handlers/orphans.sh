@@ -26,7 +26,11 @@
 # command's pid with the Claude Code process that started it
 # (`lib/own.sh`). A group holding a record is reported as soon as that
 # owner has exited, and never while it is alive, even when the command
-# was detached (`nohup`, `&`). A group with no record (started by hand,
+# was detached (`nohup`, `&`). When a recorded `rbt dev run` or `rbt
+# dashboard` has itself exited, what it started (its `main.py`s, Envoy,
+# the dashboard's backend) can survive it under pid 1, in its process
+# group; those are reported at once, and the record is kept until none
+# is left. A group with no record (started by hand,
 # by Codex, or before the shims kept records) is reported once its top
 # has run under pid 1 for at least `min_age` seconds, so one a parallel
 # session is just starting is left alone.
@@ -49,12 +53,16 @@ owners=${REBOOT_OWNERS_DIR:-$HOME/.claude/plugins/data/reboot/owners}
 
 # Each live record as `pid alive session kind`, where `alive` is 1
 # while its owner runs. A record whose pid is gone, or now names another
-# process (a different start time), is deleted.
+# process (a different start time), is deleted, except an app's or a
+# dashboard's: that one goes to `gone` as `pid<TAB>kind<TAB>pgid<TAB>cwd`,
+# and is deleted below once nothing it started is left.
 records=""
+gone=""
+gone_pids=""
 if [ -d "$owners" ]; then
     for f in "$owners"/*; do
         [ -f "$f" ] || continue
-        pid="" started="" owner="" owner_started="" session="" kind=""
+        pid="" started="" owner="" owner_started="" session="" kind="" pgid="" cwd=""
         while IFS='=' read -r key value; do
             case "$key" in
                 pid) pid=$value ;;
@@ -63,11 +71,22 @@ if [ -d "$owners" ]; then
                 owner_started) owner_started=$value ;;
                 session) session=$value ;;
                 kind) kind=$value ;;
+                pgid) pgid=$value ;;
+                cwd) cwd=$value ;;
             esac
         done <"$f"
         now=""
         [ -n "$pid" ] && now=$(ps -o lstart= -p "$pid" 2>/dev/null || true)
         if [ -z "$now" ] || [ "$now" != "$started" ]; then
+            case "$kind" in
+                app | dashboard)
+                    if [ -n "$pgid$cwd" ] && [ "$f" = "$owners/$pid" ]; then
+                        gone="${gone}${pid}\\t${kind}\\t${pgid:--}\\t${cwd}\\n"
+                        gone_pids="$gone_pids $pid"
+                        continue
+                    fi
+                    ;;
+            esac
             rm -f "$f"
             continue
         fi
@@ -81,12 +100,13 @@ if [ -d "$owners" ]; then
     done
 fi
 
-# One line per orphaned group: `top|age|session|pids|rss_kb|cpu|what`.
+# One line per orphaned group: `top|age|session|pids|rss_kb|cpu|what|rbt`,
+# where `rbt` is the pid of the exited `rbt` a group survived, if any.
 # `-ww` keeps command lines untruncated so the patterns match. Only
 # this user's processes are considered (the `uid` column): another
 # user's are not ours to report or stop.
-groups=$(ps -axww -o pid=,ppid=,uid=,etime=,rss=,%cpu=,command= | awk \
-    -v records="$records" -v min_age="$min_age" -v me="$(id -u)" '
+groups=$(ps -axww -o pid=,ppid=,uid=,pgid=,etime=,rss=,%cpu=,command= | awk \
+    -v records="$records" -v gone="$gone" -v min_age="$min_age" -v me="$(id -u)" '
     # `[[dd-]hh:]mm:ss` to seconds.
     function seconds(t,    n, f, s) {
         n = split(t, f, /[-:]/)
@@ -145,6 +165,28 @@ groups=$(ps -axww -o pid=,ppid=,uid=,etime=,rss=,%cpu=,command= | awk \
         }
         return ""
     }
+    # Whether a process of this kind is something a recorded command
+    # of `rkind` starts.
+    function started_by(rkind, k) {
+        if (rkind == "app") return k == "app" || k == "Envoy"
+        return k == "dashboard" || k == "dashboard pyright" || k == "Envoy"
+    }
+    # Add `p` and everything under it to the group being built.
+    function gather(p,    head, tail, x, m, j, ch, queue) {
+        queue[1] = p; head = 1; tail = 1
+        while (head <= tail) {
+            x = queue[head++]
+            if (x in taken) continue
+            taken[x] = 1
+            pids = pids (pids == "" ? "" : " ") x
+            mem += rss[x]; load += cpu[x]
+            k = what(x)
+            if (k != "" && index(" " kinds ",", " " k ",") == 0)
+                kinds = kinds (kinds == "" ? "" : " ") k ","
+            m = split(kids[x], ch, / /)
+            for (j = 1; j <= m; j++) if (ch[j] != "") queue[++tail] = ch[j]
+        }
+    }
     BEGIN {
         n = split(records, rows, /\n/)
         for (i = 1; i <= n; i++) {
@@ -156,16 +198,42 @@ groups=$(ps -axww -o pid=,ppid=,uid=,etime=,rss=,%cpu=,command= | awk \
     $3 != me { next }
     {
         pid = $1
-        ppid[pid] = $2; etime[pid] = $4; rss[pid] = $5; cpu[pid] = $6
+        ppid[pid] = $2; pgid[pid] = $4; etime[pid] = $5; rss[pid] = $6; cpu[pid] = $7
         c = $0
-        sub(/^ *[0-9]+ +[0-9]+ +[0-9]+ +[^ ]+ +[0-9]+ +[0-9.,]+ +/, "", c)
+        sub(/^ *[0-9]+ +[0-9]+ +[0-9]+ +[0-9]+ +[^ ]+ +[0-9]+ +[0-9.,]+ +/, "", c)
         cmd[pid] = c
         kids[$2] = kids[$2] " " pid
         order[++count] = pid
     }
     END {
+        # What an exited rbt left: processes of its group (or, in a
+        # record with no group, naming its project) that it starts,
+        # now under pid 1. Reported at once.
+        ng = split(gone, grows, /\n/)
+        for (gi = 1; gi <= ng; gi++) {
+            if (split(grows[gi], g, /\t/) < 4) continue
+            pids = ""; mem = 0; load = 0; kinds = ""; age = 0; top = ""
+            for (i = 1; i <= count; i++) {
+                p = order[i]
+                if (p in taken) continue
+                if (g[3] != "-") { if (pgid[p] != g[3]) continue }
+                else if (g[4] == "" || index(cmd[p], g[4] "/") == 0) continue
+                if (!started_by(g[2], what(p))) continue
+                par = ppid[p]
+                if (par != 1 && cmd[par] !~ /(^|\/)systemd( |$)/) continue
+                if (top == "") top = p
+                if (seconds(etime[p]) > age) age = seconds(etime[p])
+                seen[p] = 1
+                gather(p)
+            }
+            if (top == "") continue
+            sub(/,$/, "", kinds)
+            printf "%s|%d|%s|%s|%d|%.0f|%s|%s\n", top, age, "", pids, mem, load, kinds, g[1]
+        }
+
         for (i = 1; i <= count; i++) {
             p = order[i]
+            if (p in taken) continue
             if (!(p in owned) && what(p) == "") continue
             # Walk up to the topmost ancestor below pid 1, or to a live
             # owner.
@@ -188,21 +256,21 @@ groups=$(ps -axww -o pid=,ppid=,uid=,etime=,rss=,%cpu=,command= | awk \
 
             # The group: the top and everything under it.
             pids = ""; mem = 0; load = 0; kinds = ""
-            queue[1] = top; head = 1; tail = 1
-            while (head <= tail) {
-                x = queue[head++]
-                pids = pids (pids == "" ? "" : " ") x
-                mem += rss[x]; load += cpu[x]
-                k = what(x)
-                if (k != "" && index(" " kinds ",", " " k ",") == 0)
-                    kinds = kinds (kinds == "" ? "" : " ") k ","
-                m = split(kids[x], ch, / /)
-                for (j = 1; j <= m; j++) if (ch[j] != "") queue[++tail] = ch[j]
-            }
+            gather(top)
             sub(/,$/, "", kinds)
-            printf "%s|%d|%s|%s|%d|%.0f|%s\n", top, age, (dead ? session : ""), pids, mem, load, kinds
+            printf "%s|%d|%s|%s|%d|%.0f|%s|\n", top, age, (dead ? session : ""), pids, mem, load, kinds
         }
     }')
+
+# A gone record is kept while something it started is reported.
+for pid in $gone_pids; do
+    case "
+$groups" in
+        *"|$pid
+"* | *"|$pid") ;;
+        *) rm -f "$owners/$pid" ;;
+    esac
+done
 
 [ -n "$groups" ] || exit 0
 
@@ -221,7 +289,7 @@ old_ifs=$IFS
 IFS='
 '
 for group in $groups; do
-    IFS='|' read -r top age session pids rss cpu kinds <<EOF
+    IFS='|' read -r top age session pids rss cpu kinds rbt <<EOF
 $group
 EOF
     project=$(project_of "$top")
@@ -230,7 +298,9 @@ EOF
     else
         up="$((age / 60)) min"
     fi
-    if [ -n "$session" ]; then
+    if [ -n "$rbt" ]; then
+        why="its rbt (pid ${rbt}) has exited"
+    elif [ -n "$session" ]; then
         why="its session ${session} has exited"
     else
         why="no record of its session; its parent has exited"

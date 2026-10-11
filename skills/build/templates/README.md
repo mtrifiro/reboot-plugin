@@ -29,7 +29,8 @@ of the project name and the next free set when one is held (a merge
 keeps the ports the stub `.rbtrc` names), written into `.rbtrc`, the
 Vite config, `.env.development` and `scripts/screenshots.py`;
 `copy.sh --ports <project>` prints the set, for the dashboard skill. In
-a repository it points `core.hooksPath` at `.githooks/`. Then:
+a repository of its own it points `core.hooksPath` at `.githooks/`; in
+no repository it starts one on `main` first. Then:
 
 ```sh
 uv sync

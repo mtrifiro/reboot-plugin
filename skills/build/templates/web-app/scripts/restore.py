@@ -109,10 +109,19 @@ def state_id(item: Item) -> str:
 # --------------------------------------------------------------------------
 
 
+def dev_port() -> int:
+    """The project's own backend port, the `dev run --port=` .rbtrc names
+    (copy.sh chose it), else the framework's 9991."""
+    rbtrc = ROOT / ".rbtrc"
+    text = rbtrc.read_text() if rbtrc.is_file() else ""
+    match = re.search(r"^dev run --port=(\d+)", text, re.MULTILINE)
+    return int(match.group(1)) if match else 9991
+
+
 def application_url(env_name: str) -> str:
     """Where scripts/backup.sh exports from, so a restore goes back there."""
     if env_name == "dev":
-        return os.environ.get("REBOOT_DEV_URL", "http://localhost:9991")
+        return os.environ.get("REBOOT_DEV_URL", f"http://localhost:{dev_port()}")
     ledger = ROOT / "deploy" / "ledger.jsonl"
     rows = [json.loads(line) for line in ledger.read_text().splitlines() if line.strip()] if ledger.exists() else []
     urls = [row["api_url"] for row in rows if row.get("api_url")]

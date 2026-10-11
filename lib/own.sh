@@ -20,7 +20,10 @@
 # One file per recorded pid, under `$REBOOT_OWNERS_DIR` (default: the
 # plugin's data dir, which the hooks and the shims share). Each start
 # time is stored beside its pid, so a reused pid never reads as the
-# same process. `orphans.sh` deletes a record once its pid is gone.
+# same process. So is its process group: an `rbt dev run` or `rbt
+# dashboard` that dies leaves its `main.py`s and Envoy running in that
+# group, and `orphans.sh` reports them at once. `orphans.sh` deletes a
+# record once its pid is gone and nothing of its group is left.
 #
 # Never fails the shim: every error is swallowed, and the shims call
 # this with `|| true`.
@@ -73,6 +76,7 @@ mkdir -p "$dir" 2>/dev/null || exit 0
 started=$(ps -o lstart= -p "$pid" 2>/dev/null) || exit 0
 owner_started=$(ps -o lstart= -p "$CLAUDE_PID" 2>/dev/null) || exit 0
 [ -n "$started" ] && [ -n "$owner_started" ] || exit 0
+pgid=$(ps -o pgid= -p "$pid" 2>/dev/null | tr -d ' ') || pgid=""
 
 # Written whole, then renamed, so the hook never reads half a record.
 tmp="$dir/.$pid.$$"
@@ -83,6 +87,7 @@ tmp="$dir/.$pid.$$"
     printf 'owner_started=%s\n' "$owner_started"
     printf 'session=%s\n' "${CLAUDE_CODE_SESSION_ID:-}"
     printf 'kind=%s\n' "$kind"
+    printf 'pgid=%s\n' "$pgid"
     printf 'cwd=%s\n' "$PWD"
 } >"$tmp" 2>/dev/null && mv -f "$tmp" "$dir/$pid" 2>/dev/null
 rm -f "$tmp" 2>/dev/null

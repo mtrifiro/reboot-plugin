@@ -54,6 +54,10 @@ for arg in "$@"; do
     *) echo "usage: scripts/deploy.sh [--backend-only|--frontend-only] [--dry-run] [--first]" >&2; exit 2 ;;
   esac
 done
+if [ "$first" = 1 ] && [ "$only" = frontend ]; then
+  echo "deploy: --first ships the backend, whose address the frontend needs; it does not combine with --frontend-only." >&2
+  exit 2
+fi
 
 say() { echo "deploy: $*"; }
 die() { echo "deploy: $*" >&2; exit 1; }

@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 """Tests for the ports copy.sh gives a project: a set of its own from
 the project name, the next free set when one is held, the ones a merge
-keeps, and every file that names a port rewritten together.
+keeps, and every file that names a port rewritten together; the
+scripts that reach the local backend (backup.sh, restore.py,
+page_timing.py) read its port from .rbtrc, and page_timing.py waits
+for the build it times to answer.
 
     python3 tests/templates/ports_test.py
 """
@@ -9,6 +12,7 @@ keeps, and every file that names a port rewritten together.
 import os
 import socket
 import subprocess
+import sys
 import tempfile
 import unittest
 import zlib
@@ -95,6 +99,69 @@ class PortsTest(unittest.TestCase):
         self.assertIn("dashboard --port=9833", rbtrc)
         self.assertIn("localhost:9933", (self.dest / "web" / ".env.development").read_text())
         self.assertIn("Vite 53", r.stdout, "the Vite port is still chosen")
+
+    # The scripts that reach the local backend use the project's port.
+
+    def scaffold(self, front_door: str) -> None:
+        r = run(front_door, str(self.dest), "todo-list", "todo_list", "Todo List",
+                env={"REBOOT_PORTS": "9955 9855 5355"})
+        self.assertEqual(r.returncode, 0, r.stderr)
+
+    def python(self, code: str) -> subprocess.CompletedProcess:
+        # page_timing.py imports playwright at the top; a stub stands in.
+        stub = Path(self.tmp.name) / "stub" / "playwright"
+        stub.mkdir(parents=True, exist_ok=True)
+        (stub / "__init__.py").write_text("")
+        (stub / "sync_api.py").write_text("Page = object\nsync_playwright = None\n")
+        env = {k: v for k, v in os.environ.items() if k != "REBOOT_DEV_URL"}
+        env["PYTHONPATH"] = f"{stub.parent}{os.pathsep}{self.dest / 'scripts'}"
+        return subprocess.run([sys.executable, "-c", code], cwd=self.dest, env=env,
+                              capture_output=True, text=True)
+
+    def test_backup_and_restore_reach_the_projects_backend(self) -> None:
+        for front_door in ("mcp-ui", "web-app", "both"):
+            with self.subTest(front_door):
+                self.scaffold(front_door)
+                fake = Path(self.tmp.name) / "fakebin"
+                fake.mkdir(exist_ok=True)
+                (fake / "uv").write_text("#!/bin/sh\nexit 1\n")
+                (fake / "uv").chmod(0o755)
+                env = {k: v for k, v in os.environ.items() if k != "REBOOT_DEV_URL"}
+                env["PATH"] = f"{fake}{os.pathsep}{env['PATH']}"
+                r = subprocess.run(["bash", "scripts/backup.sh", "dev"], cwd=self.dest, env=env,
+                                   capture_output=True, text=True)
+                self.assertIn("backup: exporting http://localhost:9955", r.stdout, r.stderr)
+                r = self.python("import restore; print(restore.application_url('dev'))")
+                self.assertEqual(r.stdout.strip(), "http://localhost:9955", r.stderr)
+                subprocess.run(["rm", "-rf", str(self.dest)], check=True)
+
+    def test_page_timing_times_the_projects_backend(self) -> None:
+        self.scaffold("both")
+        r = self.python("import page_timing; print(page_timing.DEFAULT_BASE)")
+        self.assertEqual(r.stdout.strip(), "http://localhost:9955/__/frontend/web", r.stderr)
+
+    def test_page_timing_waits_for_the_build_and_names_it_when_absent(self) -> None:
+        for front_door in ("web-app", "both"):
+            with self.subTest(front_door):
+                self.scaffold(front_door)
+                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as listener:
+                    listener.bind(("127.0.0.1", 0))
+                    listener.listen(1)
+                    port = listener.getsockname()[1]
+                    r = self.python(f"import page_timing; print(page_timing.wait_for("
+                                    f"'http://127.0.0.1:{port}/x', timeout=2))")
+                    self.assertEqual(r.stdout.strip(), "True", r.stderr)
+                r = self.python(
+                    "import sys, page_timing\n"
+                    f"print(page_timing.wait_for('http://127.0.0.1:{port}', timeout=0.5))\n"
+                    "page_timing.wait_for = lambda base: False\n"
+                    f"sys.argv = ['page_timing.py', '--base', 'http://127.0.0.1:{port}']\n"
+                    "sys.exit(page_timing.main())\n")
+                self.assertEqual(r.returncode, 1)
+                self.assertEqual(r.stdout.strip(), "False")
+                self.assertIn(f"nothing answers on http://127.0.0.1:{port} after 60 s", r.stderr)
+                self.assertIn("Step 5", r.stderr)
+                subprocess.run(["rm", "-rf", str(self.dest)], check=True)
 
 
 if __name__ == "__main__":

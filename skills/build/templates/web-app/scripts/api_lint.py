@@ -84,11 +84,17 @@ def annotation_names(node: ast.AST | None) -> set[str]:
 
 
 def quoted_in(node: ast.AST | None) -> ast.Constant | None:
-    """A string constant inside an annotation: a quoted forward reference."""
+    """A string constant inside an annotation: a quoted forward reference.
+    The values of a `Literal[...]` are strings by design, not references."""
     if node is None:
         return None
+    literal_values: set[int] = set()
     for sub in ast.walk(node):
-        if isinstance(sub, ast.Constant) and isinstance(sub.value, str):
+        if isinstance(sub, ast.Subscript) and "Literal" in annotation_names(sub.value):
+            literal_values |= {id(inner) for inner in ast.walk(sub.slice)}
+    for sub in ast.walk(node):
+        if isinstance(sub, ast.Constant) and isinstance(sub.value, str) \
+                and id(sub) not in literal_values:
             return sub
     return None
 

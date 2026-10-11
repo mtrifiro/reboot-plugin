@@ -308,8 +308,12 @@ case "$tool" in
         # is then validated independently. Anything still containing
         # risky metacharacters after normalization (`&`, `<`, `>`,
         # `` ` ``, `$`, `(`, `)`, `\`) falls through to a normal
-        # permission prompt.
+        # permission prompt. A line continuation (a backslash, then a
+        # newline: `\\` and `\n` in the JSON) and the indent after it
+        # become one space first, so a command split over lines, such
+        # as the run skill's tunnel, reads as its one-line form.
         parts=$(printf '%s' "$cmd" | sed \
+            -e 's/\\\\\\n[[:space:]]*/ /g' \
             -e 's/[[:space:]]*2>&1//g' \
             -e 's/[[:space:]]*2>\/dev\/null//g' \
             -e 's/[[:space:]]*>\/dev\/null//g' \

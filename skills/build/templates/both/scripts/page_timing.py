@@ -14,13 +14,30 @@ backend serves that build. The first run needs a browser: `uv run --with
 playwright playwright install chromium`."""
 
 import argparse
+import re
+import socket
 import sys
+import time
+from pathlib import Path
+from urllib.parse import urlsplit
 
 from playwright.sync_api import Page, sync_playwright
 
+ROOT = Path(__file__).resolve().parent.parent
+
+
+def backend_port() -> int:
+    """The project's own backend port, the `dev run --port=` .rbtrc names
+    (copy.sh chose it), else the framework's 9991."""
+    rbtrc = ROOT / ".rbtrc"
+    text = rbtrc.read_text() if rbtrc.is_file() else ""
+    match = re.search(r"^dev run --port=(\d+)", text, re.MULTILINE)
+    return int(match.group(1)) if match else 9991
+
+
 # Where the backend serves the web app's build (`npm run build` in
 # `frontend/`) under `rbt dev run`.
-DEFAULT_BASE = "http://localhost:9991/__/frontend/web"
+DEFAULT_BASE = f"http://localhost:{backend_port()}/__/frontend/web"
 
 # Google's "good" thresholds (web.dev/articles/vitals).
 LCP_MS = 2500
@@ -64,6 +81,26 @@ def load(page: Page, url: str) -> tuple[float, float, float]:
     return float(content), float(lcp), float(cls)
 
 
+WAIT_S = 60
+
+
+def wait_for(base: str, timeout: float = WAIT_S) -> bool:
+    """Whether something answers on the base URL's host and port within
+    `timeout` seconds (a preview build takes a moment to come up)."""
+    parts = urlsplit(base)
+    host = parts.hostname or "localhost"
+    port = parts.port or (443 if parts.scheme == "https" else 80)
+    deadline = time.monotonic() + timeout
+    while True:
+        try:
+            with socket.create_connection((host, port), timeout=1):
+                return True
+        except OSError:
+            if time.monotonic() >= deadline:
+                return False
+            time.sleep(0.5)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("routes", nargs="*", default=["/"])
@@ -72,6 +109,10 @@ def main() -> int:
     parser.add_argument("--runs", type=int, default=5, help="warm loads per route")
     args = parser.parse_args()
     base = args.base.rstrip("/")
+    if not wait_for(base):
+        print(f"page_timing: nothing answers on {base} after {WAIT_S} s; start the app "
+              "with its build first (build skill, Step 5)", file=sys.stderr)
+        return 1
 
     with sync_playwright() as p:
         browser = p.chromium.launch()

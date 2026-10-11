@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Tests for `hooks/suite-guard.sh`: while a project's suite runs
 (`tests/.suite-running` names a live pid) it denies regenerating,
-restarting, expunging and code edits, from Claude Code's tools and
-Codex's `apply_patch`; it is silent for other files, a dead pid, no
+restarting, expunging and code edits, from Claude Code's tools,
+Codex's `apply_patch` and shell commands (`sed -i`, `cp`, a redirect,
+also after a `cd`; a git checkout, stash or hard reset); it is silent for other files, a dead pid, no
 sentinel, and outside a project.
 
     python3 tests/hooks/suite_guard_test.py
@@ -71,6 +72,37 @@ class SuiteGuardTest(unittest.TestCase):
                           "api/hotel/v1/hotel.py")
         self.assertIsNone(self.run_hook("Edit", {"file_path": os.path.join(self.project, "README.md")}))
         self.assertIsNone(self.run_hook("Edit", {"file_path": os.path.join(self.project, "tests", "a.feature")}))
+
+    def test_denies_a_shell_rewrite_of_code(self) -> None:
+        self.running()
+        for command, where in [
+            ("sed -i s/a/b/ backend/src/main.py", "backend/"),
+            ("perl -pi -e s/a/b/ web/src/App.tsx", "web/"),
+            ("cp /tmp/main.py backend/src/main.py", "backend/"),
+            ("echo x > frontend/x.ts", "frontend/"),
+            ("cat new.py | tee api/hotel/v1/hotel.py", "api/"),
+            ("cd backend/src && mv /tmp/x.py main.py", "backend/"),
+            ("cd tests; cp /tmp/x.py ../backend/src/main.py", "backend/"),
+            ("git checkout -- backend/", "backend/"),
+            ("git restore web/src/App.tsx", "web/"),
+            ("git checkout main", "the code"),
+            ("git stash", "the code"),
+            ("git reset --hard HEAD", "the code"),
+        ]:
+            with self.subTest(command=command):
+                self.assertDenied(self.run_hook("Bash", {"command": command}), f"Rewriting {where}")
+        for command in [
+            "sed -n 1,20p backend/src/main.py",
+            "cat backend/src/main.py > /tmp/main.py",
+            "echo x > tests/notes.txt 2>&1",
+            "cp backend/src/main.py /tmp/",
+            "git stash list",
+            "git diff backend/",
+            "(cd backend && ls) && cp /tmp/x tests/x",
+            "cat <<EOF > tests/a.feature\nrm -rf backend\nEOF",
+        ]:
+            with self.subTest(command=command):
+                self.assertIsNone(self.run_hook("Bash", {"command": command}))
 
     def test_denies_a_codex_patch(self) -> None:
         self.running()

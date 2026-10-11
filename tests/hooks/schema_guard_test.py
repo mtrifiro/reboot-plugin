@@ -343,10 +343,15 @@ class SchemaGuardTest(unittest.TestCase):
             "cat new.py > api/hello/v1/hello.py",
             "mv api/hello/v1/hello.py /tmp/",
             "git checkout HEAD~1 -- api/hello/v1/hello.py",
+            "git checkout main",
+            "git stash",
+            "git reset --hard HEAD~1",
+            "cd api/hello/v1 && cp /tmp/hello.py hello.py",
         ]:
             with self.subTest(command=command):
                 self.assertIn("with apply_patch", self.bash(command))
-        for command in ["cat api/hello/v1/hello.py", "sed -n '1,20p' api/hello/v1/hello.py", "ls"]:
+        for command in ["cat api/hello/v1/hello.py", "sed -n '1,20p' api/hello/v1/hello.py", "ls",
+                        "git stash list", "git checkout -b feature", "cd backend && cp /tmp/x.py x.py"]:
             with self.subTest(command=command):
                 self.assertEqual(self.bash(command), "")
 
