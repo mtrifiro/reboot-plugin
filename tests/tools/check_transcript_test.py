@@ -59,6 +59,10 @@ class CheckTranscriptTest(unittest.TestCase):
         self.assertEqual(len(r["settled"]), 1)
         self.assertEqual(r["dashes"], 1)
 
+    def test_a_branded_step_line_is_allowed_between_reports(self):
+        r = ct.check(session("**Reboot Design** · Writing who may call each method", "Now the stubs with their real authorizers."))
+        self.assertEqual((r["step_lines"], len(r["between"])), (1, 1))
+
     def test_code_is_ignored(self):
         r = ct.check(session("Welcome to Reboot. `I; settled — x`"))
         self.assertEqual((r["first_person"], r["dashes"], r["semicolons"]), (0, 0, 0))

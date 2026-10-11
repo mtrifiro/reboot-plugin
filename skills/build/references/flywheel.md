@@ -186,7 +186,7 @@ Tone, for these and any card written later:
   follows"), and "you" is the user.
 - Few and complete: the build speaks in the welcome, a report at each
   milestone (domain model, feature spec, built, full suite) and the
-  review, and is quiet between them. Each is
+  review, with one branded step line between. Each is
   written for a reader who saw nothing else. The sentence rules and the
   proposed model's sections are at the head of the build skill ("How
   the build talks").

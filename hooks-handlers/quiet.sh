@@ -1,7 +1,8 @@
 #!/usr/bin/env sh
 # PostToolUse: every QUIET_EVERY tool calls of a Reboot build, repeat
-# the one rule a long build forgets: the chat hears only reports, and a
-# step line goes to `reboot-now`, which the progress band shows.
+# the one rule a long build forgets: between reports, only a step line,
+# sent to `reboot-now` for the progress band and said in the chat, if at
+# all, in the band's branded form.
 #
 # The prompt-time reminder (remind.sh) arrives once per prompt, and a
 # build is one prompt that runs dozens of tool calls; by the middle the
@@ -48,4 +49,4 @@ in_build() {
 in_build || exit 0
 
 # shellcheck disable=SC2016,SC1112  # Markdown backticks; the ’ is meant
-printf '%s' '{"hookSpecificOutput":{"hookEventName":"PostToolUse","additionalContext":"[reboot-plugin-quiet] Quiet between reports. A step line goes to `reboot-now <plain words>`, which the progress band shows, never to the chat, as `reboot-now Reading how Reboot defines objects and methods`, in the user\u2019s terms, never step, reference or reading list (an apostrophe always the typographic ’): not \"Reading the API-step references.\", not \"The project shell is in place\", not \"The servicers are written. The tests come next\". The chat hears only the brief, the milestone reports and the review, each framed, and a question only the user can answer."}}'
+printf '%s' '{"hookSpecificOutput":{"hookEventName":"PostToolUse","additionalContext":"[reboot-plugin-quiet] Between reports, one step line per step and nothing else. It goes to the progress band as `reboot-now <plain words>`, as `reboot-now Writing who may call each method`, and may be said in the chat once, in the band\u2019s form: **Reboot Design** · Writing who may call each method. The Flywheel stage, then what the work is for in the user\u2019s terms, never step, stub, servicer, reference or reading list (an apostrophe always the typographic ’): not \"Now the stubs with their real authorizers.\", not \"Reading the API-step references.\", not \"The project shell is in place\". Otherwise the chat hears only the brief, the milestone reports and the review, each framed, and a question only the user can answer."}}'

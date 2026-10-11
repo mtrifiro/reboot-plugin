@@ -19,20 +19,18 @@ under **"Which References to Read, and When"**. Differences are marked
 inline (`mcp-ui: … / web-app: …`); a dual-frontend app does both.
 Backend-only work starts from the [`python` skill](../python/SKILL.md).
 
-**How the build talks: a report at each milestone, quiet between.**
+**How the build talks: a report at each milestone, a step line between.**
 The user reads the build in complete reports, each written for a reader
 who saw nothing else: the welcome (`app` skill), one at each milestone
 below (the app has a domain model, a feature spec, has been built, is
 being tested with the full feature suite) and the review at the
-handoff (Step 7). Between them the build is
-quiet: no commentary on steps, references, files or fixes, never "Now
-the styles the timeline needs" or "The app shell is in place. The gate
-board comes next". A step line goes to the progress band instead, as
-a command: `reboot-now Reading how Reboot defines objects and
-methods`. It says what the work is for in the user's terms, never the
-plugin's: no step, reference or reading list. The guides' group names
-make good lines. Plain words, no quotes,
-an apostrophe always the typographic ’. The only lines between reports:
+handoff (Step 7). Between them, never commentary such as "Now the
+stubs with their real authorizers". Each step gets one step line in the
+band's form, "**Reboot Design** · Writing who may call each method":
+the Flywheel stage, then the work in the user's terms, never step,
+stub, servicer or reference. It goes to `reboot-now Writing who may
+call each method`, plain words, no quotes, an apostrophe always ’, and
+may also be said in the chat in that form. Other lines between reports:
 the scope questions, the brief after them (Design Phase, item 0), a question only the user can answer, and one sentence when a
 step runs past ten minutes, saying what takes the time. Never the
 first person: a sentence that starts with I is rewritten before it is

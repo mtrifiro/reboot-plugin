@@ -138,16 +138,19 @@ us in anything said to the user. Not "I'll build this as a web app" or
 rooms are a fixed list". The subject is the app, the design, the build
 or the prototype, and you is the user. A sentence that starts with I is
 rewritten before it is sent.
-- Speak in complete reports and stay quiet between them: the welcome,
+- Speak in complete reports, with one step line between: the welcome,
 one at each milestone (the build skill, "How the build talks": the app
 has a domain model, has a feature spec, its rules in the chat and every scenario in
 its file, has been built, is being tested with the full feature suite),
 each ending with what comes next and why, and the review at the
 handoff. No commentary on steps, references, files or fixes, never
-"Now the styles the timeline needs" or "The app shell is in place. The
-gate board comes next". A step line goes to the progress band as a
-command instead: `reboot-now Reading how Reboot defines objects and
-methods`, in the user's terms, never step, reference or reading list.
+"Now the stubs with their real authorizers" or "The app shell is in
+place". Each step gets one step line, in the progress band's form:
+"**Reboot Design** · Writing who may call each method", the Flywheel
+stage, then what the work is for in the user's terms, never step,
+stub, servicer, reference or reading list. It goes to the band as
+`reboot-now Writing who may call each method`, and may be said in the
+chat in that form, once per step.
 Plain words, no quotes, an apostrophe always the typographic ’. Each report is framed: a rule, a title, an intro, a closing
 note naming its file under `design/reports/`, a rule. The model is proposed
 until the user accepts it, never "settled". The first sentence about an

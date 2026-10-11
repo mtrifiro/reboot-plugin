@@ -5,7 +5,7 @@
     tools/check-transcript.py <project dir>     # its newest session
     tools/check-transcript.py <...> --json
 
-A build speaks in reports and is quiet between them (the build skill,
+A build speaks in reports, with one branded step line between (the build skill,
 "How the build talks"): the welcome, one at each milestone (the app has
 a domain model, a feature spec, has been built, is being tested with the
 full feature suite), and the review at the handoff. The planning-only evals squeeze a build into one
@@ -15,8 +15,9 @@ every message the build showed the user and reports:
 - whether the first message is the welcome;
 - which milestone reports and the review appear, and in order;
 - the messages between reports that are none of the allowed lines (the
-  scope questions, the brief after them, a question only the user
-  can answer, a long-step notice), with their opening words;
+  scope questions, the brief after them, a step line in the band's
+  form, a question only the user can answer, a long-step notice), with
+  their opening words, and the count of step lines;
 - reports missing their frame: a `#` title, the rules around them, the evidence so far, and
   the closing note naming the file under `design/reports/`;
 - lines in the first person, "settled", "actor" (a domain object to the user), em or en dashes, semicolons.
@@ -83,7 +84,14 @@ def shown_messages(session: Path) -> list[str]:
     return out
 
 
+# A step line in the progress band's form, the one line allowed between
+# reports: "**Reboot Design** · Writing who may call each method".
+STEP_LINE = re.compile(r"^\**Reboot (Design|Prove|Observe|Promote)\** · \S[^\n]*$")
+
+
 def kind(text: str) -> str:
+    if STEP_LINE.match(text.strip()):
+        return "step"
     if WELCOME.search(text):
         return "welcome"
     for name, rx in MILESTONES:
@@ -115,6 +123,7 @@ def check(session: Path) -> dict:
                      if k in ("brief", "review") or k in dict(MILESTONES)
                      if not all(rx.search(m) for rx in (FRAMED[:2] if k == "brief" else FRAMED))],
         "between": [m.strip().splitlines()[0][:100] for m, k in zip(messages, kinds) if k == "other"],
+        "step_lines": sum(k == "step" for k in kinds),
         "first_person": len(first_person),
         "first_person_lines": lines(FIRST_PERSON)[:8],
         "settled": lines(SETTLED)[:5],
@@ -138,7 +147,8 @@ def main() -> None:
     print(f"welcome first: {'yes' if result['welcome_first'] else 'no'}")
     print(f"reports, in order: {', '.join(result['reports_in_order']) or 'none'}")
     print(f"reports missing their frame: {', '.join(result['unframed']) or 'none'}")
-    print(f"messages between reports: {len(result['between'])}")
+    print(f"branded step lines: {result['step_lines']}")
+    print(f"other messages between reports: {len(result['between'])}")
     for line in result["between"][:12]:
         print(f"  - {line}")
     print(f"first-person sentences: {result['first_person']}")
