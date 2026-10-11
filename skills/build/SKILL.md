@@ -161,9 +161,10 @@ waits.
    answers go into `design/design.md` under "Scope", the rest under
    "Assumed" (defaults: the web app, the `Development()` sign-in).
    Local data is seed data, reset when the model changes, never asked.
-   Then one line: a simple, fast prototype of that
-   scope goes up first, to review the architecture, the rules and the
-   features on.
+   Then one line on the model the design turns to, its objects in the
+   user's nouns, never the first person and never the prototype: "The
+   model comes first: flights, gates, and the assignments between
+   them."
 1. **The whole app, said object by object.** Write every capability's
    `@wip` feature file from the scope ([`feature`
    skill](../feature/SKILL.md), Step 2; its Step 2a is this flow's).
