@@ -146,9 +146,9 @@ asynchronously: guard at the parent, mount the child with a real id.
   it, so they already show the new state; other actors' readers update
   on their own push.
 - On `UNAUTHENTICATED` a mutation refreshes the token and retries once.
-- A subscribed reader is transitively reactive (verified 1.4.1 and
-  1.6.0), so one aggregating reader can replace N subscriptions
-  ([`patterns-cross-actor-reads.md`](patterns-cross-actor-reads.md)).
+- A subscribed reader is transitively reactive, so one aggregating
+  reader can replace N subscriptions
+  (`patterns-cross-actor-reads.md`, "Do this").
 - Reactivity tracks committed writes only; a value computed from the
   clock (an expired hold) never pushes
   ([`patterns-react-state.md`](patterns-react-state.md)).

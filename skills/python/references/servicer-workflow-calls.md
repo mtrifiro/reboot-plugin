@@ -155,9 +155,9 @@ async def control_loop(
 
 ## Scales as
 
-- Gathered writer calls from one workflow: ~20 concurrent was the sweet
-  spot; ~54 concurrent made calls ping out and retry-loop (103 s vs.
-  15.7 s for the same 216 creations, measured at 1.4.0).
+- Gathered writer calls from one workflow: about 20 concurrent is the
+  sweet spot, about 54 retry-looped
+  (`patterns-load-and-benchmarking.md`, "Scales as").
 
 ## Errors you will see
 

@@ -1,5 +1,5 @@
 ---
-title: Use `Service.create` and `Service.<ctor>` for Constructor Calls
+title: Call a Constructor as `Type.<ctor>(context, id, ...)`
 impact: MEDIUM
 impactDescription: Calling a constructor through `.ref(...).method(...)` fails with `AttributeError`; a second call aborts `StateAlreadyConstructed`; a broad `except <X>Aborted` hides timeouts
 tags: rpc, constructor, create, factory, StateAlreadyConstructed, get-or-create, Aborted
@@ -11,7 +11,7 @@ verified: 1.6.0
 docs: ""
 ---
 
-# Use `Service.create` and `Service.<ctor>` for Constructor Calls
+# Call a Constructor as `Type.<ctor>(context, id, ...)`
 
 ## When you are here
 

@@ -116,9 +116,8 @@ next mutation _without_ an idempotency key fails:
 ## Limits
 
 - An alias must be unique within the lifetime of its context.
-- Reboot may retry transactions internally, and dev effect validation
-  runs every writer and transaction body twice, committing only the
-  second; the same input must produce the same committed change.
+- Reboot may retry a body, and dev effect validation re-runs it without
+  comparing runs, committing only the second (`servicer-writer.md`, "Limits").
 - `.always()` skips key generation and uncertainty tracking (1.6.0
   source), so it is never replayed.
 

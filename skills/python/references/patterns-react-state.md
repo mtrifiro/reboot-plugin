@@ -51,7 +51,8 @@ parent decision.
 Past about 15 subscriptions on a page, subscribe to one parent reader
 that returns all the cards (cineloop: 60 streams → 12; theater-chain,
 bluesky, showtime and reboot-crm reached the same shape). It is
-transitively reactive, so it still pushes when any child changes:
+transitively reactive (`patterns-cross-actor-reads.md`, "Do this"), so
+it still pushes when any child changes:
 
 ```tsx
 function Lobby({ theaterId }: { theaterId: string }) {

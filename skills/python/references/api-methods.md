@@ -86,7 +86,8 @@ BankMethods = Methods(
   refuses boot (Reboot intends an upstream fix that allows it; until a
   release says so, it holds) ([`api-schema-evolution.md`](api-schema-evolution.md)).
 - `factory=True` on a `Writer` or `Transaction` makes it the explicit
-  creation path; the servicer branches on `context.constructor`
+  creation path; its body runs only when the actor does not exist, so
+  it never branches on `context.constructor`
   ([`servicer-constructor.md`](servicer-constructor.md)). Without one,
   a `Type` is constructed implicitly on first write. To start a
   workflow on creation, schedule it from the factory's body.

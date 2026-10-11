@@ -309,9 +309,9 @@ not waited for:
   custom tags (`@critical`), though `-m` selects them. To review a tier,
   add `@wip` beside it, check `-m "wip and not critical"` collects
   nothing, remove it after.
-- **Effect validation runs writer and transaction bodies twice in
-  tests** (idempotency check), so a mock called from one sees
-  `call_count == 2`.
+- **Effect validation re-runs writer and transaction bodies in tests**,
+  comparing nothing, so a mock called from one sees `call_count == 2`
+  (`servicer-writer.md`, "Limits").
 
 ## Scales as
 

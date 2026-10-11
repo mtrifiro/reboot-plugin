@@ -96,11 +96,9 @@ Read back with `OAuthTokenManager.ref(<service id>).fetch(...)` inside a
 
 ## Limits
 
-- **At 1.6.0 the published wheel lacks `reboot.std.oauth`**, so any
-  provider with `store_tokens=True` fails at startup with
-  `ModuleNotFoundError` until you install the plugin's vendored
-  `reboot-std-oauth` package (`python/references/stdlib-oauth-tokens.md`,
-  Do this; tool-checks-01, open upstream).
+- **At 1.6.0 the published wheel lacks `reboot.std.oauth`**, so
+  `store_tokens=True` fails at startup until the vendored package is
+  installed (`python/references/stdlib-oauth-tokens.md`, "Do this").
 - Any provider storing tokens requires the `oauth` + `ciphertext` (+
   `ordered_map`) libraries at startup.
 - `REBOOT_CRYPTO_ROOT_KEYS` backs the encryption; auto-provisioned under

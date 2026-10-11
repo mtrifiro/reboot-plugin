@@ -94,7 +94,7 @@ async def interest(self, context: WriterContext) -> None:
 - **Wait for each run to succeed**: drop `tick()`; `run()` schedules the
   next `run()` as its **last** step, so occurrences never overlap and a
   failing run pauses the recurrence. From a workflow that step is
-  `spawn(when=…)`, not `schedule(when=…)`.
+  `spawn(when=…)` (`servicer-workflow-declare.md`, "Never").
 - **Inside a long-lived workflow**, `context.loop("…", interval=…)` paces
   iterations ([`servicer-workflow-loop.md`](servicer-workflow-loop.md)).
 

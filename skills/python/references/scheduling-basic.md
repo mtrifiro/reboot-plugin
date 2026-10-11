@@ -71,9 +71,8 @@ while it runs.
   another actor accept only `TransactionContext` (mypy reports an opaque
   overload mismatch). Schedule on `self`, or make the method a
   transaction (Writer → Transaction is schema-compatible).
-- `….schedule(when=…)` from a **workflow**, on any ref — raises
-  `TypeError` every attempt and retries forever; mypy misses it. Use
-  `spawn(when=…)` ([`servicer-workflow-declare.md`](servicer-workflow-declare.md)).
+- `….schedule(when=…)` from a **workflow**, on any ref — use
+  `spawn(when=…)` (`servicer-workflow-declare.md`, "Never").
 - Several scheduled transactions on one actor with the same `when=` (one
   `expire_hold` per seat) — their two-phase-commit prepares collide and
   a native assert kills the worker (observed at 1.4.0). Schedule one

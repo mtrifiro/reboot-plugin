@@ -46,7 +46,7 @@ await asyncio.gather(
 | `Reader` | any: `ReaderContext`, `WriterContext`, `TransactionContext`, `WorkflowContext`, `ExternalContext` |
 | `Writer`, `Transaction` | `TransactionContext`, `WorkflowContext`, `ExternalContext` |
 | Constructor (`factory=True`) | `TransactionContext`, `WorkflowContext`, `ExternalContext` |
-| `Workflow` | scheduled (`.schedule()` / `.spawn()`), not called |
+| `Workflow` | `WorkflowContext`, `ExternalContext` (an await spawns it and waits); from `WriterContext` / `TransactionContext` only via `.schedule()` |
 
 - A writer cannot call any writer through a ref, not even its own via
   `self.ref()` (observed at 1.6.0); it mutates `self.state` directly.

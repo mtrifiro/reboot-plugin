@@ -82,10 +82,9 @@ class UserState(Model):
 class UserServicer(User.Servicer):
 
     async def create(self, context: WriterContext) -> None:
-        if context.constructor:
-            # Only allocate the ID: the map is constructed on first `insert`;
-            # reading before that aborts `StateNotConstructed`.
-            self.state.people_index_id = str(uuid4())
+        # Only allocate the ID: the map is constructed on first `insert`;
+        # reading before that aborts `StateNotConstructed`.
+        self.state.people_index_id = str(uuid4())
 
     async def add_person(
         self,

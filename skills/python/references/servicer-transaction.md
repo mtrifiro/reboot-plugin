@@ -139,10 +139,8 @@ on an in-system actor that schedules the HTTP send in a workflow, then
 - Subscribers see nothing until commit: a 200-writer reset read as
   "hung"; batches of 25 gave progress
   (showtime-40).
-- Effect validation compares the actor's own state changes, not a
-  sub-call's arguments: a transaction that fans out random sub-call
-  payloads passes it (showtime, 1.4.1). Seed any randomness from
-  request fields so the fan-out is deterministic.
+- Effect validation re-runs the body and never compares the runs, so
+  random sub-call payloads pass it (`servicer-writer.md`, "Limits").
 
 ## Scales as
 

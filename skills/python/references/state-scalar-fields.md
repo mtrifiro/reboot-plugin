@@ -34,16 +34,17 @@ class AccountState(Model):
     balance: int = Field(tag=2, default=0)
 
 
+# open=Writer(..., factory=True): the body runs once, when the actor does not exist.
 async def open(
     self, context: WriterContext, request: Account.OpenRequest,
 ) -> None:
-    if context.constructor:
-        self.state.name = request.name
-        self.state.balance = 100  # initial balance applied here
+    self.state.name = request.name
+    self.state.balance = 100  # initial balance applied here
 ```
 
-- Gate set-once values on `context.constructor`; a `start`-style reset
-  writer may set them unconditionally.
+- A factory never branches on `context.constructor`; a factory-less
+  type gates first-write values on it (`servicer-constructor.md`). A
+  `start`-style reset writer may set them unconditionally.
 - Keep the domain default in a module constant
   (`DEFAULT_MOVE_DELAY = 1.0`) and apply it when the request leaves the
   field at zero.

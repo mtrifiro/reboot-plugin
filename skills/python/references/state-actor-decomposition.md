@@ -67,12 +67,11 @@ class UserServicer(User.Servicer):
     async def create(
         self, context: TransactionContext, request: User.CreateRequest,
     ) -> None:
-        if context.constructor:
-            self.state.display_name = request.display_name
-            session, _ = await TelegramSession.create(context)
-            self.state.telegram_session_id = session.state_id
-            manager, _ = await MonitoringManager.create(context)
-            self.state.monitoring_manager_id = manager.state_id
+        self.state.display_name = request.display_name
+        session, _ = await TelegramSession.create(context)
+        self.state.telegram_session_id = session.state_id
+        manager, _ = await MonitoringManager.create(context)
+        self.state.monitoring_manager_id = manager.state_id
 ```
 
 - Per-concern methods live on the concern's `Type` (login on

@@ -65,16 +65,14 @@ class GreeterServicer(Greeter.Servicer):
   return `-> None` with no `return` (rule in `api-methods.md`).
 
 `await Greeter.Hello(ctx, "alice", name="alice")` creates the actor and
-starts `run_hello`. Start form by caller (1.6.0 generated client):
+starts `run_hello`. Which context schedules or spawns from which ref:
+`scheduling-basic.md`, "Do this". Particular to workflows (1.6.0
+generated client):
 
-| Caller | Form | Reaches |
-| --- | --- | --- |
-| Writer | `self.ref().schedule(when=…).wf(context, …)` | own actor only |
-| Transaction | `Type.ref(id).schedule(when=…).wf(context, …)` | any actor |
-| Workflow | `Type.ref(id).spawn(when=…).wf(context, …)`, or `.per_workflow("alias").spawn(…)` | any actor |
-| Workflow | `await Type.ref(id).wf(context, …)` | spawns it and waits for its response |
-| `ExternalContext` / `initialize` | `Type.ref(id).spawn(…)`; in `initialize`, `.idempotently("alias").spawn(…)` | any actor |
-| Reader | cannot start a workflow | — |
+- `await Type.ref(id).wf(context, …)` from a workflow or an
+  `ExternalContext` spawns it and waits for its response.
+- In `initialize`, `.idempotently("alias").spawn(…)`.
+- A reader cannot start a workflow.
 
 A bare `spawn()` in a workflow is scoped `per_workflow` (`per_iteration`
 inside `context.loop`); name the alias when one workflow spawns more

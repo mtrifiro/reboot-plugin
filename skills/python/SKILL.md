@@ -321,7 +321,7 @@ Load only what the task needs (the lists above say when). Full catalog:
 
 **RPC**
 - `references/rpc-calls.md` — Call Actor Methods with Kwargs and a Context
-- `references/rpc-constructor-calls.md` — Use `Service.create` and `Service.<ctor>` for Constructor Calls
+- `references/rpc-constructor-calls.md` — Call a Constructor as `Type.<ctor>(context, id, ...)`
 - `references/rpc-forall.md` — Fan Out Calls with `Service.forall(ids).method(context)`
 - `references/rpc-refs.md` — Get Actor References with `Service.ref(id)`
 

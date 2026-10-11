@@ -41,11 +41,10 @@ class ChatRoomServicer(ChatRoom.Servicer):
   writer or transaction on that actor.
 - A reader may call **readers** on other actors with the same
   `context`: `await Account.ref(account_id).balance(context)`.
-- **Subscriptions are transitive**: a subscribed reader (React hook,
-  reactive call) re-runs when its own actor *or* any actor it read
-  through other readers changes, including through `forall` (verified
-  at 1.6.0). One aggregating reader replaces N per-actor subscriptions;
-  cost and depth rules: `patterns-cross-actor-reads.md`.
+- **Subscriptions are transitive**: a subscribed reader re-runs when
+  any actor it read through other readers changes, so one aggregating
+  reader replaces N subscriptions
+  (`patterns-cross-actor-reads.md`, "Do this").
 
 ## Never
 

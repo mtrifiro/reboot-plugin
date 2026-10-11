@@ -88,8 +88,6 @@ Providers (all arguments keyword-only):
 - Register `/__/oauth/callback` as the redirect URI with the provider.
 - With `claims=[...]`, never build a form asking a signed-in user to
   retype their email or name (`python/references/auth-claims.md`).
-- Read `mcp-ui/references/auth-oauth-providers.md` (frontend-neutral)
-  only to write a custom provider or debug one provider's flow.
 
 **Feeding identity into hooks.** With `oauth=`, call the `User` hook
 with **no arguments** for the signed-in user's own state. An
@@ -134,7 +132,8 @@ by tools/gen-index.py. Edit the frontmatter, not the lists. -->
 > [`references/react-client.md`](references/react-client.md) and the
 > `python` references below. Sole exception:
 > [mcp-ui/references/auth-oauth-providers.md](../mcp-ui/references/auth-oauth-providers.md)
-> is frontend-neutral; read it when you pick a real provider.
+> is frontend-neutral. Read it only when you pick a real (production)
+> provider.
 
 _Design_ — until the user accepts the domain model and feature files
 (build skill, "Accept the Design"):

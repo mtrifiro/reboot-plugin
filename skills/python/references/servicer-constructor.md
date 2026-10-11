@@ -64,10 +64,8 @@ account, _ = await Account.open(context, request.account_id)  # TransactionConte
 await account.deposit(context, amount=request.initial_deposit)
 ```
 
-- Create singletons in the `initialize` hook
-  (`await Bank.create(context, SINGLETON_BANK_ID)`, `create` being
-  `Bank`'s factory); why that is safe every boot:
-  `lifecycle-initialize-hook.md`.
+- Create singletons in the `initialize` hook, where a bare call is
+  safe every boot (`lifecycle-initialize-hook.md`, "Do this").
 
 ## Never
 
