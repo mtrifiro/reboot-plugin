@@ -55,8 +55,8 @@ Labels: the section (`framework`, `reboot-cloud`, `reboot-bdd`,
 anything private — customer names, emails, secrets, internal URLs,
 proprietary code beyond the minimal repro — and say what you removed.
 
-**Stop and wait.** Draw the ask as a decision box
-(`build/references/flywheel.md`, "A box around the decision"): file
+**Stop and wait.** The ask is one plain line
+(`build/references/flywheel.md`, "The ask, in one line"): file
 these, drop some, or reword one. File only approved rows, as worded
 after the user's edits. No answer is not approval.
 

@@ -52,8 +52,8 @@ Steps 1–7 below are the first deploy. After it, a deploy is
 deploy" card and Step 7's checks end with "Live"
 ([`build/references/flywheel.md`](../build/references/flywheel.md),
 "Stage cards"): in full the first time, one line after. The card's
-ask (deploy now, or not yet) is a decision box ("A box around the
-decision", there).
+ask (deploy now, or not yet) is its last line ("The ask, in one
+line", there).
 
 ## When to Use
 

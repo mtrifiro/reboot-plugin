@@ -356,8 +356,8 @@ status the design adds to or changes from what the user asked, with its
 reason, so they accept those too; `design/review.md` records their
 answer to each. Beside it, the five-line visual brief (Design Phase,
 "The look") and, with no brand supplied, the offer: the house default,
-or a brand or a site to read. Then the decision box
-(`references/flywheel.md`, "A box around the decision").
+or a brand or a site to read. Then the ask, in one line
+(`references/flywheel.md`, "The ask, in one line").
 
 **Stop and wait.** No answer is not acceptance. A change sends you back
 to the slice it belongs to (the feature skill, or the design), then
@@ -619,7 +619,7 @@ cards"), then:
 3. The assumptions as made (Design Phase, item 0), and every deviation
    from the brief or from the plan's own specs, with its reason (item
    2); the first time, the review table, Beyond the brief and the look
-   ("Accept the Design"), and the decision box last.
+   ("Accept the Design"), and the ask last.
 4. The state types and methods as built, one line each (Step 1), when
    they changed after the design; and whether the design was accepted
    ("Accept the Design"), as `python3 scripts/model_diff.py` says. A
