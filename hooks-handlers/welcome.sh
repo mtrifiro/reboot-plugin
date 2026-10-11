@@ -1,5 +1,5 @@
 #!/usr/bin/env sh
-# PostToolUse, PreToolUse and Stop: the app skill's welcome reaches the user as
+# PostToolUse and Stop: the app skill's welcome reaches the user as
 # visible text, and the build goes on after it.
 #
 # Told only in words, the agent either wrote the welcome in thinking and
@@ -11,14 +11,14 @@
 # - PostToolUse, the moment the app skill loads, says the next output is
 #   the welcome as visible text: said there, beside the skill, before the
 #   agent has drafted anything in thinking.
-# - PreToolUse refuses every tool call until a message opens with the
-#   welcome, saying to send it now, as a message of its own.
+# - No PreToolUse refusal: a tool hook can't see the text of the response
+#   it belongs to (the transcript gets it after the hooks run), so it
+#   refused calls that came right after a visible welcome (hotel-5,
+#   3847b122: two failed calls and the welcome twice).
 # - Stop, when the turn's last message is that welcome, sends the agent
 #   on to the build and front-door skills (once: `stop_hook_active`).
 #
-# Silent in every other session, and in the plugin's own checkout. A
-# session whose welcome has gone out is remembered in the temp directory,
-# so later calls skip the transcript.
+# Silent in every other session, and in the plugin's own checkout.
 
 set -eu
 
@@ -28,10 +28,6 @@ field() {
     printf '%s' "$input" | sed -n "s/.*\"$1\"[[:space:]]*:[[:space:]]*\"\\([^\"]*\\)\".*/\\1/p" | head -n 1
 }
 
-session=$(field session_id)
-case "$session" in '' | *[!A-Za-z0-9_-]*) exit 0 ;; esac
-dir="${TMPDIR:-/tmp}/reboot-welcome"
-[ -f "${dir}/${session}" ] && exit 0
 
 in_new_build() {
     d=$(field cwd)
@@ -48,7 +44,7 @@ if [ "$(field hook_event_name)" = PostToolUse ]; then
     [ "$(field skill)" = reboot:app ] || exit 0
     in_new_build || exit 0
     # shellcheck disable=SC1112  # the ’ is meant
-    printf '%s' '{"hookSpecificOutput":{"hookEventName":"PostToolUse","additionalContext":"[reboot-plugin-welcome] Your next output is the app skill’s welcome, as visible text: its paragraph verbatim, on one line, no quote marks, its examples from the user’s brief. Do not draft it or summarize it in thinking first. Send it as a message of its own, with no tool call. The build goes on after it."}}'
+    printf '%s' '{"hookSpecificOutput":{"hookEventName":"PostToolUse","additionalContext":"[reboot-plugin-welcome] Your next output is the app skill’s welcome, as visible text: its paragraph verbatim, on one line, no quote marks, its examples from the user’s brief. Do not draft it or summarize it in thinking first. Then go straight on, in the same response, to the build and front-door skills."}}'
     exit 0
 fi
 
@@ -62,14 +58,6 @@ in_new_build || exit 0
 WELCOME='"type":"text","text":"(\\n|[[:space:]])*(> )?\*\*Welcome to Reboot\.'
 
 case "$(field hook_event_name)" in
-PreToolUse)
-    if grep -Eq "$WELCOME" "$transcript"; then
-        if mkdir -p "$dir" 2>/dev/null; then : > "${dir}/${session}" 2>/dev/null || true; fi
-        exit 0
-    fi
-    # shellcheck disable=SC1112  # the ’ is meant
-    printf '%s' '{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"[reboot-plugin-welcome] The welcome has not reached the user. Send the app skill’s welcome now, verbatim, as visible text in a message of its own, with no tool call, never in thinking. The build goes on after it."}}'
-    ;;
 Stop)
     [ "$(printf '%s' "$input" | sed -n 's/.*"stop_hook_active"[[:space:]]*:[[:space:]]*\(true\).*/\1/p')" = true ] && exit 0
     grep '"type":"assistant"' "$transcript" | tail -n 1 | grep -Eq "$WELCOME" || exit 0

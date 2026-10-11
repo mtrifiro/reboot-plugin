@@ -10,9 +10,9 @@ allowed-tools: Bash, Read, Write, Glob, Grep, Edit
 **Say the welcome first,** the moment this skill loads, before the
 routing line or the scope round: your next output is the welcome itself,
 as visible text, never drafted or written in thinking, where the user
-sees only the app's summary of it. It is a message of its own with no
-tool call. The plugin refuses tool calls until it is sent, then carries
-the build on to the `build` and front-door skills. It is the
+sees only the app's summary of it. The same response then goes straight
+on to the `build` and front-door skills; if the welcome ends a turn,
+the plugin carries the build on. It is the
 paragraph below, verbatim, on one line, with no quote marks. The
 only change is the examples in angle brackets: two things from the
 user's brief that will be objects, in the user's words ("a class or a

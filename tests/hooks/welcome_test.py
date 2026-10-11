@@ -1,6 +1,6 @@
-"""Tests for `hooks-handlers/welcome.sh`: a new build's tool calls wait
-for the welcome as visible text, and a turn that ends on the welcome
-goes on. It runs before every tool call of every session, so it must
+"""Tests for `hooks-handlers/welcome.sh`: when the app skill loads, the
+next output is named as the welcome; a turn that ends on the welcome
+goes on; tool calls are never refused. It runs after the app skill and at every Stop, so it must
 stay silent elsewhere and its output must parse."""
 
 import json
@@ -38,12 +38,11 @@ class WelcomeTest(unittest.TestCase):
         self.assertEqual((r.returncode, r.stderr), (0, ""))
         return json.loads(r.stdout) if r.stdout else None
 
-    def test_tools_wait_for_the_welcome(self):
+    def test_tool_calls_are_never_refused(self):
+        # A tool hook can't see its own response's text, so it never gates.
         for launch in (LAUNCHED, TYPED):
-            out = self.run_hook("PreToolUse", launch, THOUGHT)
-            self.assertEqual(out["hookSpecificOutput"]["permissionDecision"], "deny")
-            self.assertIn("message of its own", out["hookSpecificOutput"]["permissionDecisionReason"])
-        self.assertIsNone(self.run_hook("PreToolUse", LAUNCHED, WELCOME))
+            self.assertIsNone(self.run_hook("PreToolUse", launch, THOUGHT))
+            self.assertIsNone(self.run_hook("PreToolUse", launch, WELCOME))
 
     def test_a_turn_that_ends_on_the_welcome_goes_on(self):
         self.assertEqual(self.run_hook("Stop", LAUNCHED, WELCOME)["decision"], "block")
@@ -56,17 +55,16 @@ class WelcomeTest(unittest.TestCase):
         self.assertIsNone(self.run_hook("PostToolUse", tool_name="Skill", tool_input={"skill": "reboot:build"}))
 
     def test_silent_elsewhere(self):
-        self.assertIsNone(self.run_hook("PreToolUse", THOUGHT))
         self.assertIsNone(self.run_hook("Stop", WELCOME))
         project = os.path.join(self.tmp.name, "hotel")
         os.makedirs(project)
         open(os.path.join(project, ".rbtrc"), "w").close()
-        self.assertIsNone(self.run_hook("PreToolUse", LAUNCHED, cwd=project))
+        self.assertIsNone(self.run_hook("Stop", LAUNCHED, WELCOME, cwd=project))
         plugin = os.path.join(self.tmp.name, "plugin")
         os.makedirs(os.path.join(plugin, "skills/app"))
         os.makedirs(os.path.join(plugin, "hooks-handlers"))
         open(os.path.join(plugin, "skills/app/SKILL.md"), "w").close()
-        self.assertIsNone(self.run_hook("PreToolUse", LAUNCHED, cwd=plugin))
+        self.assertIsNone(self.run_hook("Stop", LAUNCHED, WELCOME, cwd=plugin))
         self.assertIsNone(self.run_hook("PostToolUse", cwd=project, tool_name="Skill", tool_input={"skill": "reboot:app"}))
 
 
