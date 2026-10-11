@@ -11,7 +11,7 @@ tags: [pattern, testing]
 cluster: ""
 still_applies: yes
 status: Resolved
-resolved_by: "feature/SKILL.md § Step 5 — Ask before taking `@wip` off"
+resolved_by: "feature/SKILL.md § Step 5: Ask before taking `@wip` off"
 ---
 
 # The feature skill agrees each feature one at a time and asks before removing @wip; at about 50 files that is 50 round trips

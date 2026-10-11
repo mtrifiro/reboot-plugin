@@ -11,7 +11,7 @@ tags: [operations, error-text]
 cluster: "F"
 still_applies: unknown
 status: Resolved
-resolved_by: "dashboard/SKILL.md § Step 4 — Start the dashboard"
+resolved_by: "dashboard/SKILL.md § Step 4: Start the dashboard"
 ---
 
 # rbt dashboard cannot be told not to open a browser

@@ -13,7 +13,7 @@ cluster: "4.2"
 duplicate_of: theater-chain-04
 still_applies: no
 status: Resolved
-resolved_by: "build/SKILL.md § Step 4 — Authorizers"
+resolved_by: "build/SKILL.md § Step 4: Authorizers"
 ---
 
 # The test harness enforces production authorization; rbt dev only warns, so "auth later" breaks the first test run

@@ -13,7 +13,7 @@ tags: [operations, auth]
 cluster: ""
 still_applies: yes
 status: Resolved
-resolved_by: "deploy/SKILL.md § Step 3 — Deploy the backend"
+resolved_by: "deploy/SKILL.md § Step 3: Deploy the backend"
 ---
 
 # Use the printed Cloud URL as-is on port 443; the references still say :9991

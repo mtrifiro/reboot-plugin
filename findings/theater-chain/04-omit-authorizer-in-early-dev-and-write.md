@@ -14,7 +14,7 @@ tags: [contradiction, auth, negative-space, testing]
 cluster: "4.2"
 still_applies: yes
 status: Resolved
-resolved_by: "web-app/SKILL.md § Auth in Web Apps; python/references/servicer-authorizer.md § Do this; python/references/auth-allow-deny.md § Do this; python/references/auth-custom-predicates.md § Never; build/SKILL.md § Step 4 — Authorizers"
+resolved_by: "web-app/SKILL.md § Auth in Web Apps; python/references/servicer-authorizer.md § Do this; python/references/auth-allow-deny.md § Do this; python/references/auth-custom-predicates.md § Never; build/SKILL.md § Step 4: Authorizers"
 ---
 
 # Omit authorizer in early dev and write tests are mutually exclusive

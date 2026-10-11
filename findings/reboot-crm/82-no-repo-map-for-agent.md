@@ -10,7 +10,7 @@ tags: [index-gap, operations]
 cluster: "4.6"
 still_applies: unknown
 status: Resolved
-resolved_by: "build/SKILL.md § Step 2 — Project shell; build/templates/README.md § Files"
+resolved_by: "build/SKILL.md § Step 2: Project shell; build/templates/README.md § Files"
 ---
 
 # No map of the repo for an agent: every session rebuilds the layout by grepping

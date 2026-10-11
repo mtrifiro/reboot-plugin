@@ -12,7 +12,7 @@ cluster: "F"
 duplicate_of: reboot-crm-45
 still_applies: no
 status: Resolved
-resolved_by: "dashboard/SKILL.md § dashboard — Start the Reboot Developer Dashboard"
+resolved_by: "dashboard/SKILL.md § dashboard: Start the Reboot Developer Dashboard"
 ---
 
 # rbt dev run does not manage the dashboard; run rbt dashboard yourself

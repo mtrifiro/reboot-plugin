@@ -14,7 +14,7 @@ cluster: "4.1"
 duplicate_of: theater-chain-04
 still_applies: yes
 status: Resolved
-resolved_by: "web-app/SKILL.md § Auth in Web Apps; python/references/servicer-authorizer.md § Do this; python/references/auth-allow-deny.md § Do this; build/SKILL.md § Step 4 — Authorizers"
+resolved_by: "web-app/SKILL.md § Auth in Web Apps; python/references/servicer-authorizer.md § Do this; python/references/auth-allow-deny.md § Do this; build/SKILL.md § Step 4: Authorizers"
 ---
 
 # The test harness enforces production-mode authorization though rbt dev run only warns

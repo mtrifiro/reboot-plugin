@@ -11,7 +11,7 @@ tags: [frontend, operations]
 cluster: ""
 still_applies: yes
 status: Resolved
-resolved_by: "deploy/SKILL.md § Step 3 — Deploy the backend"
+resolved_by: "deploy/SKILL.md § Step 3: Deploy the backend"
 ---
 
 # After any breaking backend change, republish the frontend in the same deploy

@@ -12,7 +12,7 @@ tags: [testing, index-gap]
 cluster: ""
 still_applies: yes
 status: Resolved
-resolved_by: "build/SKILL.md § Step 2a — Run the scenarios red"
+resolved_by: "build/SKILL.md § Step 2a: Run the scenarios red"
 ---
 # Nothing makes the red run happen before servicers are written
 

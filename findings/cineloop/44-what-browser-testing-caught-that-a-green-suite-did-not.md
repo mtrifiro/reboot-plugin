@@ -12,7 +12,7 @@ tags: [testing, frontend, pattern]
 cluster: "8.4"
 still_applies: unknown
 status: Resolved
-resolved_by: "build/SKILL.md § Step 6 — Tests; build/SKILL.md § Step 7 — Run"
+resolved_by: "build/SKILL.md § Step 6: Tests; build/SKILL.md § Step 7: Run"
 ---
 
 # What browser testing caught that a green suite did not

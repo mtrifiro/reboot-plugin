@@ -11,7 +11,7 @@ tags: [testing, operations]
 cluster: ""
 still_applies: yes
 status: Resolved
-resolved_by: "build/SKILL.md § Step 6 — Tests"
+resolved_by: "build/SKILL.md § Step 6: Tests"
 ---
 # The full suite outlives the shell tool's timeout
 

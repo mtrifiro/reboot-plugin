@@ -11,7 +11,7 @@ tags: [contradiction, operations]
 cluster: "F"
 still_applies: yes
 status: Resolved
-resolved_by: "dashboard/SKILL.md § dashboard — Start the Reboot Developer Dashboard"
+resolved_by: "dashboard/SKILL.md § dashboard: Start the Reboot Developer Dashboard"
 ---
 
 # The dashboard skill says rbt dev run looks after its own dashboard; rbt dev run says it does not
