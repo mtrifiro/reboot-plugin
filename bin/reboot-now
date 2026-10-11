@@ -2,9 +2,14 @@
 # The build's step line, for the progress band above the prompt, never
 # for the chat (the build skill, "How the build talks"):
 #
-#   reboot-now Writing the servicers
+#   reboot-now Reading how Reboot defines objects and methods
 #
-# Plain words, no quotes: letters, digits and ,.:/_- only, so the
-# plugin's auto-approve hook lets it through without a prompt. The
-# band reads the line from the command itself. This does nothing else.
+# It says what the work is for in the user's terms, never the plugin's:
+# no step, reference or reading list.
+#
+# Plain words, no quotes: letters, digits, ,.:/_- and the typographic
+# apostrophe ’, never the plain one, which the shell reads as a quote.
+# The plugin's auto-approve hook then lets it through without a prompt.
+# The band reads the line from the command itself. This does nothing
+# else.
 exit 0

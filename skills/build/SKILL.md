@@ -28,8 +28,10 @@ handoff (Step 7). Between them the build is
 quiet: no commentary on steps, references, files or fixes, never "Now
 the styles the timeline needs" or "The app shell is in place. The gate
 board comes next". A step line goes to the progress band instead, as
-a command: `reboot-now Writing the servicers`, plain words, no quotes,
-no apostrophes. The only lines between reports:
+a command: `reboot-now Reading how Reboot defines objects and
+methods`. It says what the work is for in the user's terms, never the
+plugin's: no step, reference or reading list. Plain words, no quotes,
+an apostrophe always the typographic ’. The only lines between reports:
 the scope questions, the brief after them (Design Phase, item 0), a question only the user can answer, and one sentence when a
 step runs past ten minutes, saying what takes the time. Never the
 first person: a sentence that starts with I is rewritten before it is

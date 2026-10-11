@@ -47,5 +47,5 @@ in_build() {
 }
 in_build || exit 0
 
-# shellcheck disable=SC2016  # the backticks are Markdown, not expansions
-printf '%s' '{"hookSpecificOutput":{"hookEventName":"PostToolUse","additionalContext":"[reboot-plugin-quiet] Quiet between reports. A step line goes to `reboot-now <plain words>`, which the progress band shows, never to the chat: not \"The project shell is in place\", not \"The servicers are written. The tests come next\". The chat hears only the brief, the milestone reports and the review, each framed, and a question only the user can answer."}}'
+# shellcheck disable=SC2016,SC1112  # Markdown backticks; the ’ is meant
+printf '%s' '{"hookSpecificOutput":{"hookEventName":"PostToolUse","additionalContext":"[reboot-plugin-quiet] Quiet between reports. A step line goes to `reboot-now <plain words>`, which the progress band shows, never to the chat, as `reboot-now Reading how Reboot defines objects and methods`, in the user\u2019s terms, never step, reference or reading list (an apostrophe always the typographic ’): not \"Reading the API-step references.\", not \"The project shell is in place\", not \"The servicers are written. The tests come next\". The chat hears only the brief, the milestone reports and the review, each framed, and a question only the user can answer."}}'

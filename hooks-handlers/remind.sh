@@ -146,8 +146,9 @@ each ending with what comes next and why, and the review at the
 handoff. No commentary on steps, references, files or fixes, never
 "Now the styles the timeline needs" or "The app shell is in place. The
 gate board comes next". A step line goes to the progress band as a
-command instead: `reboot-now Writing the servicers`, plain words, no
-quotes. Each report is framed: a rule, a title, an intro, a closing
+command instead: `reboot-now Reading how Reboot defines objects and
+methods`, in the user's terms, never step, reference or reading list.
+Plain words, no quotes, an apostrophe always the typographic ’. Each report is framed: a rule, a title, an intro, a closing
 note naming its file under `design/reports/`, a rule. The model is proposed
 until the user accepts it, never "settled". The first sentence about an
 object says why it exists, with the object as its subject. Sentences

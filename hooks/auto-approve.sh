@@ -460,9 +460,11 @@ case "$tool" in
                     'reboot-now '*)
                         # The build's step line for the progress band, a
                         # no-op in the plugin's bin/: plain words,
-                        # letters, digits and `,.:/_-` only, so nothing
-                        # in it can quote, expand or chain.
-                        line="${trimmed#reboot-now }"
+                        # letters, digits, `,.:/_-` and the typographic
+                        # apostrophe (U+2019, never a shell quote) only,
+                        # so nothing in it can quote, expand or chain.
+                        # shellcheck disable=SC1112  # the ’ is meant
+                        line=$(printf '%s' "${trimmed#reboot-now }" | sed 's/’//g')
                         case "$line" in *[!A-Za-z0-9\ ,.:/_-]*) exit 1 ;; esac
                         approved=$((approved + 1))
                         ;;

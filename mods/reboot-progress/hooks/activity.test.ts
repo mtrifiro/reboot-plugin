@@ -17,6 +17,7 @@ describe('activity', () => {
 
   test('reads the build\'s step line from its command', () => {
     expect(stepLine('reboot-now Writing the servicers')).toBe('Writing the servicers')
+    expect(stepLine('reboot-now Reading Reboot’s API step references')).toBe('Reading Reboot’s API step references')
     expect(stepLine('reboot-now Running the full suite, 42 scenarios')).toBe('Running the full suite, 42 scenarios')
     expect(stepLine('cd /p/hotel && /plugin/bin/reboot-now Writing the pages')).toBe('Writing the pages')
     expect(stepLine('reboot-now "Quoted line"')).toBe('Quoted line')

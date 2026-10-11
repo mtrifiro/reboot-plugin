@@ -7,9 +7,12 @@ allowed-tools: Bash, Read, Write, Glob, Grep, Edit
 
 # app: Build a Reboot Application
 
-**Say the welcome first,** the moment this skill loads, before
-invoking `build` or any other skill, and before the routing line or the
-scope round. It is fixed text except the examples in angle brackets:
+**Say the welcome first,** the moment this skill loads, before the
+routing line or the scope round. It is visible text in the chat, sent
+verbatim as a message of its own: never written in thinking, where the
+user sees only the app's summary of it, and with no tool call in the
+same message. `build` and the front-door skill are invoked in the next
+message. It is fixed text except the examples in angle brackets:
 two things from the user's brief that will be objects, in the user's
 words ("a class or a membership"). An existing project skips it.
 

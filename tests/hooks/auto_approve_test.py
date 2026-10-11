@@ -43,7 +43,7 @@ class AutoApproveTest(unittest.TestCase):
         payload = {"tool_name": tool, "tool_input": tool_input, "cwd": cwd or self.project}
         result = subprocess.run(
             ["sh", HOOK],
-            input=json.dumps(payload),
+            input=json.dumps(payload, ensure_ascii=False),  # as Claude Code sends it: raw UTF-8
             capture_output=True,
             text=True,
             timeout=30,
@@ -182,6 +182,7 @@ class AutoApproveTest(unittest.TestCase):
             "reboot-now Writing the servicers",
             "reboot-now Running the full suite, 42 scenarios",
             "reboot-now Writing the pages: rooms/stays",
+            "reboot-now Reading Reboot’s API step references",
             f"cd {self.project} && reboot-now Writing the pages",
         ])
         self.check("allow", ["reboot-now Writing the API file"], cwd=self.elsewhere)
