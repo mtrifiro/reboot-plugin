@@ -149,15 +149,37 @@ class PlaceholderTest(unittest.TestCase):
         self.assertEqual(self.run_script("stop").returncode, 0, "nothing running is fine")
         self.assertIn("not running", self.run_script("status").stdout)
 
+    def knock(self, held: socket.socket, seconds: float = 10) -> None:
+        """Waits for the next connection to the held port: the watcher
+        checks a port by connecting to it. Connections already queued
+        (a `status`) are dropped first."""
+        held.setblocking(False)
+        while True:
+            try:
+                held.accept()[0].close()
+            except BlockingIOError:
+                break
+        held.settimeout(seconds)
+        try:
+            held.accept()[0].close()
+        except socket.timeout:
+            raise AssertionError("the watcher never checked the port")
+
     def test_watch_serves_after_the_pid_exits_and_the_port_frees(self) -> None:
-        app = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(1.5)"])
+        # The app runs until its stdin closes, not for a fixed time.
+        app = subprocess.Popen([sys.executable, "-c", "import sys; sys.stdin.read()"],
+                               stdin=subprocess.PIPE)
+        self.held.append(app)
         held = self.hold(self.port)
         r = self.run_script("watch", "--pid", str(app.pid), "--for", "60")
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual(self.record()["watching"], app.pid)
         self.assertIn("waiting for pid %d" % app.pid, self.run_script("status").stdout)
+        assert app.stdin is not None
+        app.stdin.close()
         app.wait()
-        time.sleep(3)
+        # The watcher has seen the pid exit and found the port held.
+        self.knock(held)
         self.assertEqual(self.record()["watching"], app.pid, "still waiting: the port is held")
         held.close()
         self.assertTrue(until(lambda: self.get(self.port)[0] == 503), "serves once the port frees")

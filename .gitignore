@@ -1,6 +1,9 @@
 
 # claude plugin eval output
 evals/results/
+
+# tools/check.py's per-machine times and last results
+.reboot/
 .gstack/
 
 # Written by Claude Code when it loads a mod

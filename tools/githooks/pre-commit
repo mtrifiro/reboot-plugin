@@ -1,0 +1,13 @@
+#!/usr/bin/env sh
+# The plugin repository's pre-commit hook (not the templates'
+# .githooks): the lint and shell stages over what the commit and the
+# rest of the uncommitted work can break, in about two seconds. A
+# failure blocks the commit; `git commit --no-verify` skips it.
+#
+# Install once per clone:  git config core.hooksPath tools/githooks
+#
+# `--changed HEAD` diffs the working tree against HEAD, so staged
+# changes are counted (and unstaged ones too: the checks read the
+# files on disk, not the index).
+root="$(git rev-parse --show-toplevel)" || exit 1
+exec "$root/tools/check.sh" --changed HEAD --upto shell

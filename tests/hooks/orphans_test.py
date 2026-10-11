@@ -47,6 +47,36 @@ def alive(pid: int) -> bool:
     ).returncode == 0
 
 
+def ps(pid: int) -> tuple:
+    """(ppid, command) of a running pid, or (None, "") when gone."""
+    out = subprocess.run(
+        ["ps", "-ww", "-o", "ppid=,command=", "-p", str(pid)],
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+    if not out:
+        return None, ""
+    ppid, _, command = out.partition(" ")
+    return int(ppid), command.strip()
+
+
+def until(check, seconds: float = 10) -> None:
+    """Polls `check` to a deadline; fails the test if it never holds."""
+    deadline = time.time() + seconds
+    while not check():
+        if time.time() >= deadline:
+            raise AssertionError(f"timed out after {seconds}s waiting for {check.__doc__ or check}")
+        time.sleep(0.02)
+
+
+def reparented(pid: int) -> bool:
+    """Under pid 1 (or a systemd subreaper), as the hook reads it."""
+    ppid, _ = ps(pid)
+    if ppid == 1:
+        return True
+    return ppid is not None and re.search(r"(^|/)systemd( |$)", ps(ppid)[1]) is not None
+
+
 class OrphansTest(unittest.TestCase):
 
     def setUp(self) -> None:
@@ -81,20 +111,36 @@ class OrphansTest(unittest.TestCase):
             check=True,
         )
         files = [out, out + ".child"] if child else [out]
-        for _ in range(100):
-            pids = []
+        pids: List[int] = []
+
+        def started() -> bool:
+            """the detached process to start"""
+            pids.clear()
             for path in files:
                 if os.path.exists(path):
                     with open(path) as f:
-                        pids += [int(word) for word in f.read().split()]
-            if len(pids) == len(files):
-                break
-            time.sleep(0.05)
-        else:
-            raise AssertionError("detached process never started")
+                        pids.extend(int(word) for word in f.read().split())
+            return len(pids) == len(files)
+
+        until(started)
         self.pids.extend(pids)
-        # Wait for the reparent to pid 1, and for `exec -a` to land.
-        time.sleep(0.3)
+
+        # Wait for the reparent to pid 1, and for `exec -a` to land:
+        # until then a forked process still shows the command line of
+        # the shell that forked it.
+        def settled() -> bool:
+            """the reparent to pid 1 and the exec"""
+            if not reparented(pids[0]):
+                return False
+            for i, pid in enumerate(pids):
+                _, command = ps(pid)
+                if not command or command.startswith("bash -c ( "):
+                    return False
+                if i and command == ps(pids[0])[1]:
+                    return False
+            return True
+
+        until(settled)
         return pids
 
     def app(self, cwd: Optional[str] = None) -> int:
@@ -178,7 +224,7 @@ class OrphansTest(unittest.TestCase):
         pid = self.app()
         self.record(pid, owner, owner_started, "dead-session-id")
         subprocess.run(["kill", "-9", str(owner)], check=True)
-        time.sleep(0.2)
+        until(lambda: not alive(owner))
         line = self.line_for(self.run_hook(min_age=3600), pid)
         self.assertIsNotNone(line)
         self.assertIn("session dead-session-id has exited", line or "")
@@ -202,7 +248,7 @@ class OrphansTest(unittest.TestCase):
         (pid,) = self.detached('sleep 600 & echo $! >"$PIDS"')
         path = self.record(pid, os.getpid(), lstart(os.getpid()), "s")
         subprocess.run(["kill", "-9", str(pid)], check=True)
-        time.sleep(0.2)
+        until(lambda: not alive(pid))
         self.run_hook(min_age=3600)
         self.assertFalse(os.path.exists(path))
 
@@ -225,10 +271,7 @@ class OrphansTest(unittest.TestCase):
             with open(child) as f:
                 return f.read().strip()
 
-        for _ in range(100):
-            if read():
-                break
-            time.sleep(0.05)
+        until(lambda: bool(read()))
         main = int(read())
         self.pids.append(main)
         path = os.path.join(self.owners, str(rbt.pid))
@@ -242,7 +285,7 @@ class OrphansTest(unittest.TestCase):
         assert rbt.stdin is not None
         rbt.stdin.close()
         rbt.wait()
-        time.sleep(0.3)
+        until(lambda: reparented(main))
         return rbt.pid, main, path
 
     def test_what_a_dead_rbt_left_is_reported_at_once(self) -> None:
@@ -255,7 +298,7 @@ class OrphansTest(unittest.TestCase):
                 self.assertIn("(app)", line or "")
                 self.assertTrue(os.path.exists(path), "the record stays while its survivors run")
                 subprocess.run(["kill", "-9", str(main)], check=True)
-                time.sleep(0.2)
+                until(lambda: not alive(main))
                 self.run_hook(min_age=3600)
                 self.assertFalse(os.path.exists(path), "deleted once nothing is left")
 

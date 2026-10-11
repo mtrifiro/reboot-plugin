@@ -85,7 +85,13 @@ class RbtShimTest(unittest.TestCase):
         holder = subprocess.Popen(
             ["python3", "-c", f"import time; f = open({str(lock)!r}); time.sleep(60)"])
         self.holders.append(holder)
-        time.sleep(0.5)
+        # Until lsof (what the shim asks) sees the file open.
+        deadline = time.time() + 10
+        while subprocess.run(["lsof", "-t", "--", str(lock)], capture_output=True,
+                             text=True).stdout.split()[:1] != [str(holder.pid)]:
+            if time.time() >= deadline:
+                raise AssertionError("the lock holder never opened the lock")
+            time.sleep(0.02)
         return holder.pid
 
     def test_passes_through_to_the_pinned_cli(self) -> None:
@@ -112,7 +118,7 @@ class RbtShimTest(unittest.TestCase):
         r = self.rbt("dev", "expunge", "--yes", cwd=self.project)
         self.assertEqual(r.returncode, 1)
         self.assertIn(f"held by pid {pid}", r.stderr)
-        r = self.rbt("dev", "run", cwd=self.project, REBOOT_LOCK_WAIT="1")
+        r = self.rbt("dev", "run", cwd=self.project, REBOOT_LOCK_WAIT="0")
         self.assertEqual(r.returncode, 1)
         self.assertIn(f"still held by pid {pid}", r.stderr)
         self.assertIn("Stop it completely first", r.stderr)
@@ -193,7 +199,7 @@ class RbtShimTest(unittest.TestCase):
     @unittest.skipUnless(shutil.which("lsof"), "lsof is not installed")
     def test_uv_run_under_a_held_lock_is_refused(self) -> None:
         pid = self.hold_lock()
-        r = self.uv_run("dev", "run", cwd=self.project, REBOOT_LOCK_WAIT="1")
+        r = self.uv_run("dev", "run", cwd=self.project, REBOOT_LOCK_WAIT="0")
         self.assertEqual(r.returncode, 1)
         self.assertIn(f"still held by pid {pid}", r.stderr)
         self.assertEqual(r.stdout, "", "uv never ran")

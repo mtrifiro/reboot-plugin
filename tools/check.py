@@ -12,12 +12,27 @@ protect, and a selector that runs only what a change can break.
     tools/check.sh --list               # stages, checks, measured times
     tools/check.sh --changed --explain  # which row of PATHS picked each check
     tools/check.sh --run-evals          # behavior: run the eval cases (model calls, money)
+    tools/check.sh --stage integration --skip templates-smoke
+    tools/check.sh --only templates-smoke --template web-app
+    tools/check.sh --changed BASE --stage integration --dry-run
 
-A stage runs all its checks, prints each one's time and the stage's,
-and the run stops after the first stage with a failure. Output of a
-check is shown when it fails (`-v` shows it always). The behavior
-stage only prints the eval cases and the `tools/run-evals.sh` command
-unless `--run-evals` is given.
+A stage runs all its checks, prints each one's line as it finishes and
+the stage's time, and the run stops after the first stage with a
+failure. The output of a failed check is printed at the end of its
+stage (`-v` prints every check's). The unit stage runs its checks in a
+pool as wide as the machine (`-j N`, or CHECK_JOBS); a check marked
+`serial` (real ports, global state) runs alone after the pool.
+
+Inside a stage the order is fail-first: the checks the uncommitted
+changes select, then those that failed last time, then the rest by
+measured time, shortest first. Each run's times and results go to
+`.reboot/check-history.json` (gitignored); `--list` shows each check's
+last and median time, and a check that takes more than twice its
+median prints a warning.
+
+The behavior stage only prints the eval cases and the
+`tools/run-evals.sh` command unless `--run-evals` is given; it runs
+them with `--smoke` (one run, Haiku judging) unless `--full-evals`.
 
 STAGES, CHECKS and PATHS below are the whole configuration.
 """
@@ -25,10 +40,13 @@ STAGES, CHECKS and PATHS below are the whole configuration.
 from __future__ import annotations
 
 import argparse
+import concurrent.futures
 import fnmatch
+import json
 import os
 import re
 import shutil
+import statistics
 import subprocess
 import sys
 import tempfile
@@ -51,7 +69,7 @@ STAGES = [
 STAGE_NAMES = [s for s, _ in STAGES]
 
 SHELL_FILES = [
-    "install.sh", "hooks/*.sh", "hooks-handlers/*.sh", "lib/*.sh", "bin/*", "tools/*.sh",
+    "install.sh", "hooks/*.sh", "hooks-handlers/*.sh", "lib/*.sh", "bin/*", "tools/*.sh", "tools/githooks/*",
     "skills/build/templates/copy.sh", "skills/build/templates/*/scripts/*.sh",
     "skills/build/templates/*/deploy/before-backend", "skills/build/templates/*/.githooks/*",
 ]
@@ -69,11 +87,12 @@ class Check:
     file: str = ""              # the test file it runs, for PATHS' @self
     env: dict = field(default_factory=dict)
     needs: str = ""             # a command that must be on PATH, else skipped
+    serial: bool = False        # binds real ports or reads global state: never beside another
 
 
-def unit(path: str, seconds: float) -> Check:
+def unit(path: str, seconds: float, serial: bool = False) -> Check:
     name = path[len("tests/"):-len("_test.py")]
-    return Check(name, "unit", ["python3", path, "-q"], seconds, file=path)
+    return Check(name, "unit", ["python3", path, "-q"], seconds, file=path, serial=serial)
 
 
 def pytest_unit(path: str, seconds: float, bdd: bool = False) -> Check:
@@ -95,23 +114,23 @@ CHECKS = [
     Check("shellcheck", "shell", [], 1.1),
 
     unit("tests/hooks/auto_approve_test.py", 1.6),
-    unit("tests/hooks/orphans_test.py", 9.7),
+    unit("tests/hooks/orphans_test.py", 4.5),
     unit("tests/hooks/schema_guard_test.py", 6.1),   # skips itself without a cached Node
     unit("tests/hooks/suite_guard_test.py", 1.1),
     unit("tests/hooks/session_start_test.py", 0.7),
     unit("tests/hooks/remind_test.py", 0.3),
-    unit("tests/shims/rbt_test.py", 8.3),
+    unit("tests/shims/rbt_test.py", 5.0),
     unit("tests/shims/uv_test.py", 4.8),
     unit("tests/templates/copy_test.py", 1.9),
     unit("tests/templates/run_progress_test.py", 0.04),   # skips itself without pytest
     unit("tests/templates/step_order_test.py", 0.04),     # skips itself without pytest-bdd
-    unit("tests/templates/ports_test.py", 4.9),
+    unit("tests/templates/ports_test.py", 4.9, serial=True),        # binds a port copy.sh probes
     unit("tests/templates/test_sh_test.py", 0.04),        # skips itself without pytest
     unit("tests/templates/feature_lint_test.py", 0.04),   # skips itself without pytest-bdd
     unit("tests/templates/harness_hygiene_test.py", 0.04),
     unit("tests/templates/api_lint_test.py", 0.4),
     unit("tests/templates/doctor_test.py", 0.6),
-    unit("tests/templates/placeholder_test.py", 7.2),
+    unit("tests/templates/placeholder_test.py", 5.3, serial=True),  # binds and serves ports
     unit("tests/templates/deploy_test.py", 0.1),
     unit("tests/tools/gen_index_test.py", 0.1),
     unit("tests/tools/findings_test.py", 0.2),
@@ -119,7 +138,8 @@ CHECKS = [
     unit("tests/tools/check_manifests_test.py", 0.1),
     unit("tests/tools/check_cli_test.py", 0.04),
     unit("tests/tools/check_symbols_test.py", 0.04),
-    unit("tests/tools/run_evals_test.py", 3.6),
+    unit("tests/tools/run_evals_test.py", 10.5),
+    unit("tests/tools/check_transcript_test.py", 0.05),
     unit("tests/tools/check_test.py", 0.5),
 
     Check("check-cli", "integration", ["python3", "tools/check-cli.py"], 18.3),
@@ -138,6 +158,12 @@ CHECKS = [
     Check("mods", "integration", ["tools/check-mods.sh"], 3.2, needs="claude"),
 ]
 BY_NAME = {c.name: c for c in CHECKS}
+
+# The front doors templates-smoke builds, in its default order. A change
+# inside one template's directory smokes that template; any other path
+# that selects the smoke (copy.sh, the shims, VERSION) smokes all three.
+TEMPLATES = ["mcp-ui", "web-app", "both"]
+TEMPLATES_DIR = "skills/build/templates/"
 
 GROUPS = {
     "hook-tests": [c.name for c in CHECKS if c.name.startswith("hooks/")],
@@ -187,12 +213,15 @@ PATHS = [
     ("tools/check-manifests.py", ["tools/check_manifests"]),
     ("tools/check-cli.py", ["tools/check_cli", "check-cli"]),
     ("tools/check-symbols.py", ["tools/check_symbols", "check-symbols"]),
+    ("tools/check-transcript.py", ["tools/check_transcript"]),
     ("tools/known-defects.json", ["check-symbols"]),
     ("tools/run-evals.sh", ["tools/run_evals", "shellcheck"]),
+    ("tools/evals_cache.py", ["tools/run_evals"]),
     ("tools/style-check.*", ["style-browser"]),
     ("tools/templates-smoke.sh", ["shellcheck", "templates-smoke"]),
     ("tools/check-mods.sh", ["shellcheck", "mods"]),
     ("tools/check.py", ["tools/check"]),
+    ("tools/githooks/*", ["shellcheck"]),
     ("tools/*.sh", ["shellcheck", "tools/check"]),
     ("tools/*", []),
     # A test runs itself.
@@ -258,6 +287,15 @@ class Selection:
     all_cases: bool
     unmapped: list
     why: dict          # path -> (glob or None, [check names])
+    templates: set = field(default_factory=set)   # what templates-smoke builds, when it is selected
+
+
+def template_of(path: str):
+    """The front door a path lies inside, or None (a shared file)."""
+    if not path.startswith(TEMPLATES_DIR):
+        return None
+    parts = path[len(TEMPLATES_DIR):].split("/")
+    return parts[0] if len(parts) > 1 and parts[0] in TEMPLATES else None
 
 
 def select(paths: list, cases: dict | None = None) -> Selection:
@@ -294,6 +332,9 @@ def select(paths: list, cases: dict | None = None) -> Selection:
                 picked.append(tok)
         sel.checks.update(picked)
         sel.why[path] = (glob, picked)
+        if "templates-smoke" in picked:
+            one = template_of(path)
+            sel.templates.update([one] if one else TEMPLATES)
     if paths:
         sel.checks.update(c.name for c in CHECKS if c.stage == "lint")
     if sel.all_cases:
@@ -323,6 +364,71 @@ def changed_paths(base: str) -> list:
     return sorted(set(out))
 
 
+# --- history ---------------------------------------------------------
+
+# Each check's recent times and its last result, per machine; written
+# after every stage. A smoke of fewer than all three templates is kept
+# under its own key ("templates-smoke[web-app]"), so it does not drag
+# the whole smoke's median down.
+HISTORY = ROOT / ".reboot" / "check-history.json"
+KEEP = 20              # times kept per check
+SLOW = 2.0             # warn past this many times the median ...
+SLOW_FLOOR = 1.0       # ... and this many seconds over it (a 0.04 s check doubles on noise)
+
+
+def load_history(path: Path | None = None) -> dict:
+    try:
+        data = json.loads((path or HISTORY).read_text())
+        return data if isinstance(data, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def save_history(hist: dict, path: Path | None = None) -> None:
+    path = path or HISTORY
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        tmp = path.with_name(f".{path.name}.{os.getpid()}")
+        tmp.write_text(json.dumps(hist, indent=1, sort_keys=True) + "\n")
+        os.replace(tmp, path)
+    except OSError:
+        pass                # a record is a convenience; never fail a run over it
+
+
+def median_time(hist: dict, key: str):
+    times = (hist.get(key) or {}).get("times") or []
+    return statistics.median(times) if times else None
+
+
+def record(hist: dict, key: str, status: str, seconds: float) -> None:
+    entry = hist.setdefault(key, {})
+    entry["last"] = status
+    if status in ("ok", "fail"):
+        entry["times"] = (entry.get("times", []) + [round(seconds, 2)])[-KEEP:]
+
+
+def slow_warning(hist: dict, key: str, seconds: float):
+    """A line when `seconds` is past SLOW x the recorded median, else None."""
+    times = (hist.get(key) or {}).get("times") or []
+    if len(times) < 3:
+        return None
+    med = statistics.median(times)
+    if seconds > SLOW * med and seconds - med > SLOW_FLOOR:
+        return (f"  warn {key} took {seconds:.1f}s, {seconds / med:.1f}x its median of "
+                f"{med:.1f}s over {len(times)} runs")
+    return None
+
+
+def fail_first(checks: list, first: set, hist: dict) -> list:
+    """The changed paths' checks, then last run's failures, then the
+    rest by measured time (the recorded median, else the table's)."""
+    def key(c):
+        med = median_time(hist, c.name)
+        return (c.name not in first, (hist.get(c.name) or {}).get("last") != "fail",
+                c.seconds if med is None else med)
+    return sorted(checks, key=key)
+
+
 # --- running ---------------------------------------------------------
 
 def shellcheck_cmd():
@@ -341,38 +447,92 @@ def fmt(seconds: float) -> str:
     return f"{seconds:6.1f}s" if seconds >= 0.1 else "  <0.1s"
 
 
-def run_check(c: Check, verbose: bool) -> str:
-    """'ok', 'fail' or 'skip: <why>'."""
-    cmd = c.cmd
+def command_for(c: Check, templates) -> list:
+    """`templates`: the front doors to smoke, or None for the default (all)."""
     if c.name == "shellcheck":
-        cmd = shellcheck_cmd()
-        if cmd is None:
-            return "skip: shellcheck is not installed and uvx cannot fetch it (CI runs it)"
+        return shellcheck_cmd()
+    if c.name == "templates-smoke" and templates is not None:
+        return c.cmd + [t for t in TEMPLATES if t in templates]
+    return c.cmd
+
+
+def history_key(c: Check, templates) -> str:
+    if c.name == "templates-smoke" and templates is not None and set(templates) != set(TEMPLATES):
+        return f"{c.name}[{','.join(t for t in TEMPLATES if t in templates)}]"
+    return c.name
+
+
+def run_check(c: Check, templates=None) -> tuple:
+    """(status, output, seconds); status is 'ok', 'fail' or 'skip: <why>'."""
+    t0 = time.time()
+    cmd = command_for(c, templates)
+    if cmd is None:
+        return "skip: shellcheck is not installed and uvx cannot fetch it (CI runs it)", "", 0.0
     if c.needs and not shutil.which(c.needs):
-        return f"skip: {c.needs} is not on PATH (CI runs it)"
+        return f"skip: {c.needs} is not on PATH (CI runs it)", "", 0.0
     env = dict(os.environ, **c.env)
-    if verbose:
-        return "ok" if subprocess.run(cmd, cwd=ROOT, env=env).returncode == 0 else "fail"
     with tempfile.TemporaryFile("w+") as log:
-        rc = subprocess.run(cmd, cwd=ROOT, env=env, stdout=log, stderr=subprocess.STDOUT).returncode
-        if rc != 0:
-            log.seek(0)
-            sys.stdout.write(log.read())
-    return "ok" if rc == 0 else "fail"
+        rc = subprocess.run(cmd, cwd=ROOT, env=env, stdin=subprocess.DEVNULL,
+                            stdout=log, stderr=subprocess.STDOUT).returncode
+        log.seek(0)
+        out = log.read()
+    return ("ok" if rc == 0 else "fail"), out, time.time() - t0
 
 
-def evals_command(cases) -> list:
+def run_stage(checks: list, jobs: int, verbose: bool, hist: dict, templates=None) -> list:
+    """Runs `checks` (already in order), printing each line as it
+    finishes; `jobs` > 1 runs those not marked serial in a pool, then
+    the serial ones alone. Returns the failed checks' names; their
+    output is printed after the stage's lines."""
+    failed, outputs = [], []
+
+    def report(c, status, out, seconds):
+        mark = {"ok": "ok  ", "fail": "FAIL"}.get(status, "skip")
+        note = status[len("skip: "):] if status.startswith("skip") else ""
+        print(f"  {mark} {fmt(seconds)}  {c.name}{'  (' + note + ')' if note else ''}", flush=True)
+        key = history_key(c, templates)
+        warning = slow_warning(hist, key, seconds) if status in ("ok", "fail") else None
+        if warning:
+            print(warning, flush=True)
+        record(hist, key, "skip" if note else status, seconds)
+        if verbose and out:
+            sys.stdout.write(out)
+        if status == "fail":
+            failed.append(c.name)
+            outputs.append((c.name, out))
+
+    pooled = [c for c in checks if not c.serial] if jobs > 1 else []
+    alone = [c for c in checks if c not in pooled]
+    if pooled:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=jobs) as pool:
+            futures = {pool.submit(run_check, c, templates): c for c in pooled}
+            for fut in concurrent.futures.as_completed(futures):
+                report(futures[fut], *fut.result())
+        if alone:
+            print(f"  -- serial: {' '.join(c.name for c in alone)}", flush=True)
+    for c in alone:
+        report(c, *run_check(c, templates))
+    if not verbose:
+        for name, out in outputs:
+            print(f"--- {name} output ---")
+            sys.stdout.write(out if out.endswith("\n") or not out else out + "\n")
+    return failed
+
+
+def evals_command(cases, smoke: bool = False) -> list:
+    flag = " --smoke" if smoke else ""
     if cases is None:
-        return ["tools/run-evals.sh"]
-    return [f"tools/run-evals.sh --case {c}" for c in sorted(cases)]
+        return [f"tools/run-evals.sh{flag}"]
+    return [f"tools/run-evals.sh{flag} --case {c}" for c in sorted(cases)]
 
 
-def run_behavior(cases, run: bool) -> bool:
-    """`cases` None means every case. Prints, or runs with --run-evals."""
+def run_behavior(cases, run: bool, smoke: bool = True) -> bool:
+    """`cases` None means every case. Prints, or runs with --run-evals;
+    `smoke`: one run per case, Haiku judging (run-evals.sh --smoke)."""
     if cases is not None and not cases:
         print("  no eval case covers the changed paths")
         return True
-    cmds = evals_command(cases)
+    cmds = evals_command(cases, smoke)
     if not run:
         print("  evals cost model calls; run them with --run-evals, or:")
         for cmd in cmds:
@@ -385,7 +545,9 @@ def run_behavior(cases, run: bool) -> bool:
     return ok
 
 
-def list_stages() -> None:
+def list_stages(hist: dict) -> None:
+    print(f"  {'table':>7} {'last':>7} {'median':>7}  check   (last, median: this machine's runs, "
+          f"{HISTORY.relative_to(ROOT)})")
     for stage, what in STAGES:
         checks = [c for c in CHECKS if c.stage == stage]
         total = sum(c.seconds for c in checks)
@@ -393,8 +555,24 @@ def list_stages() -> None:
         print(head)
         print(f"  {what}")
         for c in checks:
-            print(f"  {fmt(c.seconds)}  {c.name}")
+            times = (hist.get(c.name) or {}).get("times") or []
+            last = fmt(times[-1]) if times else "      -"
+            med = fmt(statistics.median(times)) if times else "      -"
+            flags = "  (serial)" if c.serial else ""
+            failed = "  (failed last run)" if (hist.get(c.name) or {}).get("last") == "fail" else ""
+            print(f"  {fmt(c.seconds)} {last} {med}  {c.name}{flags}{failed}")
+        for key in sorted(k for k in hist if k.startswith("templates-smoke[") and stage == "integration"):
+            times = hist[key].get("times") or []
+            if times:
+                print(f"         {fmt(times[-1])} {fmt(statistics.median(times))}  {key}")
         print()
+
+
+def default_jobs() -> int:
+    try:
+        return max(1, int(os.environ.get("CHECK_JOBS", "")))
+    except ValueError:
+        return os.cpu_count() or 1
 
 
 def main(argv=None) -> int:
@@ -403,19 +581,30 @@ def main(argv=None) -> int:
     ap.add_argument("--stage", action="append", choices=STAGE_NAMES, help="run this stage (repeatable)")
     ap.add_argument("--upto", choices=STAGE_NAMES, help="run every stage up to and including this one")
     ap.add_argument("--only", action="append", metavar="CHECK", help="run only this check (repeatable)")
+    ap.add_argument("--skip", action="append", metavar="CHECK", help="leave this check out (repeatable)")
+    ap.add_argument("--template", action="append", choices=TEMPLATES,
+                    help="templates-smoke builds only this front door (repeatable; "
+                         "with --changed, only if the changes select it)")
     ap.add_argument("--changed", nargs="?", const="", metavar="BASE",
                     help="run only what the paths changed since BASE can break "
                          "(default: the merge base with main; HEAD: uncommitted work)")
     ap.add_argument("--explain", action="store_true", help="with --changed: print each path's row and checks")
+    ap.add_argument("--dry-run", action="store_true",
+                    help="print `would run: <check>` for each check the flags select, run nothing")
+    ap.add_argument("-j", "--jobs", type=int, default=default_jobs(),
+                    help="unit checks run at once (default: CHECK_JOBS, else the CPU count)")
     ap.add_argument("--run-evals", action="store_true", help="run the behavior stage's evals (costs money)")
+    ap.add_argument("--full-evals", action="store_true",
+                    help="with --run-evals: run-evals.sh's full run (3 runs, the configured judge), not --smoke")
     ap.add_argument("--list", action="store_true", help="list the stages and checks with measured times")
     ap.add_argument("-v", "--verbose", action="store_true", help="show every check's output")
     args = ap.parse_args(argv)
 
+    hist = load_history()
     if args.list:
-        list_stages()
+        list_stages(hist)
         return 0
-    for name in args.only or []:
+    for name in (args.only or []) + (args.skip or []):
         if name not in BY_NAME:
             ap.error(f"unknown check {name!r}; --list shows them")
 
@@ -433,11 +622,14 @@ def main(argv=None) -> int:
     wanted = set(BY_NAME)
     cases = None                           # None: every case
     sel = None
+    templates = set(args.template) if args.template else None   # None: all three
+    first = set()                          # what the changes select: run first
     if args.changed is not None:
         base = args.changed or default_base()
         paths = changed_paths(base)
         sel = select(paths)
         wanted = set(sel.checks)
+        first = set(sel.checks)
         cases = None if sel.cases == set(eval_cases()) else sel.cases
         print(f"changed since {base[:12]}: {len(paths)} paths")
         if args.explain:
@@ -449,31 +641,55 @@ def main(argv=None) -> int:
         if not paths:
             print("nothing changed")
             return 0
+        if "templates-smoke" in wanted:
+            templates = sel.templates & templates if templates is not None else set(sel.templates)
+            if not templates:
+                wanted.discard("templates-smoke")
+                print(f"  templates-smoke: the changes touch only {' '.join(sorted(sel.templates))}, "
+                      f"not {' '.join(args.template)}")
+            elif args.explain:
+                print(f"  templates-smoke builds: {' '.join(t for t in TEMPLATES if t in templates)}")
+    else:
+        try:
+            first = select(changed_paths("HEAD"), {}).checks
+        except (subprocess.CalledProcessError, OSError):
+            first = set()
+    if templates is not None and set(templates) == set(TEMPLATES):
+        templates = None
     if args.only:
         wanted &= set(args.only)
+    wanted -= set(args.skip or [])
+
+    if args.dry_run:
+        for stage in stages:
+            if stage == "behavior":
+                continue
+            for c in fail_first([c for c in CHECKS if c.stage == stage and c.name in wanted], first, hist):
+                extra = " " + " ".join(command_for(c, templates)[len(c.cmd):]) if c.name == "templates-smoke" else ""
+                print(f"would run: {c.name}{extra}")
+        return 0
 
     started = time.time()
     for stage in stages:
-        checks = [c for c in CHECKS if c.stage == stage and c.name in wanted]
         if stage == "behavior":
             print("== behavior", flush=True)
-            if not run_behavior(cases, args.run_evals):
+            if not run_behavior(cases, args.run_evals, smoke=not args.full_evals):
                 print("FAILED at stage behavior")
                 return 1
             continue
+        all_in_stage = [c for c in CHECKS if c.stage == stage]
+        checks = fail_first([c for c in all_in_stage if c.name in wanted], first, hist)
         if not checks:
+            if args.stage or sel is not None:
+                why = "the changed paths select none of its checks" if sel is not None else "the flags leave none"
+                print(f"== {stage}: skipped, {why} "
+                      f"({' '.join(c.name for c in all_in_stage)})", flush=True)
             continue
-        print(f"== {stage} ({len(checks)})", flush=True)
+        jobs = args.jobs if stage == "unit" else 1
+        print(f"== {stage} ({len(checks)}{f', {jobs} at once' if jobs > 1 else ''})", flush=True)
         t0 = time.time()
-        failed = []
-        for c in checks:
-            t = time.time()
-            status = run_check(c, args.verbose)
-            mark = {"ok": "ok  ", "fail": "FAIL"}.get(status, "skip")
-            note = status[len("skip: "):] if status.startswith("skip") else ""
-            print(f"  {mark} {fmt(time.time() - t)}  {c.name}{'  (' + note + ')' if note else ''}", flush=True)
-            if status == "fail":
-                failed.append(c.name)
+        failed = run_stage(checks, jobs, args.verbose, hist, templates)
+        save_history(hist)
         print(f"   {stage}: {fmt(time.time() - t0).strip()}", flush=True)
         if failed:
             print(f"FAILED at stage {stage}: {', '.join(failed)}")
@@ -489,7 +705,7 @@ def main(argv=None) -> int:
             print(f"  tools/check.sh --changed{base_arg} --upto {upto}")
         if "behavior" in later and sel.cases and not args.only:
             print(f"eval cases for these changes: {' '.join(sorted(sel.cases))}")
-            for cmd in evals_command(cases):
+            for cmd in evals_command(cases, smoke=True):
                 print(f"  {cmd}")
     print(f"all passed in {time.time() - started:.1f}s")
     return 0

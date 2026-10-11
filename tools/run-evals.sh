@@ -3,9 +3,10 @@
 # Run the behavior evals in evals/ against this working tree with
 # `claude plugin eval`, with and without the plugin.
 #
-#   tools/run-evals.sh [claude plugin eval flags...]
+#   tools/run-evals.sh [--smoke] [--fresh] [claude plugin eval flags...]
 #   e.g. tools/run-evals.sh --tag routing --runs 1
 #        tools/run-evals.sh --case design-ready-for-both -j 2
+#        tools/run-evals.sh --smoke --case route-mcp   # 1 run, no ablation, Haiku judging
 #
 # The eval runner refuses an evals/ that links outside the plugin, and a
 # run should get a copy of the skills and no leftover-process hook, so
@@ -13,48 +14,46 @@
 # bin/ and hooks-handlers/, and copies of skills/, hooks/ and evals/.
 # A case with a fixture (scaffold_script) gets --scaffold unless the
 # flags already say --scaffold or --no-scaffold. Results are copied back
-# into evals/results/ (gitignored).
+# into evals/results/ (gitignored; EVALS_RESULTS_DIR moves them).
+#
+# The result cache: each selected case gets a key, a hash of its
+# directory, the skills its Skill graders name (with references/),
+# hooks-handlers/remind.sh, the templates' AGENTS.md and the flags that
+# change a score (runs, ablation, judge model, model, scaffold);
+# tools/evals_cache.py has the list. A case whose key matches a clean
+# earlier result prints that result and does not run; --fresh runs it
+# anyway. Each result directory keeps its keys in cache-keys.json.
+# After a run, and for a cached case, each grader's votes per run are
+# printed (PPF: three judges, two passed), with the range of the
+# per-run scores, so a small difference between two scores reads as
+# the noise it is.
+#
+# --smoke: one run per case, ablation none, Haiku judging (a flag
+# given explicitly wins). The full default stays three runs per case
+# with Sonnet judging.
 
 set -euo pipefail
 
 ROOT="$(cd "$(dirname -- "$0")/.." && pwd)"
-WRAP="$(mktemp -d "${TMPDIR:-/tmp}/reboot-evals.XXXXXX")"
-trap 'rm -rf "$WRAP"' EXIT
+RESULTS="${EVALS_RESULTS_DIR:-$ROOT/evals/results}"
 
-mkdir -p "$WRAP/.claude-plugin"
-for d in bin hooks-handlers; do
-  ln -s "$ROOT/$d" "$WRAP/$d"
+# This script's own flags, taken out before the rest reach the runner.
+smoke=0
+fresh=0
+rest=()
+for arg in "$@"; do
+  case "$arg" in
+    --smoke) smoke=1 ;;
+    --fresh) fresh=1 ;;
+    *) rest+=("$arg") ;;
+  esac
 done
-# The skills are copied, not linked: a run may read inside the plugin
-# under test, judged by the real path, so a link to the checkout left
-# every reference read denied and the design cases measured the
-# SKILL.md text alone (the Skill tool loads a SKILL.md itself; its
-# references need Read).
-rsync -a "$ROOT/skills/" "$WRAP/skills/"
-# The hooks, less the leftover-process report: it runs at session start
-# and tells the agent about dev processes on this machine, which then
-# opens its answer by offering to stop them. An eval measures the
-# skills, not the machine.
-cp -R "$ROOT/hooks" "$WRAP/hooks"
-python3 - "$WRAP/hooks/hooks.json" <<'PY'
-import json, sys
-path = sys.argv[1]
-doc = json.load(open(path))
-events = doc["hooks"] if isinstance(doc.get("hooks"), dict) else doc
-for entries in events.values():
-    for entry in entries:
-        entry["hooks"] = [h for h in entry.get("hooks", []) if "orphans.sh" not in h.get("command", "")]
-json.dump(doc, open(path, "w"), indent=2)
-PY
-cat > "$WRAP/.claude-plugin/plugin.json" <<EOF
-{
-  "name": "reboot",
-  "version": "0.0.0-$(git -C "$ROOT" rev-parse --short HEAD)",
-  "description": "Eval wrapper for the reboot-plugin working tree."
-}
-EOF
-rsync -a --exclude results "$ROOT/evals/" "$WRAP/evals/"
-
+set -- ${rest[@]+"${rest[@]}"}
+if [ "$smoke" = 1 ]; then
+  case " $* " in *" --runs "*|*" --runs="*) ;; *) set -- --runs 1 "$@" ;; esac
+  case " $* " in *" --ablation "*|*" --ablation="*) ;; *) set -- --ablation none "$@" ;; esac
+  case " $* " in *" --judge-model "*|*" --judge-model="*) ;; *) set -- --judge-model haiku "$@" ;; esac
+fi
 
 # The wrapper is a fresh temp dir every run and holds this working tree,
 # so trust it: a non-interactive run can't ask, and refuses otherwise.
@@ -113,12 +112,92 @@ case " $* " in
   *) set -- --judge-model sonnet "$@" ;;
 esac
 
+# The cache: which selected cases already have a result for their key.
+cached_status=0
+selected=0
+to_run=()
+keys=()
+fresh_flag=()
+[ "$fresh" = 1 ] && fresh_flag=(--fresh)
+while read -r what name where; do
+  [ -n "$what" ] || continue
+  selected=$((selected + 1))
+  if [ "$what" = cached ]; then
+    python3 "$ROOT/tools/evals_cache.py" show "$where" "$name" -- "$@" --cached || cached_status=1
+  else
+    to_run+=("$name")
+    keys+=("$name=$where")
+  fi
+done <<< "$(python3 "$ROOT/tools/evals_cache.py" plan "$RESULTS" -- "$@" ${fresh_flag[@]+"${fresh_flag[@]}"})"
+if [ "$selected" -gt 0 ] && [ "${#to_run[@]}" -eq 0 ]; then
+  echo "every selected case is cached (--fresh runs them again)"
+  exit "$cached_status"
+fi
+
+WRAP="$(mktemp -d "${TMPDIR:-/tmp}/reboot-evals.XXXXXX")"
+trap 'rm -rf "$WRAP"' EXIT
+
+mkdir -p "$WRAP/.claude-plugin"
+for d in bin hooks-handlers; do
+  ln -s "$ROOT/$d" "$WRAP/$d"
+done
+# The skills are copied, not linked: a run may read inside the plugin
+# under test, judged by the real path, so a link to the checkout left
+# every reference read denied and the design cases measured the
+# SKILL.md text alone (the Skill tool loads a SKILL.md itself; its
+# references need Read).
+rsync -a "$ROOT/skills/" "$WRAP/skills/"
+# The hooks, less the leftover-process report: it runs at session start
+# and tells the agent about dev processes on this machine, which then
+# opens its answer by offering to stop them. An eval measures the
+# skills, not the machine.
+cp -R "$ROOT/hooks" "$WRAP/hooks"
+python3 - "$WRAP/hooks/hooks.json" <<'PY'
+import json, sys
+path = sys.argv[1]
+doc = json.load(open(path))
+events = doc["hooks"] if isinstance(doc.get("hooks"), dict) else doc
+for entries in events.values():
+    for entry in entries:
+        entry["hooks"] = [h for h in entry.get("hooks", []) if "orphans.sh" not in h.get("command", "")]
+json.dump(doc, open(path, "w"), indent=2)
+PY
+cat > "$WRAP/.claude-plugin/plugin.json" <<EOF
+{
+  "name": "reboot",
+  "version": "0.0.0-$(git -C "$ROOT" rev-parse --short HEAD)",
+  "description": "Eval wrapper for the reboot-plugin working tree."
+}
+EOF
+rsync -a --exclude results "$ROOT/evals/" "$WRAP/evals/"
+
+
+
 status=0
-(cd "$WRAP" && claude plugin eval . --no-publish "$@") || status=$?
+if [ "${#to_run[@]}" -eq "$selected" ]; then
+  # Nothing cached: one run with the flags as given (cases share -j).
+  (cd "$WRAP" && claude plugin eval . --no-publish "$@") || status=$?
+else
+  # Some cached: the rest one case at a time.
+  filtered=()
+  while IFS= read -r arg; do
+    filtered+=("$arg")
+  done <<< "$(python3 "$ROOT/tools/evals_cache.py" filters -- "$@")"
+  for name in "${to_run[@]}"; do
+    (cd "$WRAP" && claude plugin eval . --no-publish ${filtered[@]+"${filtered[@]}"} --case "$name") || status=$?
+  done
+fi
 
 if [ -d "$WRAP/evals/results" ]; then
-  mkdir -p "$ROOT/evals/results"
-  cp -R "$WRAP/evals/results/." "$ROOT/evals/results/"
-  echo "results: $ROOT/evals/results/"
+  mkdir -p "$RESULTS"
+  for dir in "$WRAP/evals/results"/*/; do
+    [ -f "$dir/aggregate-result.json" ] || continue
+    name="$(basename -- "$dir")"
+    cp -R "$dir" "$RESULTS/$name"
+    python3 "$ROOT/tools/evals_cache.py" store "$RESULTS/$name" ${keys[@]+"${keys[@]}"} || true
+    python3 "$ROOT/tools/evals_cache.py" show "$RESULTS/$name" -- "$@" || true
+  done
+  echo "results: $RESULTS/"
 fi
+[ "$status" -ne 0 ] || status="$cached_status"
 exit "$status"

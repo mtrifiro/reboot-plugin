@@ -7,12 +7,20 @@ and the smoke, and no eval; a hook, a shim, a tool, a test file, a mod
 and an eval case each pick their own; a path no row matches runs the
 shell and unit stages whole; lint runs whole on any change. Every
 token in PATHS names a check, every test file under tests/ is a check,
-and every check is reachable from some path.
+and every check is reachable from some path. The smoke builds only
+the template a change lies in, all three for a shared file; with
+--changed, a stage the changes leave empty is skipped with a line
+saying so; --skip and --template narrow a run; checks run fail-first
+(the changes' checks, last run's failures, then shortest first); the
+history keeps each check's times, and a check past twice its median
+warns; the unit pool keeps the serial checks out.
 
     python3 tests/tools/check_test.py
 """
 
+import contextlib
 import importlib.util
+import io
 import shutil
 import sys
 import tempfile
@@ -108,6 +116,176 @@ class SelectTest(unittest.TestCase):
 
     def test_text_only_paths_run_lint_only(self) -> None:
         self.assertEqual(pick("findings/x/y.md", "README.md", "docs/a.md").checks, LINT)
+
+
+class TemplatesTest(unittest.TestCase):
+    def test_a_change_in_one_template_smokes_that_one(self) -> None:
+        self.assertEqual(pick("skills/build/templates/web-app/web/src/App.tsx").templates, {"web-app"})
+        self.assertEqual(pick("skills/build/templates/both/AGENTS.md",
+                              "skills/build/templates/mcp-ui/pyproject.toml").templates,
+                         {"both", "mcp-ui"})
+
+    def test_a_shared_file_smokes_all_three(self) -> None:
+        for path in ("skills/build/templates/copy.sh", "skills/build/templates/README.md",
+                     "VERSION", "bin/rbt", "tools/templates-smoke.sh"):
+            self.assertEqual(pick(path).templates, set(check.TEMPLATES), path)
+
+    def test_no_smoke_no_templates(self) -> None:
+        self.assertEqual(pick("skills/build/SKILL.md").templates, set())
+
+    def test_the_smoke_command_names_the_templates(self) -> None:
+        smoke = check.BY_NAME["templates-smoke"]
+        self.assertEqual(check.command_for(smoke, None), smoke.cmd)
+        self.assertEqual(check.command_for(smoke, {"both", "web-app"}), smoke.cmd + ["web-app", "both"])
+        self.assertEqual(check.history_key(smoke, {"web-app"}), "templates-smoke[web-app]")
+        self.assertEqual(check.history_key(smoke, None), "templates-smoke")
+
+
+class MainTest(unittest.TestCase):
+    """main() with the changed paths stubbed and nothing really run."""
+
+    def setUp(self) -> None:
+        self.tmp = Path(tempfile.mkdtemp())
+        self.ran = []
+        stubs = {
+            "changed_paths": lambda base: list(self.paths),
+            "run_check": lambda c, templates=None: (self.ran.append((c.name, templates)) or ("ok", "", 0.0)),
+            "HISTORY": self.tmp / "history.json",
+        }
+        self.saved = {k: getattr(check, k) for k in stubs}
+        for k, v in stubs.items():
+            setattr(check, k, v)
+        self.paths = []
+
+    def tearDown(self) -> None:
+        for k, v in self.saved.items():
+            setattr(check, k, v)
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def main(self, *argv) -> tuple:
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            rc = check.main(list(argv))
+        return rc, out.getvalue()
+
+    def test_changed_honors_stage_and_skips_with_a_line(self) -> None:
+        self.paths = ["skills/build/SKILL.md"]
+        rc, out = self.main("--changed", "BASE", "--stage", "integration")
+        self.assertEqual(rc, 0)
+        self.assertEqual({n for n, _ in self.ran}, {"check-cli", "check-symbols"})
+        self.paths = ["findings/x/y.md"]
+        self.ran.clear()
+        rc, out = self.main("--changed", "BASE", "--stage", "integration")
+        self.assertEqual((rc, self.ran), (0, []))
+        self.assertIn("== integration: skipped, the changed paths select none of its checks", out)
+
+    def test_changed_smokes_only_the_changed_template(self) -> None:
+        self.paths = ["skills/build/templates/mcp-ui/frontend/src/App.tsx"]
+        self.main("--changed", "BASE", "--stage", "integration", "--only", "templates-smoke")
+        self.assertEqual(self.ran, [("templates-smoke", {"mcp-ui"})])
+
+    def test_template_flag_outside_the_change_skips_the_smoke(self) -> None:
+        self.paths = ["skills/build/templates/mcp-ui/frontend/src/App.tsx"]
+        rc, out = self.main("--changed", "BASE", "--only", "templates-smoke", "--template", "web-app")
+        self.assertEqual((rc, self.ran), (0, []))
+        self.assertIn("skipped", out)
+        rc, out = self.main("--changed", "BASE", "--only", "templates-smoke", "--template", "web-app",
+                            "--dry-run")
+        self.assertNotIn("would run", out)
+        self.paths = ["skills/build/templates/copy.sh"]
+        rc, out = self.main("--changed", "BASE", "--only", "templates-smoke", "--template", "web-app",
+                            "--dry-run")
+        self.assertIn("would run: templates-smoke web-app", out)
+        self.assertEqual(self.ran, [])
+
+    def test_skip_leaves_a_check_out(self) -> None:
+        self.main("--stage", "integration", "--skip", "templates-smoke")
+        names = {n for n, _ in self.ran}
+        self.assertNotIn("templates-smoke", names)
+        self.assertIn("check-cli", names)
+
+    def test_a_run_is_recorded(self) -> None:
+        self.main("--stage", "lint")
+        hist = check.load_history()
+        self.assertEqual(hist["gen-index"]["last"], "ok")
+        self.assertEqual(len(hist["gen-index"]["times"]), 1)
+
+
+class OrderTest(unittest.TestCase):
+    def test_changed_then_failed_then_shortest(self) -> None:
+        unit = [c for c in check.CHECKS if c.stage == "unit"]
+        hist = {"tools/findings": {"last": "fail", "times": [0.2]},
+                "hooks/remind": {"last": "ok", "times": [30.0]}}
+        order = [c.name for c in check.fail_first(unit, {"hooks/orphans"}, hist)]
+        self.assertEqual(order[:2], ["hooks/orphans", "tools/findings"])
+        rest = order[2:]
+        times = [check.median_time(hist, n) or check.BY_NAME[n].seconds for n in rest]
+        self.assertEqual(times, sorted(times))
+        self.assertEqual(rest[-1], "hooks/remind", "a recorded median beats the table")
+
+
+class HistoryTest(unittest.TestCase):
+    def test_times_are_kept_and_capped(self) -> None:
+        hist = {}
+        for i in range(check.KEEP + 5):
+            check.record(hist, "x", "ok", float(i))
+        self.assertEqual(len(hist["x"]["times"]), check.KEEP)
+        self.assertEqual(hist["x"]["times"][-1], float(check.KEEP + 4))
+        check.record(hist, "x", "skip", 0.0)
+        self.assertEqual(hist["x"]["last"], "skip")
+        self.assertEqual(len(hist["x"]["times"]), check.KEEP, "a skip has no time")
+
+    def test_twice_the_median_warns(self) -> None:
+        hist = {"x": {"times": [4.0, 5.0, 6.0]}}
+        self.assertIsNone(check.slow_warning(hist, "x", 9.0))
+        self.assertIn("2.2x its median of 5.0s", check.slow_warning(hist, "x", 11.0))
+        self.assertIsNone(check.slow_warning({"x": {"times": [0.1, 0.1, 0.1]}}, "x", 0.5),
+                          "a small check is not slow on noise")
+        self.assertIsNone(check.slow_warning({"x": {"times": [1.0, 1.0]}}, "x", 9.0), "too few runs")
+
+    def test_a_broken_file_reads_as_empty(self) -> None:
+        tmp = Path(tempfile.mkdtemp())
+        try:
+            (tmp / "h.json").write_text("{not json")
+            self.assertEqual(check.load_history(tmp / "h.json"), {})
+            check.save_history({"x": {"last": "ok"}}, tmp / "sub" / "h.json")
+            self.assertEqual(check.load_history(tmp / "sub" / "h.json"), {"x": {"last": "ok"}})
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+
+
+class PoolTest(unittest.TestCase):
+    def test_serial_checks_run_after_the_pool(self) -> None:
+        unit = [c for c in check.CHECKS if c.stage == "unit"]
+        serial = {c.name for c in unit if c.serial}
+        self.assertTrue({"templates/placeholder", "templates/ports"} <= serial)
+        ran = []
+        saved = check.run_check
+        check.run_check = lambda c, templates=None: (ran.append(c.name) or ("ok", "", 0.0))
+        try:
+            with contextlib.redirect_stdout(io.StringIO()):
+                failed = check.run_stage(unit, 4, False, {})
+        finally:
+            check.run_check = saved
+        self.assertEqual(failed, [])
+        self.assertEqual(set(ran[-len(serial):]), serial)
+
+    def test_failure_output_comes_after_the_lines(self) -> None:
+        checks = [check.BY_NAME["tools/check"], check.BY_NAME["tools/findings"]]
+        saved = check.run_check
+        check.run_check = lambda c, templates=None: (
+            ("fail", "boom\n", 0.0) if c.name == "tools/check" else ("ok", "quiet\n", 0.0))
+        out = io.StringIO()
+        try:
+            with contextlib.redirect_stdout(out):
+                failed = check.run_stage(checks, 2, False, {})
+        finally:
+            check.run_check = saved
+        self.assertEqual(failed, ["tools/check"])
+        text = out.getvalue()
+        self.assertNotIn("quiet", text)
+        self.assertGreater(text.index("--- tools/check output ---"), text.index("tools/findings"))
+        self.assertIn("boom", text)
 
 
 class TableTest(unittest.TestCase):

@@ -37,15 +37,114 @@ jobs:
       - run: claude --version
       - run: tools/check-mods.sh
 
-  full:
-    # The integration stage: every rbt flag and reboot symbol against
-    # the pinned Reboot, the three templates built from scratch with
-    # their scenarios run, and the stylesheet page rendered in a
-    # browser. The mods skip here (no claude); the mods job runs them.
+  integration:
+    # The integration stage less the smoke: every rbt flag and reboot
+    # symbol against the pinned Reboot, the schema guard on a fetched
+    # Node, the template tests under pytest, the stylesheet page
+    # rendered in a browser. The mods skip here (no claude); the mods
+    # job runs them. On a pull request only the checks the changed
+    # paths select run (tools/check.py's PATHS), and the job passes at
+    # once when there are none; on a push to main the stage runs whole.
     runs-on: ubuntu-latest
     needs: fast
+    env:
+      BASE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || '' }}
     steps:
       - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }   # the PR's base commit, for --changed
       - uses: actions/setup-python@v5
         with: { python-version: "3.12" }
-      - run: tools/check.sh --stage integration
+      - id: plan
+        name: plan
+        run: |
+          set -- --stage integration --skip templates-smoke
+          if [ -n "$BASE" ]; then set -- --changed "$BASE" --explain "$@"; fi
+          tools/check.sh "$@" --dry-run | tee "$RUNNER_TEMP/plan.txt"
+          if grep -q '^would run' "$RUNNER_TEMP/plan.txt"; then echo run=1 >> "$GITHUB_OUTPUT"; fi
+      - name: cache locations
+        if: steps.plan.outputs.run == '1'
+        run: |
+          echo "UV_CACHE_DIR=$HOME/.cache/uv" >> "$GITHUB_ENV"
+          echo "npm_config_cache=$HOME/.npm" >> "$GITHUB_ENV"
+      - uses: actions/cache@v4
+        if: steps.plan.outputs.run == '1'
+        with:
+          # uv's downloads (the pinned reboot wheel, pytest, playwright),
+          # the Python uv installs, and the shims' pinned binaries (uv,
+          # Node, Envoy) under the plugin's data directory.
+          path: |
+            ~/.cache/uv
+            ~/.local/share/uv/python
+            ~/.claude/plugins/data/reboot/bin
+            ~/.cache/ms-playwright
+          key: integration-${{ runner.os }}-${{ hashFiles('VERSION', 'lib/install_*.sh', 'skills/build/templates/*/pyproject.toml', 'skills/build/templates/*/uv.lock') }}
+          restore-keys: integration-${{ runner.os }}-
+      - name: integration
+        if: steps.plan.outputs.run == '1'
+        run: |
+          set -- --stage integration --skip templates-smoke
+          if [ -n "$BASE" ]; then set -- --changed "$BASE" "$@"; fi
+          tools/check.sh "$@"
+      - name: skipped
+        if: steps.plan.outputs.run != '1'
+        run: echo "integration skipped, nothing the changed paths cover changed"
+      - name: prune uv's cache for saving
+        if: steps.plan.outputs.run == '1'
+        run: bin/uv cache prune --ci || true
+
+  smoke:
+    # templates-smoke, one front door per job, in parallel: copy the
+    # template, uv sync, rbt generate, npm install and build, mypy and
+    # the scenarios (SMOKE_FULL=1). On a pull request a template runs
+    # only when the changes touch it, or a file all three share
+    # (copy.sh, the shims, VERSION); on a push to main all three run.
+    runs-on: ubuntu-latest
+    needs: fast
+    strategy:
+      fail-fast: false
+      matrix:
+        template: [mcp-ui, web-app, both]
+    env:
+      BASE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || '' }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - id: plan
+        name: plan
+        run: |
+          set -- --only templates-smoke --template "${{ matrix.template }}"
+          if [ -n "$BASE" ]; then set -- --changed "$BASE" "$@"; fi
+          tools/check.sh "$@" --dry-run | tee "$RUNNER_TEMP/plan.txt"
+          if grep -q '^would run' "$RUNNER_TEMP/plan.txt"; then echo run=1 >> "$GITHUB_OUTPUT"; fi
+      - name: cache locations
+        if: steps.plan.outputs.run == '1'
+        run: |
+          echo "UV_CACHE_DIR=$HOME/.cache/uv" >> "$GITHUB_ENV"
+          echo "npm_config_cache=$HOME/.npm" >> "$GITHUB_ENV"
+      - uses: actions/cache@v4
+        if: steps.plan.outputs.run == '1'
+        with:
+          # uv's and npm's downloads, the Python uv installs, and the
+          # shims' pinned binaries (uv, Node, Envoy). The templates ship
+          # no lockfiles yet; the key hashes any that appear.
+          path: |
+            ~/.cache/uv
+            ~/.npm
+            ~/.local/share/uv/python
+            ~/.claude/plugins/data/reboot/bin
+          key: smoke-${{ matrix.template }}-${{ runner.os }}-${{ hashFiles('VERSION', 'lib/install_*.sh', format('skills/build/templates/{0}/pyproject.toml', matrix.template), format('skills/build/templates/{0}/**/package.json', matrix.template), 'skills/build/templates/**/uv.lock', 'skills/build/templates/**/package-lock.json') }}
+          restore-keys: smoke-${{ matrix.template }}-${{ runner.os }}-
+      - name: smoke ${{ matrix.template }}
+        if: steps.plan.outputs.run == '1'
+        run: |
+          set -- --only templates-smoke --template "${{ matrix.template }}"
+          if [ -n "$BASE" ]; then set -- --changed "$BASE" "$@"; fi
+          tools/check.sh "$@"
+      - name: skipped
+        if: steps.plan.outputs.run != '1'
+        run: echo "smoke of ${{ matrix.template }} skipped, the changes do not touch it"
+      - name: prune uv's cache for saving
+        if: steps.plan.outputs.run == '1'
+        run: bin/uv cache prune --ci || true
