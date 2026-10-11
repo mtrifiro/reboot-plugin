@@ -20,6 +20,7 @@ the plugin pins.
 | `findings.py` | Schema + summary of `findings/`; `--todo` lists the open items with the fixes the combined report names, grouped by file, with a mechanism to try | an item breaks the schema, or a `resolved_by` section doesn't exist |
 | `check-manifests.py` | The JSON manifests parse; the Reboot version pins (`VERSION`, the manifests, `bin/rbt`, the templates' `pyproject.toml`) agree | a manifest doesn't parse, or two pins differ |
 | `check-mods.sh` | Each mod in `mods/` as the engine reads it: `claude plugin validate`, then its `*.test.ts` with `claude plugin test` | validation or a test fails |
+| `package-plugin.sh` | Zips the committed plugin (manifest, skills, hooks, shims, README) as a `.plugin` file the Claude app installs from a chat; `dependencies` dropped since the app runs no mods | (not a check) |
 
 `check-all.sh` runs them in order, with the tests in `tests/` (the
 hooks, the template copy script) and `shellcheck` over every shell script (`--full` adds
