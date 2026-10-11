@@ -14,11 +14,11 @@ skills front-load (which front door, the design) and before any code.
 | `route-mcp` | Claude named as the runtime: MCP UI first, backend ready for a web app |
 | `route-just-website` | "just a website": one front door, no MCP offer |
 | `route-both` | Both named: both front doors on one backend |
-| `design-ready-for-both` | Asks what the brief leaves open before the design; the design has a `User` type, each method's AI role, AI-facing descriptions, a visual brief with a primary view, light/dark modes with a toggle, dev-only demo data, and no growing history list on an app-lifetime actor |
-| `design-look-triage` | Asks first; triage of a few hundred bug reports: a grouped list (not a chart) as the primary view, color on one dimension, stat tiles and labelled filters |
-| `design-look-board` | Asks first; a dozen candidates through interview stages: still a board, so the principles add flexibility rather than a new house style |
-| `design-roles` | Asks first; a hotel with front desk and housekeeping: the design names the roles and enforces in the backend which methods each may call; roles on one roster, a sign-in linked only on a verified email, the first admin named; dev-only demo data |
-| `design-accept-gate` | The accept checkpoint: the agent asks what the brief leaves open first, shows each feature's slice of the model before the next, names one feature as the first prototype and the rest as a backlog, maps each rule to its owner, method, kind and caller, lists what goes beyond the brief, and stops for the user's acceptance with the ask drawn as a box. `explains-the-stop` (the stage card's plain words for why it stops) is reported, not scored: a planning session never reaches the checkpoint with the artifacts in hand, and no run has produced the card yet |
+| `design-ready-for-both` | Assumes what the brief leaves open and says it builds something simple first; the design has a `User` type, each method's AI role, AI-facing descriptions, a visual brief with a primary view, light/dark modes with a toggle, dev-only demo data, and no growing history list on an app-lifetime actor |
+| `design-look-triage` | Assumes first; triage of a few hundred bug reports: a grouped list (not a chart) as the primary view, color on one dimension, stat tiles and labelled filters |
+| `design-look-board` | Assumes first; a dozen candidates through interview stages: still a board, so the principles add flexibility rather than a new house style |
+| `design-roles` | Assumes first; a hotel with front desk and housekeeping: the design names the roles and enforces in the backend which methods each may call; roles on one roster, a sign-in linked only on a verified email, the first admin named; dev-only demo data |
+| `design-accept-gate` | The review on the first prototype: the agent assumes what the brief leaves open and says it builds something simple first, names one feature as the first prototype and the rest as a backlog, shows that feature's slice of the model, maps each of its rules to its owner, method, kind and caller, lists what goes beyond the brief, and puts the user's acceptance at the running prototype's handoff with the ask drawn as a box. `explains-the-stop` (the stage card's plain words for why it stops) is reported, not scored: a planning session never reaches the checkpoint with the artifacts in hand, and no run has produced the card yet |
 | `design-skip-gate` | Told up front to build without stopping: the design is still shown, and nothing waits |
 
 Plain Claude also builds a web app without asking on the `route-*`
@@ -36,8 +36,8 @@ zero on the design cases). The design cases, three runs per arm on
 `design-look-board` 0.78 and 0.44; `design-ready-for-both` 0.71 and
 0.00; `design-roles` 0.60 and 0.33. On the accept gate the plugin's
 gain is the rule mapping, the first prototype and the backlog, in every
-run; `asks-first` and `slices` pass in one run of three with the plugin
-and none without, a tendency the prose has not yet made a rule. Plain
+run; `slices` passes in one run of three with the plugin and none
+without, a tendency the prose has not yet made a rule. Plain
 Claude also asks before it builds in a planning session, so
 `waits-for-acceptance` guards against a regression more than it shows
 a gain. An earlier wording of that

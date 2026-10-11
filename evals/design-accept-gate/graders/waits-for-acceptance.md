@@ -2,4 +2,4 @@
 type: llm
 weight: 2
 ---
-PASS if the response stops for the user before any implementation: it asks them to agree the features or to accept the design (the domain model and the feature files), or to say what to change, and the implementation (servicers, frontend, tests) is placed after that answer. A numbered plan whose later steps build the app once the user has accepted is fine; so is stopping at the features, before the API, since the build skill's checkpoint comes after them. FAIL if the response says it would go on to build without waiting for the user's answer, or never asks the user anything about the design. Quote what you relied on.
+PASS if the response puts the user's review of the design (accept it, change it, or add to it) at the handoff of a running first prototype built on stated assumptions, and places every later feature's implementation after the user agrees that feature. FAIL if it stops for the user's acceptance before building anything, or never puts a review of the design in front of the user. Quote what you relied on.

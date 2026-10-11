@@ -70,31 +70,36 @@ method types mean regenerating a dozen or more files.
 
 ### Design Phase
 
-Design is a conversation in slices: ask what the brief leaves open,
-agree one feature, show the slice of the model it adds, ask again;
-"Accept the Design" closes it. "Just build it", said up front, skips
-the questions and the waits: item 0's defaults, said so at the handoff.
+The first prototype comes before the questions: take the simplest
+assumption for what the brief leaves open, build the one feature the
+app exists for, and hold the review on the running prototype. From
+there, design is a conversation in slices: agree one feature, show the
+slice of the model it adds, build it, hand it off. "Just build it",
+said up front, skips the reviews' waits too.
 
-0. **Questions first.** Before any file, ask what the brief leaves
-   open, up to five (`AskUserQuestion` where the host has it, prose
-   otherwise): who uses it and how they sign in; the one thing the
-   primary view answers; what must never happen; what is out of scope
-   for now; whether the data stays disposable while prototyping
-   (`AGENTS.md`'s `Data:` line; "keep the data", said at any point,
-   writes `keep since <date>` there, committed). Defaults: the web
-   app, disposable data, no invariant beyond the brief.
-1. **A slice per feature, one feature first.** Per capability, follow
-   the [`feature` skill](../feature/SKILL.md)'s Step 1: agree on it in
-   plain English, show the slice of the domain model it adds, as rows
-   of the review table ("Accept the Design") under the rows so far,
-   and ask: the next feature, or is that the app? The conversation
-   ends by naming, in the user's words, the one feature the app exists
-   for: **the first prototype**. Only that feature's `@wip` file is
-   written now (the feature skill's Step 2; its Step 2a is this flow's
-   Step 2a); the rest go to the backlog in `design/design.md`, one line
-   each in the proposed order, and come one at a time through the
-   Update Flow. A brief that implies more than three or four features
-   gets told so, with the order proposed.
+0. **Assumptions first.** For what the brief leaves open (who uses it
+   and how they sign in; the one thing the primary view answers; what
+   must never happen; what is out of scope for now; whether the data
+   stays disposable while prototyping, `AGENTS.md`'s `Data:` line),
+   take the simplest assumption and write each into `design/design.md`
+   under "Assumed". Defaults: the web app, the `Development()` sign-in,
+   disposable data, no invariant beyond the brief. Ask nothing yet:
+   tell the user, in one line, that you are building something simple
+   and fast first, to review the architecture, the business rules and
+   the feature set on. "Keep the data", said at any point, writes
+   `keep since <date>` on the `Data:` line, committed.
+1. **One feature first, then a slice per feature.** Name, in the
+   user's words, the one feature the app exists for: **the first
+   prototype**. Write its `@wip` feature file now, from the assumptions
+   (the [`feature` skill](../feature/SKILL.md)'s Step 2; its Step 2a is
+   this flow's Step 2a); the rest go to the backlog in
+   `design/design.md`, one line each in the proposed order. After the
+   prototype's review, each later feature follows the feature skill's
+   Step 1: agree on it in plain English, show the slice of the domain
+   model it adds, as rows of the review table under the rows so far,
+   build it, hand it off, and ask what comes next. A brief that implies
+   more than three or four features gets told so, with the order
+   proposed.
 2. **Implement the brief literally** — the interactions the user
    described, not a pattern "common on sites like this". List any
    deviation (extra confirm step, staging area, batching) with its
@@ -268,13 +273,15 @@ web-app (summary vs. detail readers, aggregation, per-caller views):
 ## Step-by-Step Build Flow
 
 **Run all commands from the application directory**; before each step,
-read its front-door reading list. Step 1 closes Design; "Accept the
-Design" sits between it and Step 2, where Prove begins.
+read its front-door reading list. Step 1 closes the first prototype's
+design; its acceptance comes with the running prototype (Step 7), and
+from the second feature on "Accept the Design" sits before each
+feature's implementation.
 
 **The first prototype is one feature, running within fifteen minutes
-of its acceptance.** Steps 1 to 7 build that feature alone: its state
+of the brief.** Steps 1 to 7 build that feature alone: its state
 types, its methods, its page or tool, its scenarios. Note the time at
-acceptance; a step that runs past ten minutes stops and says what is
+the start; a step that runs past ten minutes stops and says what is
 taking the time and what it proposes to cut. Until the app has a
 second feature there is no screenshot pass and no page timing (Step
 5), and the suite is the feature's scenarios. Each later feature
@@ -312,13 +319,13 @@ reshapes a state type or method.
 
 ### Accept the Design
 
-Design ends here: the domain model the first prototype needs (`api/`,
-generated) and its `@wip` feature file exist, the backlog is written,
-and no implementation does. The review table has grown on screen a
-slice at a time; now close the conversation. The
-first time a project reaches this point, open with the design card
-([`references/flywheel.md`](references/flywheel.md), "Stage cards").
-Show the whole **review table**, one row per rule, in the design's words:
+For the first prototype this is the handoff (Step 7): the user reviews
+the architecture, the rules and the feature set on the running app,
+the assumptions beside it. For every later feature it comes before the
+implementation, once the feature's slice is on screen. The first time,
+open with the card ([`references/flywheel.md`](references/flywheel.md),
+"Stage cards"); show the **review table**, one row per rule, in the
+design's words:
 
 | State type | State ID | Rule | Method | Kind | Who may call | Scenario |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -326,8 +333,8 @@ Show the whole **review table**, one row per rule, in the design's words:
 
 Every rule in a feature file gets a row; a rule with no owner, method
 or scenario is a gap to name, not to fill silently. List the feature
-file by path and the backlog in order, and point at the dashboard's
-Models and Features pages.
+file by path, the assumptions as made, and the backlog in order, and
+point at the dashboard's Models and Features pages.
 Under the table, **Beyond the brief**: one line per interaction, rule or
 status the design adds to or changes from what the user asked, with its
 reason, so they accept those too; `design/review.md` records their
@@ -338,15 +345,16 @@ or a brand or a site to read. Then the decision box
 
 **Stop and wait.** No answer is not acceptance. A change sends you back
 to the slice it belongs to (the feature skill, or the design), then
-here again. Building without stopping, said up front: show the table
-and continue, and the handoff says the design was not accepted.
+here again; a changed assumption is rebuilt into the prototype before
+the next feature. Building without stopping, said up front: show the
+table and continue, and the handoff says the design was not accepted.
 
-Once accepted, Step 2 records it in the repository (its item 5): the
-design in `design/design.md`, the review table in `design/review.md`,
-an entry in `design/decisions.md`, the record `scripts/model_diff.py
---accept` writes in `design/accepted.json`, and one commit holding
-them with `api/` and the feature files. Every later model diff measures
-from that commit.
+Once accepted, the repository records it (Step 2, item 5): the design
+in `design/design.md`, the review table in `design/review.md`, an entry
+in `design/decisions.md`, the record `scripts/model_diff.py --accept`
+writes in `design/accepted.json`, and one commit holding them with
+`api/` and the feature files. Every later model diff measures from
+that commit.
 
 ### Step 2 — Project shell
 
@@ -375,17 +383,17 @@ copies `templates/both/`. Then:
    already had: move its content into `AGENTS.md` and leave
    `@AGENTS.md` as its only line. Keep `AGENTS.md` current as you go:
    each new state type, UI, route or script adds its row.
-5. **Record the acceptance.** `design/design.md` is the design as
-   accepted (Design Phase, item 5). Write `design/review.md` (the
-   review table as shown, the feature files by path) and add the first
-   entry to `design/decisions.md` (below). Run
-   `python3 scripts/model_diff.py --accept`, and commit `api/`,
-   `tests/*.feature` and `design/` with the scaffold as
-   `Design accepted: <title>`, the project's first commit. That commit
-   is the base every later `model_diff.py` measures from, and what the
-   pull request and the release record mean by "accepted". When the
-   user built without stopping, commit `design/design.md` and the
-   entry, marked not accepted, and skip `--accept`.
+5. **Record the design.** `design/design.md` is the design as assumed
+   (Design Phase, item 5). Write `design/review.md` (the review table,
+   the feature file by path) and the first entry in
+   `design/decisions.md` (below), and commit `api/`, `tests/*.feature`
+   and `design/` with the scaffold as `Design assumed: <title>`, the
+   project's first commit. When the user accepts at the first handoff
+   (Step 7), run `python3 scripts/model_diff.py --accept`, add the
+   entry, and commit as `Design accepted: <title>`: that commit is the
+   base every later `model_diff.py` measures from, and what the pull
+   request and the release record mean by "accepted". Built without
+   stopping, the record stays marked not accepted.
 
    `design/decisions.md` is a log, newest entry last, never rewritten:
    each acceptance adds one entry with what was decided and why
@@ -586,16 +594,19 @@ never bare `rbt dev run` / `npm run dev`.
 - web-app: check the page at the URL a person would type
   (`localhost`).
 
-**Hand off** only after the final test run has finished. Open with the
-prototype card ([`references/flywheel.md`](references/flywheel.md),
-"Stage cards"), then:
+**Hand off** only after the final test run has finished. The first
+time, this is the review ("Accept the Design"). Open with the prototype
+card ([`references/flywheel.md`](references/flywheel.md), "Stage
+cards"), then:
 
 1. The app's URL (mcp-ui: the setup wizard's; web-app: the page's).
 2. The result: scenarios passed, anything `@blocked` and why, mypy
    clean, each route's load against the thresholds (Step 5) with any
    still over and its cause.
-3. Every deviation from the brief or from the plan's own specs, with
-   its reason (Design Phase, item 2).
+3. The assumptions as made (Design Phase, item 0), and every deviation
+   from the brief or from the plan's own specs, with its reason (item
+   2); the first time, the review table, Beyond the brief and the look
+   ("Accept the Design"), and the decision box last.
 4. The state types and methods as built, one line each (Step 1), when
    they changed after the design; and whether the design was accepted
    ("Accept the Design"), as `python3 scripts/model_diff.py` says. A

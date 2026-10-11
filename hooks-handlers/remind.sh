@@ -130,12 +130,13 @@ append an item to the project's `FINDINGS.md` (format inside it).
 - An application's behavior is specified and tested as `.feature`
 files (the `feature` skill): agree on a feature in English before
 writing its API or code, and iterate on its scenarios with the user.
-- Work follows the Reboot Flywheel (Design, Prove, Observe). Design is
-a conversation: ask what the brief leaves open, agree one feature at a
-time, show the slice of the model it adds. The first prototype is one
-feature, running; the rest follow one at a time. Write no implementation
-until the user accepts the domain model and feature files (the build
-skill, Accept the Design), recorded in
+- Work follows the Reboot Flywheel (Design, Prove, Observe). The first
+prototype is one feature, built fast on the simplest assumptions (say
+so in one line) and reviewed running: the architecture, the rules and
+the feature set, with the user. After it, agree each feature in
+English, show the slice of the model it adds, and write no
+implementation until the user accepts it (the build skill, Accept the
+Design), recorded in
 `design/accepted.json`. A change to a rule, to `api/` or to an
 authorizer goes back there; `scripts/model_diff.py` sorts each change
 from that record.

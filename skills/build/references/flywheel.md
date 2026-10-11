@@ -30,7 +30,7 @@ change goes back to Design. The evidence each decision rests on is in
 
 | Stage | Skills and steps | Evidence | Ends with |
 | --- | --- | --- | --- |
-| **Design** | `app` (routing); `feature` 1–2; `build` Design Phase, State Model Assessment, Step 1; `dashboard` (Models, Features); Update Flow 1–4 | Domain model: state types, state IDs, methods, method kinds, who may call. `@wip` feature files | **Accept**: the user accepts the domain model and feature files (`build`, "Accept the design") |
+| **Design** | `app` (routing); `feature` 1–2; `build` Design Phase, State Model Assessment, Step 1; `dashboard` (Models, Features); Update Flow 1–4 | Domain model: state types, state IDs, methods, method kinds, who may call. `@wip` feature files | **Accept**: the user accepts the domain model and feature files (`build`, "Accept the design"): the first prototype's on the running app, each later feature's before its implementation |
 | **Prove** | `build` Steps 2–7; `feature` 2a–5 and fixes; `python`; `run`; `upgrade`; `deploy` checks | Scenario results (`tests/.last-run.json`), mypy, page timing, the model diff | **Merge** (the pull request body) and **Promote** (`scripts/deploy.sh`, its release record) |
 | **Observe** | `inspect` (and its "From a finding to a scenario"); `deploy` Step 7; the app's logs | Stored state (`rbt inspect`): the history the design chose to record | A finding becomes a ticket, routed below |
 
@@ -149,26 +149,18 @@ pass; the merge needs the last one"). The stage's name appears once, in
 a clause that says what it is for, never as a label; no chapter numbers
 or links. The models below are the hotel; write yours.
 
-> **The design, for your review.** Here is the design as we settled
-> it, feature by feature: `Room` owns "booked at most once per night", `Reservation.create`
-> books every room or none and is called only by the app, and each
-> rule has a scenario that will test it. The first prototype is
-> booking a room; cancellations and the housekeeping view follow one at
-> a time once it runs. The look: violet on paper,
-> the house default since you named no brand; name one, or a site, and
-> I'll read it. This is the cheapest moment to change any of it, before
-> anything depends on it. Take your time; I'll
+> **The first prototype is running, for your review.** Booking a room
+> is up at http://localhost:9991; all 4 scenarios pass. I built it on
+> the simplest assumptions, to give us something real to review the
+> architecture, the rules and the feature set on: `Room` owns "booked
+> at most once per night", `Reservation.create` books every room or
+> none and is called only by the app, guests sign in with the
+> development picker, and the data is disposable. Cancellations and
+> the housekeeping view are next, one at a time. The look: violet on
+> paper, the house default since you named no brand; name one, or a
+> site, and I'll read it. Try the screens the way a guest would: this
+> is the cheapest moment to change any of it. Take your time; I'll
 > wait for your go-ahead or your changes.
-
-> **The first prototype is built and tested.** Booking a room is
-> running at http://localhost:9991; all 4 scenarios pass. This is the
-> stage where the code is checked against the design you accepted, so
-> what you see should match the rules we agreed on. Try the screens the
-> way a guest or a manager would: anything the prototype shows is
-> missing, like what happens when a second guest wants the same night,
-> is a new rule, and we can add it to the design from here. Next on
-> the backlog is cancellations; say so and it comes the same way, or
-> pick another.
 
 > **The feature is built and tested.** The full suite ran at this
 > commit: 11 of 12 scenarios pass; the one that doesn't is "A guest
@@ -185,8 +177,8 @@ or links. The models below are the hotel; write yours.
 > `rbt inspect` reads the stored state behind it, and the fix starts
 > from a scenario that reproduces it.
 
-The second card follows what was built: the prototype (a first build,
-with the URL and the invitation to try it), a feature (above), or a fix
+The first card is the prototype's review; a later handoff follows what
+was built: a feature (above), or a fix
 ("The fix is in", with the reproducing scenario now passing). The pull
 request sentence appears only when the work is on a branch. First time
 or not: no `design/` before the first checkpoint, no ledger before the
@@ -224,9 +216,11 @@ the card. Under 60 columns, so it never wraps.
 
 ## Never
 
-- Writing the implementation (Step 2 onward) before the design is
-  accepted, unless the user said up front to build without stopping.
-  "No answer is not acceptance."
+- Asking the brief's open questions before the first prototype runs:
+  assume, say so, build, and review on the running app.
+- Writing a feature's implementation, after the first prototype, before
+  its slice of the design is accepted, unless the user said up front to
+  build without stopping. "No answer is not acceptance."
 - Building a second feature before the first prototype runs and is
   handed off, or writing every feature's file before the first one
   runs: the rest wait in the backlog and come one at a time.

@@ -55,9 +55,10 @@ change it here in the same commit.
 
 1. **Behavior first, then acceptance.** A feature starts as a `@wip`
    `.feature` file, agreed before the API or code changes; the user
-   accepts the domain model and feature files before any
-   implementation, and again after any change `model_diff.py` calls a
-   design change (the plugin's `build/references/flywheel.md`).
+   accepts the domain model and feature files on the first prototype
+   running, then before each later feature's implementation, and again
+   after any change `model_diff.py` calls a design change (the plugin's
+   `build/references/flywheel.md`).
 2. **The API only grows.** Add fields, methods, errors and types; never
    remove or rename one, and never reword a method's `description=`
    (it is schema). A removal Reboot allows ships only when

@@ -61,13 +61,13 @@ an API:
   flow, if that is how the feature is used.
 
 Ask whether that is the feature; iterate on the English until they
-agree — the file follows the words. In a build, this is one slice of
-the design conversation: the build shows the slice of the domain model
-the feature adds and asks for the next; the first prototype is one
-feature, whose file is written now (Step 2) while the rest wait in the
-design's backlog; "Accept the Design" closes that conversation, where
-the user accepts the rules, their scenarios and the domain model
-together, before any implementation.
+agree — the file follows the words. In a build, the first feature is
+the first prototype: its file is written from the build's assumptions
+and reviewed running, while the rest wait in the design's backlog. Each
+later feature is one slice of the design conversation: agreed here, its
+slice of the domain model shown, then "Accept the Design", where the
+user accepts the rules, their scenarios and the domain model together,
+before any implementation.
 
 ## Step 2 — Write it down, tagged `@wip`
 
