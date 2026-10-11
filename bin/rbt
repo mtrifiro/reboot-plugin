@@ -80,7 +80,15 @@ lock_holder() {
     done
 }
 
-case "${1:-} ${2:-}" in
+# `--help` only prints: no guard applies (tools/check-cli.py reads the
+# help of every subcommand through this shim, with no terminal).
+wants_help=0
+for arg in "$@"; do
+    case "$arg" in
+        -h | --help) wants_help=1 ;;
+    esac
+done
+[ "$wants_help" = 1 ] || case "${1:-} ${2:-}" in
     "dev expunge")
         yes=0
         for arg in "$@"; do
@@ -127,8 +135,13 @@ esac
 if [ -n "$project" ] && [ -x "$project/.venv/bin/rbt" ]; then
     # The project's own install. Its `bin/` goes first on PATH, as
     # `uv run` arranges, so `rbt generate` finds its protoc plugins.
-    venv_version="$(ls -d "$project"/.venv/lib/python*/site-packages/reboot-*.dist-info 2>/dev/null \
-        | head -n 1 | sed 's/.*reboot-\(.*\)\.dist-info/\1/')"
+    venv_version=""
+    for info in "$project"/.venv/lib/python*/site-packages/reboot-*.dist-info; do
+        [ -e "$info" ] || continue
+        venv_version="${info##*/reboot-}"
+        venv_version="${venv_version%.dist-info}"
+        break
+    done
     if [ -n "$venv_version" ] && [ "$venv_version" != "$REBOOT_VERSION" ]; then
         echo "rbt: running the project's reboot $venv_version (.venv); the plugin pins $REBOOT_VERSION, which the upgrade skill brings the app to." >&2
     fi

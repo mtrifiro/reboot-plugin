@@ -16,6 +16,7 @@ set -eu
 input=$(cat)
 command -v python3 >/dev/null 2>&1 || exit 0
 
+# shellcheck disable=SC2016  # the python program is the single-quoted string
 printf '%s' "$input" | python3 -c '
 import json
 import os

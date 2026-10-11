@@ -48,10 +48,15 @@ case "$mode" in
         echo "test.sh: no module under tests/ names $name in its scenarios(...); it runs nowhere" >&2
         exit 1
       fi
-      modules="$modules $found"
+      for module in $found; do
+        case " $modules " in
+          *" $module "*) ;;
+          *) modules="$modules $module" ;;
+        esac
+      done
     done
     # shellcheck disable=SC2086  # the modules and the user's pytest arguments are word lists
-    exec $pytest $(printf '%s\n' $modules | sort -u) "$@"
+    exec $pytest $modules "$@"
     ;;
   smoke)
     # shellcheck disable=SC2086
