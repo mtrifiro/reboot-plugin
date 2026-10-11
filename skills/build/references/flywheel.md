@@ -197,6 +197,9 @@ Tone, for these and any card written later:
   line to the user. The subject is the app, the design, the build or
   the prototype ("the prototype is running", "the next feature
   follows"), and "you" is the user.
+- Verbose by design: the build is read as it happens. Each step says
+  what, why and what was decided, in two or three sentences; reading a
+  reference says what it settled for this app.
 - The next stage is described when it happens, in the model diff's own
   words, not announced as a gate.
 - Their nouns, two or three of their own rules, never the table

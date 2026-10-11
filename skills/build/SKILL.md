@@ -18,7 +18,10 @@ front door's concepts, the project layout, and each step's reading list
 under **"Which References to Read, and When"**. Differences are marked
 inline (`mcp-ui: … / web-app: …`); a dual-frontend app does both.
 Backend-only work starts from the [`python` skill](../python/SKILL.md).
-Every line to the user is in the build's voice, never the first person
+Every line to the user is in the build's voice, never the first person,
+and never sparse: the user reads the build as it happens, so each step
+gets two or three sentences on what is being done, why, and what was
+decided, in their nouns; a bare line between tool calls is too little
 (`references/flywheel.md`, Tone).
 
 The flow is the **Reboot Flywheel**'s first two stages
@@ -42,6 +45,11 @@ Everything read is re-sent every later turn:
 - **One reference per tool call**; `cat`-ing several can exceed the
   output limit and be cut off unseen.
 - Skip a reading-list line ending *only when …* unless it holds.
+- **Reading is narrated.** Before a reference, one sentence on the
+  question it answers for this app; after it, one or two on what it
+  settled ("the roles reference settles the staff: one roster actor
+  and a custom predicate, so the butler and the concierge see different
+  things"). A silent read is a failure.
 - When a reference is wrong or silent about something you hit, append
   an item to the project's `FINDINGS.md` (format inside it) and keep
   going; the `report` skill files them later.
@@ -285,7 +293,8 @@ implementation.
 said as it goes.** Steps 1 to 7 build every feature file's model,
 methods, pages or tools and scenarios. Each step's narration names the
 object, method or file being written and the decision behind it, in
-the user's nouns, as it happens; a step that runs past ten minutes
+the user's nouns, as it happens, in two or three sentences before each
+tool call or group of calls; a step that runs past ten minutes
 says what is taking the time and what it would cut. The first
 prototype skips the screenshot pass and page timing (Step 5); they
 come with the first update after the review.
