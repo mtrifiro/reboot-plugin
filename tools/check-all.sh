@@ -1,0 +1,54 @@
+#!/usr/bin/env sh
+# Every check that keeps the plugin honest, in one command for CI or a
+# pre-commit hook. Fails on the first broken check.
+#   tools/check-all.sh            # fast checks; no network
+#   tools/check-all.sh --full     # also the CLI, symbol, template-build and
+#                                 # rendered-style checks, and the mods when
+#                                 # `claude` is on PATH (need network)
+set -eu
+cd "$(dirname -- "$0")/.."
+
+python3 tools/gen-index.py --check --quiet
+python3 tools/lint-references.py
+python3 tools/lint-frontmatter.py
+python3 tools/findings.py --check
+python3 tools/budget.py --check
+python3 tools/style-check.py
+python3 tools/templates-drift.py
+python3 tools/check-manifests.py
+python3 tests/hooks/auto_approve_test.py -q
+python3 tests/hooks/orphans_test.py -q
+python3 tests/hooks/schema_guard_test.py -q   # skips itself without a cached Node
+python3 tests/templates/copy_test.py -q
+python3 tests/templates/run_progress_test.py -q   # skips itself without pytest
+python3 tests/templates/ports_test.py -q
+python3 tests/templates/test_sh_test.py -q   # skips itself without pytest
+python3 tests/templates/feature_lint_test.py -q   # skips itself without pytest-bdd
+python3 tests/templates/harness_hygiene_test.py -q
+python3 tests/templates/api_lint_test.py -q
+python3 tests/templates/doctor_test.py -q
+python3 tests/shims/rbt_test.py -q
+python3 tests/hooks/suite_guard_test.py -q
+if command -v shellcheck >/dev/null 2>&1; then
+    shellcheck install.sh hooks/*.sh hooks-handlers/*.sh lib/*.sh bin/* tools/*.sh \
+        skills/build/templates/copy.sh skills/build/templates/*/scripts/*.sh \
+        skills/build/templates/*/deploy/before-backend skills/build/templates/*/.githooks/*
+else
+    echo "check-all: shellcheck is not installed; skipped (CI runs it)" >&2
+fi
+if [ "${1:-}" = "--full" ]; then
+    python3 tools/check-cli.py
+    python3 tools/check-symbols.py
+    REBOOT_FETCH_NODE=1 python3 tests/hooks/schema_guard_test.py -q
+    bin/uv run --no-project --with pytest==8.4.2 python tests/templates/run_progress_test.py -q
+    bin/uv run --no-project --with pytest==8.4.2 python tests/templates/test_sh_test.py -q
+    bin/uv run --no-project --with pytest==8.4.2 --with pytest-bdd==8.1.0 python tests/templates/feature_lint_test.py -q
+    SMOKE_FULL=1 tools/templates-smoke.sh
+    bin/uv run --no-project --with playwright sh -c \
+        'python -m playwright install --with-deps chromium >/dev/null && python tools/style-check.py --browser'
+    if command -v claude >/dev/null 2>&1; then
+        tools/check-mods.sh
+    else
+        echo "check-all: claude is not on PATH; mods skipped (CI runs them)" >&2
+    fi
+fi

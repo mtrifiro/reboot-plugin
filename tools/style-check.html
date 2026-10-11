@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Template Class Check</title>
+<!-- Every class in the template stylesheet, on one page. tools/style-check.py
+     copies skills/build/templates/web-app/web/src/styles.css beside it and
+     checks it at phone and desktop width, light and dark. Add a class to
+     the stylesheet, add it here. -->
+<link rel="stylesheet" href="styles.css" />
+<script>
+  // ?theme=dark|light, ?drawer=1, ?compact=1 — for screenshots
+  const q = new URLSearchParams(location.search);
+  if (q.get("theme")) document.documentElement.dataset.theme = q.get("theme");
+</script>
+</head>
+<body>
+<header class="topbar">
+  <span class="brand">Bug Desk</span>
+  <nav><a class="active" href="#">Triage</a><a href="#">Board</a><a href="#">Activity</a></nav>
+  <span class="spacer"></span>
+  <button class="ghost" aria-label="Switch to dark mode" onclick="const t=document.documentElement.dataset.theme==='dark'?'light':'dark';document.documentElement.dataset.theme=t">☾</button>
+  <button class="ghost">Sign out</button>
+</header>
+
+<div class="brand-band">
+  <div class="page-head">
+    <div>
+      <p class="eyebrow">Release A.14b</p>
+      <h1>Incoming bug reports</h1>
+      <p class="lede">Sort new reports by severity, assign an owner, and close duplicates.</p>
+    </div>
+    <div class="actions"><button>Export</button><button class="primary">New report</button></div>
+  </div>
+</div>
+
+<main>
+  <section class="stats" aria-label="Pipeline stages">
+    <button class="stat"><div class="label">1 · New</div><div class="value">142</div><div class="meter"><span style="width:62%"></span></div></button>
+    <button class="stat selected" aria-pressed="true"><div class="label">2 · Triaged</div><div class="value">58</div><div class="meter"><span style="width:30%"></span></div></button>
+    <button class="stat"><div class="label">3 · Assigned</div><div class="value">27</div><div class="meter"><span style="width:14%"></span></div></button>
+    <button class="stat"><div class="label">4 · In progress</div><div class="value">19</div><div class="meter"><span style="width:10%"></span></div></button>
+    <button class="stat"><div class="label">5 · Review</div><div class="value">8</div><div class="meter"><span style="width:4%"></span></div></button>
+    <button class="stat"><div class="label">6 · Closed</div><div class="value">212</div></button>
+  </section>
+
+  <div class="tally" aria-label="By severity"><span><i class="dot bad"></i><b>3</b> critical</span><span><i class="dot warn"></i><b>27</b> high</span><span><i class="dot good"></i><b>96</b> low</span><span><i class="dot"></i><b>16</b> unrated</span></div>
+
+  <section class="filter-panel" aria-label="Filters">
+    <input class="search" type="search" aria-label="Search reports" placeholder="Search titles and notes" />
+    <div class="filters">
+      <div class="field"><label for="f1">Severity</label><select id="f1"><option>Any</option></select></div>
+      <div class="field"><label for="f2">Status</label><select id="f2"><option>Open</option></select></div>
+      <div class="field"><label for="f3">Owner</label><select id="f3"><option>Anyone</option></select></div>
+      <div class="field"><label for="f4">Group by</label><select id="f4"><option>Severity</option></select></div>
+      <div class="field"><label for="f5">Area</label><select id="f5"><option>Any</option></select></div>
+      <div class="field"><label for="f6">Project</label><select id="f6"><option>Any</option></select></div>
+    </div>
+  </section>
+
+  <div class="tabs" role="tablist"><button class="tab" role="tab" aria-selected="true">List</button><button class="tab" role="tab">Table</button><button class="tab" role="tab">Board</button></div>
+
+  <section class="list-card" aria-label="Reports">
+    <button class="group-band" aria-expanded="true"><span class="dot bad"></span>P0 critical · A.14b <span class="spacer"></span>3</button>
+    <button class="row"><span class="pill bad">P0</span><span class="title">Checkout fails with a 500 when the cart holds a gift card and a coupon</span><span class="pill secondary">Open</span><span class="meta secondary">also seen ×2</span><span class="meta">2h ago</span></button>
+    <button class="row" aria-selected="true"><span class="pill bad">P0</span><span class="title">Login loops back to the sign-in page on Safari 18</span><span class="pill secondary">Assigned</span><span class="meta">5h ago</span></button>
+    <div class="group-band"><span class="dot warn"></span>P1 high <span class="spacer"></span>27</div>
+    <div class="row row-grid" style="--row-cols: 20px 64px 12px minmax(0, 1fr) auto auto"><input type="checkbox" aria-label="Select BUG-1050" /><span class="mono small">BUG-1050</span><span class="dot warn"></span><span class="title">Dark mode toggle forgets its setting after sign-out on Firefox</span><span class="meta secondary">web, api</span><span class="meta">also seen ×3</span></div>
+    <button class="row"><span class="pill warn">P1</span><span class="title">Search results drop the last page when filters change</span><span class="pill secondary">Open</span><span class="meta">1d ago</span></button>
+    <button class="row"><span class="pill warn">P1</span><span class="title">CSV export misses the owner column</span><span class="pill secondary">Duplicate</span><span class="meta">2d ago</span></button>
+  </section>
+
+  <div class="confirm-bar" role="alert"><span class="message">Close 4 duplicate reports? Their reporters are notified.</span><button class="ghost">Cancel</button><button class="danger">Close 4 reports</button></div>
+
+  <h2>Board</h2>
+  <section class="board" aria-label="Interview stages">
+    <div class="board-col"><div class="board-col-head">Applied <span class="count">4</span></div>
+      <div class="card"><strong>Priya Shah</strong><div class="small muted">Backend · referral</div></div>
+      <div class="card"><strong>Tom Okafor</strong><div class="small muted">Frontend</div></div></div>
+    <div class="board-col"><div class="board-col-head">Phone screen <span class="count">3</span></div>
+      <div class="card"><strong>Lena Ruiz</strong><div class="small muted">Design · <span class="pill">Thu 2pm</span></div></div></div>
+    <div class="board-col"><div class="board-col-head">Onsite <span class="count">2</span></div>
+      <div class="card"><strong>Sam Lee</strong><div class="small muted">Backend</div></div></div>
+    <div class="board-col"><div class="board-col-head">Offer <span class="count">1</span></div>
+      <button class="card"><strong>Ana Costa</strong><div class="small muted">Data</div></button></div>
+    <div class="board-col"><div class="board-col-head">Reference check <span class="count">1</span></div>
+      <div class="card"><strong>Jo Park</strong><div class="small muted">Security</div></div></div>
+    <div class="board-col"><div class="board-col-head">Hired <span class="count">2</span></div>
+      <div class="card"><strong>Kim Ito</strong><div class="small muted">Backend</div></div></div>
+  </section>
+
+  <div class="cards" style="grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));">
+    <section class="panel" aria-labelledby="chart-h">
+      <div class="panel-head"><h2 id="chart-h">Reports per week</h2></div>
+      <div class="chart">
+        <svg viewBox="0 0 320 140" role="img" aria-label="Opened and closed per week">
+          <g class="grid"><line x1="28" x2="320" y1="20" y2="20"/><line x1="28" x2="320" y1="60" y2="60"/><line x1="28" x2="320" y1="100" y2="100"/></g>
+          <g class="axis"><line x1="28" x2="320" y1="120" y2="120"/></g>
+          <text x="0" y="24">60</text><text x="0" y="64">40</text><text x="0" y="104">20</text>
+          <rect x="40" y="50" width="16" height="70" style="fill:var(--series-1)"/><rect x="58" y="70" width="16" height="50" style="fill:var(--series-2)"/>
+          <rect x="110" y="40" width="16" height="80" style="fill:var(--series-1)"/><rect x="128" y="56" width="16" height="64" style="fill:var(--series-2)"/>
+          <rect x="180" y="62" width="16" height="58" style="fill:var(--series-1)"/><rect x="198" y="44" width="16" height="76" style="fill:var(--series-2)"/>
+          <rect x="250" y="30" width="16" height="90" style="fill:var(--series-1)"/><rect x="268" y="36" width="16" height="84" style="fill:var(--series-2)"/>
+          <text x="48" y="136">W36</text><text x="118" y="136">W37</text><text x="188" y="136">W38</text><text x="258" y="136">W39</text>
+        </svg>
+        <div class="legend"><span><i style="background:var(--series-1)"></i>Opened</span><span><i style="background:var(--series-2)"></i>Closed</span><span><i style="background:var(--series-3)"></i>series-3</span><span><i style="background:var(--series-4)"></i>series-4</span></div>
+      </div>
+    </section>
+    <section class="panel" aria-labelledby="feed-h">
+      <div class="panel-head"><h2 id="feed-h">Activity</h2></div>
+      <ol class="feed">
+        <li><time>Today, 09:41</time>Dana assigned <strong>Login loops on Safari 18</strong> to Ravi</li>
+        <li><time>Today, 08:12</time>Triage bot marked 4 reports as likely duplicates</li>
+        <li><time>Yesterday</time>Release 4.2.1 closed 11 reports</li>
+      </ol>
+    </section>
+    <section class="panel" aria-labelledby="kv-h">
+      <div class="panel-head"><h2 id="kv-h">Record detail</h2></div>
+      <dl class="kv">
+        <dt>Severity</dt><dd><span class="pill bad">P0 critical</span></dd>
+        <dt>Status</dt><dd><span class="pill">Assigned</span></dd>
+        <dt>Owner</dt><dd>Ravi Patel</dd>
+        <dt>Reported</dt><dd>Oct 6, 2026 · 5h ago</dd>
+        <dt>Environment</dt><dd>Safari 18.1 on macOS 15, https://shop.example.com/account/sign-in?return=/checkout</dd>
+      </dl>
+    </section>
+  </div>
+
+  <section class="panel" aria-label="Table">
+    <div class="table-wrap"><table>
+      <thead><tr><th>Severity</th><th>Title</th><th>Owner</th><th>Status</th><th>Opened</th></tr></thead>
+      <tbody>
+        <tr><td><span class="pill bad">P0</span></td><td>Checkout fails with a 500</td><td>Unassigned</td><td><span class="pill">Open</span></td><td>2h ago</td></tr>
+        <tr><td><span class="pill warn">P1</span></td><td>Search drops the last page</td><td>Mia</td><td><span class="pill">Open</span></td><td>1d ago</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <div class="cards">
+    <section class="panel"><h2>Loading</h2><div class="skeleton" style="width:70%"></div><div class="skeleton" style="width:45%;margin-top:8px"></div></section>
+    <section class="panel"><div class="empty"><h3>No reports match</h3><p>Try clearing the owner filter.</p><div class="actions"><button>Clear filters</button></div></div></section>
+    <section class="panel"><h2>Form</h2><div class="field-row"><div class="field"><label for="d1">Due</label><input id="d1" type="date"/></div><div class="field"><label for="d2">Estimate</label><input id="d2" type="number" value="3"/></div></div><p class="error small">Owner is required.</p></section>
+  </div>
+</main>
+
+<div class="notice toast" role="status">Assigned to Ravi. <button class="ghost small">Undo</button></div>
+
+<script>
+  if (q.get("compact")) document.querySelector(".list-card").classList.add("density-compact");
+  if (q.get("drawer")) document.body.insertAdjacentHTML("beforeend",
+    '<div class="drawer-backdrop"></div><aside class="drawer" aria-label="Report detail"><div class="drawer-head"><div><p class="small muted" style="margin:0">BUG-1042</p><h2 style="margin:0">Login loops back to the sign-in page on Safari 18</h2></div><span class="spacer"></span><button class="ghost" aria-label="Close">✕</button></div><div class="drawer-body"><dl class="kv"><dt>Severity</dt><dd><span class="pill bad">P0 critical</span></dd><dt>Owner</dt><dd>Ravi Patel</dd><dt>Seen</dt><dd>also seen ×2</dd></dl></div><div class="drawer-foot"><button class="ghost">Mark duplicate</button><button class="primary">Assign to me</button></div></aside>');
+</script>
+</body>
+</html>

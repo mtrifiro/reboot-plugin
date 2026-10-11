@@ -3,134 +3,70 @@ title: Derive Your Own Keys from Reboot's Managed Crypto Root Keys (with Rotatio
 impact: HIGH
 impactDescription: Deriving keys wrong, or skipping rotation/usage markers, makes data permanently unrecoverable or pins an old root key forever.
 tags: crypto, root-keys, hkdf, derive_key, rotation, use_root_key_version, disuse_root_key_version, encryption, signing
+summary: "Usually use `Ciphertext`; never change `info`/`length` after shipping; HKDF from `active_version()`, rotation via `use`/`disuse` markers."
+step: servicer
+applies: [mcp-ui, web-app, backend-only]
+always: false
+when: "building your own key-derivation feature"
+verified: 1.6.0
+docs: ""
 ---
 
-## Derive Your Own Keys from Reboot's Managed Crypto Root Keys
+# Derive Your Own Keys from Reboot's Managed Crypto Root Keys
 
-> **First decide if you even need rotation.** If you re-derive a key
-> from `root_keys.active_version()` **every time** and never persist
-> the derived key (or anything encrypted under it) — e.g. an
-> HMAC/signing key recomputed on each use — you need **none** of the
-> rotation machinery below: just always derive from
-> `active_version()`, and a root-key rotation simply produces a new
-> key next time. The `Watch` loop and `use_root_key_version` /
-> `disuse_root_key_version` markers are **only** for code that
-> **persists material wrapped under a specific (possibly older) root
-> version** and must keep that version alive until it has migrated
-> off. If you just want encryption-at-rest + crypto-shredding, **don't
-> build this — use the `Ciphertext` library** (`stdlib-ciphertext.md`),
-> which already implements everything here.
+## When you are here
 
-Reboot provisions and rotates a versioned set of root secrets in the
-`REBOOT_CRYPTO_ROOT_KEYS` environment variable (`rbt dev` and Reboot
-Cloud set it automatically — you do not manage it yourself). Your
-library/app never uses these roots directly: you **HKDF-derive your
-own purpose-specific keys** from them via
-`reboot.crypto.root_keys.derive_key`.
+Deriving your own key (HMAC/signing, custom encryption) from the root
+secrets in `REBOOT_CRYPTO_ROOT_KEYS` (`rbt dev` and Reboot Cloud set
+it). For encryption at rest or crypto-shredding use `Ciphertext`
+(`stdlib-ciphertext.md`) instead; it implements everything here.
+
+If you re-derive from `active_version()` every time and never persist
+the key or anything encrypted under it, you need only Derive; a
+rotation just yields a new key next time. The `watch` loop and
+`use_root_key_version` / `disuse_root_key_version` markers are only for
+persisted material wrapped under a specific root version.
+
+## Do this
+
+### Derive
 
 ```python
 from reboot.crypto import root_keys
 
-# `info` is a domain separator: pick a unique, stable byte-string per
-# purpose so your derived key is independent of every other consumer's.
+# `info`: domain separator, one unique stable byte-string per purpose.
 key = root_keys.derive_key(
     info=b"my.app.notes-encryption-key",
     version=root_keys.active_version(),
 )  # -> 32 bytes (override with length=)
 ```
 
-### The `root_keys` API
+| Call | Returns / raises |
+| --- | --- |
+| `derive_key(*, info: bytes, version: int, length: int = 32)` | HKDF-SHA256 key (`bytes`); keyword-only; raises `UnknownRootKeyVersion` if `version` is not configured |
+| `active_version()` | highest configured version; new material uses it |
+| `available_versions()` | all configured versions, ascending |
 
-| Call                                                         | Returns / raises                                                                                            |
-| ------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------- |
-| `derive_key(*, info: bytes, version: int, length: int = 32)` | the derived key (`bytes`); **keyword-only**. Raises `UnknownRootKeyVersion` if `version` is not configured. |
-| `active_version()`                                           | highest configured version (the one new material should use)                                                |
-| `available_versions()`                                       | all configured versions, ascending                                                                          |
+Errors: `root_keys.MissingRootKeys`, `root_keys.MalformedRootKeys`,
+`root_keys.UnknownRootKeyVersion`. The env value is comma-separated
+`vN:key` entries, conventionally newest-first (`v2:<new>,v1:<old>`;
+both present during a rotation); the highest number is active
+regardless of order.
 
-Errors live on the module: `root_keys.MissingRootKeys` (env unset),
-`root_keys.MalformedRootKeys`, `root_keys.UnknownRootKeyVersion`.
+### If you persist material: mark usage and rotate
 
-Two rules that prevent silent data loss:
-
-- **Always derive new material from `active_version()`.** Never
-  hard-code a version.
-- **`info` is a permanent contract.** Changing the `info` label (or
-  `length`) changes every derived key, orphaning everything already
-  encrypted under the old one. Choose it once and never change it.
-
-`REBOOT_CRYPTO_ROOT_KEYS` is a versioned list, newest-first:
-`v2:<new-key>,v1:<old-key>`. During a rotation both versions are
-present so old material still decrypts while you migrate.
-
-### When you persist material: handle rotation
-
-If you store a key (or data) derived from / wrapped under a specific
-root version, then when the operator adds a newer version you must
-**re-derive (re-wrap) your persisted material onto the new active
-version** so the old version can eventually be dropped. Until you do,
-the old version must stay in `REBOOT_CRYPTO_ROOT_KEYS`.
-
-You tell the platform which versions you still hold via two writers on
-the per-app `Application` singleton, so an operator (or a future
-automated actor) knows when a version has zero holders and is safe to
-retire:
-
-```python
-import reboot.application
-
-# "I now hold material under this version."
-await reboot.application.ref().use_root_key_version(
-    context, consumer=CONSUMER, version=target,
-)
-
-# "I no longer hold anything under this older version."
-await reboot.application.ref().disuse_root_key_version(
-    context, consumer=CONSUMER, version=old,
-)
-```
-
-`consumer` is a **globally-unique, namespaced** string identifying
-_you_ among all consumers in the app (the field is shared app-wide).
-Namespace it by your library and, if you run multiple independent
-holders, by instance — e.g. `f"my.app.notes:{manager_id}"`. Both
-writers are **idempotent**.
-
-Track the versions you hold in your **own state** (a
-`repeated uint32 consuming_versions` set) and treat the `Application`
-markers as a mirror of it. This buys two correctness properties:
-
-- **Mark `use` transactionally, deduped.** When you first create
-  material under a version, record `use_root_key_version` _in the same
-  transaction_ — but only if the version is new to your
-  `consuming_versions` set. That closes the window where a key is in
-  use before its marker exists (a retirement actor could otherwise see
-  the version as unused and drop it), and you touch the shared
-  `Application` singleton only **once per version**, not once per key.
-- **Keep the markers a conservative superset of `consuming_versions`.**
-  A version you still record locally as consumed must never appear
-  unused in `Application`. So set the global marker **before** (or in
-  the same transaction as) adding the version locally, and clear it
-  **after** removing it locally. Erring on the "still in use" side
-  until the end is the safe direction — the retirement actor reads the
-  markers, so a too-early disuse is what loses data.
-
-Two more rules:
-
-- **The active version is always in use** — never disuse it.
-- A version is retire-able only when **every** consumer has disused it
-  (zero markers).
-
-### Marking usage when you create material
-
-The first half is a writer/transaction that creates a key under the
-active version. Mark `use` here, transactionally and deduped against
-`consuming_versions`, and lazily start the `Watch` loop:
+Two idempotent, app-internal writers on the per-app `Application`
+singleton record which root versions you hold, so a version with zero
+holders can be retired. Mirror them from a `consuming_versions` set in
+your state. Mark `use` in the same transaction that first creates
+material under a version, only when it is new to your set (no window
+before the marker; one write per version, not per key):
 
 ```python
 import reboot.application
 from reboot.aio.contexts import TransactionContext
 
-CONSUMER = "my.app.notes"  # namespace per library/instance
+CONSUMER = "my.app.notes"  # globally unique; namespace per library/instance
 
 
 class KeyManagerServicer(KeyManager.Servicer):
@@ -139,10 +75,6 @@ class KeyManagerServicer(KeyManager.Servicer):
         self, context: TransactionContext, request: KeyManager.RegisterRequest,
     ) -> KeyManager.RegisterResponse:
         # ... persist your new key, wrapped under `request.version` ...
-
-        # First time we see this version: mark it in use *in this
-        # transaction* (no window before the marker), and only once per
-        # version (cheap on the shared `Application` singleton).
         if request.version not in self.state.consuming_versions:
             self.state.consuming_versions.append(request.version)
             await reboot.application.ref().use_root_key_version(
@@ -154,14 +86,9 @@ class KeyManagerServicer(KeyManager.Servicer):
         return KeyManager.RegisterResponse()
 ```
 
-### The rotation control loop
-
-The second half is a long-lived `Watch` workflow (`workflow-method.md`,
-`workflow-loop.md`, `workflow-until.md`). It parks until you still hold
-a version older than the env's active one, then: mark + start-consuming
-the new version, migrate, stop-consuming + disuse the old ones. The
-`consuming_versions` set in your state makes the loop deterministic
-across replays and restarts.
+The rotation loop parks until you hold a version older than active,
+then uses the new version, migrates, and disuses the old ones. Every
+cross-state call carries `.per_iteration(...)` so replays memoize it:
 
 ```python
 import reboot.application
@@ -178,10 +105,8 @@ class KeyManagerServicer(KeyManager.Servicer):
     ) -> KeyManager.WatchResponse:
         async for _ in context.loop("Watch"):
 
-            # Park until we still hold a version older than the env's
-            # active one. A bare `read()` IS allowed in an `until`
-            # predicate; use the OWN-instance ref (`.ref()`, no id).
-            # Returning a (truthy) tuple ends the wait; `False` keeps it.
+            # Bare `read()` on the own ref is allowed in `until`;
+            # a truthy return ends the wait.
             async def stale() -> tuple[int, list[int]] | bool:
                 key_manager = await KeyManager.ref().read(context)
                 active_version = root_keys.active_version()
@@ -196,9 +121,7 @@ class KeyManagerServicer(KeyManager.Servicer):
 
             active_version, stale_versions = await until("Stale", context, stale)
 
-            # Mark `use` and start consuming `active_version` BEFORE
-            # migrating, so a key wrapped under it mid-sweep is never
-            # left unmarked (idempotent if `register` already recorded it).
+            # Mark and start consuming the new version BEFORE migrating.
             await reboot.application.ref().per_iteration(
                 "Use root key versions"
             ).use_root_key_version(
@@ -214,12 +137,9 @@ class KeyManagerServicer(KeyManager.Servicer):
             )
 
             # ... re-derive / re-wrap every persisted key onto
-            # `active_version` (your migration sweep; page it for large
-            # keyrings) ...
+            # `active_version` (page it for large keyrings) ...
 
-            # Stop consuming the old versions LOCALLY first, then release
-            # their `Application` markers — keeping the markers a
-            # conservative superset of what we still record as consumed.
+            # Stop consuming LOCALLY first, then release the markers.
             async def stop_consuming(state: KeyManager.State) -> None:
                 for v in stale_versions:
                     if v in state.consuming_versions:
@@ -237,20 +157,52 @@ class KeyManagerServicer(KeyManager.Servicer):
                 )
 ```
 
-All cross-state calls inside the loop are wrapped in `.per_iteration(...)`
-so they're memoized deterministically across `context.loop`
-effect-validation replays (`workflow-idempotency-scopes.md`).
+## Never
 
-### Don't
+- Hard-coding a `version` for new material — always
+  `active_version()`.
+- Changing `info` or `length` after shipping — every derived key
+  changes, orphaning everything derived or encrypted.
+- A bare `consumer` like `"default"` — app-global, so two libraries
+  could retire each other's version. Namespace it, per instance if
+  several (`f"my.app.notes:{manager_id}"`).
+- Disusing the active version — it is always in use.
+- Clearing a marker before removing the version from your own
+  `consuming_versions`, or adding the version locally before setting
+  its marker — markers must stay a superset of what you hold; an early
+  disuse loses data.
+- `use` / `disuse` from the `watch` loop without `.per_iteration(...)`.
+- Rolling your own envelope encryption — use `Ciphertext`.
 
-- **Don't change `info` or `length` after shipping.** It silently
-  orphans everything already derived.
-- **Don't disuse the active version**, and don't `use`/`disuse` from
-  outside the deterministic `Watch` region without `.per_iteration(...)`.
-- **Don't reuse a bare `consumer` like `"default"`** — it's app-global;
-  namespace it so two libraries can't collide and prematurely retire
-  each other's version.
-- **Don't roll your own envelope encryption** if encryption-at-rest +
-  crypto-shredding is what you want — use `Ciphertext`
-  (`stdlib-ciphertext.md`), the reference implementation of everything
-  on this page.
+## Limits
+
+- Keep the old root version in `REBOOT_CRYPTO_ROOT_KEYS` until
+  persisted material is re-wrapped; deriving with a removed version
+  raises `UnknownRootKeyVersion`.
+- A version is retirable only at zero markers. Nothing in the 1.6.0
+  Python package acts on the markers; an operator removes the version
+  from the env.
+- `use_root_key_version` / `disuse_root_key_version` authorize
+  `is_app_internal` only (1.6.0 source).
+- `root_keys` has no Reboot dependencies and reads the environment on
+  every call.
+
+## Scales as
+
+- Not measured. Writes to the shared `Application` singleton are
+  O(versions), not O(keys); the migration sweep is O(persisted keys)
+  per rotation.
+
+## Errors you will see
+
+| Error text (stable prefix) | Meaning | Fix |
+| --- | --- | --- |
+| `root key version v` … `is not in 'REBOOT_CRYPTO_ROOT_KEYS'` | `UnknownRootKeyVersion`: the version was never configured or already removed | Derive from `active_version()`; keep old versions until migrated |
+| `'REBOOT_CRYPTO_ROOT_KEYS' is not set` | `MissingRootKeys`: running outside `rbt dev` / Cloud without the env var | Provision it (`lifecycle-secrets.md`) |
+| `'REBOOT_CRYPTO_ROOT_KEYS' entry` … `is not of the form 'vN:key'` | `MalformedRootKeys` | Fix the env value |
+
+## See also
+
+- [`stdlib-ciphertext.md`](stdlib-ciphertext.md) — the reference implementation; usually what you want
+- [`servicer-workflow-loop.md`](servicer-workflow-loop.md) — the `watch` loop's iterations
+- [`servicer-workflow-wait.md`](servicer-workflow-wait.md) — `until` for the stale-version park

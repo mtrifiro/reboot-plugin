@@ -1,3 +1,11 @@
+---
+title: "Development environments install reboot[dev]"
+summary: "Add reboot[dev], pinned like reboot, to the project's development dependencies."
+kind: migration
+audience: agent
+applies: [mcp-ui, web-app, backend-only]
+---
+
 ## Development environments install `reboot[dev]`
 
 The `reboot` package now ships what a development environment needs

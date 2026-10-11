@@ -1,0 +1,7 @@
+/* This UI's page styles: the shared tokens and classes, plus anything
+   only this UI needs. */
+@import "../styles.css";
+
+body {
+  background: var(--bg);
+}

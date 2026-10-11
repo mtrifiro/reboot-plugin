@@ -1,3 +1,12 @@
+---
+title: "Every transaction must declare exclusive or shared"
+summary: "Give every Transaction an explicit lock mode, exclusive unless it rarely writes its own state."
+kind: migration
+audience: agent
+applies: [mcp-ui, web-app, backend-only]
+when: "the API declares a Transaction"
+---
+
 ## Every transaction must declare `exclusive` or `shared`
 
 A transaction method now says how it holds the lock on its own state

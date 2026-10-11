@@ -1,0 +1,5 @@
+/* The web app's stylesheet: the shared tokens and classes in
+   `frontend/styles.css`, which the MCP UIs import too, so the two front
+   doors can't drift apart. Change the brand there. Rules only the web app
+   needs go below. */
+@import "../../styles.css";

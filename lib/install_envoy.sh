@@ -8,13 +8,15 @@
 #
 # Source mix mirrors the Reboot library's resolver:
 # - Linux: official `envoyproxy/envoy` GitHub releases (single
-#   binary, SHA-256 from `checksums.txt.asc`).
+#   binary; the SHA-256 pinned below is from the release's signed
+#   `checksums.txt.asc`).
 # - macOS arm64: Tetrate's archive at `archive.tetratelabs.io`
-#   (`.tar.xz` containing the binary, SHA-256 from a `.sha256`
-#   sibling). Tetrate is the de facto third-party distributor
-#   of Envoy macOS builds — what `func-e` consumes — and is
-#   the only practical source upstream Envoy doesn't publish
-#   for macOS.
+#   (`.tar.xz` containing the binary). Tetrate is the de facto
+#   third-party distributor of Envoy macOS builds — what `func-e`
+#   consumes — and is the only practical source upstream Envoy
+#   doesn't publish for macOS. It publishes no digest for the
+#   tarball, so the one pinned below is of the archive as fetched
+#   when the pin was set; it still refuses a changed download.
 
 set -eu
 
@@ -22,6 +24,14 @@ set -eu
 # (`ENVOY_VERSION`), which is the library's source of truth for the
 # resolver.
 ENVOY_VERSION="1.38.4"
+# To bump: the Linux digests from
+# https://github.com/envoyproxy/envoy/releases/download/v<version>/checksums.txt.asc;
+# the macOS one computed from
+# https://archive.tetratelabs.io/envoy/download/v<version>/envoy-v<version>-darwin-arm64.tar.xz
+# (Tetrate publishes none; this one was taken on 2026-10-10).
+SHA256_LINUX_X64="c994c452de131f59c9ec9f4a2fffcc65039f250a38b6279870bb95dac21db0fa"
+SHA256_LINUX_ARM64="847bdd681e78f2bfd5e3f84fbfc6afe20a9b41b5453a6bb8d4b6fae9dab3376f"
+SHA256_DARWIN_ARM64="bff2714ebde97297571cbbb1c2c79755038806a4a312261271d31ae98431b76b"
 
 # `PLUGIN_DATA` is hardcoded rather than read from `$CLAUDE_PLUGIN_DATA`.
 # Claude Code only sets that env var when it runs something from a
@@ -47,14 +57,17 @@ case "$os_name-$arch_name" in
     Linux-x86_64 | Linux-amd64)
         ENVOY_SOURCE=github
         ENVOY_ARCH=x86_64
+        EXPECTED_SHA256="$SHA256_LINUX_X64"
         ;;
     Linux-aarch64 | Linux-arm64)
         ENVOY_SOURCE=github
         ENVOY_ARCH=aarch_64
+        EXPECTED_SHA256="$SHA256_LINUX_ARM64"
         ;;
     Darwin-arm64)
         ENVOY_SOURCE=tetrate
         ENVOY_ARCH=darwin-arm64
+        EXPECTED_SHA256="$SHA256_DARWIN_ARM64"
         ;;
     *)
         printf '\033[1;31m[reboot-plugin]\033[0m unsupported platform for Envoy: %s-%s\n' \
@@ -74,21 +87,22 @@ START_SECONDS=$(date +%s)
 printf '\033[1;34m[reboot-plugin]\033[0m installing pinned Envoy %s into %s ...\n' \
     "$ENVOY_VERSION" "$ENVOY_DIR" >&2
 
-# Verify a downloaded file's SHA-256 against an expected string.
-# Best-effort: if neither `sha256sum` nor `shasum` is available
-# we log a warning and skip rather than block the install.
+# Verify a downloaded file's SHA-256 against the pinned digest. Without
+# a tool to compute it, nothing is installed: an unverified download is
+# not what the pin promises.
 _verify_sha256() {
     _file="$1"
     _expected="$2"
-    if [ -z "$_expected" ]; then
-        return 0
-    fi
     if command -v sha256sum >/dev/null 2>&1; then
         _actual="$(sha256sum "$_file" | awk '{print $1}')"
     elif command -v shasum >/dev/null 2>&1; then
         _actual="$(shasum -a 256 "$_file" | awk '{print $1}')"
+    elif command -v openssl >/dev/null 2>&1; then
+        _actual="$(openssl dgst -sha256 "$_file" | awk '{print $NF}')"
     else
-        return 0
+        printf '\033[1;31m[reboot-plugin]\033[0m no sha256sum, shasum or openssl to verify Envoy %s; not installing\n' \
+            "$ENVOY_VERSION" >&2
+        exit 1
     fi
     if [ "$_expected" != "$_actual" ]; then
         printf '\033[1;31m[reboot-plugin]\033[0m Envoy SHA-256 mismatch (expected %s, got %s)\n' \
@@ -102,16 +116,7 @@ case "$ENVOY_SOURCE" in
         binary_name="envoy-${ENVOY_VERSION}-linux-${ENVOY_ARCH}"
         base_url="https://github.com/envoyproxy/envoy/releases/download/v${ENVOY_VERSION}"
         curl -fsSL --output "$STAGE/envoy" "${base_url}/${binary_name}"
-        # The PGP-signed manifest's lines look like
-        # `<sha256>  /tmp/.../bin/envoy-<version>-linux-<arch>`.
-        # We verify SHA-256 only — verifying the PGP signature
-        # would require importing maintainer keys, out of scope.
-        expected="$(
-            curl -fsSL "${base_url}/checksums.txt.asc" 2>/dev/null |
-                grep "/${binary_name}\$" |
-                awk '{print $1}'
-        )"
-        _verify_sha256 "$STAGE/envoy" "$expected"
+        _verify_sha256 "$STAGE/envoy" "$EXPECTED_SHA256"
         chmod +x "$STAGE/envoy"
         ;;
     tetrate)
@@ -119,13 +124,7 @@ case "$ENVOY_SOURCE" in
         base_url="https://archive.tetratelabs.io/envoy/download/v${ENVOY_VERSION}"
         url="${base_url}/${tarball}"
         curl -fsSL --output "$STAGE/$tarball" "$url"
-        # Tetrate publishes a `.sha256` sibling whose first
-        # whitespace-separated field is the digest.
-        expected="$(
-            curl -fsSL "${url}.sha256" 2>/dev/null |
-                awk 'NR==1 {print $1}'
-        )"
-        _verify_sha256 "$STAGE/$tarball" "$expected"
+        _verify_sha256 "$STAGE/$tarball" "$EXPECTED_SHA256"
         tar -xJf "$STAGE/$tarball" -C "$STAGE"
         # Internal layout is `envoy-v<version>-<platform>/bin/envoy`,
         # but use `find` for tolerance across Tetrate releases.
@@ -136,7 +135,7 @@ case "$ENVOY_SOURCE" in
             exit 1
         fi
         mv "$extracted" "$STAGE/envoy.bin"
-        rm -rf "$STAGE/$tarball" "$STAGE/envoy-v${ENVOY_VERSION}-${ENVOY_ARCH}"
+        rm -rf "${STAGE:?}/$tarball" "${STAGE:?}/envoy-v${ENVOY_VERSION}-${ENVOY_ARCH}"
         mv "$STAGE/envoy.bin" "$STAGE/envoy"
         chmod +x "$STAGE/envoy"
         ;;

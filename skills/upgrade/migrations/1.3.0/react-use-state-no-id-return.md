@@ -1,3 +1,12 @@
+---
+title: "A no-id generated state hook now returns the handle and isLoading"
+summary: "Destructure the handle and isLoading from no-id state hooks and render immediately."
+kind: migration
+audience: agent
+applies: [mcp-ui, web-app]
+when: "the frontend calls a generated state hook without an id"
+---
+
 ## A no-id generated state hook now returns `{ <state>, isLoading }`, and the UI renders immediately
 
 A generated state hook such as `useUser()` / `useCounter()` called

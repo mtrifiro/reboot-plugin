@@ -1,3 +1,12 @@
+---
+title: "Auto-construct state types now require oauth="
+summary: "An app with User-typed auto-construct state must configure oauth= or it fails at startup."
+kind: migration
+audience: agent
+applies: [mcp-ui, web-app, backend-only]
+when: "the app has User-typed auto-construct state"
+---
+
 ## Auto-construct state types now require `oauth=`
 
 An `Application` with `User`-typed auto-construct servicers (state

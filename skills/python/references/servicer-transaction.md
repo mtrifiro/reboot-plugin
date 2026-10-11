@@ -1,59 +1,42 @@
 ---
 title: Implement Transaction Methods
 impact: HIGH
-impactDescription: Cross-actor atomic work requires a transaction
-tags: servicer, transaction, TransactionContext, atomic, multi-actor
+impactDescription: Cross-actor atomic work requires a transaction; an oversized or externally-calling one stalls, locks actors, or fires side effects twice
+tags: servicer, transaction, TransactionContext, atomic, multi-actor, lock, participants, deadlock, two-phase commit
+summary: "External calls inside fire on abort; oversized transactions stall; rollback spans every touched actor; schedule a workflow instead."
+step: servicer
+applies: [mcp-ui, web-app, backend-only]
+always: false
+when: "you declared a `Transaction`"
+verified: 1.6.0
+docs: "https://docs.reboot.dev/develop/side_effects"
 ---
 
-## Implement Transaction Methods
+# Implement Transaction Methods
 
-> **Critical:** transactions are **all-or-nothing across actors** —
-> any `<Method>Aborted` rolls back **all** mutations in the
-> transaction. Reboot may also retry transactions internally, so the
-> body must be safe to re-run with the same input — and must **never**
-> call outside the system (see below).
+## When you are here
 
-A method declared with `Transaction(...)` in the API file receives a
-`TransactionContext` and is the only place where you can atomically
-mutate multiple actors. The runtime serializes transactions that touch
-overlapping actors. The declaration's `mode=` says how the transaction
-holds the lock on its own state: `Exclusive()` takes it exclusive as
-the transaction starts, so concurrent callers of the actor queue, and
-is the choice for a body that writes `state`; `Shared()` takes it
-shared and upgrades only if the body writes `state`, so callers that
-only read proceed concurrently.
+Implementing a method declared `Transaction(...)`: it takes a
+`TransactionContext` and is the only kind that atomically mutates
+several actors (plus its own `self.state`). Durable multi-step work:
+`servicer-workflow.md`; exact signature: `api-methods.md`. The public
+docs allow an idempotent side effect in any method run as a task; this
+skill deliberately tightens that: an external call goes in a
+`Workflow`, never in a transaction.
 
-**Incorrect (multi-actor work in a writer):**
+## Do this
 
-```python
-async def transfer(
-    self, context: WriterContext, request: Bank.TransferRequest,
-) -> None:
-    # WRONG — writers can only mutate one actor.
-    await Account.ref(request.from_id).withdraw(context, ...)
-    await Account.ref(request.to_id).deposit(context, ...)
-```
+`mode=` sets the lock on its own actor: `Exclusive()` takes it
+exclusive at the start (concurrent callers queue), for bodies that
+write `state`; `Shared()` takes it shared and upgrades only if the body
+writes `state`, so read-only callers proceed concurrently.
 
-**Correct (matches the [`reboot-bank-pydantic`](https://github.com/reboot-dev/reboot-bank-pydantic) example's `BankServicer`):**
-
-`api/bank/v1/bank.py`:
+From the [`reboot-bank-pydantic`](https://github.com/reboot-dev/reboot-bank-pydantic) example:
 
 ```python
-transfer=Transaction(
-    # The bank only coordinates: it reads nothing of its own state and
-    # writes the accounts, so transfers proceed through it concurrently.
-    mode=Shared(),
-    request=TransferRequest,
-    response=None,
-    description="Move funds between two accounts, both sides landing "
-    "together or neither.",
-    mcp=None,
-),
-```
-
-`main.py`:
-
-```python
+# api/bank/v1/bank.py:
+#   transfer=Transaction(mode=Shared(), request=TransferRequest, response=None, ...)
+#   Shared(): the bank only coordinates, writing accounts, not its own state.
 import asyncio
 from bank.v1.account_rbt import Account
 from bank.v1.bank_rbt import Bank
@@ -66,7 +49,7 @@ class BankServicer(Bank.Servicer):
         self,
         context: TransactionContext,
         request: Bank.TransferRequest,
-    ) -> None:
+    ) -> None:  # response=None: no return (api-methods.md)
         from_account = Account.ref(request.from_account_id)
         to_account = Account.ref(request.to_account_id)
 
@@ -76,107 +59,117 @@ class BankServicer(Bank.Servicer):
         )
 ```
 
-## Transactions Are Atomic Across Actors
+- Any `<Method>Aborted` inside rolls back **every** mutation on every
+  actor touched.
+- Reboot may retry the body, and in development re-runs it for effect
+  validation: it must be safe to rerun with the same input.
+- Inside, call readers, writers, constructors and other transactions
+  (nested) on other actors; `asyncio.gather` parallelizes independent
+  round trips; `Service.forall(ids)` fans one method out
+  (`rpc-forall.md`).
 
-If any call inside a transaction fails (raises a `<Method>Aborted`), the
-runtime rolls back **all** the mutations made within that transaction —
-across every actor it touched.
+### External calls: schedule a workflow
 
-## External Calls Belong in a Workflow, Not a Transaction
+An email, payment, SMS or LLM call cannot be rolled back and a re-run
+sends it twice. Put it in a `Workflow` method (primitive per
+`servicer-workflow-external.md`) reached only by
+`await self.ref().schedule().<workflow_method>(context)`. Calling an
+in-system actor that itself schedules the external work is fine: the
+bank's `sign_up` calls `await mailgun.Message.send(context, None,
+Options(bearer_token=mailgun_api_key), recipient=..., ...)`, a `Writer`
+on an in-system actor that schedules the HTTP send in a workflow, then
+`Account.open(...)`.
 
-A transaction is **all-or-nothing**: if it aborts, the semantics are
-that **no effect has taken place** — every mutation it made is rolled
-back. A call that leaves the system — sending email, hitting a
-third-party API, an **LLM / model API call**, charging a payment, an
-SMS login code — **cannot be rolled back**. A transaction making
-such a call directly breaks that guarantee: the transaction can
-still abort, but the external call already happened. Reboot may
-also retry a transaction internally, and in development re-run its
-body for **effect validation** (asserting the mutations are
-deterministic) — both fire the external call more than once.
+## Never
 
-So a transaction must **never** make an external call itself. It may
-freely call other **in-system actors**, and the correct pattern is for
-one of those actors to **schedule a `Workflow`** that performs the
-external call. The
-[`reboot-bank-pydantic`](https://github.com/reboot-dev/reboot-bank-pydantic)
-`sign_up` transaction sends a welcome email this way:
+- Multi-actor work in a `Writer` (`withdraw(...)` then `deposit(...)`
+  on other actors) — a writer mutates one actor.
+- An external call in the body — it fires on abort and every re-run.
+- Stash data on `self` — each call may get a fresh servicer instance;
+  state lives in `self.state` or other actors.
+- One transaction over N things when N is more than a handful (Reset
+  All over 48 showings stalled a suite; cineloop-40, 1.4.1) — every actor is a two-phase-
+  commit participant. Iterate in a `Workflow`, one small transaction or
+  writer per item, `.per_workflow(f"... {id}")` per step.
+- `schedule()` onto N foreign actors from one transaction — each
+  becomes a 2PC participant; colliding prepares killed the dev database
+  worker (`database.cc:1374` assert; theater-network-20, 1.4.0). Pass
+  the list in a workflow's request and write each actor from the
+  workflow.
+- Read an actor then write it as two calls — one writer returning what
+  the caller needs was about 10x faster under contention
+  (theater-chain-17).
+- Touch shared actors in different orders in different transactions
+  (A then B, B then A) — they wait on each other. Keep one global order.
+- Cancel in-flight transaction calls (load drivers, timing-out tests,
+  Ctrl-C) — see Limits. Drain: stop issuing, await in-flight calls.
+- Read `context.auth` in an actor called from this transaction — it is
+  `None`; pass identity in the request (`servicer-authorizer.md`).
+- An aggregator, registry or dashboard among the participants — the
+  participant set is the lock set, and a burst of transactions then
+  convoys on that one actor for minutes (returns-desk, 1.4.0).
+  Participants are the actors whose invariants the transaction enforces;
+  write the rest from the workflow after commit, `per_workflow`.
 
-```python
-async def sign_up(
-    self, context: TransactionContext, request: SignUpRequest,
-) -> SignUpResponse:
-    if mailgun_api_key := await self._mailgun_api_key():
-        await mailgun.Message.send(
-            context, None, Options(bearer_token=mailgun_api_key),
-            recipient=request.account_id,
-            sender='team@reboot.dev',
-            domain='reboot.dev',
-            subject='Welcome',
-            html=self._html_email,
-            text=self._text_email,
-        )
+## Limits
 
-    account, _ = await Account.open(context, request.account_id)
-    await account.deposit(context, amount=request.initial_deposit)
-    return SignUpResponse()
-```
+- Locks on every touched actor are held until commit; concurrent
+  callers wait up to 30 s, then abort with `Unavailable` (`LOCK_ACQUIRE_DEADLINE_DEFAULT`, 1.6.0).
+- Deadlocks between transactions are broken, not prevented: a
+  transaction that waits more than 250 ms
+  (`REBOOT_TRANSACTION_DEADLOCK_GRACE_MS`) on an actor held by an
+  *older* transaction aborts with `TransactionShouldRetry` and is
+  retried, keeping its first attempt's age (1.6.0 source); a plain
+  reader or writer holding the lock never triggers this. Before 1.6.0,
+  twelve concurrent bulk imports over shared actors stalled with no
+  error (student-sor-05, 1.5.0).
+- No documented size limit, but one is reachable: creating 138 actors
+  plus `OrderedMap` inserts worked, 360 hung on lock waits and the app
+  never came up (reboot-air-141-19, 1.4.1). Split seeds into proven-size
+  transactions, each with its own `.idempotently(alias)`
+  (`lifecycle-initialize-hook.md`).
+- A caller that vanished mid-transaction left its exclusive lock held
+  until restart; every later writer on that actor timed out, including
+  sign-in (writes `User` via `set_claims`)
+  (reboot-air-141-21, -load-02; observed 1.4.1, not re-tested at
+  1.6.0). `rbt inspect` cannot show lock holders.
+- A transaction canceled during lock contention left one child actor
+  constructed while its parent's side never committed (next run:
+  `StateAlreadyConstructed`; student-sor-07, 1.5.0, cause undiagnosed).
+- Subscribers see nothing until commit: a 200-writer reset read as
+  "hung"; batches of 25 gave progress
+  (showtime-40).
+- Effect validation compares the actor's own state changes, not a
+  sub-call's arguments: a transaction that fans out random sub-call
+  payloads passes it (showtime, 1.4.1). Seed any randomness from
+  request fields so the fan-out is deterministic.
 
-`mailgun.Message.send` is a `Writer` on an in-system mailgun actor — it
-does not hit the network itself; it **schedules a workflow** that makes
-the actual HTTP send. So the transaction only ever issues in-system
-RPCs, and the un-rollback-able external call lives safely in that
-workflow.
+## Scales as
 
-When _you_ are the one making the external call — an LLM / model API
-call, a payment charge, an SMS — put it in a `Workflow` method and
-pick the right primitive (`at_least_once`, `at_most_once`, or
-`Agent`) per `servicer-workflow.md`.
+- Cost grows with **participants** (distinct actors), not calls: 8x
+  fewer calls into the same participants bought 16% (theater-chain-18);
+  about 10 sequential participants took about 10 s in the dev harness,
+  about 4 took 2-3 s; `asyncio.gather` does not lower the floor (reboot-bluesky-04, 1.4.1). A transaction is roughly
+  5-10x a writer.
+- N independent creations: 216 seats took 54 s as a transaction chain,
+  15.7 s as a workflow of writer calls (theater-network-14, 1.4.0).
+- A transaction on a hot actor stalls every user writer on it: bound
+  background per-tick work (showtime-42).
+- Full numbers and how to measure: `patterns-load-and-benchmarking.md`.
 
-How to wire it up:
+## Errors you will see
 
-- Make the external call inside a `Workflow` method, with the
-  primitive chosen above.
-- A `Transaction` (or `Writer`) reaches that workflow only by
-  **scheduling** it —
-  `await self.ref().schedule().<workflow_method>(context)` — never by
-  performing the external call itself.
+| Error text (stable prefix) | Meaning | Fix |
+| --- | --- | --- |
+| `Timed out waiting 30.0s to acquire exclusive lock; retry the transaction.` | Another holder kept the actor locked past the deadline (long transaction, or a vanished caller) | Shrink the transaction; drain callers; restart clears an orphaned lock |
+| `Cannot upgrade shared lock to exclusive: another transaction is already upgrading the same state; retry the transaction.` | Two `Shared()` transactions both read then wrote (or scheduled on) the same actor | Use `Exclusive()`, or don't read before scheduling; give parallel chains their own actors |
+| `is presumed deadlocked with it; aborting so that the older transaction proceeds. Retry required.` | Deadlock broken by aborting the younger transaction (logged; retried automatically) | Keep one actor-touch order to avoid the retries |
+| `aborted with 'Unknown'` from a transaction whose nested call hit `StateNotConstructed` | A participant the transaction named was never constructed (a synthetic id); the abort crosses the transaction undeclared | Keep observers and display state out of the participant set; write them from the workflow after commit |
+| `Timed out waiting 30.0s to acquire exclusive lock` from many transactions released together onto one actor, converging over minutes | A convoy on one hot actor's lock; any aggregator, registry or dashboard a transaction touches is such an actor | No bursts of transactions against one actor; keep aggregators out of the participant set and update them after commit with `per_workflow` |
+| `TransactionShouldRetry { reason: PRESUMED_DEADLOCK ... }` repeating for minutes; a button in the UI does nothing | A long-held lock (a slow seed under load, a participant that died holding it), not a cycle; the retry never surfaces to the caller | Stop completely, `rbt dev expunge --yes`, restart; no suite beside the dev loop |
 
-Rule of thumb: **if a call leaves the system, it belongs in a
-workflow, not a transaction.**
+## See also
 
-## Use `asyncio.gather` for Concurrent Sub-Calls
-
-Independent calls inside a transaction can run concurrently with
-`asyncio.gather`. Reboot serializes them as needed at the storage layer; the
-gather only parallelizes the network/RPC roundtrips.
-
-## Don't Hold State Outside the Context
-
-Don't stash data on `self` inside a transaction — every call may run on a
-fresh Servicer instance, and instance attributes don't persist. State lives
-in `self.state` (per-actor) or external systems.
-
-## Transactions May Have No Response
-
-`Transaction(... response=None ...)` is a valid shape for transactions
-that have no payload to return. The method's return type is then
-`-> None` and the body has no `return` statement — common for
-orchestration calls where the caller only needs success/failure
-(raised errors). See `api-pydantic.md` for the cross-method rule.
-
-## See Also
-
-- `api-methods.md` — "The Servicer Signature Each Declaration
-  Obliges": the exact shape codegen requires, including the
-  `request=None` / `response=None` variants. Read it instead of
-  the generated `*_rbt.py`.
-- `rpc-refs.md` — `self.ref().state_id` (not `self.state_id`).
-- `rpc-calls.md` — kwargs convention; `await ref.method(context, k=v)`.
-- `rpc-forall.md` — `Service.forall(ids).method(context, ...)` for
-  fan-out across many actors.
-- `servicer-constructor.md` — when a transaction also constructs an
-  actor (e.g. `Account.open(context, id)`).
-- `api-errors.md` — typed errors that roll back the entire transaction.
-- `servicer-workflow.md` — when one-shot atomicity isn't enough and you
-  need durable, long-running orchestration.
+- [`servicer-workflow-external.md`](servicer-workflow-external.md) — external calls and N-item loops
+- [`patterns-load-and-benchmarking.md`](patterns-load-and-benchmarking.md) — measured costs and method
+- [`rpc-refs.md`](rpc-refs.md) — refs, existence probes, IDs

@@ -1,33 +1,26 @@
 ---
 title: Implement Reader Methods
 impact: HIGH
-impactDescription: Reader methods give read-only state access; incorrect signatures fail at startup
-tags: servicer, reader, ReaderContext, state, async
+impactDescription: A reader that mutates `self.state` loses the change silently; nested readers drop the caller's identity and multiply subscription cost
+tags: servicer, reader, ReaderContext, state, async, reactive, transitive, fan-out
+summary: "Mutating `self.state` in a reader is silently discarded; signature must match the API; reader-to-reader calls; subscription re-runs."
+step: servicer
+applies: [mcp-ui, web-app, backend-only]
+always: false
+verified: 1.6.0
+docs: ""
 ---
 
-## Implement Reader Methods
+# Implement Reader Methods
 
-> **Critical:** `self.state` is **read-only** inside a reader. Mutating
-> it raises at runtime. Multiple readers on the same actor run
-> concurrently — they're blocked only by an in-flight writer/transaction.
+## When you are here
 
-A method declared with `Reader(...)` in the API file receives a
-`ReaderContext` and must return its declared response type (or `None`
-if `response=None`). Inside a reader, `self.state` is read-only —
-mutations are not allowed and will fail.
+Implementing a method declared `Reader(...)`: it takes a
+`ReaderContext` and returns its declared response (nothing for
+`response=None`). Exact signature and variants: `api-methods.md` (read
+it, not the generated `*_rbt.py`).
 
-**Incorrect (mutating state in a reader):**
-
-```python
-async def messages(
-    self,
-    context: ReaderContext,
-) -> ChatRoom.MessagesResponse:
-    self.state.messages.append("seen")  # NEVER mutate in a reader
-    return ChatRoom.MessagesResponse(messages=self.state.messages)
-```
-
-**Correct (canonical reader shape):**
+## Do this
 
 ```python
 from chat_room.v1.chat_room_rbt import ChatRoom
@@ -43,43 +36,59 @@ class ChatRoomServicer(ChatRoom.Servicer):
         return ChatRoom.MessagesResponse(messages=self.state.messages)
 ```
 
-## Method Signature Matches the API File
+- Treat `self.state` as read-only.
+- Readers on one actor run concurrently; they wait for an in-flight
+  writer or transaction on that actor.
+- A reader may call **readers** on other actors with the same
+  `context`: `await Account.ref(account_id).balance(context)`.
+- **Subscriptions are transitive**: a subscribed reader (React hook,
+  reactive call) re-runs when its own actor *or* any actor it read
+  through other readers changes, including through `forall` (verified
+  at 1.6.0). One aggregating reader replaces N per-actor subscriptions;
+  cost and depth rules: `patterns-cross-actor-reads.md`.
 
-The signature codegen obliges — the base class to subclass, the
-`request=None` / `response=None` variants, and the two lookalike
-shapes you will find if you grep the generated `*_rbt.py` — is in
-`api-methods.md` ("The Servicer Signature Each Declaration
-Obliges"). Reading it is cheaper than opening the generated file,
-and complete.
+## Never
 
-## Readers Run Concurrently
+- Mutating `self.state` (`self.state.messages.append("seen")  # NEVER`).
+  It does not raise: the change appears in that one response and is
+  never persisted (observed at 1.6.0: a reader set a field to 999 and
+  returned it; the next read saw the old value). Use a `Writer` or
+  `Transaction`.
+- Calling a `Writer`, `Transaction` or constructor — a reader context
+  calls only readers (`rpc-calls.md`); cross-actor work is a
+  `Transaction`.
+- Computing "mine" from `context.auth` in a reader another reader
+  calls — the inner call is app-internal with `context.auth` `None`,
+  silently wrong. Pass the viewer explicitly (`servicer-authorizer.md`
+  § Never).
+- `self.state_id` — use `self.ref().state_id` (`rpc-refs.md`).
 
-Multiple readers on the same actor can run in parallel; they don't block
-each other. They are blocked by an in-flight writer/transaction on that
-actor and resume after it completes.
+## Limits
 
-## Calling Other Actors Is Allowed (But Read-Only)
+- Reading a never-constructed actor aborts `StateNotConstructed`
+  (`rpc-refs.md`).
+- A fan-out reader of about 150 actors did not finish inside the
+  request window (`patterns-cross-actor-reads.md`).
+- A reader fanning out from a read-mostly actor may return the other
+  actors as of its own host's last write; a polled aggregator then
+  showed a frozen world for minutes (agentic-demo, 1.4.0; not
+  re-verified). Have the events that matter also write to the
+  aggregator.
 
-A reader may call `await Service.ref(other_id).reader_method(context)` —
-the call propagates the `ReaderContext`. Calling a `Writer` or
-`Transaction` method from a reader is a category error; use a
-`Transaction` method if the work is genuinely cross-actor.
+## Scales as
 
-A reader of a `Bank` actor calling into per-account readers, run from a
-transaction context (which can also call readers):
+- In dev, effect validation re-runs every nested inline reader, so
+  fan-out multiplies per level; the one-level rule is in
+  `patterns-cross-actor-reads.md`.
 
-```python
-async def balance(account_id: str):
-    account = Account.ref(account_id)
-    balance = await account.balance(context)  # Account.balance is a reader
-    return Balance(account_id=account_id, balance=balance.amount)
-```
+## Errors you will see
 
-## See Also
+| Error text (stable prefix) | Meaning | Fix |
+| --- | --- | --- |
+| `No overload variant matches argument types "ReaderContext"` | mypy: a reader called a writer, transaction or constructor | Move the work to a `Transaction` |
 
-- `rpc-refs.md` — getting an actor ref and the actor's ID. The
-  recurring trip: `self.state_id` doesn't exist; use
-  `self.ref().state_id`.
-- `rpc-calls.md` — kwargs convention for calling other actors.
-- `servicer-authorizer.md` — every Servicer needs `def authorizer(self)`
-  returning a constructed rule.
+## See also
+
+- [`patterns-cross-actor-reads.md`](patterns-cross-actor-reads.md) — fan-out depth, materialize on write
+- [`servicer-authorizer.md`](servicer-authorizer.md) — nested calls carry no identity
+- [`rpc-calls.md`](rpc-calls.md) — which context calls which method

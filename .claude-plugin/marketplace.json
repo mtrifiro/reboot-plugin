@@ -5,27 +5,29 @@
     "email": "team@reboot.dev"
   },
   "metadata": {
-    "description": "Skills for building MCP UIs with Reboot.",
+    "description": "Skills for building Reboot apps (MCP UIs and standalone Web Apps) from your coding agent.",
     "version": "1.6.0"
   },
   "plugins": [
     {
       "name": "reboot",
-      "description": "Use Reboot to build MCP UIs for ChatGPT, Claude, VSCode, Goose, and others.",
-      "source": "./",
-      "strict": false,
-      "skills": [
-        "./skills/app",
-        "./skills/feature",
-        "./skills/mcp-ui",
-        "./skills/web-app",
-        "./skills/run",
-        "./skills/dashboard",
-        "./skills/deploy",
-        "./skills/inspect",
-        "./skills/python",
-        "./skills/upgrade"
-      ]
+      "description": "Build Reboot apps from your coding agent: MCP UIs for ChatGPT, Claude, VSCode, Goose and others, and standalone Web Apps, on one backend.",
+      "category": "development",
+      "source": "./"
+    },
+    {
+      "name": "reboot-progress",
+      "description": "Claude Code only: a band above the prompt with what Claude is working on, the Reboot build's progress, buttons for the dashboard and the app, how far a test run or a deploy is, and toasts when the app or the dashboard starts or stops.",
+      "author": {
+        "name": "Reboot",
+        "email": "team@reboot.dev",
+        "url": "https://reboot.dev"
+      },
+      "homepage": "https://reboot.dev",
+      "repository": "https://github.com/reboot-dev/reboot-plugin",
+      "license": "Apache-2.0",
+      "category": "development",
+      "source": "./mods/reboot-progress"
     }
   ]
 }

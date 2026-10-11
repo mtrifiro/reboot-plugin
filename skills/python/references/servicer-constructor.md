@@ -1,55 +1,29 @@
 ---
 title: Handle Constructor Methods
 impact: HIGH
-impactDescription: Initial state set in the wrong place leaks across actors or never runs
-tags: servicer, constructor, context.constructor, create, initialization
+impactDescription: Initial state set in the wrong place leaks across actors or never runs; a constructor called twice aborts with `StateAlreadyConstructed`
+tags: servicer, constructor, context.constructor, create, initialization, factory, StateAlreadyConstructed
+summary: "Never set initial state in `__init__`; a second call aborts `StateAlreadyConstructed`; use `Transaction(factory=True)` if it constructs others."
+step: servicer
+applies: [mcp-ui, web-app, backend-only]
+always: false
+verified: 1.6.0
+docs: ""
 ---
 
-## Handle Constructor Methods
+# Handle Constructor Methods
 
-> **Critical:** invoke a constructor as `await Service.create(context, id)`
-> (or `await Service.<CtorMethod>(context, id, **kwargs)`), **never**
-> as `Service.ref(id).method(...)` — the latter skips creation
-> semantics. Inside the implementation, branch on
-> `context.constructor` for set-once initial state.
+## When you are here
 
-A method declared with `factory=True` on its `Writer(...)` or
-`Transaction(...)` factory is the explicit creation path for an actor.
-The Servicer implementation is just an ordinary writer/transaction
-method — the _constructor-ness_ shows up in two places:
+Implementing a method declared `factory=True` on its `Writer(...)` or
+`Transaction(...)`: the actor's explicit creation path. Calling it
+(`Service.<ctor>(context, id)`, the `(ref, response)` tuple):
+`rpc-constructor-calls.md`; exact signature: `api-methods.md`.
 
-1. **Caller side**: use `await Service.create(context, id)` (not
-   `Service.ref(id).method(...)`) to invoke it.
-2. **Servicer side**: branch on `context.constructor` to set initial state
-   only on the creation pass.
-
-**Incorrect (initial state set in `__init__`):**
+## Do this
 
 ```python
-class AccountServicer(Account.Servicer):
-
-    def __init__(self):
-        # WRONG — runs on every Servicer instantiation, not on create.
-        self.state.balance = 0
-```
-
-**Correct (set initial state in the constructor method):**
-
-`api/bank/v1/account.py`:
-
-```python
-open=Writer(
-    request=OpenRequest,
-    response=None,
-    factory=True,
-    description="Bring the account into existence with a zero balance.",
-    mcp=None,
-),
-```
-
-`account_servicer.py`:
-
-```python
+# api/bank/v1/account.py: open=Writer(request=OpenRequest, response=None, factory=True, ...)
 from reboot.aio.contexts import WriterContext
 
 
@@ -60,46 +34,97 @@ class AccountServicer(Account.Servicer):
         context: WriterContext,
         request: Account.OpenRequest,
     ) -> None:
-        if context.constructor:
-            self.state.name = request.name
-            self.state.balance = 0
+        self.state.name = request.name
+        self.state.balance = 0
 ```
 
-## `context.constructor` Distinguishes Create from Re-Open
-
-A constructor method may also be invokable on an existing actor; branch
-on `context.constructor` so set-once fields aren't overwritten on a
-second call.
-
-## Calling from Initialize
-
-```python
-async def initialize(context: InitializeContext):
-    await Bank.create(context, SINGLETON_BANK_ID)
-```
-
-`Service.create(context, id)` is **idempotent** when called from the
-`initialize` hook, so it's safe to invoke on every application start.
-
-## Calling from a Transaction
-
-A transaction can create and operate on a new actor in one atomic step:
+- The body runs only when the actor does not exist; on an existing one
+  the runtime aborts with `StateAlreadyConstructed` first, so inside an
+  explicit constructor `context.constructor` is always `True` and needs
+  no branch (1.6.0 source, `state_managers.py`; observed at 1.6.0).
+- In a type with a factory, non-constructor methods see
+  `context.constructor == False` (observed at 1.6.0).
+- In a type with **no** factory, the first writer or transaction call
+  constructs the actor implicitly and sees `context.constructor ==
+  True` for that call only; gate first-write initialization there:
 
 ```python
-async def sign_up(
-    self, context: TransactionContext, request: Bank.SignUpRequest,
+async def send(
+    self, context: WriterContext, request: ChatRoom.SendRequest,
 ) -> None:
-    account, _ = await Account.open(context, request.account_id)
-    await account.deposit(context, amount=request.initial_deposit)
+    if context.constructor:
+        self.state.topic = "general"
+    self.state.messages.append(request.message)
 ```
 
-`Account.open(context, id)` here is the constructor (the `open` method
-declared `factory=True`) and returns the actor reference plus the
-response (or `None` when `response=None`).
+- Create and use a new actor atomically from a transaction:
 
-## See Also
+```python
+account, _ = await Account.open(context, request.account_id)  # TransactionContext
+await account.deposit(context, amount=request.initial_deposit)
+```
 
-- `api-methods.md` — "The Servicer Signature Each Declaration
-  Obliges": the exact shape codegen requires for a factory method,
-  including the `request=None` / `response=None` variants. Read it
-  instead of the generated `*_rbt.py`.
+- Create singletons in the `initialize` hook
+  (`await Bank.create(context, SINGLETON_BANK_ID)`, `create` being
+  `Bank`'s factory); why that is safe every boot:
+  `lifecycle-initialize-hook.md`.
+
+## Never
+
+- **Initial state in `__init__`** (`self.state.balance = 0  # WRONG`).
+  Servicer instances are created lazily and reused; set state in the
+  constructor method.
+- **A "create or re-open" constructor.** On an existing actor it aborts
+  `StateAlreadyConstructed`; get-or-create from the caller
+  (`rpc-constructor-calls.md` § Never).
+- **Stamping `context.auth` in a constructor reached from another
+  servicer.** A nested `create` is app-internal with `context.auth`
+  `None`, so an "owner" or first history entry comes out empty
+  (reboot-crm-03, 1.6.0). Pass it as a request field
+  (`servicer-authorizer.md` § Never).
+- **A `Writer(factory=True)` that may one day construct another actor
+  or write a second state.** A writer cannot call another actor's
+  writer or constructor (`TypeError`, see Errors), and an existing
+  `Writer` constructor cannot become a `Transaction` on persisted state
+  (reboot-crm-12, 1.6.0). If in doubt, declare
+  `Transaction(mode=Exclusive(), factory=True)` from the start.
+- **A field added to the constructor later, expected on existing
+  actors.** Their constructor never reruns, so it stays at its zero
+  value; allocate lazily (`rpc-refs.md` § Never).
+- **Re-deriving a `uuid4()` id minted in the constructor.** Reading it
+  back from state is fine (`patterns-time-and-randomness.md`).
+
+## Limits
+
+- Callable only from a `TransactionContext`, `WorkflowContext` or
+  `ExternalContext` (which includes `InitializeContext`), never a
+  reader or writer (generated signature, 1.6.0).
+- Constructors cannot be scheduled and are not on `Service.ref(id)` or
+  `Service.forall(ids)` (1.6.0 template).
+- Changing a constructor between `Writer` and `Transaction` on
+  persisted state is refused at boot, even with `factory=True`
+  unchanged (reboot-crm-12, 1.6.0); `api-schema-evolution.md` lists the
+  kind change as compatible without this exception.
+- In development, effect validation runs the body twice; the first
+  run's effects, including actors a transaction constructor created,
+  are discarded (1.6.0 source).
+- `Transaction -> Writer factory` nesting is proven. Deeper chains
+  (transaction factories calling transaction factories that construct
+  stdlib actors) were part of a hang at 1.4.0, not retested at 1.6.0
+  (theater-network-05); keep creation shallow.
+
+## Scales as
+
+- Not measured.
+
+## Errors you will see
+
+| Error text (stable prefix) | Meaning | Fix |
+| --- | --- | --- |
+| `Reboot options for method` `...` `updated from` | A persisted constructor's kind changed between `Writer` and `Transaction` | Revert the kind; construct the other actor elsewhere |
+
+## See also
+
+- [`rpc-constructor-calls.md`](rpc-constructor-calls.md) — how callers invoke a constructor
+- [`lifecycle-initialize-hook.md`](lifecycle-initialize-hook.md) — singletons and replayed creates
+- [`api-methods.md`](api-methods.md) — the exact factory method signature

@@ -1,3 +1,12 @@
+---
+title: "Python apps: declare dev dependencies for uv"
+summary: "Mirror rye dev dependencies into a PEP 735 dependency-groups table so uv installs them."
+kind: migration
+audience: agent
+applies: [mcp-ui, web-app, backend-only]
+when: "pyproject.toml lists dev dependencies only under tool.rye"
+---
+
 ## Python apps: declare dev dependencies for `uv`
 
 Reboot's Python examples now declare dev dependencies in a PEP 735

@@ -86,22 +86,22 @@ START_SECONDS=$(date +%s)
 printf '\033[1;34m[reboot-plugin]\033[0m installing pinned cloudflared %s into %s ...\n' \
     "$CLOUDFLARED_VERSION" "$CLOUDFLARED_DIR" >&2
 
-# Verify a downloaded file's SHA-256 against an expected string.
-# Best-effort: if neither `sha256sum` nor `shasum` is available
-# we log a warning and skip rather than block the install.
+# Verify a downloaded file's SHA-256 against the pinned digest. Without
+# a tool to compute it, nothing is installed: an unverified download is
+# not what the pin promises.
 _verify_sha256() {
     _file="$1"
     _expected="$2"
-    if [ -z "$_expected" ]; then
-        return 0
-    fi
     if command -v sha256sum >/dev/null 2>&1; then
         _actual="$(sha256sum "$_file" | awk '{print $1}')"
     elif command -v shasum >/dev/null 2>&1; then
         _actual="$(shasum -a 256 "$_file" | awk '{print $1}')"
+    elif command -v openssl >/dev/null 2>&1; then
+        _actual="$(openssl dgst -sha256 "$_file" | awk '{print $NF}')"
     else
-        printf '\033[1;33m[reboot-plugin]\033[0m no sha256sum/shasum found; skipping cloudflared SHA-256 verification\n' >&2
-        return 0
+        printf '\033[1;31m[reboot-plugin]\033[0m no sha256sum, shasum or openssl to verify cloudflared %s; not installing\n' \
+            "$CLOUDFLARED_VERSION" >&2
+        exit 1
     fi
     if [ "$_expected" != "$_actual" ]; then
         printf '\033[1;31m[reboot-plugin]\033[0m cloudflared SHA-256 mismatch (expected %s, got %s)\n' \

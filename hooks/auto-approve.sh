@@ -7,15 +7,19 @@
 #   1. Read-only inspection of this plugin's OWN skill files, so a
 #      skill can read its sibling references. Covers the Read, LS,
 #      Glob, and Grep tools, plus a small allowlist of read-only
-#      Bash binaries (ls, cat, head, tail, find, wc, file, stat)
-#      aimed at a path under `$CLAUDE_PLUGIN_ROOT/skills/`.
+#      Bash binaries (ls, cat, head, tail, wc, file, stat) whose
+#      every path argument lies under `$CLAUDE_PLUGIN_ROOT/skills/`
+#      and whose flags come from a short per-command list. `find`
+#      is not on the list: `-exec`, `-delete` and `-fprint` make it
+#      a write.
 #
 #   2. The Reboot dev commands issued by the `run` and `dashboard`
 #      skills: `uv sync`, `npm install`, `npm run dev`,
 #      `cloudflared tunnel …`, `uv run rbt dev run …`,
-#      `uv run rbt dashboard …`, `npx @mcpjam/inspector …`. These
+#      `uv run rbt dashboard …`, the MCPJam inspector. These
 #      are approved ONLY inside a Reboot project tree (the working
-#      directory, or an ancestor, holds a `.rbtrc`).
+#      directory, or an ancestor, holds a `.rbtrc`), and only with
+#      the flags each may take.
 #
 # Guards that hold for every case:
 #
@@ -32,7 +36,14 @@
 # `(` `)` `\`) is never approved. Every part must match category
 # 1, a stdin filter, a bare `cd`, or a category-2 Reboot dev
 # command; the call is approved only if at least one part is a
-# real op and none is unsafe.
+# real op and none is unsafe. Every token of every part is checked:
+# a path must lie under the plugin's `skills/`, a flag must be one
+# the command may take, a bare integer is a count. Anything else (a
+# second path, `~`, a quote, a flag with a path value such as
+# `sort -o`) defers to the prompt.
+#
+# `tests/hooks/auto_approve_test.py` is the table of commands this
+# must approve and must defer; `tools/check-all.sh` runs it.
 #
 # Anything not matching exits silently with status 0; Claude Code
 # then falls back to the normal permission prompt.
@@ -83,7 +94,7 @@ input=$(cat)
 # a Claude Code-only concept: Codex's schema requires it too, with
 # Claude Code's exact enum.
 is_claude_code() {
-    [ -n "${CLAUDECODE}" ] && [ -z "$(field turn_id)" ]
+    [ -n "${CLAUDECODE:-}" ] && [ -z "$(field turn_id)" ]
 }
 
 emit_allow() {
@@ -93,7 +104,8 @@ emit_allow() {
 
 # Extract a top-level string field from the input JSON. Naive sed parse
 # — fine for Claude Code's flat tool_input shape (no escaped quotes in
-# paths).
+# paths). A value holding an escaped quote keeps its backslash, which
+# the metacharacter screen below rejects.
 field() {
     printf '%s' "$input" | sed -n "s/.*\"$1\"[[:space:]]*:[[:space:]]*\"\\([^\"]*\\)\".*/\\1/p"
 }
@@ -101,7 +113,7 @@ field() {
 is_in_plugin() {
     # Empty string fails (no prefix match against a non-empty constant).
     case "$1" in
-        "${CLAUDE_PLUGIN_ROOT}/skills/"*)
+        "${CLAUDE_PLUGIN_ROOT}/skills" | "${CLAUDE_PLUGIN_ROOT}/skills/"*)
             return 0
             ;;
     esac
@@ -113,17 +125,129 @@ has_traversal() {
     return 1
 }
 
-# True (0) when every whitespace-separated token in $1 is a flag
-# (`-x` / `--long`) or a bare number. An empty list is true, so a
-# command with no arguments passes.
-args_all_flags() {
-    for arg in $1; do
+# True (0) when the flag token $1 is one a command may take: an exact
+# flag from $2 (space-separated; one ending in `=` takes a value of
+# letters, digits and `_ . / : @ -`), or `-` followed only by letters
+# from $3, or, when $4 is `num`, `-` followed by digits (`head -40`).
+flag_ok() {
+    for exact in $2; do
+        [ "$1" = "$exact" ] && return 0
+        case "$exact" in
+            *=)
+                case "$1" in
+                    "$exact"?*)
+                        value="${1#"$exact"}"
+                        case "$value" in *[!A-Za-z0-9_./:@-]*) ;; *) return 0 ;; esac
+                        ;;
+                esac
+                ;;
+        esac
+    done
+    case "$1" in
+        --*) return 1 ;;
+        -?*) ;;
+        *) return 1 ;;
+    esac
+    letters="${1#-}"
+    case "$letters" in
+        *[!0-9]*) ;;
+        *) [ "${4:-}" = num ] && return 0; return 1 ;;
+    esac
+    [ -n "$3" ] || return 1
+    while [ -n "$letters" ]; do
+        c="${letters%"${letters#?}"}"
+        case "$3" in *"$c"*) ;; *) return 1 ;; esac
+        letters="${letters#?}"
+    done
+    return 0
+}
+
+# True (0) when every token in $1 is a flag `flag_ok` accepts for the
+# spec in $2 $3 $4, or a bare integer. An empty list is fine.
+args_ok() {
+    list=$1; shift
+    for arg in $list; do
         case "$arg" in
-            -* | [0-9]*) ;;
-            *) return 1 ;;
+            *[!0-9]*) flag_ok "$arg" "$@" || return 1 ;;
         esac
     done
     return 0
+}
+
+# True (0) when $1 holds at least one path, and every token is a path
+# under this plugin's `skills/`, a flag `flag_ok` accepts for the spec
+# in $2 $3 $4, or a bare integer.
+args_in_plugin() {
+    list=$1; shift
+    paths=0
+    for arg in $list; do
+        case "$arg" in
+            "${CLAUDE_PLUGIN_ROOT}/skills" | "${CLAUDE_PLUGIN_ROOT}/skills/"*) paths=$((paths + 1)) ;;
+            *[!0-9]*) flag_ok "$arg" "$@" || return 1 ;;
+        esac
+    done
+    [ "$paths" -gt 0 ]
+}
+
+# A read-only binary that reads files or stdin: with a plugin path
+# among its arguments it is a file reader (every path under `skills/`),
+# otherwise a stdin filter (flags only).
+reader_or_filter() {
+    list=$1; shift
+    case " $list" in
+        *" ${CLAUDE_PLUGIN_ROOT}/skills"*) args_in_plugin "$list" "$@" ;;
+        *) args_ok "$list" "$@" ;;
+    esac
+}
+
+# True (0) when every token in $1 is one of `rbt`'s own long flags
+# (`--no-chaos`, `--port=9991`, `--env-file=.env`, …) or a bare
+# integer. `rbt` flags only configure `rbt`; the project gate and the
+# metacharacter screen are what keep the command local.
+rbt_args_ok() {
+    for arg in $1; do
+        case "$arg" in
+            --[a-z]*)
+                name="${arg%%=*}"
+                case "$name" in *[!a-z-]*) return 1 ;; esac
+                case "$arg" in
+                    *=*)
+                        value="${arg#*=}"
+                        case "$value" in *[!A-Za-z0-9_./:@-]*) return 1 ;; esac
+                        ;;
+                esac
+                ;;
+            *[!0-9]*) return 1 ;;
+        esac
+    done
+    return 0
+}
+
+# True (0) when $1 is the MCPJam inspector's argument list as the `run`
+# skill issues it: `--url http://localhost:<port>/mcp`, `--oauth`,
+# `--no-open`, in any order. `--config` (a file that can name stdio
+# servers, i.e. commands to run) and anything else defer.
+mcpjam_args_ok() {
+    expect_url=0
+    for arg in $1; do
+        if [ "$expect_url" -eq 1 ]; then
+            case "$arg" in
+                http://localhost:*/mcp | http://127.0.0.1:*/mcp)
+                    port="${arg#http://*:}"; port="${port%/mcp}"
+                    case "$port" in ''|*[!0-9]*) return 1 ;; esac
+                    ;;
+                *) return 1 ;;
+            esac
+            expect_url=0
+            continue
+        fi
+        case "$arg" in
+            --url) expect_url=1 ;;
+            --oauth | --no-open) ;;
+            *) return 1 ;;
+        esac
+    done
+    [ "$expect_url" -eq 0 ]
 }
 
 # True (0) when $1 — resolved against $cwd when relative — sits
@@ -150,11 +274,13 @@ case "$tool" in
         # A skill routed by this plugin auto-approves its own Skill
         # invocation so the hand-off between skills doesn't trigger a
         # prompt. Only this plugin's skills qualify, matched by their
-        # `reboot:` selector; `deploy` and `inspect` are intentionally
-        # excluded because they reach outside the local project.
+        # `reboot:` selector; `deploy`, `inspect` and `report` are
+        # intentionally excluded because they reach outside the local
+        # project.
         case "$(field skill)" in
-            reboot:app | reboot:feature | reboot:mcp-ui | reboot:web-app | \
-            reboot:python | reboot:run | reboot:upgrade)
+            reboot:app | reboot:build | reboot:dashboard | reboot:feature | \
+            reboot:mcp-ui | reboot:web-app | reboot:python | reboot:run | \
+            reboot:upgrade)
                 emit_allow
                 ;;
         esac
@@ -200,22 +326,22 @@ case "$tool" in
         # part is a real safe op AND no part is unsafe. A part is
         # "safe" if it is one of:
         #
-        #   (a) a safe read-only binary followed by a path inside this
-        #       plugin's skills (the producer side of a pipeline, or a
-        #       standalone op);
+        #   (a) a read-only binary whose paths all lie under this
+        #       plugin's skills and whose flags are on its list (the
+        #       producer side of a pipeline, or a standalone op);
         #
         #   (b) a pure stdin filter — head, tail, wc, sort, uniq —
-        #       with no arguments, or with arguments that are ALL
-        #       flags (`-x`, `--long`) or numerics. Covers
-        #       `… | head -50`, `… | wc -l`; rejects `… | head x.txt`;
+        #       with flags from its list and bare counts only. Covers
+        #       `… | head -50`, `… | wc -l`; rejects `… | head x.txt`
+        #       and `… | sort -o file`;
         #
         #   (c) a bare `cd` — no side effects of its own; it only
         #       moves the working directory tracked in `effective_dir`
         #       so the Reboot project gate below sees the right place;
         #
-        #   (d) a Reboot dev command the `run` skill issues — gated on
-        #       `in_reboot_project` and (where its arguments are
-        #       flags) on `args_all_flags`.
+        #   (d) a Reboot dev command the `run` or `dashboard` skill
+        #       issues — gated on `in_reboot_project` and on the flags
+        #       that command may take.
         #
         # A `cd` part is safe but is not itself a "real op", so a
         # command that is only `cd …` still defers to the prompt.
@@ -226,25 +352,37 @@ case "$tool" in
                 trimmed=$(printf '%s' "$part" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')
                 [ -z "$trimmed" ] && continue
                 case "$trimmed" in
-                    'ls '*"${CLAUDE_PLUGIN_ROOT}/skills/"* | \
-                    'cat '*"${CLAUDE_PLUGIN_ROOT}/skills/"* | \
-                    'head '*"${CLAUDE_PLUGIN_ROOT}/skills/"* | \
-                    'tail '*"${CLAUDE_PLUGIN_ROOT}/skills/"* | \
-                    'find '*"${CLAUDE_PLUGIN_ROOT}/skills/"* | \
-                    'wc '*"${CLAUDE_PLUGIN_ROOT}/skills/"* | \
-                    'file '*"${CLAUDE_PLUGIN_ROOT}/skills/"* | \
-                    'stat '*"${CLAUDE_PLUGIN_ROOT}/skills/"* )
+                    'ls '*)
+                        args_in_plugin "${trimmed#ls}" "" 1aAlhR || exit 1
                         approved=$((approved + 1))
                         ;;
-                    head | tail | wc | sort | uniq)
-                        # Stdin filter with no args.
+                    'cat '*)
+                        args_in_plugin "${trimmed#cat}" "" nb || exit 1
                         approved=$((approved + 1))
                         ;;
-                    'head '* | 'tail '* | 'wc '* | 'sort '* | 'uniq '*)
-                        # Stdin filter with args — every arg must be a
-                        # flag (`-X` / `--long`) or numeric.
+                    'file '*)
+                        args_in_plugin "${trimmed#file}" "" b || exit 1
+                        approved=$((approved + 1))
+                        ;;
+                    'stat '*)
+                        args_in_plugin "${trimmed#stat}" "" "" || exit 1
+                        approved=$((approved + 1))
+                        ;;
+                    head | 'head '* | tail | 'tail '*)
                         cmd_name="${trimmed%% *}"
-                        args_all_flags "${trimmed#$cmd_name}" || exit 1
+                        reader_or_filter "${trimmed#"$cmd_name"}" "-n -c" qv num || exit 1
+                        approved=$((approved + 1))
+                        ;;
+                    wc | 'wc '*)
+                        reader_or_filter "${trimmed#wc}" "" lwcm || exit 1
+                        approved=$((approved + 1))
+                        ;;
+                    sort | 'sort '*)
+                        args_ok "${trimmed#sort}" "" nrfub || exit 1
+                        approved=$((approved + 1))
+                        ;;
+                    uniq | 'uniq '*)
+                        args_ok "${trimmed#uniq}" "" cdu || exit 1
                         approved=$((approved + 1))
                         ;;
                     cd | 'cd '*)
@@ -261,35 +399,36 @@ case "$tool" in
                     'uv sync' | 'uv sync '*)
                         # `run` skill — backend dependency install.
                         in_reboot_project "$effective_dir" || exit 1
-                        args_all_flags "${trimmed#uv sync}" || exit 1
+                        args_ok "${trimmed#uv sync}" \
+                            "--quiet --frozen --locked --all-groups --no-dev" q || exit 1
                         approved=$((approved + 1))
                         ;;
                     'npm install' | 'npm install '*)
                         # `run` skill — frontend dependency install.
-                        # Flag-only: never a positional package name.
+                        # Never a package name, `-g` or a registry.
                         in_reboot_project "$effective_dir" || exit 1
-                        args_all_flags "${trimmed#npm install}" || exit 1
+                        args_ok "${trimmed#npm install}" \
+                            "--no-audit --no-fund --silent --quiet --prefer-offline --loglevel=" "" || exit 1
                         approved=$((approved + 1))
                         ;;
                     'npm run dev' | 'npm run dev '*)
                         # `run` skill — frontend dev server.
                         in_reboot_project "$effective_dir" || exit 1
-                        args_all_flags "${trimmed#npm run dev}" || exit 1
+                        args_ok "${trimmed#npm run dev}" \
+                            "-- --host --strictPort --port --port=" "" || exit 1
                         approved=$((approved + 1))
                         ;;
                     'uv run rbt dev run' | 'uv run rbt dev run '*)
                         # `run` skill — start the Reboot backend.
                         in_reboot_project "$effective_dir" || exit 1
-                        args_all_flags "${trimmed#uv run rbt dev run}" \
-                            || exit 1
+                        rbt_args_ok "${trimmed#uv run rbt dev run}" || exit 1
                         approved=$((approved + 1))
                         ;;
                     'uv run rbt dashboard' | 'uv run rbt dashboard '*)
                         # `dashboard` skill — start the developer
                         # dashboard while an app is being built.
                         in_reboot_project "$effective_dir" || exit 1
-                        args_all_flags "${trimmed#uv run rbt dashboard}" \
-                            || exit 1
+                        rbt_args_ok "${trimmed#uv run rbt dashboard}" || exit 1
                         approved=$((approved + 1))
                         ;;
                     'cloudflared tunnel '* )
@@ -297,6 +436,7 @@ case "$tool" in
                         in_reboot_project "$effective_dir" || exit 1
                         args="${trimmed#cloudflared tunnel }"
                         # Require exactly: --metrics localhost:<port> and --url http://localhost:<port> (either order).
+                        # shellcheck disable=SC2086  # splitting into words is the point
                         set -- $args
                         [ "$#" -eq 4 ] || exit 1
                         if [ "$1" = "--metrics" ] && [ "$3" = "--url" ]; then
@@ -312,15 +452,23 @@ case "$tool" in
                         case "$bport" in ''|*[!0-9]*) exit 1 ;; esac
                         approved=$((approved + 1))
                         ;;
-                    'npx @mcpjam/inspector'* | 'mcpjam-inspector'*)
-                        # `run` skill — MCPJam inspector for MCP UIs,
-                        # whether invoked directly or via the plugin's
-                        # `mcpjam-inspector` shim (the on-demand path
-                        # when the user asks us to launch it). Its
-                        # `--url <url>` / `--config <file>` arguments are
-                        # not flags, so the project gate and the
-                        # metacharacter screen are the guard.
+                    'npx @mcpjam/inspector@'* | mcpjam-inspector | 'mcpjam-inspector '*)
+                        # `run` skill — MCPJam inspector for MCP UIs, via
+                        # the plugin's `mcpjam-inspector` shim or a pinned
+                        # `npx @mcpjam/inspector@<version>`; only the
+                        # `--url`, `--oauth` and `--no-open` arguments.
                         in_reboot_project "$effective_dir" || exit 1
+                        program="${trimmed%% *}"
+                        case "$program" in
+                            'npx')
+                                package="${trimmed#npx }"; package="${package%% *}"
+                                version="${package#@mcpjam/inspector@}"
+                                case "$version" in ''|*[!0-9.]*) exit 1 ;; esac
+                                rest="${trimmed#npx "$package"}"
+                                ;;
+                            *) rest="${trimmed#mcpjam-inspector}" ;;
+                        esac
+                        mcpjam_args_ok "$rest" || exit 1
                         approved=$((approved + 1))
                         ;;
                     *)

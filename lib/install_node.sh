@@ -7,9 +7,14 @@
 
 set -eu
 
-# Pinned Node.js version. To bump, change here and update the
-# README.
+# Pinned Node.js version. To bump, change here, refresh the digests
+# below from https://nodejs.org/dist/v<version>/SHASUMS256.txt and
+# update the README.
 NODE_VERSION="22.11.0"
+SHA256_LINUX_X64="83bf07dd343002a26211cf1fcd46a9d9534219aad42ee02847816940bf610a72"
+SHA256_LINUX_ARM64="6031d04b98f59ff0f7cb98566f65b115ecd893d3b7870821171708cdbaf7ae6e"
+SHA256_DARWIN_ARM64="c379a90c6aa605b74042a233ddcda4247b347ba5732007d280e44422cc8f9ecb"
+SHA256_DARWIN_X64="ab28d1784625d151e3f608a9412a009118f376118ed842ae643f8c2efdfb0af6"
 
 # `PLUGIN_DATA` is hardcoded rather than read from `$CLAUDE_PLUGIN_DATA`.
 # Claude Code only sets that env var when it runs something from a
@@ -25,10 +30,10 @@ PLUGIN_DATA="$HOME/.claude/plugins/data/reboot"
 os_name="$(uname -s)"
 arch_name="$(uname -m)"
 case "$os_name-$arch_name" in
-    Linux-x86_64 | Linux-amd64) NODE_PLATFORM=linux-x64 ;;
-    Linux-aarch64 | Linux-arm64) NODE_PLATFORM=linux-arm64 ;;
-    Darwin-arm64) NODE_PLATFORM=darwin-arm64 ;;
-    Darwin-x86_64) NODE_PLATFORM=darwin-x64 ;;
+    Linux-x86_64 | Linux-amd64) NODE_PLATFORM=linux-x64; EXPECTED_SHA256="$SHA256_LINUX_X64" ;;
+    Linux-aarch64 | Linux-arm64) NODE_PLATFORM=linux-arm64; EXPECTED_SHA256="$SHA256_LINUX_ARM64" ;;
+    Darwin-arm64) NODE_PLATFORM=darwin-arm64; EXPECTED_SHA256="$SHA256_DARWIN_ARM64" ;;
+    Darwin-x86_64) NODE_PLATFORM=darwin-x64; EXPECTED_SHA256="$SHA256_DARWIN_X64" ;;
     *)
         printf '\033[1;31m[reboot-plugin]\033[0m unsupported platform: %s-%s\n' \
             "$os_name" "$arch_name" >&2
@@ -63,30 +68,25 @@ printf '\033[1;34m[reboot-plugin]\033[0m installing pinned Node.js %s into %s ..
 
 curl -fsSL --output "$STAGE/$tarball" "$url"
 
-# Verify against the official `SHASUMS256.txt` manifest. The
-# manifest's lines look like `<sha256>  node-v<version>-...tar.xz`,
-# so we grep for our tarball and pull the first field. If
-# neither `sha256sum` nor `shasum` is available we log a warning
-# and skip rather than block the install — same posture as the
-# repo's existing tooling.
-expected="$(
-    curl -fsSL "${base_url}/SHASUMS256.txt" 2>/dev/null |
-        grep " ${tarball}\$" |
-        awk '{print $1}'
-)"
-if [ -n "$expected" ]; then
-    if command -v sha256sum >/dev/null 2>&1; then
-        actual="$(sha256sum "$STAGE/$tarball" | awk '{print $1}')"
-    elif command -v shasum >/dev/null 2>&1; then
-        actual="$(shasum -a 256 "$STAGE/$tarball" | awk '{print $1}')"
-    else
-        actual=""
-    fi
-    if [ -n "$actual" ] && [ "$expected" != "$actual" ]; then
-        printf '\033[1;31m[reboot-plugin]\033[0m Node SHA-256 mismatch (expected %s, got %s)\n' \
-            "$expected" "$actual" >&2
-        exit 1
-    fi
+# Verify against the digest pinned above (from the release's
+# `SHASUMS256.txt`, fetched once when the pin was set, not at install
+# time: a manifest from the same origin as the tarball proves
+# nothing). Without a tool to compute it, nothing is installed.
+if command -v sha256sum >/dev/null 2>&1; then
+    actual="$(sha256sum "$STAGE/$tarball" | awk '{print $1}')"
+elif command -v shasum >/dev/null 2>&1; then
+    actual="$(shasum -a 256 "$STAGE/$tarball" | awk '{print $1}')"
+elif command -v openssl >/dev/null 2>&1; then
+    actual="$(openssl dgst -sha256 "$STAGE/$tarball" | awk '{print $NF}')"
+else
+    printf '\033[1;31m[reboot-plugin]\033[0m no sha256sum, shasum or openssl to verify Node.js %s; not installing\n' \
+        "$NODE_VERSION" >&2
+    exit 1
+fi
+if [ "$EXPECTED_SHA256" != "$actual" ]; then
+    printf '\033[1;31m[reboot-plugin]\033[0m Node SHA-256 mismatch (expected %s, got %s)\n' \
+        "$EXPECTED_SHA256" "$actual" >&2
+    exit 1
 fi
 
 # Strip the top-level `node-vX.Y.Z-<platform>/` so the contents

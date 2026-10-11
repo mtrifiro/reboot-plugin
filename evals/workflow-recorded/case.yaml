@@ -1,0 +1,13 @@
+schema_version: "1.1"
+name: workflow-recorded
+description: "With 'Workflow: main' recorded in AGENTS.md, the agent works on main and does not ask about branches again."
+tags: [workflow, flywheel]
+runs: 3
+execution:
+  prompt: "Add a due date to todos, so I can see which ones are late."
+  max_turns: 40
+  timeout_seconds: 900
+  allowed_tools: [Read, Glob, Grep, Skill, AskUserQuestion]
+  append_system_prompt: "You are in a planning-only session: you can read files and load skills but cannot write files or run commands. The project in your working directory is the app. Follow any skills that apply as far as you can without writing, and say what you would do at each step, in order. End with a short summary of what happens next."
+context:
+  scaffold_script: fixture.sh

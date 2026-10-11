@@ -24,9 +24,10 @@
 #     REBOOT_PLUGIN_DISABLE_CODEX_SANDBOX=yes   # consent; install for Codex
 #     REBOOT_PLUGIN_DISABLE_CODEX_SANDBOX=no    # decline; skip Codex install
 #
-#   If neither env var nor a TTY (stdin or /dev/tty) is available, the
-#   installer defaults to "yes" and logs that it did so, so headless
-#   installs are not blocked.
+#   If neither the env var nor a TTY (stdin or /dev/tty) is available,
+#   the installer answers "no" and skips the Codex install: the opt-out
+#   is a global change to every Codex session on the machine, and a
+#   headless `curl | bash` is no one's consent to it.
 #
 # Maintainer note
 #
@@ -49,14 +50,13 @@ log()   { printf "${BLUE}[reboot-plugin]${RESET} %s\n" "$*" >&2; }
 error() { printf "${RED}[reboot-plugin] error:${RESET} %s\n" "$*" >&2; }
 ok()    { printf "${GREEN}[reboot-plugin]${RESET} %s\n" "$*" >&2; }
 
-# Ask a Y/n question on the user's TTY, defaulting to Y (return 0).
-# Works under `curl | bash`: stdin is the curl pipe in that case, not
-# a TTY, but the user's terminal is still attached at /dev/tty so the
-# prompt is interactive. When there is truly no TTY anywhere (e.g.
-# running inside a Docker build or CI step), defaults to Y with a log
-# line so automated installs are not blocked. CI/CD pipelines that
-# want explicit consent can pre-answer via an env var read by the
-# caller; this helper just handles the interactive case.
+# Ask a Y/n question on the user's TTY, defaulting to Y (return 0)
+# when the user just presses Enter. Works under `curl | bash`: stdin
+# is the curl pipe in that case, not a TTY, but the user's terminal is
+# still attached at /dev/tty so the prompt is interactive. When there
+# is truly no TTY anywhere (a Docker build, a CI step), nobody can
+# consent, so the answer is N (return 1) with a log line; CI/CD
+# pipelines pre-answer via the env var the caller reads.
 prompt_yes_no() {
     local prompt="$1"
     local answer=""
@@ -68,18 +68,22 @@ prompt_yes_no() {
         tty_in=/dev/stdin
     fi
 
+    # `/dev/tty` exists but cannot be opened when there is no
+    # controlling terminal (a Docker build), so the read itself is the
+    # test: a failed read is "no terminal", not "Enter".
     if [ -n "$tty_in" ]; then
         printf "%s " "$prompt" >&2
-        IFS= read -r answer <"$tty_in" || answer=""
-    else
-        log "Non-interactive install (no TTY); defaulting to Y."
-        return 0
+        if IFS= read -r answer 2>/dev/null <"$tty_in"; then
+            case "$answer" in
+                ""|[Yy]|[Yy][Ee][Ss]) return 0 ;;
+                *) return 1 ;;
+            esac
+        fi
+        printf >&2 "\n"
     fi
-
-    case "$answer" in
-        ""|[Yy]|[Yy][Ee][Ss]) return 0 ;;
-        *) return 1 ;;
-    esac
+    log "Non-interactive install (no TTY); answering N. Set"
+    log "  REBOOT_PLUGIN_DISABLE_CODEX_SANDBOX=yes to consent without a prompt."
+    return 1
 }
 
 REPO="reboot-dev/reboot-plugin"
@@ -143,15 +147,17 @@ install_claude() {
         || { error "claude plugin install failed."; return 1; }
 
     # Pre-warm the bundled shims. For a local checkout the shims live
-    # in $source/bin; for a GitHub clone Claude Code drops them at
-    # ~/.claude/plugins/marketplaces/<org>-<repo>/bin (the slash in
-    # the repo slug becomes a dash in the directory name). `prewarm`
-    # is non-fatal, so a wrong guess just defers the download.
+    # in $source/bin; for a GitHub clone Claude Code checks the
+    # marketplace out at ~/.claude/plugins/marketplaces/<marketplace
+    # name> (the `name` in .claude-plugin/marketplace.json, recorded in
+    # ~/.claude/plugins/known_marketplaces.json), so the shims are in
+    # its bin/. `prewarm` is non-fatal, so a wrong guess just defers
+    # the download.
     local bindir
     if [ -d "$source/bin" ]; then
         bindir="$source/bin"
     else
-        bindir="$HOME/.claude/plugins/marketplaces/${REPO//\//-}/bin"
+        bindir="$HOME/.claude/plugins/marketplaces/$MARKETPLACE_NAME/bin"
     fi
     log "Pre-installing dependencies for Claude Code..."
     prewarm "$bindir"
@@ -349,16 +355,16 @@ install_codex() {
 
     if [ -z "$disable_sandbox" ]; then
         printf >&2 "\n"
-        printf >&2 "${BOLD}Codex sandbox decision${RESET}\n"
+        printf >&2 '%sCodex sandbox decision%s\n' "$BOLD" "$RESET"
         printf >&2 "  The Reboot plugin's main commands (rbt dev run, rbt generate, ...)\n"
         printf >&2 "  hang silently inside Codex's sandbox because of an upstream Codex\n"
         printf >&2 "  bug that breaks Python asyncio cross-thread wakeups:\n"
-        printf >&2 "    ${BOLD}https://github.com/openai/codex/issues/24933${RESET}\n"
+        printf >&2 '    %shttps://github.com/openai/codex/issues/24933%s\n' "$BOLD" "$RESET"
         printf >&2 "  Until that is fixed, the only way to make the plugin actually work\n"
         printf >&2 "  under Codex is to opt out of Codex's sandbox.\n"
         printf >&2 "\n"
-        printf >&2 "  Doing so writes ${BOLD}sandbox_mode = \"danger-full-access\"${RESET} into\n"
-        printf >&2 "  ~/.codex/config.toml. That setting is ${BOLD}global${RESET}: it affects every\n"
+        printf >&2 '  Doing so writes %ssandbox_mode = "danger-full-access"%s into\n' "$BOLD" "$RESET"
+        printf >&2 '  ~/.codex/config.toml. That setting is %sglobal%s: it affects every\n' "$BOLD" "$RESET"
         printf >&2 "  Codex session on this machine, not just sessions that touch the\n"
         printf >&2 "  Reboot plugin. You can undo it later by removing the sandbox_mode\n"
         printf >&2 "  line (tagged '# reboot-plugin') from ~/.codex/config.toml.\n"
@@ -460,7 +466,7 @@ main() {
         ok "Installed for: $(IFS=', '; echo "${INSTALLED_FOR[*]}")."
     fi
     printf >&2 "\nStart a new agent session, then ask to build a Reboot app"
-    printf >&2 " — e.g. ${BOLD}build a todo-list MCP UI${RESET}.\n"
+    printf >&2 ' — e.g. %sbuild a todo-list MCP UI%s.\n' "$BOLD" "$RESET"
 }
 
 # Run the install when this file is executed, directly or via

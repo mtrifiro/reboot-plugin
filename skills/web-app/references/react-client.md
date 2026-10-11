@@ -2,134 +2,89 @@
 title: Wire the Web SPA to the Reboot Backend
 impact: HIGH
 impactDescription: The browser shell, the backend URL, the generated hooks, and how a typed backend error reaches the user
-tags: web-app, react, vite, hooks, errors, RebootClientProvider
+tags: web-app, react, vite, hooks, errors, RebootClientProvider, template, allowed-origins
+summary: "An unset `VITE_REBOOT_URL` points at Vite's origin; copy `build/templates/web-app/web/`; own port, `strictPort`, sign-in, typed errors."
+step: frontend
+applies: [web-app]
+always: false
+verified: 1.6.0
+docs: ""
 ---
 
-## Wire the Web SPA to the Reboot Backend
+# Wire the Web SPA to the Reboot Backend
 
-Everything the standalone browser frontend needs. This is the
-web-app equivalent of the `mcp-ui` skill's scaffolding references —
-**do not read those**: their Vite config, nested
-`frontend/mcp/<name>/index.html` output, and `UI()` machinery are
-MCP-host-specific and do not apply to a web app.
+## When you are here
 
-## The `web/` Shell
+Building the standalone browser frontend at `web/`: Vite shell, provider
+and backend URL, sign-in, components calling the generated hooks. **Do
+not read the `mcp-ui` scaffolding references**: their Vite config,
+nested `frontend/mcp/<name>/index.html` output and `UI()` machinery are
+MCP-host-specific. The hook surface is
+[`react-generated-client.md`](../../python/references/react-generated-client.md).
 
-Stock Vite React-TS scaffolding (`npm create vite@latest web -- --template react-ts`), plus the two Reboot packages. Pin them to
-the same version as the backend's `reboot` dependency:
+## Do this
 
-```json
-{
-  "name": "<app>-web",
-  "private": true,
-  "type": "module",
-  "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build"
-  },
-  "dependencies": {
-    "@reboot-dev/reboot-api": "<same version as `reboot` in pyproject.toml>",
-    "@reboot-dev/reboot-react": "<same version>",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "zod": "^4.0.0"
-  }
-}
-```
+### The `web/` shell — copy it
 
-`vite.config.ts` is the stock config with two additions, both
-load-bearing:
+`web/` arrives with the template (`copy.sh web-app ...`; see
+[`build/templates/README.md`](../../build/templates/README.md)); do not
+run `npm create vite@latest`. Then `cd web && npm install`, `rbt generate`
+again, and `npm run build` to check the bundle. Every file is explained
+in the templates README; two are load-bearing:
 
-```ts
-export default defineConfig({
-  plugins: [react()],
-  // Two copies of `react` or `zod` — one from the app, one pulled
-  // through the Reboot packages — break hooks and schema identity
-  // checks at runtime.
-  resolve: { dedupe: ["react", "react-dom", "zod"] },
-  server: {
-    // Listen on every interface. Vite's default is `localhost`,
-    // which on modern Node resolves to IPv6 `[::1]` only; a
-    // forwarded port (Codespaces, VS Code remote, a dev VM, a
-    // tunnel) connects over IPv4 `127.0.0.1` and gets connection
-    // refused, so the page is unreachable from the browser even
-    // though the dev server is healthy and logs no error.
-    host: true,
-    port: parseInt(process.env.PORT || "5173", 10),
-  },
-});
-```
+- **`vite.config.ts`** — `resolve.dedupe: ["react", "react-dom", "zod"]`
+  (two copies break hooks and schema identity at runtime);
+  `server.host: true` (Vite's `localhost` binds IPv6 `[::1]` only, so a
+  forwarded IPv4 port is refused with no dev-server error — the most
+  common "starts fine, won't open").
+- **`src/App.tsx`** — the sign-in gate and one signed-in component;
+  replace its body.
 
-Leaving `server.host` out is the single most common reason a
-freshly built app "starts fine" and then won't open: `npm run dev`
-prints a URL, the process is up, and the browser cannot reach it.
+### The backend URL — set it explicitly in dev
 
-## The Backend URL — Set It Explicitly in Dev
-
-`<RebootClientProvider>` with no `url` falls back to detection:
-`window.REBOOT_URL`, then a `?rebootUrl=` query parameter, then
-`window.location.origin`. In development the SPA is served by Vite
-on `:5173` while the backend listens on `:9991`, so the fallback
-resolves to the **wrong** origin — and when even that is
-unavailable the client throws
-`Could not detect Reboot server URL. Ensure the page is served from the Reboot server.`
-
-Pass it explicitly, from an env file:
-
-```
-# web/.env.development
-VITE_REBOOT_URL=http://localhost:9991
-```
-
-`import.meta.env` needs Vite's ambient types or `npm run build`
-fails with `Property 'env' does not exist on type 'ImportMeta'`.
-Stock `create vite` scaffolding includes the file; if you assembled
-`web/` by hand, write it:
-
-```ts
-// web/src/vite-env.d.ts
-/// <reference types="vite/client" />
-```
+`<RebootClientProvider>` with no `url` falls back to `window.REBOOT_URL`,
+then `?rebootUrl=`, then `window.location.origin` — the **wrong** origin
+in dev, where the SPA is on Vite's port and the backend on the port
+`.rbtrc` names. The template reads `web/.env.development`
+(`VITE_REBOOT_URL=http://localhost:<port>`, written by the scaffold with
+the same port as `.rbtrc`; a second copy of the app changes both):
 
 ```tsx
-// web/src/main.tsx
 const REBOOT_URL =
   (import.meta.env.VITE_REBOOT_URL as string | undefined) ??
-  window.location.origin;
-
-createRoot(document.getElementById("root")!).render(
-  <RebootClientProvider url={REBOOT_URL}>
-    <App />
-  </RebootClientProvider>
-);
+  window.location.origin; // keeps a backend-served build working
+// <RebootClientProvider url={REBOOT_URL}>
 ```
 
-The `?? window.location.origin` keeps the production build working
-when the backend serves the built assets from one origin.
+### The generated client
 
-## The Generated Client
+Hooks, mutators and error classes from `rbt generate --react=` — the
+`useFoo` overloads, `UseFooApi`, the three-field reader return,
+`ResponseOrAborted`, `<Type><Method>Aborted`, snake→camel naming, why a
+hook id must be real on every render — are in
+[`react-generated-client.md`](../../python/references/react-generated-client.md).
+Do **not** open `web/src/api/**/*_rbt_react.ts` to rediscover them.
+Client state on top of the hooks:
+[`patterns-react-state.md`](../../python/references/patterns-react-state.md).
 
-The hook, mutator, and error declarations `rbt generate --react=`
-emits are identical for every frontend, so they live in one place:
-[`python/references/react-generated-client.md`](../../python/references/react-generated-client.md).
-Read it before writing components — it has the `useFoo` overloads,
-`UseFooApi`, the three-field reader return, `ResponseOrAborted`, the
-`<Type><Method>Aborted` error classes, the snake→camel naming rules,
-and why a hook id must be real on every render. Do **not** open
-`web/src/api/**/*_rbt_react.ts` to rediscover them.
+### Sign-in and sign-out
 
-What is web-app-specific: the client is created by the
-`<RebootClientProvider url={...}>` above, and the signed-in user's
-handle comes from the no-argument `useUser()` (see "Sign-in and
-Sign-out" below).
+`useSignIn()` / `useSignOut()` from `@reboot-dev/reboot-react` drive the
+built-in OAuth server at `/__/oauth/*`. The session is the HttpOnly
+`rbt_session` cookie (no token to store). The no-argument `useUser()`
+(present because the API declares a `User` type) returns
+`{ user, isLoading }`: `user === undefined` when signed out, `isLoading`
+while the `/__/oauth/whoami` probe runs. The template's `App.tsx` gates
+on `user`, then mounts `SignedIn({ user }: { user: UseUserApi })` so
+every hook below has a real id.
 
-## Surfacing a Typed Error to the User
+### Surfacing a typed error
 
-`aborted.error` is a discriminated union — the errors the method
-declared plus the framework's (`PermissionDenied`, `Unknown`, …) —
-tagged by `error.type`, which is the Python error class's name. A
-single translator keeps the switch in one place; every story with
-a "shows a visible error" requirement routes through it:
+`aborted.error` is a union of the method's declared errors and the
+framework's (`PermissionDenied`, `Unknown`, …), tagged by `error.type`
+(the Python class name), with the pydantic error model's fields
+camelCased. Translate in one place; the backend already refused, the
+frontend only reports:
 
 ```ts
 // web/src/errors.ts
@@ -140,8 +95,6 @@ export function friendlyError(aborted: {
   switch (aborted.error.type) {
     case "QuotaExceededError":
       return `Limit reached (${String(aborted.error.limit)}).`;
-    case "UnknownUserError":
-      return `No user named "${String(aborted.error.username)}".`;
     case "PermissionDenied":
       return "You don't have access to do that.";
     default:
@@ -150,97 +103,80 @@ export function friendlyError(aborted: {
 }
 ```
 
-The fields on each error case are exactly the fields declared on
-the pydantic error model in the API definition, camelCased. The
-frontend only _reports_; the backend already refused the operation.
+### Accessible markup, so scenarios can drive the page
 
-## Accessible Markup, So Scenarios Can Drive the Page
-
-The web app scenarios (`python/references/testing-web-app.md`)
-find elements the way a person, or a screen reader, does: a button
-by what it says, a field by its label, a table by its heading. They
-never take a selector, so the page has to expose an accessibility
-tree. Build every page this way from the start, not when the first
-scenario fails to find something:
+Scenarios ([`testing-web-app.md`](../../python/references/testing-web-app.md))
+find elements as a person or screen reader does, never by selector. Build
+every page this way from the start:
 
 ```tsx
-// A field's label is paired with it: `htmlFor` names the input's
-// `id`. `fills "Amount ($)" in the web app with `250`` finds it
-// through that pairing; a placeholder does not count.
-<label htmlFor="amount">Amount ($)</label>
+<label htmlFor="amount">Amount ($)</label>          {/* field by label */}
 <input id="amount" type="number" value={amount} onChange={...} />
-
-// A select is a `<select>` with a paired label, its options saying
-// what a person would pick (here the account id).
-<label htmlFor="from-account">From Account</label>
-<select id="from-account" value={from} onChange={...}>
-  {accounts.map((a) => <option key={a.id} value={a.id}>{a.id}</option>)}
-</select>
-
-// A button says what it does. `clicks the "Open Account" button`
-// matches that text exactly; an icon-only button gets `aria-label`.
-<button onClick={open}>Open Account</button>
+<button onClick={open}>Open Account</button>        {/* button by text */}
 <button aria-label="Delete" onClick={remove}><TrashIcon /></button>
-
-// A table a scenario names has a labelled heading (or a
-// `<caption>`). `sees "$1000" in the "Your Accounts" table` looks
-// only inside it.
-<h2 id="your-accounts">Your Accounts</h2>
+<h2 id="your-accounts">Your Accounts</h2>           {/* table by heading */}
 <table aria-labelledby="your-accounts">...</table>
-
-// A value a scenario reads back (an id the backend made up)
-// carries `data-testid`, on the element whose text is exactly the
-// value. This is the only place a test id belongs.
-<td data-testid="account-id">{account.id}</td>
+<td data-testid="account-id">{account.id}</td>      {/* a backend-made value */}
 ```
 
-The roles a scenario may name are `button`, `link`, `tab`,
-`checkbox`, `radio`, `menuitem`, `option`, `row`, and `table`; use
-the native element for each (`<button>`, `<a href>`, `<input type="checkbox">`) rather than a `<div onClick>`, which has no role.
-Text that changes on a backend event (a balance, a status) is
-rendered as text, so `eventually sees "$1000"` can wait for it.
+- A `<select>` gets a paired label too, its `<option>`s saying the value
+  a scenario picks; a placeholder is not a label.
+- A table or list a scenario names has a labeled heading as above, or a
+  `<caption>`.
+- `data-testid` only on an element whose text is exactly a value a
+  scenario reads back.
+- Nameable roles: `button`, `link`, `tab`, `checkbox`, `radio`,
+  `menuitem`, `option`, `row`, `table` — use the native element
+  (`<button>`, `<a href>`, `<input type="checkbox">`), never a
+  `<div onClick>`.
+- Render values that change on backend events as text so
+  `eventually sees` can wait.
 
-## Sign-in and Sign-out
+## Never
 
-`useSignIn()` / `useSignOut()` from `@reboot-dev/reboot-react` drive
-the built-in OAuth server mounted at `/__/oauth/*`; call the
-returned function from a button. Session state lives in the
-HttpOnly `rbt_session` cookie, so there is no token to store, and
-`useUser()` reports the result (`user === undefined` when signed
-out).
+- `npm create vite@latest` for `web/`: it emits React 19 / TypeScript 6
+  tsconfigs (`erasableSyntaxOnly`) the TypeScript 5 set rejects. Copy
+  the template.
+- `process.env.PORT` in `vite.config.ts` without `@types/node`: `tsc -b`
+  fails. The template uses a literal port.
+- Leaving the port at Vite's default 5173 or dropping `strictPort`:
+  another project's server on `[::1]:5173` silently answers `localhost` while this
+  one answers `127.0.0.1`, and without `strictPort` Vite slides to the
+  next port, leaving `.env` and `allowed_origins` wrong.
+- Deploying with `allowed_origins=[]`: a standalone SPA is cross-origin
+  from its backend by construction. `rbt dev run` allows `http://localhost(:*)` itself,
+  hiding this in development. Set the production origin in `main.py`'s
+  `OAuth(allowed_origins=[...])` when choosing the provider (`deploy`
+  skill).
+- The subscription traps (`#` in an id, an actor that may not exist,
+  a seventh live read): `react-generated-client.md` § Never and Limits.
 
-The whole shape, and the one place the signed-in subtree gets its
-guaranteed-real id:
+## Limits
 
-```tsx
-import {
-  RebootClientProvider,
-  useSignIn,
-  useSignOut,
-} from "@reboot-dev/reboot-react";
-import { UseUserApi, useUser } from "./api/<pkg>/v1/<name>_rbt_react";
+- `useUser()` exists only when the API has a `User` type;
+  `@reboot-dev/reboot-react` 1.6.0 exports no other session hook.
+  Without a `User` type, read a domain reader at the top of the tree and
+  treat `aborted.error.type === "Unauthenticated"` as signed out
+  (reboot-bluesky, 1.4.1).
 
-function App() {
-  const { user, isLoading } = useUser();
-  const signIn = useSignIn();
-  const signOut = useSignOut();
-  // `isLoading` covers the `/__/oauth/whoami` session probe.
-  if (isLoading) return <Spinner />;
-  if (user === undefined) {
-    return <button onClick={() => signIn()}>Sign in</button>;
-  }
-  return (
-    <>
-      <button onClick={() => signOut()}>Sign out</button>
-      <SignedIn user={user} />
-    </>
-  );
-}
+## Scales as
 
-// Mounted only once `user` exists, so `user.state_id` is real and
-// every hook below it can be called with a genuine id.
-function SignedIn({ user }: { user: UseUserApi }) {
-  const { response } = user.useProfile();
-  // ...
-}
-```
+- The template's production bundle is about 384 kB of JS (115 kB gzip)
+  at 1.6.0, almost all React, `zod` and the Reboot client.
+
+## Errors you will see
+
+| Error text (stable prefix) | Meaning | Fix |
+| --- | --- | --- |
+| `Could not detect Reboot server URL. Ensure the page is served from the Reboot server.` | No `url` and no fallback resolved | Pass `url={REBOOT_URL}` from `VITE_REBOOT_URL` |
+| `Property 'env' does not exist on type 'ImportMeta'` | `src/vite-env.d.ts` missing | Copy it from the template |
+| `error TS2688: Cannot find type definition file for 'node'.` | `"types": ["node"]` without `@types/node` | Copy the template's `package.json` |
+| `Cannot find name 'process'` | `process.env` in `vite.config.ts` without `@types/node` | Same |
+| `` `Application(oauth=...)` is running without `OAuth(allowed_origins=[...])` `` | `allowed_origins` left out: works under `rbt dev run`, production refuses to start | Pass a list (the template passes `[]`); list the SPA origin before deploying |
+| `/__/oauth/whoami` CORS error in the browser console on every load | The client probes it whether or not the app has `oauth=`; nothing breaks. On 1.4.0 the response lacked `access-control-allow-credentials` and the client retried forever | Ignore it; on 1.4.0 serve same-origin through a Vite proxy |
+
+## See also
+
+- [`react-generated-client.md`](../../python/references/react-generated-client.md) — hooks, mutators, typed errors
+- [`testing-web-app.md`](../../python/references/testing-web-app.md) — scenarios that drive this page
+- [`build/templates/README.md`](../../build/templates/README.md) — every template file explained

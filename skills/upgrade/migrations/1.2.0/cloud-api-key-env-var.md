@@ -1,3 +1,12 @@
+---
+title: "Prefer the REBOOT_CLOUD_API_KEY environment variable over the API key flag"
+summary: "Move the Reboot Cloud API key out of command lines and into an environment variable."
+kind: migration
+audience: agent
+applies: [mcp-ui, web-app, backend-only]
+when: "scripts or .rbtrc pass an API key flag to Reboot Cloud commands"
+---
+
 ## Prefer `REBOOT_CLOUD_API_KEY` over `--api-key`
 
 `rbt cloud` subcommands now read the API key from the

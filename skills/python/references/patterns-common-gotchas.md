@@ -1,290 +1,713 @@
 ---
-title: Common Reboot Python Gotchas
+title: Every "Never" in One List
 impact: MEDIUM
-impactDescription: Each item here breaks startup or causes subtle runtime errors
-tags: patterns, gotchas, anti-patterns, mistakes
+impactDescription: A scan list of every known trap across the references; each line points at the file that explains it
+tags: gotchas, never, traps, pitfalls, checklist, digest
+summary: "Scan before debugging: a generated one-line index of every Never lead, grouped by owning file."
+step: any
+applies: [mcp-ui, web-app, backend-only]
+always: false
+verified: 1.6.0
+docs: ""
 ---
 
-## Common Reboot Python Gotchas
-
-The shortlist of things that bite. None of these are speculative — they
-all show up in real Reboot Python code review.
-
-### 1. `.rbtrc` Is Line-Based, Not YAML
-
-Don't write nested YAML in `.rbtrc`; one flag per line:
-
-```sh
-generate api/
-generate --python=backend/api/
-dev run --python
-dev run --application=backend/src/main.py
-```
-
-### 2. `.rbtrc` Uses `--application-name` (Not `--name`) on `reboot>=1.0.4`
-
-The canonical persistence flag is `dev run --application-name=<app>`.
-The older `--name` still works as a deprecated alias but prints a
-console warning on every `rbt dev run`. Write fresh `.rbtrc` with
-`--application-name`; fix old `.rbtrc` that still has `--name` rather
-than ignoring the warning.
-
-### 3. No `__init__.py` in `api/` — or Anywhere Else
-
-Hand-written `__init__.py` files in `api/` confuse `rbt generate`'s
-package detection, and the `backend/` tree doesn't need them either
-(`.mypy.ini` sets `explicit_package_bases`; see
-`lifecycle-project-setup.md`). Never create them.
-
-### 4. Pass Kwargs, Not Request Wrappers
-
-```python
-# Wrong:
-await account.deposit(context, DepositRequest(amount=10))
-# Right:
-await account.deposit(context, amount=10)
-```
-
-### 5. Constructor Calls Use `Service.create` / `Service.<ctor>`
-
-Don't call a constructor through `.ref(id).method(...)`. Use the factory
-form so creation semantics apply:
-
-```python
-# Wrong:
-await Account.ref(id).open(context)
-# Right:
-account, _ = await Account.open(context, id)
-```
-
-### 6. Servicer `authorizer()` Returns an Instance
-
-```python
-# Wrong:
-def authorizer(self): return allow
-# Right:
-def authorizer(self): return allow()
-```
-
-### 7. Reader Methods Cannot Mutate `self.state`
-
-Mutations inside a `ReaderContext` raise. If you need to mutate, the
-method needs to be a `Writer` or `Transaction`.
-
-### 8. Cross-Actor Mutations Need a Transaction; All External Calls Need a Workflow
-
-A `Writer` can only mutate one actor (its own). Cross-actor
-mutations belong in a `Transaction(...)` method. A writer or
-transaction **may** call readers on other actors — cross-actor
-reads are fine.
-
-External side effects — any call that leaves the system: SMS,
-email, payment, third-party APIs, LLM/model calls, filesystem
-writes — must **not** happen in a `Writer` or a `Transaction`,
-**even when the external call is idempotent**. Two reasons stack:
-
-- **Atomicity.** A `Writer` may be invoked inside a `Transaction`,
-  and a transaction is all-or-nothing — if it aborts, every
-  mutation rolls back, but the external call already happened.
-  The same applies to a transaction that makes the call directly.
-- **Re-execution.** Writer and transaction bodies may also
-  re-execute under transient retries and dev-mode **effect
-  validation** (which re-runs the body to assert state mutations
-  are deterministic), firing the external call more than once.
-  A real bug: an SMS login code sent twice with the first code
-  invalidated.
-
-Put the external call in a `Workflow` and pick the right primitive
-per `servicer-workflow.md`. The
-on-demand "do it now" entry point is a `Writer`/`Transaction` that
-only **schedules** the workflow
-(`await self.ref().schedule().<workflow_method>(context)`); the
-external call itself lives in the workflow. See
-`servicer-workflow.md` and "External Calls Belong in a
-Workflow, Not a Transaction" in `servicer-transaction.md`.
-
-### 9. `initialize` Runs on Every Restart
-
-It's idempotent only if **you** make it so. Use `Service.create` and
-`context.constructor` to gate set-once work.
-
-### 10. Don't Hand-Edit `*_rbt.py`
-
-Any change you make to a generated file is overwritten the next time
-`rbt generate` runs (which `rbt dev run` does on file change). Edit
-the API definition file instead.
-
-### 11. State Defaults Must Be the Type's Zero Value
-
-You cannot declare a non-zero `default=` on a `Field(tag=N)` —
-non-zero defaults are rejected at import. To seed non-zero state, do
-it in a constructor method using `context.constructor`.
-
-### 12. Register Stdlib Libraries
-
-`OrderedMap` requires `libraries=[ordered_map_library()]` in the
-`Application(...)` call. Forgetting it gives a runtime error about
-unknown actor type. The same shape applies to every stdlib state
-type with a `<thing>_library()` factory.
-
-### 13. Servicer Class, Not Instance, in `Application(...)`
-
-```python
-# Wrong:
-await Application(servicers=[ChatRoomServicer()]).run()
-# Right:
-await Application(servicers=[ChatRoomServicer]).run()
-```
-
-### 14. Pydantic `Field(tag=N)` Needs an Explicit Zero-Value Default
-
-Two layered rules:
-
-1. Every Field needs an explicit default — `model_construct()` skips
-   fields without one, and reads then `AttributeError`.
-2. The default **must be the type's zero value** (`""`, `0`, `0.0`,
-   `False`, empty list/dict). Non-zero defaults are rejected at import
-   time:
-
-   ```text
-   reboot.api.UserPydanticError: Field `turn` in model `CheckersState`
-   uses `default` with an unsupported value. Supported default value
-   for `str` is ``.
-   ```
-
-Always declare zero defaults; set domain defaults inside the
-constructor method (or a `start`-style reset writer):
-
-```python
-class GameState(Model):
-    board: str = Field(tag=1, default="")
-    turn: str = Field(tag=2, default="")           # not default="r"
-    move_delay_seconds: float = Field(tag=3, default=0.0)  # not 1.0
-    history: list[str] = Field(tag=4, default_factory=list)
-    paused: bool = Field(tag=5, default=False)
-
-
-async def open(
-    self, context: WriterContext, request: OpenRequest,
-) -> None:
-    if context.constructor:
-        self.state.turn = "r"
-        self.state.move_delay_seconds = 1.0
-```
-
-### 15. `self.state_id` Doesn't Exist; Use `self.ref().state_id`
-
-Inside a Servicer (writer/reader/transaction), get the actor's ID via
-`self.ref().state_id`. Inside a workflow `@classmethod`, use
-`context.state_id`. Plain `self.state_id` raises `AttributeError: 'XServicer' object has no attribute 'state_id'`.
-
-### 16. Generated Request/Response Names Come From the Method Name
-
-`<Type>.<MethodPascalCase>Request` and
-`<Type>.<MethodPascalCase>Response` — the source class names you
-passed to `request=`/`response=` are **internal**. A method
-`create_checkers_game` is always exposed as
-`User.CreateCheckersGameRequest`/`Response`, regardless of source
-name. Mismatching the method PascalCase raises `AttributeError: type object '<Type>' has no attribute '<WrongName>'`. See
-`api-pydantic.md` for the full rule.
-
-### 17. `Workflow(...)` Needs `mcp=` Just Like the Other Factories
-
-Easy to miss because workflows are rarely AI-callable. Missing it:
-
-```text
-1 validation error for Workflow
-mcp
-  Field required [type=missing, input_value=...]
-```
-
-Set `mcp=None` for non-tool workflows.
-
-### 18. Secrets Don't Belong in Plain `str` Fields
-
-A `str`/`bytes` scalar field is plaintext at rest. Passwords, API keys,
-session tokens, and PII must **never** be stored that way — the "it's
-just a string" reflex is the trap. Encrypt with the `Ciphertext` stdlib
-type and store the returned `state_id` instead:
-
-```python
-# Wrong — API key in plaintext at rest:
-api_key: str = Field(tag=1, default="")
-# Right — store the Ciphertext id; the secret is encrypted:
-api_key_id: str = Field(tag=1, default="")
-```
-
-**OAuth access/refresh tokens are the exception** — don't hand-roll
-`Ciphertext` for them; use the purpose-built `OAuthTokenManager`
-(`stdlib-oauth-tokens.md`), which with `store_tokens=True` captures and
-encrypts them automatically.
-
-See `stdlib-ciphertext.md` and "Never Store Secrets in Plain Scalar
-Fields" in `state-scalar-fields.md`.
-
-### 19. Inline Writer Parameter Must Be Named `state`
-
-The runtime calls the writer as `writer(state=typed_state)`. Renaming
-the parameter raises `TypeError: ... got an unexpected keyword argument 'state'`. Always:
-
-```python
-async def fn(state):
-    state.x += 1
-await Service.ref().write(context, fn)
-```
-
-### 19. Schema Evolution Is Additive-Only Once State Persists
-
-Changing the API of an application that has persisted state or has
-been deployed can make it fail to boot ("Updated state or method
-definitions are not backwards compatible") and get its deploy
-rejected. Read `api-schema-evolution.md` for the rules you must
-follow before changing such an API.
-
-### 20. A `ref()` Belongs to One Context — `MixedContextsError`
-
-**Reusing a ref for many calls on the same context is fine** — hold
-it in a local and call it as often as you like:
-
-```python
-task_list = TaskList.ref(list_id)
-await task_list.add_task(context, title="Milk")
-await task_list.toggle_task(context, task_id=task_id)
-snapshot = await task_list.get(context)      # All fine.
-```
-
-What is not allowed is carrying that same ref object across to a
-**different** context. `Type.ref(id)` binds to the first `Context`
-it is used with (it carries that context's idempotency manager), so
-a ref stashed on `self`, hoisted to a module constant, or shared
-between two test contexts raises `MixedContextsError` — on readers
-as well as mutations, and regardless of the id being identical:
-
-```python
-# Wrong — one ref object, two contexts.
-shared = TaskList.ref(list_id)
-await shared.get(alice)
-await shared.get(alice2)     # MixedContextsError, even for the
-                             # same user and the same list id.
-
-# Right — a fresh ref per context; `ref()` is cheap.
-await TaskList.ref(list_id).get(alice)
-await TaskList.ref(list_id).get(alice2)
-```
-
-The error names the fix directly: "Instead create a new
-`WeakReference` for every `Context`."
-
-### 21. The State Type Named `User` Is Auto-Constructed
-
-A state type literally named `User` is special: when
-`Application(oauth=...)` is configured, Reboot auto-constructs one
-`User` actor per signed-in identity, whose state id **is** the
-`context.auth.user_id`, on first access. Do not write a sign-up
-method that creates it, do not pass an id to `useUser()` in the
-browser, and do not construct it in tests — impersonating a user
-with `await rbt.create_external_context_as(name, user_id)` is enough
-for `User.ref(user_id)` to resolve. The auto-construction happens
-only under `oauth=`; an app with a `User` type and no `oauth=` fails
-to start. Other state types are constructed explicitly, by their
-factory `create`.
+# Every "Never" in One List
+
+## When you are here
+
+Something fails for a reason you can't place, or you want to scan
+every known trap before a review. This file is an index: each line
+is the lead of one item in some reference's "Never" section, grouped
+by that reference. Read the owning file for the reason and the fix.
+Each reference on your build path already shows you its own Never
+items at the step you read it; you do not need this file to build.
+
+It replaces the two hand-written trip lists that used to live here
+and in `mcp-ui/references/gotchas.md`. Every item moved into the
+reference that owns its topic.
+
+## Do this
+
+<!-- Generated by tools/gen-index.py from every reference's "## Never"
+section. Add or change a trap in its owning reference, not here. -->
+
+<!-- generated:start never-digest -->
+**`lifecycle-application-entry.md`**
+- `Application(servicers=[ChatRoomServicer()])`
+- A servicer list written out again in a test module
+- `ChatRoomServicer().serve()` or a sync `main` with no `Application`
+- Omitting a stdlib type's `<name>_library()`, or a library-less type's `servicers()`
+
+**`lifecycle-backup-restore.md`**
+- Never expunge without a backup taken after the last write, checked by its counts
+- Never `rbt import` into an application holding data: it overwrites what the backup has and deletes nothing, so the result is a merge of two states
+- Never put a dev backup into production: its users are the Development picker's identities
+- Never edit a backup in place
+- Never commit `exports/`
+
+**`lifecycle-dev-loop.md`**
+- Calling a run with no summary line a pass
+- Running the suite while `rbt dev run` watches the same tree
+- Iterating on a state shape while the watcher is live
+- Counting log lines to measure progress
+- Trusting a browser tab across a backend restart
+- Saving a live-code edit in pieces: hot reload boots each save, and a reference to a constant the next save defines throws `NameError` in a scheduled chain until then (marquee-control, 1.4.1)
+
+**`lifecycle-dockerfile.md`**
+- `CMD ["rbt", "dev", "run"]` in a Cloud image
+- A base image version different from the `reboot==` pin
+- `RUN rbt generate` before `COPY frontend/`
+- Production flags on the `CMD` line
+- A hand-rolled non-Reboot base image
+- No `serve run --application-name=<app>`
+- `COPY backend/src/` near the top
+
+**`lifecycle-initialize-hook.md`**
+- Creating singletons in a Servicer's `__init__`
+- Expecting a bare call to run again next boot
+- Trusting a replayed call's response
+- Recomputing seed-time values in a migration
+- Calling an explicit constructor again expecting a no-op
+- A bare `.spawn()` from `initialize`
+- Person-level rules on seeded actions
+- Raising out of `initialize` expecting the error to surface
+
+**`lifecycle-project-setup.md`**
+- `__init__.py` anywhere
+- Hand-editing `backend/api/<app>/v1/<app>_rbt.py` (or anything under `frontend/api/` / `web/src/api/`): `rbt generate` overwrites it
+- Committing generated code or `.rbt/`
+- A nonstandard layout (entry point other than `backend/src/main.py`, API outside `api/`): `.rbtrc`, the template and every reference assume the canonical one
+- A `[tool.rye]` table: move dev deps into `[dependency-groups].dev`, drop the duplicated `reboot`, add `name`/`version`, replace `requirements*.lock` with `uv lock`
+
+**`lifecycle-rbtrc.md`**
+- YAML in `.rbtrc`
+- `dev run --name=<app>`
+- `rbt dev expunge` without `--yes` from a script or agent shell
+- `rbt dev expunge` while `rbt dev run` is live
+- Two `rbt dev run`s over one state directory
+- Debugging dev state that lived through incompatible API changes
+- A literal secret on a `--env=KEY=secret` line
+
+**`lifecycle-reboot-cloud.md`**
+- `rbt cloud down` to roll back or pause
+- `rbt cloud down --expunge` to change size
+- Dropping `--organization` after the first deploy
+- `--api-key=<key>` on the command line
+
+**`lifecycle-secrets.md`**
+- A secret in `main.py`, servicer code or any source file
+- A `--env=KEY=secret` line in `.rbtrc`
+- Relying on a bare `.env` being auto-loaded
+- `rbt cloud up` after `rbt cloud secret set`
+- A `REBOOT_*` or `RBT_*` name
+
+**`lifecycle-seeding.md`**
+- Concurrent seeding transactions
+- A shared actor called in a loop without a per-iteration alias
+- Aliases from values that change between runs
+- One transaction per record
+- Hundreds of creates and one shared `OrderedMap` in one transaction
+- A big `list[Entity]` inline on an actor the seed keeps writing
+- The full production seed in every test
+- Seeding through a user context in a test
+- Debugging dev state that lived through incompatible designs
+
+**`api-errors.md`**
+- `raise ValueError("not enough funds")` (or any non-`Aborted` exception) for a business failure
+- `return None` (or a sentinel field) to signal failure
+- `raise OverdraftError(...)` or `raise Account.OverdraftErrorAborted(...)`
+- Raise an error `Model` the method did not list in its own `errors=[...]`
+- An error `Model` with no fields
+- A rejection counter written inside the transaction that rejects
+
+**`api-methods.md`**
+- `balance=BalanceResponse` (a bare `Model`) in `Methods(...)`
+- Omit `mcp=`
+- `factory=True` on a `Reader` or `Workflow`
+- Choose `Writer` for a method that must change another actor
+- A sign-up method that creates `User`, an id passed to `useUser()` in the browser, or constructing `User` in tests
+- `mcp=Resource()`
+
+**`api-pydantic.md`**
+- `board: str = Field(tag=1)` with no default
+- `turn: str = Field(tag=1, default="r")`, `default=1.0`, `default=2`
+- `Field(tag=N, default_factory=AccountCard)` or `Field(tag=N, default=AccountCard())` for a nested `Model`
+- `history: list[str] = Field(tag=3, default=[])`
+- `User.CreateGameResponse` for method `create_checkers_game`
+- `description="The balance."`
+- `Model`s or a `Type` defined but never wired into `API(...)`
+
+**`api-schema-evolution.md`**
+- Rewording a method's `description=` after state exists
+- Iterating on a state shape while `rbt dev run` watches (`lifecycle-dev-loop.md` § Never)
+- Allocating a new ID field only in the `factory=True` constructor of a type with existing actors
+- Calling a backfill bare from `initialize`
+- `rbt dev expunge` without `--yes`, or while `rbt dev run` is live (`lifecycle-rbtrc.md` § Never)
+- Expunging a production application without explicit human confirmation
+
+**`servicer-authorizer.md`**
+- Omitting `authorizer()` "until later"
+- `allow()` as a "safe default"
+- Assume the caller's identity reaches an actor your servicer calls
+- Gate per-method rules by `isinstance(request, ...)` in one predicate (`auth-custom-predicates.md` § Never)
+- A predicate on type X that calls a reader on the actor it guards: the actor waits on itself
+- A client- or MCP-facing method that fans out and relies on the gates of what it reads: its nested calls arrive app-internal and pass every `is_app_internal` arm
+- Read `PermissionDenied` from `allow_if(any=[has_verified_token, is_app_internal])` as "signed in but forbidden"
+
+**`servicer-constructor.md`**
+- Initial state in `__init__`
+- A "create or re-open" constructor
+- Stamping `context.auth` in a constructor reached from another servicer
+- A `Writer(factory=True)` that may one day construct another actor or write a second state
+- A field added to the constructor later, expected on existing actors
+- Re-deriving a `uuid4()` id minted in the constructor
+
+**`servicer-reader.md`**
+- Mutating `self.state` (`self.state.messages.append("seen") # NEVER`)
+- Calling a `Writer`, `Transaction` or constructor
+- Computing "mine" from `context.auth` in a reader another reader calls
+- `self.state_id`
+
+**`servicer-transaction.md`**
+- Multi-actor work in a `Writer` (`withdraw(...)` then `deposit(...)` on other actors)
+- An external call in the body
+- Stash data on `self`
+- One transaction over N things when N is more than a handful (Reset All over 48 showings stalled a suite; cineloop-40, 1.4.1)
+- `schedule()` onto N foreign actors from one transaction
+- Read an actor then write it as two calls
+- Touch shared actors in different orders in different transactions (A then B, B then A)
+- Cancel in-flight transaction calls (load drivers, timing-out tests, Ctrl-C)
+- Read `context.auth` in an actor called from this transaction
+- An aggregator, registry or dashboard among the participants
+
+**`servicer-workflow-calls.md`**
+- `at_least_once(...)` / `at_most_once(...)` / `.idempotently(...)` around a Reboot call
+- `async def make_move(s):`
+- `def try_claim(state) -> bool:` passed to `.write`
+- `Other.ref(id).read(context)` / `.write(context, fn)`
+- `asyncio.gather` over **transaction** calls in one workflow
+- Calling the same method on the same actor twice with a bare `.per_workflow()` / `.per_iteration()`
+- Calling a factory constructor from a workflow on an actor that may already exist
+- Feeding an `.always()` result into a memoized call, an id or a later step
+
+**`servicer-workflow-declare.md`**
+- `cls.ref()` or `self.ref()` inside the workflow
+- `async def wf(self, context: WriterContext, …)`
+- `self.state.x = …` in a workflow
+- `Workflow(factory=True)`
+- `Type.ref(id).per_workflow("…").schedule(when=…).wf(context)` from a workflow
+- `asyncio.create_task(...)` / `asyncio.sleep` to start or defer work
+- Starting the same workflow from two places with nothing stopping overlap (a startup hook plus an admin button)
+
+**`servicer-workflow-exit.md`**
+- `raise ValueError("amount must be positive")` where you mean "stop"
+- Catching a transient error and converting it to a declared abort
+- `raise` inside an `at_least_once` / `at_most_once` callable to mean "stop"
+- Raising an abort class whose error is not in the method's `errors=`
+
+**`servicer-workflow-external.md`**
+- A plain `await` on an external call
+- `idempotency_key=str(uuid.uuid4())` inside the effecting callable
+- Counting attempts in a closure to give up
+- `raise` inside an `at_most_once` callable
+- A value-returning callable with no annotation and no `type=`
+- `at_most_once` for a Reboot call or an idempotent external call
+- A test stand-in that pops answers off a list
+
+**`servicer-workflow-loop.md`**
+- `while True:` in a workflow
+- Renaming the loop alias after work has started
+- A second `context.loop(...)` in the same workflow, sequential or nested
+- `await asyncio.sleep(n)` between iterations for pacing
+- A `break` decision derived from a non-memoized external read or the clock
+
+**`servicer-workflow-wait.md`**
+- `return response if ready else None` (or `0`, `0.0`, `""`) as the "not yet" value
+- An HTTP call, SDK status check or file read inside the callable
+- `while True: … await asyncio.sleep(5)` to poll state
+- Changing an `until` callable's return type while instances are running
+- A callable that calls the same mutating method (e.g. a queue's `try_dequeue`) every time it re-runs
+- A bare `def` inline-writer callback
+
+**`servicer-workflow.md`**
+- `self` or `self.state` in a workflow
+- A plain `await` on anything with effects
+- `schedule(...)` from a workflow
+- A wall-clock or random value read directly in the body
+- Driving the phase after a commit from a plan rebuilt locally
+
+**`servicer-writer.md`**
+- Calling another actor's writer, transaction or constructor (`await Account.ref("audit-log").record(context, ...) # WRONG`)
+- `Other.ref(id).schedule(...)`
+- An external call (SMS, email, payment, LLM, network, filesystem), **even an idempotent one**
+- Persisting a fresh `uuid4()` or clock value that is later re-derived or addressed (an actor id, an idempotency key)
+
+**`agent-pydantic-ai.md`**
+- `anthropic.Anthropic().messages.create(...)` or a bare `pydantic_ai.Agent` in a workflow
+- A model call in a `Transaction` or `Writer`
+- `agent.run("prompt")` (prompt first)
+- `run_sync` / `run_stream_sync`
+- Starting an agent run from inside another (e.g. from a tool)
+- Setting `agent.name` after construction
+- `parallel_execution_mode="parallel"` (pydantic_ai's default)
+- Adding `pydantic-ai-slim[anthropic]` or `anthropic` to `pyproject.toml` yourself
+- Tool functions or `output_type` classes defined as local closures and passed per run
+
+**`agent-tools.md`**
+- `async def get_page(run: RunContext[Deps], page_id: str)` under `@agent.tool`
+- A tool body that is unsafe to run twice (charges a card, sends an email, appends without a key)
+- Per-run `toolsets=` built from local closures
+- Returning a value that cannot be pickled
+
+**`stdlib-ciphertext.md`**
+- `libraries=[ciphertext_library()]` alone
+- `associated_data=b"user-42:ssn"` or `json.dumps(...)`
+- Addressing `WrappingKey` directly
+- Calling these methods from untrusted clients
+- Dropping the `Ciphertext` id
+- Removing an old root key version before `status` shows `rotating == False`
+
+**`stdlib-item.md`**
+- Two of `value=` / `bytes=` / `any=`, or one plus `items=`, on `enqueue` / `publish`
+- `Item(value=..., bytes=...)` in a bulk list
+
+**`stdlib-oauth-tokens.md`**
+- Tokens in a `str` state field
+- Hand-rolled `Ciphertext` for provider OAuth tokens
+- A user-pasted API key in `OAuthTokenManager`
+- Leaving out any of `oauth_library()`, `ciphertext_library()`, `ordered_map_library()`
+- Calling `store` / `fetch` from an untrusted, external context
+
+**`stdlib-ordered-map.md`**
+- `await OrderedMap.create(context, map_id)`
+- Omitting `ordered_map_library()` from `Application(libraries=[...])`
+- `OrderedMap.ref(f"{self.ref().state_id}-drafts")`
+- Calling `insert` / `create` / `remove` from a `Writer`
+- `create` then `insert` on the same map in one transaction
+- Bulk-loading from concurrent transactions that insert into the same map
+- Setting single-key (`key` + value) and bulk (`entries`) fields on one call, or more than one value field per entry
+- `from uuid7 import ...` without declaring `uuid7` in `pyproject.toml`
+
+**`stdlib-presence.md`**
+- `from reboot.std.presence.subscriber.v1.subscriber import Subscriber` or `...mouse_tracker.v1.mouse_position`
+- `import reboot.std.react.presence`
+- `Subscriber.create(context, subscriber_id)`
+- Calling `presence.subscribe` before the subscriber has toggled
+- Reusing a `nonce` for a second `connect` while the first is open
+- Rolling your own heartbeat / ping-pong presence
+
+**`stdlib-pubsub.md`**
+- Publishing with no consumer side
+- Consuming from the topic directly
+- Starting `broker` yourself
+- `PubSub.ref(...)` or `subscribe(context, topic=..., queue_id=...)`
+
+**`stdlib-queue.md`**
+- `Queue.ref(id).create(context)`
+- `dequeue` from a writer or transaction
+- A bare `.spawn()` of the consumer from `initialize`
+- Reading `empty` on a queue that may never have been enqueued to
+- Calling `try_dequeue` twice on the same queue from one `until` callable
+- Hand-rolling a queue as a list field on actor state
+
+**`crypto-root-keys.md`**
+- Hard-coding a `version` for new material
+- Changing `info` or `length` after shipping
+- A bare `consumer` like `"default"`
+- Disusing the active version
+- Clearing a marker before removing the version from your own `consuming_versions`, or adding the version locally before setting its marker
+- `use` / `disuse` from the `watch` loop without `.per_iteration(...)`
+- Rolling your own envelope encryption
+
+**`state-actor-decomposition.md`**
+- Declare a constructor that may ever create another actor as a `Writer(factory=True)`
+- Build a **writer cycle**: a transaction on `A` that writes `B`, while a transaction on `B` writes `A` (e.g
+- Put a new feature on `User` because it is the entry point
+
+**`state-collections.md`**
+- `UserState.people: list[Person]` when `Person` has methods, lifecycle or nested events
+- `Type(state=X)` *and* `list[X]` / `dict[str, X]` as a state field
+- `list[str]` for an unbounded collection "because it's simpler"
+- A `MAX_ITEMS` constant so an open-ended or synced collection fits a `list`
+- An externally-synced collection as `list[Sub]` on one actor
+- `OrderedMap` for a clearly bounded, sub-dozen collection
+- Splitting items that one action must change together into separate `Type`s
+- `OrderedMap.ref(f"{self.ref().state_id}-drafts")` (or `context.state_id` in a workflow)
+- Adding a new `<thing>_index_id` to a type that already has actors and allocating it only in the `factory=True` constructor
+
+**`state-nested-models.md`**
+- Use a **state** `Model` (one bound as `state=` in a `Type(...)`) as a field of another state `Model`, alone or in a `list`/`dict`
+- Inline items that have their own identity, lifecycle or methods
+
+**`state-scalar-fields.md`**
+- `api_key: str = Field(tag=1, default="")` holding the key itself
+- `balance: int = Field(tag=1, default=100)`
+- `image: bytes = Field(tag=1, default=b"")`
+- Hand-roll `Ciphertext` for OAuth tokens
+
+**`auth-allow-deny.md`**
+- `return allow`
+- `allow()` on every servicer to silence the `rbt dev` missing-authorizer warning
+- `allow()` "for now, tighten before shipping"
+- `allow()` because "there's no auth yet"
+- `allow()` for "methods only called from inside the app"
+- `allow()` "to make the example work" in examples, tutorials, or scaffolding
+- `allow()` to get tests past `PermissionDenied`
+- Subclassing each servicer in tests to override `authorizer()` with `allow()`
+- `deny()` for "only other servicers may call this"
+
+**`auth-allow-if.md`**
+- `allow_if(all=[...], any=[...])`
+- `allow_if(any=[is_app_internal, allow_if(all=[a, b])])`
+- Read a `PermissionDenied` from `allow_if(any=[is_app_internal, has_verified_token])` as "signed in but forbidden"
+- An expensive predicate (one that reads another actor) before `has_verified_token` in `all=[...]`
+
+**`auth-built-in-predicates.md`**
+- `has_verified_token` or `state_id_is_user_id` alone on a servicer that other servicers call
+- Treat `has_verified_token` as "is a user of this app"
+
+**`auth-claims.md`**
+- `Development()` with no `claims=` while expecting identity
+- Override `set_claims(self, context, state, request)`
+- Request claims without overriding `set_claims`
+- Declare `set_claims` (or `create`) in the `User` API
+- Merge claims into existing state
+- Key roles or a directory by `Development()` user IDs
+- Link a sign-in to a roster entry, invitation or any email-keyed record unless `request.claims["email_verified"]` is true: an unverified address is a claim anybody can make, and `Development()` (five fabricated, verified addresses) never shows it (two builds of one brief, 1.6.0
+- A verified-email allowlist that may be empty while a real provider is configured: in the harness that is right, in production every account at the provider gets in
+
+**`auth-custom-predicates.md`**
+- `def can_edit(context, state, request):`
+- One predicate that tells methods apart by `isinstance(request, ...)`
+- A custom `Authorizer` subclass, or splitting state across servicers, to get per-method rules
+- `allow_if(any=[is_app_internal, allow_if(all=[a, b])])`
+- Annotate `state` with `<Type>Authorizer.StateType` / `.RequestTypes`
+- Return `AuthorizerRule[TaskListState, Any]` from a helper
+- `if request is None: <check auth>` without checking `context.app_internal` first
+
+**`auth-external-api-calls.md`**
+- The outbound HTTP call in a `Reader` / `Writer` / `Transaction`
+- `context.auth.user_id` in that `Workflow`
+- Tokens or API keys in a `str` field, or OAuth tokens in hand-rolled `Ciphertext`
+- A user API key in `OAuthTokenManager`
+- `app_internal=True` on a route that acts on unvalidated input
+- `app_internal=True` on a templated path (`/x/{id}`)
+- Crashing on "not connected"
+
+**`auth-roles.md`**
+- Link a sign-in to a roster entry, an invitation or any email-keyed record unless `request.claims["email_verified"]` is true
+- A `role` field on `User` that a method on `User` writes
+- Key the roster by `Development()` user ids ([`auth-claims.md`](auth-claims.md) § Never)
+- "The first to sign in is the admin" in production, or an allowlist that may be empty with a real provider configured: with `has_verified_token` alone every account at the provider can read the app
+- A predicate on the roster type calling a reader on the roster: the actor waits on itself
+- Asking the roster on every method of every type: put the access gate on the caller's own `User` and ask the roster only where a role decides
+
+**`rpc-calls.md`**
+- `await account.deposit(context, DepositRequest(amount=100))`
+- A `dict` or different model in that slot (`deposit(context, {"amount": 1})`)
+- `deposit(request)` without the context, or a request in the options slot
+- A writer calling another actor's writer (or its own via `self.ref()`)
+- Plain dicts for a `list[Model]` kwarg
+- Forwarding `**kwargs: dict[str, str]` into a generated method
+- Relying on the caller's identity in the callee
+- A writer cycle: a transaction on A calls a writer on B while a transaction on B calls a writer on A
+
+**`rpc-constructor-calls.md`**
+- `await Account.ref(account_id).open(context)`
+- `Lab.create(context, id)` on a type with no `factory=True` method
+- Expecting a second constructor call to be a no-op
+- `except Seat.PlaceAborted: pass` to tolerate "already exists"
+- Stamping caller identity in a constructor reached from another servicer
+
+**`rpc-forall.md`**
+- Hand-rolling `asyncio.gather(*[Message.ref(mid).get(context) for mid in ids])`
+- Expecting framework-side batching
+- A subscribed reader that `forall`s over a large or growing set, or fans out to readers that fan out again
+- `forall` over a writer from a `WriterContext`
+
+**`rpc-refs.md`**
+- Assume a reader on a missing actor returns zero-valued state
+- `self.state_id`
+- `ChatRoomServicer().send(...)`
+- One ref used from two contexts (e.g. `program = Program.ref("BS-CS")`, called as the registrar and again as a second user)
+- Expect `Service.create(...)` / a factory on an existing actor to rerun its body (`rpc-constructor-calls.md` § Never)
+- Expect the caller's identity to travel through a ref call from inside a servicer
+
+**`scheduling-basic.md`**
+- `asyncio.create_task(...)` / `asyncio.sleep(...)` for delayed work
+- `Account.ref(other_id).schedule(...)` from a **writer**
+- `….schedule(when=…)` from a **workflow**, on any ref
+- Several scheduled transactions on one actor with the same `when=` (one `expire_hold` per seat)
+- A transaction that loops `schedule()` onto N foreign actors
+- A naive `datetime`
+- Relying on a reader that computes "expired" at read time to update other viewers
+
+**`scheduling-recurring.md`**
+- A one-shot `schedule(when=…)` expecting it to recur
+- `….schedule(when=…)` from inside a workflow `run()` to line up the next occurrence
+- A naive `datetime` in `when=`
+- `datetime.now()` read directly in a **workflow** body
+- A "set active" writer that overwrites an existing generation token on a redundant start
+- Starting `run()` from both the chain and another entry point (an admin button, a startup hook) without a claim
+
+**`testing-external-context.md`**
+- `ReaderContext(...)` / `WriterContext(...)` in a test
+- Overriding `authorizer()` in a test subclass
+- Several denied mutations asserted from one context
+- Polling with `asyncio.sleep`
+- `anext()` without `asyncio.wait_for`
+- Patching where a helper is defined
+
+**`testing-failure-recovery.md`**
+- A test that "the data is still there" after a restart
+- `revision=` together with `application=` / `servicers=`
+- A second `up()` without `down()`
+- Awaiting a unary call from the test's context while the app is down
+- A stand-in for an external call that answers from a counter
+- Overriding `authorizer()` in a stalling subclass
+
+**`testing-features.md`**
+- `scope_id="<northwind id>"`
+- `@then('mentioned "{text}"')` without `parsers.parse(...)`
+- `eventually has` under `Given` or `When`
+- A `Rule:` with no `Scenario:` under it
+- Asserting a remembered constant
+- A scenario counting every call to a stand-in
+- A stand-in that answers from a counter or a popped list
+- Subclassing a servicer to weaken its authorizer
+- `World.call` / `World.request` in a custom step
+
+**`testing-harness.md`**
+- Calling servicer instances directly
+- Overriding `authorizer()` to `allow()` for the suite
+- Reusing a context after asserting a denial
+- Holding a `ref()` across two contexts
+- Reusing actor ids across tests
+
+**`testing-project-setup.md`**
+- `ChatRoomServicer().send(...)` in a custom step or harness test
+- `pytest-asyncio` in the dev dependencies: `reboot.bdd` runs steps on the harness's loop and `IsolatedAsyncioTestCase` on its own
+- `oauth=OAuth(provider=...)` in a fixture without `allowed_origins`: every scenario fails (error below)
+- Tests under `backend/tests/` with a `backend/.pytest.ini`: tests are the application's, in root `tests/`, with the root `pytest.ini`
+- Committing `*.recordings/`
+
+**`testing-web-app.md`**
+- A CSS selector or a test id on a button
+- A second `opens the web app` to test a reload
+- A saved value in an `opens the web app at` path
+- `saves the text of ...` after `Then`
+- `sees "55"` when the text appears twice
+- `` fills ... with `Alice` ``
+- Quoted web text containing ` has ` or ` with `
+- `scope="module"` on the `frontend` fixture
+
+**`patterns-cross-actor-reads.md`**
+- Return `self.state.<collection>` verbatim from a shared reader when items carry other users' identifiers
+- Make an item its own `Type` because it is a domain noun with a status field
+- Keep counters or indexes on a shared actor updated by every hold
+- Compute a user-visible transition only at read time
+- Subscribe a list page to the detail reader of every row
+- Subscribe once per row when the rows share a parent
+
+**`patterns-error-handling.md`**
+- `except Seat.PlaceAborted: pass` for "already exists" tolerance
+- `except Exception:` around a Reboot call
+- Catch only to log and continue
+- Write compensating undo after catching your own method's abort
+
+**`patterns-idempotency.md`**
+- A seed that opts out of the key and is not idempotent itself, e.g. `await bank.always().add_account(context, ...)` in `initialize`
+- Branching on the response of a replayed call
+- An alias built from a timestamp or fresh uuid
+- One alias for two different mutations
+
+**`patterns-load-and-benchmarking.md`**
+- Benchmark with effect validation on and call it the app's latency
+- Put a cross-actor `Transaction` on a click that must feel instant
+- Read an actor and then write it as two calls, wrap "do this to N things" in one transaction when N is more than a handful, or `schedule()` onto N foreign actors from one transaction (`servicer-transaction.md` § Never)
+- Issue about 200 writer calls from one transaction behind a UI button
+- Run a background loop as a transaction holding a hot actor
+- Restart only the app process (SIGTERM, let the watcher respawn) before measuring
+
+**`patterns-react-state.md`**
+- `ids.map((id) => useShowing({ id }))`
+- Deriving a visible transition at read time only (a lapsed hold, an expired offer)
+- A derived array or object in a `useEffect` dependency list
+- `crypto.randomUUID()` unguarded
+- A mutation awaited with no deadline in a `--watch` dev loop
+- A single page-level spinner over many subscriptions
+- A refetch library or a poll alongside reader hooks
+
+**`patterns-time-and-randomness.md`**
+- `seat.hold_id = str(uuid4())` in a writer when a later call addresses the hold by that id across a client retry
+- `datetime.now()` or `uuid4()` read directly in a workflow body
+- Building an `at_least_once` / `.per_workflow` alias from a timestamp or fresh uuid
+- A test double inside `at_least_once` that pops answers off a list
+- Looking for `context.now()`
+
+**`react-generated-client.md`**
+- `try { await foo.baz(…) } catch { … }` as the failure path
+- `useFoo({ id: id || '__none__' })` while identity loads
+- `ReturnType<typeof useFoo>` as a prop type
+- `ids.map(id => useFoo({ id }))`
+- `#` in a subscribed actor id
+- An error model with no fields at 1.5.0 or earlier
+
+**`mcp-ui/references/api-method-types.md`**
+- `show_person=UI(request=ShowPersonProps)` on `User`, where `ShowPersonProps` carries `person_id: str`
+- A method with no `mcp=`
+- An application type whose `create` Writer lacks `factory=True`
+- `UI(path=...)` without `request=`
+- `UI(path="mcp/clicker")` or an absolute path
+- `mcp=Resource()`
+
+**`mcp-ui/references/api-state-shapes.md`**
+- `list[Item]` for an entity collection (`Person`, `Post`, `Message`, `Task`, anything with its own identity, lifecycle or methods)
+- A `MAX_ITEMS` cap to keep a collection small enough for `list[Sub]`
+- `OrderedMap.ref(f"{self.ref().state_id}-items")`
+- A state `Model` (one registered as `Type(state=X)`) as a field, or a `list[<StateModel>]`, on another state `Model`
+- A non-`Optional` nested `Model` field with `default=` or `default_factory=`
+
+**`mcp-ui/references/servicer-patterns.md`**
+- `await Game.ref(game.state_id).autoplay(context)` from a Transaction, Writer or Reader
+- `.schedule().autoplay(context, request=Game.AutoplayRequest())`
+- `cls.ref()` or `self.ref()` in a workflow
+- Wrapping an inline writer in `at_least_once` / `at_most_once` / `.idempotently(...)`
+- A model (LLM) call in the `create_<X>` Transaction
+
+**`mcp-ui/references/auth-custom-oauth-provider.md`**
+- Return an unstable user id from `exchange_code`
+- Rewrite or re-mint `state` / `redirect_uri` in `authorization_url`
+- Return tokens when `store_tokens` is off
+- Put claims from an unverified source in `ExchangeResult.claims`
+- A claims-delivering route in `mount_routes` that doesn't authenticate its caller (a shared secret, a signature)
+- Write the provider from a blank page
+
+**`mcp-ui/references/auth-oauth-providers.md`**
+- Switch providers once you have real users
+- Launch on `Anonymous()` "for now"
+- Ship `Development()`
+- Change which Auth0 connections you offer casually
+- Hard-code the client ID / secret in `main.py`, commit them, or put them in `.rbtrc` (checked into git)
+- `os.environ["..."]` for a `prod=`-only provider
+- Trust the client name on the consent screen
+- Build profiles, password resets, or MFA yourself on `Google` / `GitHub`
+
+**`mcp-ui/references/auth-store-tokens.md`**
+- Expect a Google/GitHub token from `Auth0`
+- Use `store_tokens=True` for a service that isn't the sign-in provider (sign in with Google, call Slack)
+- `dev=Development()` for a feature that needs provider tokens
+- Request broad scopes "just in case"
+
+**`mcp-ui/references/react-app-tsx.md`**
+- `const counter = useCounter(); counter.useGet()`
+- `counter?.useGet()` behind a condition in the same component
+- `show_person=UI(request=...)` on `User` plus `usePerson({ id: personId })` from a prop
+- Flattening a decomposed collection back into `list[Item]` on one actor to regain a single subscription
+- An unguarded `useMcpApp().sendMessage(...)`
+- Importing hooks from anything but `<name>_rbt_react`
+
+**`web-app/references/react-client.md`**
+- `npm create vite@latest` for `web/`: it emits React 19 / TypeScript 6 tsconfigs (`erasableSyntaxOnly`) the TypeScript 5 set rejects
+- `process.env.PORT` in `vite.config.ts` without `@types/node`: `tsc -b` fails
+- Leaving the port at Vite's default 5173 or dropping `strictPort`: another project's server on `[::1]:5173` silently answers `localhost` while this one answers `127.0.0.1`, and without `strictPort` Vite slides to the next port, leaving `.env` and `allowed_origins` wrong
+- Deploying with `allowed_origins=[]`: a standalone SPA is cross-origin from its backend by construction
+- The subscription traps (`#` in an id, an actor that may not exist, a seventh live read): `react-generated-client.md` § Never and Limits
+
+**`mcp-ui/references/react-scaffolding.md`**
+- Rewrite `vite.config.ts` to emit a flat `dist/<name>.html`: the MCP server only finds `frontend/dist/mcp/<name>/index.html`
+- Hand-maintain per-UI `build:<name>` scripts
+- Run the second `rbt generate` before `npm install`: the documented order is generate, install, generate
+- Copy a `tsconfig*.json` from `npm create vite@latest`: it now targets React 19 / TypeScript 6 (`erasableSyntaxOnly`), not the React 18 / TypeScript 5 set pinned here
+
+**`build/references/evidence.md`**
+- A pull request body that lists files: list the rules and the domain model
+- Evidence from another revision: a test run before the last commit, or with uncommitted changes, is not this revision's
+- Hand-editing `deploy/ledger.jsonl`
+
+**`build/references/flywheel.md`**
+- Writing the implementation (Step 2 onward) before the design is accepted, unless the user said up front to build without stopping
+- Folding a rule change into a "fix": a reworded `Rule:`, a changed declaration or a loosened authorizer is a Design change however small the diff
+- Calling a deploy, merge or acceptance done for the user: they decide
+- Treating a partial test run (`-k`, one module) as evidence for a merge or a release: run the full suite
+- Choosing between `main` and branches for the developer, or going against the `Workflow:` line in `AGENTS.md`
+- Pushing, or opening, merging or closing a pull request, without the developer's yes for that one
+
+**`mcp-ui/references/pop-out-to-web-app.md`**
+- `window.open(url)` alone
+- `mcpApp.openLink(...)` without `?.`
+- Calling `useMcpApp()` after the `counter === undefined` early return
+- A hardcoded origin, or `window.location.origin` alone, in a deployed app
+
+**`mcp-ui/references/project-shell.md`**
+- `dev run --default=hmr`
+- `generate --react-extensions` in `.rbtrc`
+- `dev run --name=<project>`
+- Dropping `oauth=` from `main.py`: the `User` type is auto-constructed, and auto-construct servicers fail at startup without it
+- A `--watch` line for `api/`: `rbt dev run` already regenerates and restarts on API edits (`--generate-watch`, on by default at 1.6.0)
+
+**`run/references/stop-restart-reset.md`**
+- Iterating on a state shape with the `--watch` loop live
+- If an edit does not take,
+- A second instance of the same app needs its own directory
+- Assuming a stop worked
+
+**`mcp-ui/references/ui-design.md`**
+- Web fonts in an MCP UI, the Reboot default's included: a host may block loading them in its frame
+- A light/dark toggle, or a theme that ignores the host's
+- "loading..." or a bare spinner
+- A whole app in one UI (tabs of tables): one view per `UI()`
+- Raw hex in components
+
+**`web-app/references/ui-design.md`**
+- Browser default styling: an unstyled `<button>`, `<select>` or `<input>`, or the default serif
+- "Loading…" or a bare spinner
+- An empty list without a next action
+- `alert()`, `confirm()`, `prompt()`: they block the scenarios too
+- Raw hex in components
+- A page broken at phone width (16 px gutters, wide tables in `table-wrap`, tabs scrolling in their own row) or in either color scheme
+- Form fields in a `1fr 1fr` grid: a date or number input won't shrink and overflows its card
+- A first build without the light/dark toggle, or a palette with only one scheme
+- A placeholder as a control's only label, or labels removed to restyle (use `visually-hidden`)
+- Saturated color on two data dimensions at once
+- A summary label that is cut off or overlaps
+- Keeping a plan's number after the screenshots show it hurts
+- A brand source nobody gave, or the Reboot default kept while the user named another brand
+- A restyle that appends an override layer instead of changing the token values
+- A logo or favicon with a hard-coded color
+- A green, amber or red accent in either scheme, including a brand's green highlight promoted to the dark accent
+- Font-specific `font-feature-settings` left after the font changes
+- Truncating the main text of a row or card
+- Page links in a row that scrolls with its scrollbar hidden: past the edge they are gone with no sign
+- A layout chosen from a measurement that the layout itself changes
+- Uppercase on identifiers or data (`text-transform` turns "A.14b" into "A.14B")
+
+**`web-app/references/ui-restyle.md`**
+- A new palette from a taste word alone, or a named product's colors from memory (restaurant-app-2, 1.6.0: four guesses, four rejections)
+- A look change in the same turn as a backend restart, expunge or reseed
+- A screenshot taken without opening it, or a change reported without saying where to look
+- Candidates kept as stacked blocks in `styles.css`
+<!-- generated:end -->
+
+## Never
+
+- Adding a trap here by hand — it is overwritten on the next
+  generation. Put it in the owning reference's Never section.
+
+## Limits
+
+- Covers only references converted to the template (those with a
+  Never section).
+
+## Scales as
+
+- Not measured.
+
+## Errors you will see
+
+None known. Each owning reference lists its own.
+
+## See also
+
+- [`patterns-idempotency.md`](patterns-idempotency.md) — `IdempotencyUncertainError` and replays
+- [`lifecycle-dev-loop.md`](lifecycle-dev-loop.md) — hangs and silent test failures

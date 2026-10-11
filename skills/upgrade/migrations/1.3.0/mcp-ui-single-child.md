@@ -1,3 +1,11 @@
+---
+title: "RebootClientProvider must wrap exactly one element in MCP UIs"
+summary: "Make each MCP UI's RebootClientProvider wrap exactly one child: the UI's App component."
+kind: migration
+audience: agent
+applies: [mcp-ui]
+---
+
 ## `RebootClientProvider` must wrap exactly one element in MCP UIs
 
 Reboot now auto-injects the AI-supplied UI request props (from

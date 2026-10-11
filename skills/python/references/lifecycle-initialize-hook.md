@@ -1,42 +1,31 @@
 ---
 title: Use `initialize` for First-Run Setup
 impact: HIGH
-impactDescription: Singletons and seeded state need an explicit creation path
-tags: initialize, InitializeContext, create, singleton, bootstrap
+impactDescription: Singletons and seeded state need an explicit creation path, and a bare call in `initialize` runs once in the application's lifetime, not once per boot
+tags: initialize, InitializeContext, create, singleton, bootstrap, idempotently, alias, migration, backfill, app_internal
+summary: "Each `initialize` call runs once per app lifetime, not per boot; migrations need new aliases; failures retry forever."
+step: servicer
+applies: [mcp-ui, web-app, backend-only]
+always: false
+verified: 1.6.0
+docs: ""
 ---
 
-## Use `initialize` for First-Run Setup
+# Use `initialize` for First-Run Setup
 
-> **Critical:** `initialize` runs on **every** application start, so
-> its calls get an **auto-generated idempotency key** (one per
-> `actor` + `method`) and run once. Constructors —
-> `Service.create(context, id)` / factory methods — are a no-op on
-> existing actors. The catch: to call the **same method on the same
-> actor more than once** you **must** distinguish the calls with
-> `.idempotently("alias")` (or an explicit `key=`), or the second one
-> raises `ValueError: To call '...' more than once using the same context an idempotency alias or key must be specified`
-> (see below). Don't create singletons in a Servicer's `__init__` —
-> that runs lazily per-actor, not at app start.
+## When you are here
 
-`initialize` is an optional `async` callback passed to `Application(...)`. It
-runs against an `InitializeContext` and is the right place to create
-singletons or seed data that must exist before the first real request.
+Actors must exist before the first request (singleton, shared index,
+catalog), or persisted state needs a one-off change.
+`Application(initialize=...)` takes an optional `async` callback run
+with an `InitializeContext` on every start; each call it makes runs once
+in the application's lifetime. Bulk loading (batching, aliases in loops, cost, fixtures):
+[`lifecycle-seeding.md`](lifecycle-seeding.md). Allowed changes to
+persisted state: [`api-schema-evolution.md`](api-schema-evolution.md).
 
-The callback runs each time the application starts; Reboot's idempotent
-`Service.create(context, id)` makes calling it on every boot safe.
+## Do this
 
-**Incorrect (creating singletons inside a Servicer's `__init__`):**
-
-```python
-# DON'T — Servicer instances are created on demand, not at app start.
-class BankServicer(Bank.Servicer):
-    def __init__(self):
-        # This won't run "at startup"; it runs the first time
-        # someone references the Bank actor.
-        Bank.create(...)  # also: no context here
-```
-
-**Correct (matches the [`reboot-bank-pydantic`](https://github.com/reboot-dev/reboot-bank-pydantic) example, `backend/src/main.py`):**
+From [`reboot-bank-pydantic`](https://github.com/reboot-dev/reboot-bank-pydantic) `backend/src/main.py`:
 
 ```python
 from reboot.aio.applications import Application
@@ -57,55 +46,117 @@ async def main():
     ).run()
 ```
 
-## Implicit Constructor on First Write
+**Keying.** Every mutating call gets a persisted idempotency key, from
+`(actor, method)` with no alias, seeded per application (a constant
+under `rbt dev`, the application ID on Reboot Cloud; 1.6.0 source). The
+first boot executes; later boots return the stored response without
+running the body, so the `Bank.create` above is safe to leave. Hence:
 
-If a `Type` does **not** declare a `factory=True` method, Reboot will
-implicitly create the actor on the first writer call. A simple chat
-room can use this — no explicit `ChatRoom.create(...)` is needed when
-`send` is a `Writer`:
+- **Same method on the same actor twice**: give BOTH calls a distinct
+  `.idempotently("alias")` (or explicit `key=`):
+  `await hello.idempotently("Greeting").send(context, message="Hi!")`,
+  then `hello.idempotently("Follow-up").send(...)`.
 
-```python
-async def initialize(context: InitializeContext):
-    chat_room = ChatRoom.ref(EXAMPLE_STATE_MACHINE_ID)
-    # Implicitly construct state machine upon first write.
-    await chat_room.send(context, message="Hello, World!")
-```
+- **A migration or backfill is a new alias, not a new boot.** Editing
+  the body, restarting or redeploying never re-runs a used key — a
+  backfill whose first run did nothing (data not there yet, or a
+  half-deployed build ran it) is done for good: no effect, no error, no
+  log; it isn't failing, it isn't called (cineloop, 1.4.1; key
+  derivation confirmed in 1.6.0 source). Use a versioned alias; bump the
+  suffix to run again:
 
-When the API **does** declare a factory (`Writer(... factory=True ...)`
-or `Transaction(... factory=True ...)`), call it explicitly via
-`Service.create(context, id)` or `Service.<CtorMethod>(context, id, ...)`.
+  ```python
+  async def initialize(context: InitializeContext):
+      await Bank.create(context, SINGLETON_BANK_ID)
+      # Runs once. Rename to "ledger-backfill-v3" to run it again.
+      await Admin.ref(ADMIN_ID).idempotently(
+          "ledger-backfill-v2"
+      ).backfill(context)
+  ```
 
-## Calling the Same Method More Than Once — `.idempotently("alias")`
+  The alias decides *whether* the body runs; the method's guard
+  (`if self.state.sale_count > 0: return`) decides *what* it does and
+  makes re-running safe. Log what it found ("48 showings scanned, 11
+  prior sales found"). Ship a new index or counter over existing data
+  with its backfill in the same change (cineloop, 1.4.1).
 
-`initialize` auto-generates an idempotency key per `(actor, method)`,
-so **one** call to a given method is fine bare — that's why
-`Service.create(...)` followed by a single `ref.send(...)` works
-without any alias. But calling that **same** method on the **same**
-actor again in the same `initialize` raises:
+- **Every boot** (e.g. refreshing a config actor from code):
+  `.always()` opts out of the key, as the framework's own `initialize`
+  does for its `Application` singleton (1.6.0 source).
 
-```text
-ValueError: To call 'hello.v1.HelloMethods.Send' of 'reboot-hello'
-more than once using the same context an idempotency alias or key
-must be specified
-```
+**Implicit constructor on first write.** A type with no `factory=True`
+method is constructed by its first writer call, no `create` needed:
+`await ChatRoom.ref(EXAMPLE_STATE_MACHINE_ID).send(context, message="Hello, World!")`.
+With a declared factory (`Writer(... factory=True ...)` or
+`Transaction(... factory=True ...)`), call `Service.create(context, id)`
+or `Service.<CtorMethod>(context, id, ...)` explicitly.
 
-Give each call a **distinct** `.idempotently("alias")` (or explicit
-`key=`) so the runtime can tell them apart:
+**Identity.** By default no bearer token: the caller is the application,
+so `is_app_internal()` holds and `context.app_internal` is true in
+called methods. `Application(initialize_bearer_token=...)` runs the
+whole hook under one token instead (1.6.0 source).
 
-```python
-async def initialize(context: InitializeContext):
-    hello, _ = await Hello.create(
-        context, "reboot-hello", initial_message="Welcome!",
-    )
+## Never
 
-    # First `send` is fine bare; a second `send` to the same actor
-    # needs its own alias, so give BOTH a distinct one.
-    await hello.idempotently("Greeting").send(context, message="Hi!")
-    await hello.idempotently("Follow-up").send(
-        context, message="Sent after construction!",
-    )
-```
+- **Creating singletons in a Servicer's `__init__`** (`Bank.create(...)`
+  there) — Servicers are created lazily on first reference, with no
+  context.
+- **Expecting a bare call to run again next boot** — use a versioned
+  alias (above).
+- **Trusting a replayed call's response** — it describes the first
+  boot; ask a reader what is new (`patterns-idempotency.md` § Never).
+- **Recomputing seed-time values in a migration.** "Today at 14:00"
+  differs on migration day while seeded actors keep the old value.
+  Build payloads from persisted state or never-changing inputs
+  (showtime, 1.4.1).
+- **Calling an explicit constructor again expecting a no-op**
+  (`rpc-constructor-calls.md` § Never). A bare `create` in `initialize`
+  is safe on later boots only because its persisted key replays first.
+- **A bare `.spawn()` from `initialize`.** It raises
+  `IdempotencyRequiredError` (observed at 1.6.0). Write
+  `ref.idempotently(alias="consumer").spawn()...`; the alias also stops
+  each boot starting another copy of a long-running loop.
+- **Person-level rules on seeded actions.** Seeds are the application,
+  so "the approver must not be the proposer" never passes; add an
+  explicit `context.app_internal` exemption with a why-comment
+  (student-system, 1.5.0). Every type `initialize` or other actors call
+  needs `allow_if(any=[<user rule>, is_app_internal])`; a miss fails at
+  the first call from that path, not at startup.
+- **Raising out of `initialize` expecting the error to surface**
+  (Limits).
 
-`.idempotently("alias")` is the mechanism here. Reusing the **same**
-alias for two different calls is also an error — each distinct call
-needs a distinct alias.
+## Limits
+
+- **A failing `initialize` is retried forever** with backoff; the only
+  sign is a log warning, and `Reboot().up(...)` never returns, so the
+  suite looks hung. Exception: an `InputError` such as
+  `IdempotencyRequiredError` propagates, not retried (1.6.0 source).
+- A retry gets a fresh context; completed calls replay stored results.
+- With several replicas, only replica 0 runs `initialize` (1.6.0 source).
+- One identity for the whole hook: none (app-internal) or
+  `initialize_bearer_token`; no per-call users.
+- A key covers one `(actor, method, alias)`; reusing an alias for a
+  different actor or method is an error (below).
+
+## Scales as
+
+- Each mutation is a full runtime call, re-run by dev effect
+  validation; seeds over a few dozen calls:
+  [`lifecycle-seeding.md`](lifecycle-seeding.md).
+
+## Errors you will see
+
+| Error text (stable prefix) | Meaning | Fix |
+| --- | --- | --- |
+| `ValueError: To call '...' of '...' more than once using the same context an idempotency alias or key must be specified` | Same method called twice on one actor in `initialize` (e.g. a seeding loop on a shared actor) | Distinct `.idempotently("alias")` per call; in a loop `.idempotently(f"...-{id}")` |
+| `ValueError: Idempotency key for ... is being reused _unsafely_` | One alias or key used for two different calls | One alias per distinct call |
+| `IdempotencyRequiredError: Calls to mutators from within your initialize function must use idempotency` | A mutation, typically a bare `.spawn()`, had no key | `ref.idempotently(alias=...)` before the call |
+| `initialize for application '...' failed with ...; will retry after backoff ...` | `initialize` raised; retried forever. Usually why `rbt.up()` hangs | Fix the named exception |
+| `StateAlreadyConstructed` | Explicit constructor on an existing actor; observed after an ordinary dev restart at 1.4.1, the hook then retrying forever | Leave the bare `create` to its persisted key; if it persists, probe with a reader before creating |
+| `AssertionError: Transaction '<id>' missing for state type '<type>'`, then `cygrpc` errors from `Participant/Abort` | Several calls at once on one context (`asyncio.gather` in `initialize`) | One call at a time per context, or a context per concurrent caller |
+
+## See also
+
+- [`lifecycle-seeding.md`](lifecycle-seeding.md): loops, batches and fixtures
+- [`api-schema-evolution.md`](api-schema-evolution.md): which persisted-state changes are allowed
+- [`patterns-idempotency.md`](patterns-idempotency.md): aliases, keys, uncertain mutations

@@ -1,0 +1,150 @@
+# Mods
+
+Claude Code mods that ship with the Reboot plugin: plugins of function
+hooks that draw in Claude Code's interface and act on tool calls. Each
+is its own plugin, listed in `.claude-plugin/marketplace.json` as a
+dependency of `reboot`, so installing `reboot` in Claude Code installs
+them too.
+
+**Claude Code only.** Codex reads the shared `hooks/hooks.json` and
+rejects its `modules` key, so a mod never goes there, and Codex's
+catalog (`.agents/plugins/marketplace.json`) doesn't list the mods.
+Anything a mod enforces is also written into the skills, which Codex
+reads. A rule that only needs to refuse a tool call belongs in a
+command hook that both agents run, not a mod: the schema guard was a
+mod and is now `hooks/schema-guard.sh`.
+
+| Mod | What it does |
+| --- | --- |
+| [`reboot-progress`](reboot-progress/) | Only in a Reboot project, or once a Reboot build, feature, fix or deploy is in view (another repository's session sees nothing and no summary is asked for). The band above the prompt: a Status heading, the Reboot Flywheel's stage (Design until the data model is accepted, Prove after, Promote during a deploy) before a sentence on what is being worked on now (the state types, methods and files involved), "awaiting your acceptance" while the design review is on screen (from the review table in the narration until the next prompt), a toast when the review appears and when a build, feature or fix finishes (the stage cards' header lines, `build/references/flywheel.md`), buttons that open the dashboard and the app (their addresses shown on hover), how far a test run is (its output's percentage and failures when it shows them, else its time beside the last run's of the same command), and during a deploy its stage and time so far (checking, building and pushing the image, rolling out, starting up, publishing the frontend), with toasts for how it ended and Cloud and Site buttons for where it lives (for an MCP app, an MCP button that opens its page for connecting an MCP client). Those buttons show only addresses that answer: from a deploy the band followed or the project's `deploy/ledger.jsonl`, checked once a minute, hidden after two failed checks, and forgotten if one never answered. Only a process that runs `rbt cloud up` or `wrangler pages deploy` counts as a deploy, not one whose arguments name them. A toast when the app or the dashboard starts or stops. |
+
+## The test-run file
+
+`reboot-progress` shows how far a test run is from `.reboot/test-run.json`
+at the project root, which the templates' `tests/run_progress.py`
+rewrites as modules start and end (whole, to a temporary file, then
+renamed):
+
+```json
+{
+  "started_at": "2026-10-08T11:24:00-05:00",
+  "finished_at": null,
+  "modules": [
+    {"name": "accounts_test", "status": "passed", "passed": 114, "failed": 0, "skipped": 1, "seconds": 130.1},
+    {"name": "leads_test", "status": "running", "started_at": "2026-10-08T11:26:11-05:00"},
+    {"name": "web_test", "status": "pending"}
+  ]
+}
+```
+
+- **`status`**: `pending`, `running`, `passed`, `failed`, `rerun`
+  for a harness failure (a hang, a server not ready) the runner
+  retried, which the band names apart from the app failing, or
+  `stopped` for the module running when the run was stopped.
+- **`finished_at`**: set when the run ends, finished or stopped.
+- **`stopped`**: `true` when the run was stopped before its end
+  (Ctrl-C, a terminate or hang-up signal); the band then shows
+  "Stopped" and how far it got. A run killed outright can't say so: the
+  band counts it stopped once it has seen it in the process list and
+  then not, for two polls.
+- **A module's counts** (`passed`, `failed`, `skipped`) are of tests,
+  kept current while it runs; they and its `started_at` are optional, and without
+  `started_at` the band takes the modules to run one after another.
+- A project's own suite script sets `REBOOT_TEST_RUN=external` for each
+  pytest it runs and writes the file itself.
+
+## How a mod works
+
+A mod is a folder with a manifest, a hooks file and one hooks module:
+
+```
+<mod>/
+├── .claude-plugin/plugin.json   # name, version, description, "types"
+├── hooks/
+│   ├── hooks.json               # { "modules": ["./register.tsx"] }
+│   ├── register.tsx             # export const register: Register = on => { ... }
+│   ├── <logic>.ts               # pure functions, no $: unit-tested
+│   └── *.test.ts                # claude plugin test
+└── types/index.d.ts             # the state the mod keeps (PluginState)
+```
+
+- **Hooks.** `on(event, matcher?, hook)` adds a hook; every hook is
+  `($, e, next)`. `e` is the event's input; `next(e)` runs the other
+  plugins and then Claude Code's own behavior. A hook watches (`await
+  next(e)` and reads the result), rewrites (`next({ ...e, … })`) or
+  answers by itself (returning `{ deny }` refuses the call).
+- **`$`** is the mod's only way out (no Node, no DOM): `$.fs`,
+  `$.process`, `$.model`, `$.ui`, `$.store`, …, each spelled noun then
+  method.
+- **Drawing.** A `ui.render` hook on a component (`AbovePrompt` for the
+  band) returns a tree of `Box`, `Text`, `Button`, … from the surface's
+  own element table (`$.ui.resolve(e)`): terminal, desktop, vscode or
+  mobile. Each surface lays the tree out its own way.
+- **State.** `$.state` (`atom`, `read`, `update`) holds a session's
+  values and redraws what reads them; `$.store` keeps values across
+  sessions (`reboot-progress` keeps each project's task there). The
+  module's own variables start over on every reload.
+- **Fail open.** Every hook on a gating event (`tool.call`,
+  `prompt.submit`) ends in `.catch(($, e, next) => next(e))`, so a bug in
+  a mod never blocks the person's work (the engine skips a failed hook by
+  default; the `.catch` says so where it matters).
+
+The API is early access and may change between releases; the
+declarations Claude Code writes beside a loaded mod
+(`.claude-plugin/types/`, gitignored) are the authority.
+
+## Running them while you work on them
+
+Load the mods from this checkout, so an edit here is what runs. In
+`~/.claude/settings.json` (user settings; a project's settings can't
+set it):
+
+```json
+"env": {
+  "CLAUDE_CODE_PLUGIN_DIRS": "/path/to/reboot-plugin/mods/reboot-progress"
+}
+```
+
+or for one session, `claude --plugin-dir mods/reboot-progress`. A
+terminal session watches the folder and reloads on save; the Claude
+desktop app loads a mod when a session starts, so see a change there
+in a new session. Don't also install the mods from the marketplace on
+the same machine, or both copies load.
+
+## Checks before a commit
+
+From the mod's folder:
+
+```sh
+claude plugin validate .     # manifest, module and what it calls, as the engine reads them
+claude plugin test .         # the *.test.ts files, against the engine itself
+tsc -p .                     # once the mod has loaded (it writes the tsconfig and types)
+```
+
+CI runs the first two for every mod on the latest Claude Code
+(`tools/check-mods.sh`, the `mods` job in
+`.github/workflows/skills-checks.yml`). `tsc` stays local: the engine
+writes a mod's tsconfig and types only when a session loads it.
+
+- **Logic** that needs no `$` lives in plain modules (`progress.ts`,
+  `activity.ts`, `deploy.ts`, `suite.ts`) with unit tests.
+- **Drawing** is tested by mounting the component on both the terminal
+  and desktop surfaces (`$.ui.mount`), pressing buttons by key.
+- **Behavior that involves a model** (the activity summaries, the task
+  classification) is checked by running real prompts through it: a
+  headless `claude -p --plugin-dir <mod>` session with `--debug-file`,
+  or the prompt function's output through `claude -p --model sonnet`.
+- **Layout isn't covered.** The tests check what a tree holds, not how
+  a surface lays it out, so look at a layout change in the Claude app
+  before calling it done.
+
+## Shipping
+
+Bump the mod's `version` in its `.claude-plugin/plugin.json` with every
+change that ships: an install keyed by version never sees an update
+otherwise.
+
+A new mod is a folder here plus an entry in
+`.claude-plugin/marketplace.json` (its `source` the folder) and its name
+in `reboot`'s `dependencies`. Never add its `modules` to the root
+`hooks/hooks.json` (Codex reads that file).

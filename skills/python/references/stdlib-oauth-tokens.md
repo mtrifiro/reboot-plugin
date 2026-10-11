@@ -3,84 +3,75 @@ title: Store Provider OAuth Tokens in `OAuthTokenManager`, Not Hand-Rolled `Ciph
 impact: HIGH
 impactDescription: OAuth access/refresh tokens are secrets at rest; the stdlib manager encrypts, indexes, and crypto-shreds them per user for you — a plain `str` field leaks them, and hand-rolling `Ciphertext` re-implements what already exists.
 tags: stdlib, oauth, tokens, access-token, refresh-token, store-tokens, ciphertext, encryption, crypto-shred, google, github, secret
+summary: "Never tokens in a `str` field or hand-rolled `Ciphertext`; `OAuthTokenManager`, three libraries (`oauth` vendored at 1.6.0), app-internal only."
+step: auth
+applies: [mcp-ui, web-app, backend-only]
+always: false
+when: "storing a user's OAuth tokens for an external service"
+verified: 1.6.0
+docs: ""
 ---
 
-## Store Provider OAuth Tokens in `OAuthTokenManager`
+# Store Provider OAuth Tokens in `OAuthTokenManager`
 
-> **Critical:** never store an external provider's OAuth access/refresh
-> token in a plain `str` state field — that is a secret in plaintext at
-> rest. And don't hand-roll `Ciphertext` for it either: the
-> `OAuthTokenManager` stdlib type already wraps `Ciphertext` plus the
-> pointer index, per-service key manager, and per-user crypto-shred
-> scope. For non-OAuth secrets/PII, use `Ciphertext` directly
-> (`stdlib-ciphertext.md`); for OAuth provider tokens, use this.
+## When you are here
 
-`OAuthTokenManager`
-(`reboot.std.oauth.v1.oauth` / `rbt.std.oauth.v1.oauth_rbt`) holds the
-OAuth tokens for **one** external third-party service (Google, GitHub,
-…), keyed by `user_id`. It is addressed by a state id naming the service
-(use the `GOOGLE` / `GITHUB` constants, or any string for a service
-without a predefined one). Each manager encrypts under its own dedicated
-`KeyManager`, and each user's tokens are scoped to their `user_id`, so a
-single user's tokens can be crypto-shredded (right-to-erasure) without
-touching anyone else's.
+Storing or reading a user's OAuth access/refresh tokens for an external
+service (Google, GitHub, Slack, …). This is the `OAuthTokenManager`
+surface; the end-to-end flow (`store_tokens=True`, your own
+authorize/callback, the in-`Workflow` call, refresh, erasure) is
+`auth-external-api-calls.md`. Non-OAuth secrets (pasted API key, PII):
+`Ciphertext` (`stdlib-ciphertext.md`).
 
-The methods are **app-internal by default** (no authorizer) — call them
-from your own backend with an app-internal context, never from an
-untrusted client.
+## Do this
 
-### Register the libraries
+One `OAuthTokenManager` per external service, keyed by `user_id`; its state
+ID names the service (`GOOGLE` / `GITHUB` constants, or any string, e.g.
+`"slack.com"`). Each manager encrypts under its own `KeyManager`, each
+user's tokens under a crypto-shred scope of their `user_id`, so one user
+can be erased alone.
 
-`OAuthTokenManager` builds on `Ciphertext` (which builds on
-`OrderedMap`), so all three libraries must be mounted — omitting any
-makes the app fail fast at boot:
+**At reboot 1.6.0, install the `oauth` library first**: the 1.6.0 wheel
+leaves it out (Limits), so the plugin ships it, copied unchanged from
+upstream's 1.6.0 tag. From the application directory, with `<python>`
+this skill's directory:
+
+```sh
+mkdir -p vendor && cp -R <python>/vendor/reboot-std-oauth vendor/
+uv add --no-workspace ./vendor/reboot-std-oauth
+```
+
+Commit `vendor/`. The package pins `reboot==1.6.0`, so an upgrade fails
+to resolve until it's removed (the upgrade skill says when).
+
+Mount all three libraries (manager → `Ciphertext` → `OrderedMap`) and
+import the manager:
 
 ```python
-from reboot.std.oauth.v1.oauth import oauth_library
+from reboot.std.oauth.v1.oauth import oauth_library, GOOGLE, GITHUB
 from reboot.std.ciphertext.v1.ciphertext import ciphertext_library
 from reboot.std.collections.ordered_map.v1.ordered_map import (
     ordered_map_library,
 )
-
-
-async def main():
-    await Application(
-        servicers=[...],
-        libraries=[
-            oauth_library(), ciphertext_library(), ordered_map_library(),
-        ],
-    ).run()
-```
-
-### The easy path: `store_tokens=True`
-
-If the tokens you want are the **identity provider's own** (the provider
-the user logs in with) **and** you're an MCP UI using
-`Application(oauth=...)`, don't store anything yourself. Configure the
-`OAuthProvider` with `store_tokens=True` and the OAuth server captures
-the access/refresh tokens during the code exchange and persists them
-encrypted under the matching `OAuthTokenManager` automatically. Your code
-only ever `fetch`es. The end-to-end recipe — this easy path, the custom
-endpoints for any other service, and the in-`Workflow` call — is
-`auth-external-api-calls.md`.
-
-### Imports
-
-```python
 from rbt.std.oauth.v1.oauth_rbt import OAuthTokenManager, OAuthTokens
-from reboot.std.oauth.v1.oauth import GOOGLE, GITHUB, oauth_library
+# also: from reboot.aio.auth import OAuthTokenManager, OAuthTokens
+
+Application(
+    servicers=[...],
+    libraries=[oauth_library(), ciphertext_library(), ordered_map_library()],
+)
 ```
 
-### `OAuthTokens`
+`OAuthTokens`:
 
-| Field           | Type             | Notes                                             |
-| --------------- | ---------------- | ------------------------------------------------- |
-| `access_token`  | `str`            | Bearer token for the provider's API.              |
-| `refresh_token` | optional `str`   | Unset (`HasField` false) if none was issued.      |
-| `expires_at`    | optional `int64` | Absolute expiry, epoch seconds; unset if unknown. |
-| `scopes`        | repeated `str`   | Scopes the provider actually granted.             |
+| Field | Type | Notes |
+| --- | --- | --- |
+| `access_token` | `str` | Bearer token for the provider's API. |
+| `refresh_token` | optional `str` | Unset (`HasField` false) if none was issued. |
+| `expires_at` | optional `int64` | Absolute expiry, epoch seconds; unset if unknown. |
+| `scopes` | repeated `str` | Scopes the provider actually granted. |
 
-### Fetch (reader)
+**Fetch** (reader):
 
 ```python
 response = await OAuthTokenManager.ref(GOOGLE).fetch(
@@ -90,18 +81,9 @@ if response.found:
     access_token = response.tokens.access_token
 ```
 
-`found` is false when nothing is stored for the user, or once their
-tokens have been crypto-shredded.
-
-### Store (transaction)
-
-You call `store` yourself when you capture tokens from a service
-**other** than an MCP UI login provider — i.e. you run that service's
-OAuth flow via your own HTTP endpoints (the only path in a web app).
-**Store with `OAuthTokenManager`, never hand-rolled `Ciphertext` or a
-`str` field** — it is the same secret-at-rest problem, already solved
-(the manager encrypts, indexes by `user_id`, and gives you per-user
-crypto-shred scope).
+**Store** (transaction) — only when you capture tokens yourself from a
+service other than the `oauth=` sign-in provider (the only path in a web
+app without `oauth=`):
 
 ```python
 await OAuthTokenManager.ref("slack.com").store(
@@ -115,19 +97,58 @@ await OAuthTokenManager.ref("slack.com").store(
 )
 ```
 
-`store` replaces any previously stored tokens for the user, but carries a
-prior `refresh_token` forward if the new `tokens` leaves it unset (some
-providers issue a refresh token only on first consent). The full
-end-to-end recipe — the authorize/callback endpoints, the HMAC-signed
-`state`, the `app_internal=True` danger note, and the in-`Workflow`
-read-and-call — is in `auth-external-api-calls.md`.
+For the sign-in provider's **own** tokens under `Application(oauth=...)`,
+don't `store`: `store_tokens=True` captures them at the code exchange; you
+only `fetch` (`auth-external-api-calls.md`, Path A).
 
-### Don't
+## Never
 
-- **Don't put tokens in a `str` field** — plaintext at rest.
-- **Don't hand-roll `Ciphertext`** for provider OAuth tokens — this type
-  already does the encryption, indexing, and per-user shred scope.
-- **Don't forget any of the three libraries** — `oauth_library()`,
-  `ciphertext_library()`, `ordered_map_library()`.
-- **Don't expose these methods to untrusted callers** — they default to
-  app-internal.
+- Tokens in a `str` state field — plaintext at rest.
+- Hand-rolled `Ciphertext` for provider OAuth tokens — the manager
+  already encrypts, indexes by `user_id`, and shreds per user.
+- A user-pasted API key in `OAuthTokenManager` — that is `Ciphertext`
+  (`auth-external-api-calls.md`, Path C).
+- Leaving out any of `oauth_library()`, `ciphertext_library()`,
+  `ordered_map_library()`.
+- Calling `store` / `fetch` from an untrusted, external context — they
+  are app-internal only.
+
+## Limits
+
+- **The 1.6.0 wheel lacks `reboot.std.oauth`** (macOS and
+  `manylinux_2_34_x86_64` alike): only the generated
+  `rbt.std.oauth.v1.oauth_rbt` client ships, not the module defining
+  `oauth_library`, `GOOGLE`, `GITHUB`, `_key_manager_id` and the
+  `OAuthTokenManager` servicer (tool-checks-01, open upstream). The
+  vendored `reboot-std-oauth` package (Do this) installs that module into
+  reboot's own `reboot/std/` namespace; upstream's `oauth_tests.py` passes
+  against it on the published 1.6.0 wheel. Not yet tried on Reboot Cloud.
+  The built-in providers use the service IDs `"google.com"` (`Google`)
+  and `"github.com"` (`GitHub`); `Auth0` uses its tenant domain.
+- `store` replaces the user's tokens wholesale, but carries a prior
+  `refresh_token` forward when the new `tokens` leaves it unset.
+- No read and write of the same manager in one transaction; to merge,
+  `fetch` in a separate call first.
+- `fetch` returns `found=False` when nothing is stored for the user or
+  their scope was shredded; before the first `store` (which constructs the
+  manager) it aborts (`FetchAborted`, `StateNotConstructed`).
+- Reboot does not refresh expired access tokens; check `expires_at`.
+- `REBOOT_CRYPTO_ROOT_KEYS` backs the encryption; auto-provisioned under
+  `rbt dev run` and on Reboot Cloud.
+
+## Scales as
+
+- Not measured.
+
+## Errors you will see
+
+| Error text (stable prefix) | Meaning | Fix |
+| --- | --- | --- |
+| `ModuleNotFoundError: No module named 'reboot.std.oauth'` | The 1.6.0 wheel does not ship the `oauth` library; also raised at startup by any provider with `store_tokens=True` (the library check imports it) | Install the vendored `reboot-std-oauth` package (Do this) |
+| `FetchAborted` | Nothing has ever been stored for this service | Treat as "not connected" |
+
+## See also
+
+- [`auth-external-api-calls.md`](auth-external-api-calls.md) — capture, use, refresh, erase
+- [`stdlib-ciphertext.md`](stdlib-ciphertext.md) — non-OAuth secrets, shred scopes
+- [`servicer-workflow-external.md`](servicer-workflow-external.md) — outbound calls in Workflows

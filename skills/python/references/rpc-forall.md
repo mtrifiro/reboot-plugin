@@ -1,88 +1,80 @@
 ---
 title: Fan Out Calls with `Service.forall(ids).method(context)`
 impact: MEDIUM
-impactDescription: Hand-rolled gather over many actors is more code and misses framework optimizations
-tags: rpc, forall, fan-out, batch, parallel
+impactDescription: A hand-rolled gather is more code; an unbudgeted fan-out over ~150 actors times out
+tags: rpc, forall, fan-out, batch, parallel, gather
+summary: "Fan-out is one RPC per id, no batching; `Service.forall(ids).method(context)` over a hand-rolled gather; input order; budgets."
+step: servicer
+applies: [mcp-ui, web-app, backend-only]
+always: false
+when: "fanning one call out to many actors"
+verified: 1.6.0
+docs: ""
 ---
 
-## Fan Out Calls with `Service.forall(ids).method(context)`
+# Fan Out Calls with `Service.forall(ids).method(context)`
 
-> **Critical:** prefer `Service.forall(ids).method(context, ...)` over
-> `asyncio.gather(*[Service.ref(id).method(...)])` — the framework can
-> batch internally. Returns a list in the same order as the input ids.
-> Same context-type rules as a single call.
+## When you are here
 
-`Service.forall(ids).method(context, **kwargs)` calls the same method on
-many actors at once and returns the list of responses, in the same order
-as the input ids. It's the framework-native fan-out, more compact than
-`asyncio.gather` and able to batch internally.
+Calling the same method on many actors of one type. Single calls and
+context rules: `rpc-calls.md`; whether to fan out at all or read a copy
+kept on the parent: `patterns-cross-actor-reads.md`.
 
-**Incorrect (handrolled gather over `Service.ref(id)`):**
-
-```python
-import asyncio
-
-# Verbose; doesn't get framework-side batching:
-results = await asyncio.gather(
-    *[Message.ref(mid).get(context) for mid in message_ids]
-)
-```
-
-**Correct (`Service.forall(...).method(...)`):**
+## Do this
 
 ```python
 from chat.v1.message_rbt import Message
 
+# List of Message.GetResponse, in the order message_ids was iterated.
 responses = await Message.forall(message_ids).get(context)
+mine = [r.details for r in responses if r.details.author == request.name]
 
-# `responses` is a list of `Message.GetResponse` in the same order
-# as `message_ids`.
-for response in responses:
-    print(response.details)
-```
-
-## Returns a List, Same Order as Inputs
-
-`Service.forall([a, b, c]).method(context)` returns
-`[response_a, response_b, response_c]`. Iterate in parallel with the
-input id list when you need both:
-
-```python
-for mid, response in zip(message_ids, responses):
-    print(mid, response.details)
-```
-
-## Method Type Restrictions
-
-Apply the same context-type rules as a single call: a `reader` method
-needs a `ReaderContext` (or higher); a `writer`/`transaction`/`workflow`
-needs the matching context. `forall` doesn't change semantics — it
-parallelizes the call shape you'd write anyway.
-
-## Use for Read-Mostly Fan-Out
-
-The canonical use is reading many actors of the same type in parallel:
-
-```python
-# Fetch each message's details from a list of message IDs.
-responses = await Message.forall(message_ids).get(context)
-messages = [r.details for r in responses]
-
-# Filter, transform, etc.
-mine = [m for m in messages if m.author == request.name]
-```
-
-## Use for Cross-Cutting Writes from Workflows
-
-Workflow brokers in stdlib use `forall` to fan items out to many queues
-in one call:
-
-```python
-# Fan one batch of items out to every subscribed queue.
+# Writes fan out the same way from a transaction or workflow (stdlib brokers do this):
 await Queue.forall(queue_ids).enqueue(context, items=items)
 ```
 
-## Pass an Iterable
+- Returns a list of responses (a list of `None` for `response=None`).
+- `ids` is any iterable of strings: list, set or generator.
+- At 1.6.0 it is exactly
+  `asyncio.gather(*[Service.ref(id).method(context, ...) for id in ids])`
+  (generated code): shorter and idiomatic, not batched.
 
-`forall(ids)` accepts any iterable of strings. List, generator, or set
-all work; the response order matches the iteration order at call time.
+## Never
+
+- Hand-rolling `asyncio.gather(*[Message.ref(mid).get(context) for mid
+  in ids])` — same work, more code.
+- Expecting framework-side batching — none at 1.6.0; one call per id.
+- A subscribed reader that `forall`s over a large or growing set, or
+  fans out to readers that fan out again — keep the facts on the parent
+  (`patterns-cross-actor-reads.md`).
+- `forall` over a writer from a `WriterContext` — as for a single call,
+  writers and transactions need a `TransactionContext`,
+  `WorkflowContext` or `ExternalContext` (`rpc-calls.md`).
+
+## Limits
+
+- Readers, writers and transactions only; not constructors or workflow
+  methods (1.6.0 template).
+- One failing call raises out of the `await`; the other calls are not
+  canceled and their responses are lost (plain `asyncio.gather`
+  without `return_exceptions`, 1.6.0 template).
+- A generator of ids is consumed once, at call time.
+- A fan-out of about 150 actors does not finish inside the request
+  window (theater-network-06; budget in
+  `patterns-load-and-benchmarking.md`).
+
+## Scales as
+
+- Linear in ids: one concurrent RPC each; in dev each also crosses the
+  local proxy, whose CPU cost is per request (theater-network-23,
+  1.4.0). Times: `patterns-load-and-benchmarking.md`.
+
+## Errors you will see
+
+`Unavailable: ping timeout`: see `patterns-load-and-benchmarking.md`.
+
+## See also
+
+- [`patterns-cross-actor-reads.md`](patterns-cross-actor-reads.md) — when not to fan out
+- [`patterns-load-and-benchmarking.md`](patterns-load-and-benchmarking.md) — measured fan-out budget
+- [`rpc-calls.md`](rpc-calls.md) — context rules per method kind

@@ -1,0 +1,22 @@
+# Settings for scripts/deploy.sh, sourced as shell. Credentials are not
+# here: they go in .deploy.env (git-ignored). See the deploy skill.
+
+# The Reboot Cloud application, and its size (xsmall, small, medium,
+# large, xlarge). Passed to `rbt cloud up` on every deploy, so a redeploy
+# cannot resize the app by forgetting a flag.
+APP=__project__
+SIZE=xsmall
+
+# The branch production runs.
+BRANCH=main
+
+# The web frontend: the directory `npm run build` runs in, the one whose
+# .env.production holds VITE_REBOOT_URL, and the built site published to
+# Cloudflare Pages.
+FRONTEND_DIR=web
+ENV_DIR=web
+PUBLISH_DIR=web/dist
+PAGES_PROJECT=__project__
+# The address the site serves at once its domain is attached; until then,
+# https://<PAGES_PROJECT>.pages.dev.
+SITE_URL=

@@ -1,3 +1,11 @@
+---
+title: "mypy was skipping the API definition; the Vite dev server binds IPv6-only"
+summary: "Fix .mypy.ini so mypy checks the API, and bind Vite on every interface."
+kind: migration
+audience: agent
+applies: [mcp-ui, web-app, backend-only]
+---
+
 ## `mypy` was skipping the API definition; the Vite dev server binds IPv6-only
 
 Two configuration files that earlier project templates generated are

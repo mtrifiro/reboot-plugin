@@ -3,21 +3,31 @@ title: Drive the Web App from Scenarios
 impact: MEDIUM
 impactDescription: A user-facing flow that is only tested at the backend leaves the page, the session cookie, and CORS untested; a page without accessible markup cannot be driven at all
 tags: testing, bdd, web-app, playwright, frontend, vite, aria, accessible-name, recordings, sign-in
+summary: "Pages need accessible markup (labels, named buttons) to be driven; the `frontend` fixture, web steps, clicked-through sign-in, recordings."
+step: tests
+applies: [web-app]
+always: false
+verified: 1.6.0
+docs: ""
 ---
 
-## Drive the Web App from Scenarios
+# Drive the Web App from Scenarios
 
-> **Critical:** the web app steps find things the way a person
-> does: a button by what it says, a field by its label, a table by
-> its caption. They never take a CSS selector. A page the steps
-> cannot find things on has an accessibility bug, and the fix is in
-> the markup, not in the scenario.
+## When you are here
 
-A scenario opens the application's web app in a real browser, run
-through Playwright, against the same backend its backend steps call.
-Backend steps and web app steps mix in one scenario, so a scenario
-can set up through the API, act in the browser, and assert on
-state:
+A scenario opens the web frontend in a real browser (Playwright)
+against the backend its backend steps call. Backend steps and feature
+shape: [`testing-features.md`](testing-features.md). Reference:
+[`reboot-bank-pydantic`](https://github.com/reboot-dev/reboot-bank-pydantic)'s
+`tests/web_test.py`, `opening_accounts.feature`, `transfers.feature`,
+`sign_in.feature`.
+
+## Do this
+
+Web app steps find things as a person does (a button by its text, a
+field by its label, a table by its caption), never by CSS selector. A
+page they can't drive has an accessibility bug: fix the markup, not the
+scenario. Backend and web steps mix:
 
 ```gherkin
 Scenario: Opening a first account in the web app
@@ -31,43 +41,23 @@ Scenario: Opening a first account in the web app
   Then as "alice", `balance` on the `Account` for "<account id>" has `amount=1000.0`
 ```
 
-`testing-features.md` covers the backend steps and the shape of a
-feature; this reference covers what the browser adds. The
-[`reboot-bank-pydantic`](https://github.com/reboot-dev/reboot-bank-pydantic)
-example's `tests/web_test.py` and the scenarios of its
-`opening_accounts.feature`, `transfers.feature`, and
-`sign_in.feature` are the reference.
-
-## What the Project Installs
-
-Add Playwright to the dev group next to `reboot[dev]`, then install
-a browser once:
+### Install
 
 ```toml
 [dependency-groups]
-dev = [
-    "reboot[dev]==<version>",
-    "playwright>=1.55.0",
-    "pytest-playwright>=0.7.1",
-    ...
-]
+dev = ["reboot[dev]==<version>", "playwright>=1.55.0", "pytest-playwright>=0.7.1", ...]
 ```
 
 ```sh
 uv sync
 uv run playwright install chromium
-cd frontend && npm install   # the web app's own dependencies
+cd web && npm install   # the web app's own dependencies (`frontend` in a dual-frontend app)
 ```
 
-With `playwright` and `pytest-playwright` present, the `reboot`
-pytest plugin registers the web app steps and records every browser
-scenario; without them the backend steps still work.
+With both present, the `reboot` pytest plugin registers the web app
+steps and records browser scenarios.
 
-## The `frontend` Fixture and the Application
-
-Each scenario serves the web app fresh, once its backend is up. A
-project with a Vite project under its root defines the `frontend`
-fixture with `reboot.bdd.vite.vite` and the directory:
+### The `frontend` fixture and the application
 
 ```python
 import pytest
@@ -80,31 +70,31 @@ from reboot.aio.auth.oauth_providers import (
 from reboot.bdd import scenarios
 from reboot.bdd.frontend import Frontend
 from reboot.bdd.vite import vite
+from servicers.registry import SERVICERS, libraries
 from typing import Iterator
 
 
 @pytest.fixture
 def frontend() -> Iterator[Frontend]:
-    with vite(directory='frontend') as frontend:
+    # `web/` holds the SPA (`frontend/` in a dual-frontend app).
+    with vite(directory='web') as frontend:
         yield frontend
 
 
 @pytest.fixture
 def application(frontend: Frontend) -> Application:
-    # A web app calls the backend from its own origin.
     assert frontend.origin is not None
     development = Development()
     return Application(
-        servicers=[...],
-        # The harness is neither `rbt dev run` nor `rbt serve`, so
-        # name the Development picker for both.
+        servicers=SERVICERS,
+        libraries=libraries(),
+        # The harness is neither `rbt dev run` nor `rbt serve`.
         oauth=OAuth(
             provider=OAuthProviderByEnvironment(
                 dev=development,
                 prod=development,
             ),
-            # The app's origin is the only one Envoy lets read
-            # `/whoami` cross-origin, as a deployment lists its host.
+            # The only origin Envoy lets read `/whoami` cross-origin.
             allowed_origins=[frontend.origin],
         ),
     )
@@ -113,57 +103,88 @@ def application(frontend: Frontend) -> Application:
 scenarios('opening_accounts.feature', 'transfers.feature', 'sign_in.feature')
 ```
 
-The app is served the way it is deployed: from its own origin (a
-Vite dev server on `localhost`), calling the backend cross-origin at
-its `127.0.0.1` address. The browser treats those as different
-sites, so the session cookie, the `whoami` probe, and Envoy's CORS
-allow-list are exercised the way production exercises them. The
-`application` fixture takes `frontend` so the app can allow that
-origin.
+The app is served from its own origin (Vite on `localhost`) and calls
+the backend cross-origin at `127.0.0.1`, exercising the session cookie,
+the `whoami` probe and Envoy's CORS allow-list as production does. To
+serve the web app another way, define `frontend` with your own
+`Frontend` subclass; `in the web app` always means this fixture.
 
-A project that serves its web app some other way defines
-`frontend` against its own `Frontend` subclass. A mobile app or an
-MCP host would get its own phrase against its own fixture; `in the web app` always means this one.
+### The steps
 
-## The Steps
+Every step names a declared user. **Each user gets their own browser.**
 
-Every step names the user acting, a user the scenario declared.
-**Each user gets a browser of their own**, so two users can be in
-the app in one scenario.
+| Step | What it does |
+| --- | --- |
+| `"alice" opens the web app` | Opens a **new** browser for alice at the app's origin (`at "/path"` for another page) |
+| `"alice" clicks the "Open Account" button in the web app` | Plain left click on the element of that role and accessible name |
+| `` "alice" fills "Amount ($)" in the web app with `250` `` | Fills the field with that label; the value is JSON: `` with `"Alice"` `` for text |
+| `"alice" selects "<first account id>" in "From Account" in the web app` | Picks an option in the select with that label |
+| `"alice" checks "Remember me" in the web app` / `unchecks` | Sets the checkbox with that label |
+| `"alice" presses "Enter" in the web app` | Presses a key in the focused element (`Shift+Tab` works) |
+| `"alice" sees "$1000" in the web app` | Asserts the text is visible now |
+| `"alice" sees "$1000" in the "Your Accounts" table in the web app` | Asserts the text within that element |
+| `"alice" eventually sees "$1000" in the web app within 10 seconds` | Waits for the text, at most that long |
+| `"alice" does not see "<carol account id>" in the web app` | Asserts the text is absent |
+| `"alice" sees the "Sign in" button in the web app is enabled` / `is disabled` | Asserts the element's state |
+| `"alice" sees the web app at "/accounts"` | Asserts the page's path |
+| `"alice" saves the text of the "account-id" element in the web app as "id"` | A **`When`**: reads an element by `data-testid` into a saved value |
+| `"bob" is signed in to the web app with their user id saved as "bob id"` | Binds bob's browser session to bob (below) |
+| `"bob" is signed out of the web app` | Waits for bob's session to end (below) |
 
-| Step                                                                          | What it does                                                              |
-| ----------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| `"alice" opens the web app`                                                   | Opens the app's origin in alice's browser (`at "/path"` for another page) |
-| `"alice" clicks the "Open Account" button in the web app`                     | Clicks the element of that role and accessible name                       |
-| `"alice" fills "Amount ($)" in the web app with `250``                        | Fills the field with that label                                           |
-| `"alice" selects "<first account id>" in "From Account" in the web app`       | Picks an option in the select with that label                             |
-| `"alice" checks "Remember me" in the web app` / `unchecks`                    | Sets the checkbox with that label                                         |
-| `"alice" presses "Enter" in the web app`                                      | Presses a key in the focused element                                      |
-| `"alice" sees "$1000" in the web app`                                         | Asserts the text is visible now                                           |
-| `"alice" sees "$1000" in the "Your Accounts" table in the web app`            | Asserts the text within that element                                      |
-| `"alice" eventually sees "$1000" in the web app within 10 seconds`            | Waits for the text, at most that long                                     |
-| `"alice" does not see "<carol account id>" in the web app`                    | Asserts the text is absent                                                |
-| `"alice" sees the "Sign in" button in the web app is enabled` / `is disabled` | Asserts the element's state                                               |
-| `"alice" sees the web app at "/accounts"`                                     | Asserts the page's path                                                   |
-| `"alice" saves the text of the "account-id" element in the web app as "id"`   | Reads an element by test id into a saved value                            |
-| `"bob" is signed in to the web app with their user id saved as "bob id"`      | Binds bob's browser session to bob (below)                                |
-| `"bob" is signed out of the web app`                                          | Waits for bob's session to end (below)                                    |
+- **Roles** are a closed list: `button`, `link`, `tab`, `checkbox`,
+  `radio`, `menuitem`, `option`, `row`, `table`.
+- **Two ways of naming**: `clicks` and `sees the ... button` match the
+  accessible name exactly (an `aria-hidden` glyph inside is excluded);
+  `fills`, `checks`, `selects` match the label's text exactly with
+  `get_by_label` (the glyph is included).
+- **Quoted text may say `<name>`** for a saved value, in every step
+  except the path of `opens the web app at`.
+- `eventually sees` takes `within`; `sees` takes none. A change shown
+  after a reactive read is always `eventually`.
+- **Gestures other than a left click** (double, right, modifier-click,
+  hover, drag) are custom steps over the Playwright `Page`:
 
-- The **roles** a step may name are a closed list: `button`,
-  `link`, `tab`, `checkbox`, `radio`, `menuitem`, `option`, `row`,
-  `table`. The name is the element's accessible name, matched
-  exactly.
-- **Quoted text may say `<name>`** for a saved value: `sees "<alice account id>" in the "Your Accounts" table`.
-- `eventually sees` takes `within`; `sees` looks now and takes
-  none. A backend change the page shows after a reactive read is
-  always `eventually`.
-- The one step that reads a value out of the page, `saves the text of the "..." element`, names it by `data-testid`; nothing else
-  does.
+```python
+from reboot.bdd import parsers, when
+from reboot.bdd.web import WebApp
 
-## Signing In Is Clicked Through, Then Bound
 
-An unauthenticated user signs in the way a person does, and then a
-binding step ties their browser's session to their name:
+@when(parsers.parse(
+    '"{user}" double-clicks the "{name}" {role} in the web app'
+))
+def _double_clicks(web_app: WebApp, user: str, name: str, role: str) -> None:
+    web_app.page(user=user).get_by_role(role, name=name, exact=True).dblclick()
+```
+
+  Right-click is testable only if the frontend calls `preventDefault()`
+  and renders its own `role="menu"`; HTML5 drag-and-drop often defeats
+  `drag_to()`, so use `mouse.down()` / `move()` / `up()`.
+
+### Look steps (template `tests/conftest.py`)
+
+The web-app template ships five `Then` steps that fail a page breaking
+the floor of `web-app/references/ui-design.md`. One scenario per page,
+after it has loaded:
+
+```gherkin
+Then "alice" sees the web app fit a phone screen
+And "alice" sees no loading text in the web app
+And "alice" sees the web app use its own fonts
+And "alice" sees the web app work in light and dark
+And "alice" sees no clipped labels in the web app
+```
+
+Phone fit: no horizontal page scroll at 375 px. Loading text:
+"Loading…" or "Loading...". Own fonts: the body's font isn't the
+browser's default serif, and a named web font actually loaded (a system
+stack passes). Light and dark: the `Switch to … mode` toggle, required
+in a first build, changes the page background. Clipped labels: no short
+label (stat tile, group band, header, pill, tab, button) is cut off.
+
+These steps are a floor; the screenshot review (build Step 5) is where
+the design is judged.
+
+### Signing in is clicked through, then bound
 
 ```gherkin
 Scenario: Signing in and out with the Development picker
@@ -181,59 +202,33 @@ Scenario: Signing in and out with the Development picker
   And as "ben", `balances` on the `User` for "<ben user id>" aborts with `Unauthenticated`
 ```
 
-- The Development picker lists its accounts as links named by
-  identity, so `clicks the "Ben" link` picks one. A custom identity
-  provider's login page is driven with the same generic steps; only
-  the binding step is Reboot's.
-- `is signed in to the web app` waits for the browser to come back
-  to the app and asks the backend who the session is; from then on
-  `as "ben",` backend steps call as the signed-in user, and `<ben user id>` is their opaque id. The `with their user id saved as`
-  part is optional.
-- `is signed out of the web app` waits for the session to end and
-  returns the user to calling with no token.
-- A scenario that does not test sign-in itself declares its people
-  with `is an authenticated user`; their browsers arrive signed in.
+The Development picker lists accounts as links named by identity; a
+custom provider's page uses the same generic steps. `is signed in`
+waits for the browser to return to the app and asks the backend who
+the session is; then `as "ben",` calls as that user (`with their user
+id saved as` is optional). `is signed out` reverts to calling with no
+token. Scenarios not about sign-in use `is an authenticated user`;
+their browsers arrive signed in.
 
-## The App Must Have Accessible Markup
+### Accessible markup the steps need
 
-The steps locate elements through the accessibility tree, so the
-page has to expose one. What the steps need, and what the React
-code must therefore do:
+The steps find elements as a person does: a field by its paired label,
+a button, link, tab or menu item by its text (or `aria-label` if
+icon-only), a table, list or region by its caption or labeled heading, a
+select by its label and its options' text, a value a scenario reads back
+by `data-testid` on the element whose text is exactly that value (the
+only place a test id belongs), and text that changes on a backend event
+as visible text. The markup, with an example:
+[`web-app/references/react-client.md`](../../web-app/references/react-client.md),
+"Accessible markup". Build pages that way from the start; screen readers
+need the same.
 
-- **A field's label is paired with it.** `<label htmlFor="amount">`
-  with `<input id="amount">`, or the input nested inside the label.
-  `fills "Amount ($)"` finds the input through that pairing; a
-  placeholder or a heading beside the field does not count.
-- **A button, link, tab, or menu item says what it does** in its
-  text, or in `aria-label` when it is only an icon. `clicks the "Sign out" button` matches that text exactly.
-- **A table, list, or region that a step names has a caption or a
-  labelled heading:** `<table aria-labelledby="your-accounts">`
-  with `<h2 id="your-accounts">Your Accounts</h2>`, or a
-  `<caption>`. `sees "$1000" in the "Your Accounts" table` looks
-  only inside it.
-- **A select is a `<select>` with a paired label**, and its
-  `<option>`s say the value a scenario would pick, such as the
-  account id.
-- **A value a scenario needs to read back** (an id the app made up)
-  carries `data-testid`, on the element whose text is exactly that
-  value. This is the only place a test id belongs; a button with a
-  test id is a button without a name.
-- **Text that changes on a backend event** (a balance, a status)
-  must be rendered as text the page shows, not only as an attribute
-  or a canvas.
+### Recordings and running
 
-Build the page with these from the start, whether or not a scenario
-drives it yet: they are the same properties a screen reader needs.
-
-## Recordings
-
-Every browser scenario is recorded: a video of each user's browser
-and a screenshot after the step that opened the app for them and
-after each assertion step, with the asserted element scrolled into
-view and outlined. They land beside the feature file:
+Each browser scenario records a video per user and a screenshot after
+the opening step and each assertion (asserted element outlined):
 
 ```
-tests/opening_accounts.feature
 tests/opening_accounts.recordings/
   opening-a-first-account-in-the-web-app/
     3f9c2a1b7d4e6f80/
@@ -242,26 +237,13 @@ tests/opening_accounts.recordings/
       5.png
 ```
 
-- The directory under the scenario's is named by a digest of what
-  the scenario runs (its name, background steps, steps, examples),
-  so recordings of an older version of the scenario are
-  recognizable as stale, and a run keeps only the current one. An
-  outline's examples all write the same files, so the last
-  example's are kept.
-- **`*.recordings/` is in `.gitignore`**: running the tests makes
-  them, and the dashboard's Features page shows the last run's, a
-  video link per user and a gallery of screenshots on the feature's
-  page. A browser scenario with no recordings shows "not recorded
-  yet", with a copy button beside the scenario's name to hand to
-  whoever runs the tests.
-- The browser is paced so the video can be followed:
-  `--recording-slowmo` (milliseconds after each browser operation,
-  default 500) and `--recording-dwell` (how long an assertion's
-  result stays on screen, default 1000); `0` for either turns that
-  pacing off. Only the browser is paced; the page and the backend
-  run at full speed.
-
-## Running
+The digest directory hashes the scenario (name, background, steps,
+examples); a run keeps only the current one, and an outline's examples
+overwrite each other. `*.recordings/` goes in `.gitignore`; the
+dashboard's Features page shows the last run's, or "not recorded yet".
+`--recording-slowmo` (ms after each browser operation, default 500) and
+`--recording-dwell` (ms an assertion stays on screen, default 1000)
+pace only the browser; `0` disables either.
 
 ```sh
 uv run pytest tests/web_test.py
@@ -269,6 +251,63 @@ uv run pytest tests/web_test.py -k "first account"
 uv run pytest tests/web_test.py --recording-slowmo=0 --recording-dwell=0
 ```
 
-A CI script without a browser or `node_modules` runs the backend
-suite with `--ignore=tests/web_test.py`, as the bank's
-`.tests/test.sh` does.
+CI without a browser or `node_modules` passes
+`--ignore=tests/web_test.py` (as the bank's `.tests/test.sh` does).
+
+## Never
+
+- **A CSS selector or a test id on a button** — it means the button
+  has no name; fix the markup.
+- **A second `opens the web app` to test a reload** — it is a fresh
+  profile with empty storage (no reload step exists); it means only
+  "the same user on another machine".
+- **A saved value in an `opens the web app at` path** — taken
+  literally, `"/l/<lead id>"` loads a nonexistent id. Reach the page by
+  clicking.
+- **`saves the text of ...` after `Then`** — it is a `When`; under
+  `Then` / `And` it fails "Step definition is not found".
+- **`sees "55"` when the text appears twice** — a Playwright
+  strict-mode violation. Save it via `data-testid`, or scope with
+  `in the "..." table`.
+- **`` fills ... with `Alice` ``** — the value is JSON; write
+  `` `"Alice"` ``.
+- **Quoted web text containing ` has ` or ` with `** ("Bad state has
+  real consequences") — a catch-all step swallows it and fails "Almost:
+  each clause goes in backticks". Rename the label.
+- **`scope="module"` on the `frontend` fixture** — the second scenario
+  fails `already serving`.
+
+## Limits
+
+- **One Vite boot per browser scenario is intrinsic**: Vite gets the
+  backend URL at spawn and each scenario's backend has a fresh port
+  (reboot-crm, 1.6.0).
+- **Only a plain left click** is built in; everything else is a custom
+  step (above).
+- **A user who opens the app twice leaves a stray video**
+  `page@<guid>.webm` (shown on the dashboard as a second video) holding
+  the first browser, sign-in included (reboot-crm, 1.6.0).
+- **A browser-only preference** (theme in `localStorage`) can't be
+  asserted, since a reopen is a new profile.
+
+## Scales as
+
+- A browser scenario cost about 11.6 s vs about 1.6 s for a backend
+  one; 11% of a 482-scenario suite took 47% of wall clock (reboot-crm, 1.6.0).
+
+## Errors you will see
+
+| Error text (stable prefix) | Meaning | Fix |
+| --- | --- | --- |
+| `Almost: each clause goes in backticks` | Web text containing ` has ` / ` with ` hit the catch-all | Change the label |
+| `"alice" has not opened the web app;` | A web step before `opens the web app` | Open it first |
+| `AssertionError: already serving` | `frontend` fixture shared across scenarios | Keep it function-scoped |
+| Playwright timeout with a `get_by_label` call log | The label's text differs from what the step says (often a hidden glyph) | Match the full label text, or drop the glyph from the label |
+| A bare `TimeoutError` from the `frontend` fixture on the first web scenario after adding a dependency | Vite's cold pre-bundle passed reboot.bdd's 60 s serving deadline | Rerun once Vite has pre-bundled (start it by hand once) |
+| `Page.goto: Timeout 30000ms exceeded ... waiting until "load"` on a scenario's first step, passing alone | The page's `load` waited on a slow request (a font CDN; several Vite servers at once) | Bundle fonts (`@fontsource`, as the template does); override `web_app` to report open requests |
+
+## See also
+
+- [`testing-features.md`](testing-features.md) — backend steps, saved values
+- [`../../web-app/SKILL.md`](../../web-app/SKILL.md) — building the page
+- [`../../dashboard/SKILL.md`](../../dashboard/SKILL.md) — recordings on the Features page

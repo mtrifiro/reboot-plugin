@@ -1,0 +1,4 @@
+interface:
+  display_name: "Report Reboot Findings"
+  short_description: "File a project's FINDINGS.md items as GitHub issues for the Reboot team, after approval"
+  default_prompt: "Use Report Reboot Findings to file this project's findings with the Reboot team."

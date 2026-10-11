@@ -13,9 +13,20 @@ no fragment. Migration fragments are not a changelog.
 One file per PR, named `<short-slug>.md` (e.g. `rename-foo-option.md`;
 separate files avoid merge conflicts between concurrent PRs). Write
 the fragment for a coding agent to execute: imperative steps, with
-grep-able before/after patterns. For example:
+grep-able before/after patterns, under front matter that says which
+apps it touches (`applies`, and `when` if only some of them; schema in
+`tools/README.md`, "Front matter"). For example:
 
 ```markdown
+---
+title: "Foo.bar() was renamed to Foo.baz()"
+summary: "Rename calls to Foo.bar() to Foo.baz(); arguments are unchanged."
+kind: migration
+audience: agent
+applies: [mcp-ui, web-app, backend-only]
+when: "backend code calls Foo.bar()"
+---
+
 ## `Foo.bar()` was renamed to `Foo.baz()`
 
 If any file under `backend/` calls `.bar(` on a `Foo` reference,

@@ -2,101 +2,82 @@
 title: Specify Behavior in Feature Files
 impact: MEDIUM
 impactDescription: Feature files are the application's specification and its test suite at once; a suite written any other way is neither reviewable by the developer nor shown by the dashboard
-tags: testing, bdd, gherkin, feature, scenario, rule, pytest-bdd, reboot.bdd, wip, blocked, custom-steps, world
+tags: testing, bdd, gherkin, feature, scenario, rule, pytest-bdd, reboot.bdd, wip, blocked, custom-steps, world, race, red-first
+summary: "Built-in steps match their exact spelling; who calls, `creates` / `does`, saved values, `eventually`, aborts, `@wip`, custom steps."
+step: tests
+applies: [mcp-ui, web-app, backend-only]
+always: false
+verified: 1.6.0
+docs: ""
 ---
 
-## Specify Behavior in Feature Files
+# Specify Behavior in Feature Files
 
-> **Critical:** a Reboot application's tests are Gherkin `.feature`
-> files run by `reboot.bdd`, which ships built-in steps for every
-> call an application takes. Write scenarios in the built-in steps'
-> spelling below; write a custom step only for what they cannot
-> say, and write it as plain Reboot code. Every step that calls
-> names who calls: there is no current user and no anonymous call.
+## When you are here
 
-A feature file is read by three parties: the developer, who reviews
-it as the specification of what the application does; `pytest`,
-which runs each scenario against the application through the
-`Reboot()` harness; and the dashboard's Features page, which shows
-each feature with its rules, scenarios, the methods it uses, and
-the recordings of its browser scenarios. One file serves all three
-only if it says things the built-in steps understand, so learn the
-spelling before writing.
+Tests are Gherkin `.feature` files run by `reboot.bdd`, whose built-in
+steps cover every call; each file is the developer's spec, the `pytest`
+suite (via the `Reboot()` harness) and the dashboard's Features page.
+Custom steps only for what built-ins can't say. Browser steps:
+[`testing-web-app.md`](testing-web-app.md); crash tests (harness only):
+[`testing-failure-recovery.md`](testing-failure-recovery.md); agreeing
+scenarios: [`feature` skill](../../feature/SKILL.md). Every pattern here
+is in [`reboot-bank-pydantic`](https://github.com/reboot-dev/reboot-bank-pydantic)
+`tests/`.
 
-The [`reboot-bank-pydantic`](https://github.com/reboot-dev/reboot-bank-pydantic)
-example's `tests/*.feature` files are the reference for
-every pattern here.
+## Do this
 
-## What Goes Where
+### Layout and the test module
 
 ```
 pytest.ini                     # testpaths: tests; pythonpath: backend/src backend/api api
 tests/
 ├── opening_accounts.feature   # One feature per capability.
-├── transfers.feature
-├── withdrawals.feature
 ├── full_bank_test.py          # One module per application setup.
 ├── interest_test.py
 ├── web_test.py                # The scenarios that drive the web app.
 └── opening_accounts.recordings/   # Made by running; git-ignored.
 ```
 
-- **One `.feature` file per capability**, named for the activity:
-  `transfers.feature`, `opening_accounts.feature`. Not
-  `bank.feature` or `account.feature`: those name state types, which
-  the dashboard already indexes as such.
-- **One test module per application configuration.** A module is a
-  few lines: the `application` fixture returning the
-  `Application(...)` the scenarios run against, and a
-  `scenarios(...)` call naming the feature files that run against
-  it. The bank's `full_bank_test.py` runs four feature files against
-  an application with authorizers and interest turned off;
-  `interest_test.py` runs `interest.feature` against one with
-  interest on; `web_test.py` runs the features whose scenarios open
-  the web app.
-- **Recordings** of browser scenarios land in
-  `<feature>.recordings/` beside the feature file; `*.recordings/`
-  is in `.gitignore` (see `testing-web-app.md`).
-
-The minimal module:
+Name a `.feature` for the activity, not a state type. A test module is
+one application configuration: an `application` fixture plus
+`scenarios(...)` naming its features.
 
 ```python
-"""The bank's tests: the Gherkin scenarios in the `.feature` files
-beside this module."""
-
 import pytest
-from account_servicer import AccountServicer
-from bank_servicer import BankServicer
 from reboot.aio.applications import Application
+from reboot.aio.auth.oauth import OAuth
 from reboot.bdd import scenarios
+from servicers.registry import SERVICERS, libraries
 
 
 @pytest.fixture
 def application() -> Application:
-    return Application(servicers=[AccountServicer, BankServicer])
+    return Application(
+        servicers=SERVICERS,
+        libraries=libraries(),
+        # Only if the app has `oauth=`; the harness needs the explicit
+        # empty list (browser variant: testing-web-app.md).
+        oauth=OAuth(provider=..., allowed_origins=[]),
+    )
 
 
 scenarios('deposits.feature', 'withdrawals.feature')
 ```
 
-Nothing imports the built-in steps: the `reboot` package registers
-them as a pytest plugin, active whenever `reboot[dev]` is installed
-(`testing-project-setup.md` has the `pyproject.toml`). A module runs
-a second application by naming it: `Given the "proxy" application is up` runs what a `proxy_application` fixture returns.
+- `reboot[dev]` registers the built-in steps as a pytest plugin; don't
+  import them ([`testing-project-setup.md`](testing-project-setup.md)).
+- `Given the "proxy" application is up` runs a `proxy_application`
+  fixture's return.
+- Run `uv run pytest`, or narrow: `uv run pytest tests/full_bank_test.py`,
+  `-k "transfer between two"`, `-m wip`, `-m "not wip"`.
 
-Run the suite the usual way: `uv run pytest` from the project root,
-one
-file with `uv run pytest tests/full_bank_test.py`, one scenario
-with `-k "transfer between two"`, and by tag with `-m wip` or
-`-m "not wip"`.
-
-## The Shape of a Feature
+### Feature, rule, scenario
 
 ```gherkin
 Feature: Customers can transfer money between accounts
   A customer moves money from one of their accounts to another
-  account of the bank in one step, which is how they pay someone
-  without a withdrawal and a deposit that could come apart.
+  account of the bank in one step.
 
   Background:
     Given the application is up
@@ -117,49 +98,20 @@ Feature: Customers can transfer money between accounts
       And "anonymous" does a `transfer` with `from_account_id=<first account id>` and `to_account_id=<second account id>` and `amount=250.0` on `Bank` of "<bank id>"
       Then as "anonymous", `balance` on the `Account` for "<first account id>" has `amount=750.0`
       And as "anonymous", `balance` on the `Account` for "<second account id>" has `amount=250.0`
-
-  Rule: A transfer that would overdraw the source leaves both accounts unchanged
-    A transfer is one transaction: when the withdrawal from the source
-    account aborts, the deposit into the destination is rolled back
-    too, so money is never created by a failed transfer.
-
-    Scenario: A transfer for more than the source account holds
-      ...
 ```
 
-**A feature is a capability, a rule is an invariant, a scenario is
-an example.**
+- **Feature**: one thing a user can do, named as a sentence, with a
+  purpose paragraph.
+- **Rule**: a business invariant (money is conserved, a balance never
+  goes below zero), stated once in name and description. A scenario
+  that only shows an operation sits at top level.
+- **Scenario**: one concrete example named for the situation, never
+  restating the rule; `Scenario Outline` + `Examples` for several values.
+- **Background**: what every scenario starts from; no user only some
+  scenarios use.
+- Don't test Reboot's own mechanisms (a task runs, a schedule fires).
 
-- The **feature** is one thing a user can do, named as a sentence
-  about the activity ("Customers can transfer money between
-  accounts"), with a description paragraph saying what it is for.
-  It is the right size when its rules read like a specification
-  someone could implement from and all serve one user goal.
-- A **rule** is a business invariant the capability obeys, one
-  someone would want to verify formally (money is conserved by a
-  transfer, a balance never goes below zero, a customer sees only
-  their own accounts). State it once, in the rule's name and its
-  description. Add a rule only for an invariant of that kind: a
-  scenario that only shows what an operation or a page does sits at
-  the feature's top level with no rule around it (the bank's
-  `deposits.feature` and `opening_accounts.feature`).
-- A **scenario** is one concrete illustration, named for the
-  situation ("A transfer for more than the source account holds"),
-  never a restatement of the rule. A `Scenario Outline` with an
-  `Examples` table illustrates one rule at several values
-  (`withdrawals.feature`).
-- The **background** carries what every scenario starts from,
-  usually `Given the application is up` and the users everyone
-  needs. Keep a user out of the background when only some scenarios
-  use them.
-- Tests of Reboot's own mechanisms (that a spawned task runs, that a
-  schedule fires) belong in Reboot's suite, not in the
-  application's specification.
-
-## Who Calls
-
-Every scenario declares its people, and every step that calls says
-who:
+### Who calls
 
 ```gherkin
 Given "alice" is an authenticated user
@@ -167,156 +119,90 @@ And "admin" has the bearer token "secret-admin-token"
 And "bob" is an unauthenticated user
 ```
 
-- `is an authenticated user` mints a test token for that user id
-  through the same path a real sign-in takes, so the application's
-  `User` for them is auto-constructed. A scenario that needs an
-  authorizer to let someone in, or keep someone out, says who it is
-  this way; it never subclasses a servicer to weaken the authorizer.
-- `has the bearer token "..."` names a user by a raw token, for an
-  application whose own `TokenVerifier` accepts it.
-- `is an unauthenticated user` declares someone whose calls carry
-  no token.
+- `is an authenticated user` mints a token via the real sign-in path,
+  auto-constructing the app's `User`, with no claims. A token with claims
+  (an email, `email_verified`), for an app that keys a roster by email,
+  is a custom step over the harness's
+  `make_valid_oauth_access_token(user_id=..., claims={...})`; it runs the
+  real `set_claims` (`auth-roles.md`).
+- `has the bearer token`: a raw token the app's `TokenVerifier` accepts.
+- Calls start with the user; reads with `as "alice",`. A lone
+  unauthenticated caller is `"anonymous"`.
+- `Given as "alice", a shared context`: later calls share one context
+  (one client session) and must name the same user.
 
-A call starts with the user; a read starts with `as "alice",`:
+### Calls, results, saved values
 
-```gherkin
-When "alice" does a `deposit` with `amount=50` on `Account` of "alice"
-Then as "alice", `balance` on the `Account` for "alice" has `balance=50`
-```
+The transfer scenario above shows the shapes:
 
-A step that names nobody is refused with a hint. There is no
-current user and no anonymous call: a scenario with a single
-unauthenticated caller names them `"anonymous"`, and invents names
-only when it has two people to tell apart.
+- **`creates`** calls a factory. Omit the id and save the generated one;
+  give one (`` creates an `Account` of "alice" via `open` ``) only when
+  it means something (a user id, a singleton the code names, a natural
+  key).
+- **`does`** calls a writer, transaction or workflow (article follows
+  English); properties: `` with `a=1` and `b="x"` ``.
+- **One call per step; save on the next line**:
+  `the resulting `field` is saved as "..."`, `the resulting state id`,
+  `the resulting task id`. `the result has ...` asserts on
+  the last response.
+- **Saved names** are quoted (spaces allowed), recalled bare as
+  `<name>`: in a state id (`of "<account id>"`), user id, token, or
+  value (`amount=<balance>`). Outline columns recall the same way, so a
+  save may not reuse a column name.
+- **Values are JSON5**: `owner={name: "Frank", tags: ["vip"]}`. Dotted
+  paths nest in calls (`owner.name="Frank"`) and reach into responses
+  in assertions (`balances[0].account_id=<ann account id>`,
+  `owners["main"].name="Heidi"`).
 
-`Given as "alice", a shared context` makes every call from then on
-share one context, the way one client session does; every later
-call must then name the same user.
-
-## Calls, Results, and Saved Values
-
-```gherkin
-Given "alice" creates an `Account` via `open` with `initial_balance=100`
-And the resulting state id is saved as "account id"
-When "alice" does a `deposit` with `amount=50` on `Account` of "<account id>"
-Then the result has `updated_balance=150`
-And the resulting `account_id` is saved as "alice account id"
-```
-
-- **`creates`** calls a factory. Leave the id out and the factory
-  makes one up, then save it on the next line with `the resulting state id is saved as "..."`. Give an id, `creates an `Account`of "alice" via`open``, only when the id means something to the application: a user id, a singleton the code itself refers to (`"coupon-book"`), a natural key. A scenario never invents an id
-  a factory would otherwise choose.
-- **`does`** calls a writer, transaction, or workflow; the article
-  follows English (`does an `open_account`` ). The properties of the request come right after the method: `with `a=1` and `b="x" ``.
-- **A call does one thing; its result is saved on the next line.**
-  `the resulting `account_id` is saved as "..."` saves a response
-  property; `the resulting state id` and `the resulting task id`
-  save what `creates` and `spawns` produced. `the result has ...`
-  asserts on the last response.
-- **A saved name is a quoted string** and may have spaces, `"first account id"`, and is said back as `<first account id>`: in a
-  state id (`of "<account id>"`), a user id, a bearer token, or a
-  property value (`amount=<balance>`). A `<name>` inside a JSON
-  string stays literal. A `Scenario Outline`'s columns are said the
-  same way, so a save may not reuse a column's name.
-- **Values are JSON** with JSON5's leniencies: `owner={name: "Frank", tags: ["vip"]}`. A dotted path nests when calling,
-  `owner.name="Frank"`, and reaches into the response when
-  asserting, `balances[0].account_id=<ann account id>` or
-  `owners["main"].name="Heidi"`.
-
-## Reads and Assertions
+### Reads, assertions, waiting
 
 ```gherkin
-Then as "alice", `balance` on the `Account` for "<account id>" has `amount=100.0`
-And as "alice", `balances` on the `Customer` for "ann" has `balances` of length `1` and `balances[0].balance=25.0`
+Then as "alice", `balances` on the `Customer` for "ann" has `balances` of length `1` and `balances[0].balance=25.0`
 And as "anonymous", `all_customer_ids` on the `Bank` for "<bank id>" has `customer_ids` containing `"alice"`
 And as "alice", `has_at_least` with `amount=50` on the `Account` for "<account id>" has `enough=true`
-```
-
-- A `Then ... has` asserts; clauses are `path=value`, `path`
-  containing `value` (a substring, a list element, or a map key),
-  and `path` of length `n`, joined by `and` or commas.
-- A reader that takes properties is given them right after the
-  method, the way a call is: `has_at_least` with `amount=50` on the
-  `Account` for ...`.
-- Readers are only read this way: `does` and `attempts` refuse a
-  reader, and `has` refuses a writer.
-- A `Given` or `When ... has` saves instead of asserting: `has `owner.name` saved as "owner name"`.
-
-**Waiting** for a task, a schedule, or a workflow to land is a
-reactive read with a bound, never a sleep:
-
-```gherkin
 Then as "anonymous", `balance` on the `Account` for "<account id>" eventually has `amount=1.0` within 10 seconds
 ```
 
-## Attempts, Aborts, and Tasks
+- `Then ... has` asserts `path=value`, `path` containing `value`
+  (substring, list element, map key) or `path` of length `n`, joined by
+  `and` or commas.
+- `Given` / `When ... has` **saves**: `` has `owner.name` saved as "owner name" ``.
+- `does` / `attempts` refuse a reader; `has` refuses a writer.
+- Wait on a task, schedule or workflow with `eventually has ... within
+  N seconds` (bounded reactive read), never a sleep.
+
+### Attempts, aborts, tasks
 
 ```gherkin
 When "alice" attempts a `withdraw` with `amount=50` on `Account` of "<account id>"
 Then the attempt aborts with `OverdraftError` with `amount=20`
-And as "alice", `balance` on the `Account` for "<account id>" has `balance=30`
-
 Then as "anonymous", `balance` on the `Account` for "ghost" aborts with `StateNotConstructed`
-```
-
-- `attempts` makes a call that may abort; `the attempt aborts with`
-  names the declared error type and, optionally, its properties. A
-  reader's abort is asserted on the read itself.
-- **An uncaught non-Reboot error aborts with `Unknown`**: a
-  validation `ValueError` in a servicer, an index out of range.
-  Asserting `aborts with `Unknown`` is the spelling for a servicer
-  bug or an undeclared refusal; the better fix is usually to declare
-  an error and assert on that.
-
-```gherkin
 When "anonymous" spawns a `deposit` with `amount=15` on `Account` of "<account id>"
 And the resulting task id is saved as "first"
 Then "anonymous" awaits the `deposit` task "<first>" on `Account` within 30 seconds
 And the result has `updated_balance=15`
 ```
 
-`spawns` runs the call as a task; a task id a response carries is
-saved and awaited the same way.
+- `attempts`: a call that may abort; a reader's abort is asserted on the
+  read.
+- An uncaught non-Reboot error (`ValueError`, index out of range) aborts
+  with `Unknown`; declare an error and assert that instead.
+- `spawns` runs a call as a task; a task id from a response is saved
+  and awaited the same way.
 
-## Tags: `@wip` and `@blocked`
+### Tags: `@wip` and `@blocked`
 
-```gherkin
-@wip
-Feature: Users can sign in
-  ...
+- **`@wip`**: work in progress; runs normally, dashboard marks it green
+  and filters by it. Start on the feature, move down to rules and
+  scenarios as added, remove with the developer's agreement.
+- **`@blocked`**: can't pass yet, or needs a person first. The paragraph
+  under `Scenario:` says why; skipped with that reason, marked red.
 
-  Rule: A user signs up once
+`rbt dashboard` ([`dashboard` skill](../../dashboard/SKILL.md)) shows
+each feature's rules, scenarios, exercised methods, unexercised methods,
+these marks and browser recordings; send the developer there to review.
 
-    @blocked
-    Scenario: Signing up twice under the same id
-      The bank does not refuse a second sign-up yet: the customer's
-      factory aborts with `StateAlreadyConstructed`, which the bank
-      lets surface as `Unknown`. This waits for a declared error.
-
-      Given ...
-```
-
-- **`@wip`** marks the feature, rule, or scenario being worked on.
-  It runs as usual; the dashboard marks it in green and filters by
-  it, so what is new is easy to see. Put it on the whole feature
-  when the feature is new, move it down to the rules and scenarios
-  as they are added, and take it off with the developer's agreement
-  when the work is done.
-- **`@blocked`** marks a scenario the application cannot pass yet,
-  or one that needs a person to do something first (a credential, a
-  decision, an external system). Its description, the paragraph
-  right under the `Scenario:` line, says why; the scenario is
-  skipped with that reason, and the dashboard marks it in red and
-  filters by it.
-
-The `feature` skill (`../../feature/SKILL.md`) is the workflow that
-puts these tags on and takes them off.
-
-## Custom Steps Are Plain Reboot Code
-
-Write a custom step only for what the built-in steps cannot say: a
-loop, an assertion on a mock, a stand-in's side channel. Its body
-is the same code any Reboot caller writes:
+### Custom steps are plain Reboot code
 
 ```python
 from bank.v1.account_rbt import Account
@@ -337,8 +223,6 @@ async def _makes_deposits(
     count: int,
     amount: int,
 ) -> None:
-    # The account is named by a saved value, the id the factory made
-    # up, which the step reads from what the scenario has saved.
     context = world.context(user)
     for _ in range(count):
         await Account.ref(str(world.saved[name])).deposit(
@@ -347,29 +231,16 @@ async def _makes_deposits(
         )
 ```
 
-- Take the `world` fixture and get the context from
-  `world.context(user)`, naming the user the step calls as, spelled
-  in the step text the way the built-in steps spell it: a call
-  starts with the user, a read with `as "alice",`. That context
-  carries the token of a user the scenario declared; reach for
-  `rbt.create_external_context()` only to step outside the
-  scenario's identity on purpose.
-- Call the generated clients directly. Never call through
-  `World.call` or `World.request`; they are the built-in steps'
-  internals.
-- A saved value is read from `world.saved[name]`; the built-in
-  substitution of `<name>` does not run on custom steps.
-- A step may be `async def`; `reboot.bdd`'s `given` / `when` /
-  `then` / `step` run it on the harness's event loop.
-- **A fixture may save values** with `world.save('name', value)`,
-  so that scenarios say `<name>`: a scripted model that learns a
-  page id when a tool returns saves it for the scenario to assert
-  on. Order the scenario so a step that recalls the name runs after
-  the save is certain (a recall resolves when its step starts).
+- Context: `world.context(user)`; `rbt.create_external_context()` only
+  to leave the scenario's identity on purpose.
+- Read `world.saved[name]`; save `world.save('name', value)` (fixtures
+  too). A recall resolves when its step starts, so order it after a
+  certain save. Derived values (a substring of a saved id): read
+  `world.saved`, compute, `world.save(...)`.
+- `async def` steps run on the harness loop.
+- No `<name>` substitution in custom steps.
 
-**Mocked externals assert through one-line custom steps.** A mock
-replaces the external call in an autouse fixture, and a `Then` step
-asserts on it:
+Mocked externals assert through one-line custom steps:
 
 ```python
 @pytest.fixture(autouse=True)
@@ -380,31 +251,92 @@ def send_email() -> Iterator[mock.AsyncMock]:
 
 @then('the welcome email was sent')
 def _the_welcome_email_was_sent(send_email: mock.AsyncMock) -> None:
-    # Reboot re-runs methods twice in development mode to validate
-    # that they are idempotent, so the email sends twice.
+    # Effect validation runs the method twice in tests (Limits).
     assert send_email.call_count == 2
 ```
 
-**Model and dependency stand-ins are autouse fixtures**, and a
-module's scenarios share its fixtures, so each stand-in gets a test
-module of its own: an application with a scripted LLM has one
-module per script, each running the feature files that script
-serves.
+Stand-ins are autouse fixtures shared module-wide, so each gets its own
+test module.
 
-## What Stays Outside a Feature File
+### Races and outside services: a deterministic window
 
-A test that crashes the application in the middle of a method and
-brings it back (`testing-failure-recovery.md`) is about Reboot's
-recovery, not the application's behavior, and stays an
-`IsolatedAsyncioTestCase` on the `Reboot()` harness
-(`testing-harness.md`). Everything a user of the application can
-observe belongs in a feature file.
+A scenario about a race or an outside service must fail red before the
+fix and pass after it every run, so the window it names has to be made,
+not waited for:
 
-## The Dashboard
+- **Script the service.** A stand-in that holds its answer until a step
+  releases it, or hangs on demand, reaches "disconnect while a connect
+  is under way" and "one mailbox never answers" on every run.
+- **Answer from the arguments.** A patched seam that counts calls or
+  pops a list breaks under effect validation, which replays it (see
+  Never).
+- **Can't be made to fail?** Say so to the developer rather than
+  writing a scenario that passes either way.
 
-`rbt dashboard` (the `dashboard` skill) shows the Features page:
-each feature as a card with its rules and scenarios, the methods it
-exercises, the methods no feature exercises, the `@wip` and
-`@blocked` marks, and, for browser scenarios, the last run's video
-and screenshots. Point the developer there to review scenarios; it
-needs `reboot[dev]` installed.
+## Never
+
+- **`scope_id="<northwind id>"`** — quoted `<name>` is literal text: an
+  id nobody created, aborting two steps later. Recall bare,
+  `scope_id=<northwind id>`; only the state id, `of "<id>"`, is quoted.
+- **`@then('mentioned "{text}"')` without `parsers.parse(...)`** —
+  registers nothing; the scenario fails "Step definition is not found".
+- **`eventually has` under `Given` or `When`** — it asserts; put it
+  under `Then` (a later `Given` may follow).
+- **A `Rule:` with no `Scenario:` under it** — runs nothing; green while false.
+- **Asserting a remembered constant** (a flat price) — assert what the
+  API returns, the way the UI computes it.
+- **A scenario counting every call to a stand-in** ("asked 9 times in
+  all") — one unrelated change breaks dozens. Count by kind.
+- **A stand-in that answers from a counter or a popped list** —
+  `at_least_once` runs it twice under effect validation and keeps the
+  **second** result. Derive the answer from the input; a billed or
+  non-deterministic call takes
+  `at_least_once(..., effect_validation=EffectValidation.DISABLED)`.
+- **Subclassing a servicer to weaken its authorizer** — declare who
+  calls with `is an authenticated user`.
+- **`World.call` / `World.request` in a custom step** — built-in
+  internals; call the generated clients.
+
+## Limits
+
+- **`eventually has` doesn't wait for an actor to exist**; one a
+  workflow hasn't created yet aborts at once with `StateNotConstructed`
+  (reboot-crm, 1.6.0). Use a custom step that loops, treating
+  `StateNotConstructed` as "not yet".
+- **No arithmetic or substrings over saved values** in built-in steps;
+  use a custom step.
+- **The dashboard marks and filters only `@wip` and `@blocked`**, not
+  custom tags (`@critical`), though `-m` selects them. To review a tier,
+  add `@wip` beside it, check `-m "wip and not critical"` collects
+  nothing, remove it after.
+- **Effect validation runs writer and transaction bodies twice in
+  tests** (idempotency check), so a mock called from one sees
+  `call_count == 2`.
+
+## Scales as
+
+- Application bring-up dominates: 26 scenarios took 3.5 minutes
+  (client-portal, 1.6.0). A browser
+  scenario costs about 7× a backend one
+  ([`testing-web-app.md`](testing-web-app.md)).
+
+## Errors you will see
+
+| Error text (stable prefix) | Meaning | Fix |
+| --- | --- | --- |
+| `Step definition is not found:` | No step matches: a custom step without `parsers.parse`, a typo, or a `When`-only step (`saves the text of`, `clicks`, `fills`) after `Then` | Wrap in `parsers.parse`; match the built-in spelling and keyword |
+| `Almost: a Given or When 'has' saves what it reads now; 'eventually has' asserts, under a Then` | `eventually has` under `Given`/`When` | Move it under `Then` |
+| `Almost: a Given or When 'has' saves, e.g. `path` saved as `name`` | An assertion under `Given`/`When` | Assert under `Then` |
+| `Almost: say a saved value as <name>, not $name` | `$name` / `${name}` spelling | `<name>` |
+| `Almost: each clause goes in backticks` | A `with` / `has` clause without backticks | `` `amount=50` `` |
+| `Nothing saved as "...";` | Recall before the save, or a misspelled name | Check the list of saved names it prints |
+| `StateNotConstructed` (from `eventually has`) | The actor does not exist yet | Custom polling step (Limits) |
+| `Step definition is not found` for a step whose quoted value holds a backtick | The clause parser splits on the inner backticks | Assert with `containing` on a backtick-free part of the value |
+| `StepDefinitionNotFoundError` for a `does a` step with its `with` clauses after the actor | The clauses go before ``on `<Type>` of "<id>"`` | ``does a `method` with `x=1` on `Type` of "id"`` |
+| `must be JSON` for a value holding `<name>` | A recall inside a JSON5 list or object literal; only a whole value is recalled | A custom step that saves the whole list or object, then `field=<name>` |
+
+## See also
+
+- [`testing-web-app.md`](testing-web-app.md) — browser steps and markup
+- [`../../feature/SKILL.md`](../../feature/SKILL.md) — agreeing scenarios with the developer
+- [`testing-failure-recovery.md`](testing-failure-recovery.md) — the harness-only crash tests

@@ -3,48 +3,49 @@ title: Pop-out button — deep-linking an MCP UI widget to your web app
 impact: MEDIUM
 impactDescription: An MCP UI widget runs in a sandboxed iframe that blocks `window.open`, so a naive "open in browser" button silently does nothing in most hosts. Use the bound entity's `state_id` to build a deep link and ask the host to open it via the MCP Apps `openLink` request, with a `window.open` fallback.
 tags: react, app-tsx, pop-out, deep-link, openLink, state_id, useMcpApp, dual-frontend, web-app
+summary: "The iframe blocks `window.open`: deep-link from `state_id` via `useMcpApp().openLink({ url })`, with fallback; `rbt_session` keeps sign-in."
+step: frontend
+applies: [mcp-ui]
+always: false
+when: "a widget needs a \"pop out into the web app\" button"
+verified: 1.6.0
+docs: ""
 ---
 
-## Pop-out button — deep-linking an MCP UI widget to your web app
+# Pop-out button — deep-linking an MCP UI widget to your web app
 
-When the same backend also serves a standalone web app (see the
-`web-app` skill), an MCP UI widget can offer a "pop out into the
-web app" button that opens the **same entity** in a full browser
-tab. Two facts make this work:
+## When you are here
 
-1. The generated `use<Type>()` hook exposes the resolved entity ID
-   as `state_id`, so a widget that auto-resolved its entity from
-   the MCP session can still recover the concrete ID.
-2. The host opens external URLs on the widget's behalf via the MCP
-   Apps `openLink` request — necessary because the widget's
-   sandboxed iframe blocks `window.open` (the host doesn't grant
-   `allow-popups`), so a direct `window.open` silently no-ops.
+The backend also serves a standalone web app (`web-app` skill) and a
+widget needs a "pop out into the web app" button opening the **same
+entity** in a browser tab. Building the web app and sharing one `User`
+via `oauth=...` are not covered here.
 
-### Recipe
+## Do this
 
 ```tsx
 import { useMcpApp } from "@reboot-dev/reboot-react";
 import { useCounter } from "@api/<pkg>/v1/<name>_rbt_react";
+import { webAppUrl } from "../web-app-url"; // `both` template: dev origin, or VITE_WEB_APP_URL
 
 export const ClickerApp = () => {
-  const counter = useCounter();
+  // Both hooks before any early return.
+  const { counter } = useCounter(); // from the tool-call target; `undefined` until then
+  const mcpApp = useMcpApp(); // `null` outside a host and on early renders
 
-  // The resolved entity ID — even though `useCounter()` inferred
-  // it from the MCP session rather than an explicit `{ id }`.
+  if (counter === undefined) {
+    return null;
+  }
+
+  // The resolved entity ID, though no `{ id }` was passed.
   const counterId = counter.state_id;
 
-  // The MCP host handle; `null` when not running under a host.
-  const mcpApp = useMcpApp();
-
   const handlePopOut = async () => {
-    // Pass the entity ID to the web app as a query param it reads
-    // on load to render that one entity.
-    const url =
-      "https://your-web-app.example/?counter=" + encodeURIComponent(counterId);
+    // The web app reads this param on load and renders that entity.
+    const url = webAppUrl("?counter=" + encodeURIComponent(counterId));
 
-    // Ask the host to open the link; `window.open` is blocked in
-    // the sandboxed iframe. Fall back to `window.open` when not
-    // under an MCP host (or the host declines the request).
+    // `window.open` is blocked in the sandboxed iframe: ask the host first,
+    // fall back when not under a host or the host declines.
     if (mcpApp?.openLink) {
       try {
         const { isError } = await mcpApp.openLink({ url });
@@ -62,22 +63,46 @@ export const ClickerApp = () => {
 };
 ```
 
-### The web-app side
+- The handle exposes the resolved entity ID as `state_id`; the host opens
+  external URLs for the widget via the MCP Apps `openLink` request.
+- The web app renders `?counter=<id>` as a single-counter view via
+  `useCounter({ id })`.
+- Both frontends share the `oauth=...` session (the `rbt_session`
+  cookie), so a user signed in through the MCP host is signed in when the
+  tab opens.
 
-The web app reads the query param on load and shows just that
-entity — e.g. `?counter=<id>` selects a single-counter view via
-`useCounter({ id })`. Because both frontends share the
-`oauth=...`-driven session (the `rbt_session` cookie), a user
-signed in to the MCP host is already signed in when the tab opens.
-The entity's authorizer still applies, so the deep-linked entity
-must be one the signed-in user is allowed to read.
+## Never
 
-### Notes
+- `window.open(url)` alone — the iframe is sandboxed without
+  `allow-popups`, so it silently no-ops in most hosts. Try `openLink`
+  first.
+- `mcpApp.openLink(...)` without `?.` — `useMcpApp()` is `null` outside a
+  host and on early renders.
+- Calling `useMcpApp()` after the `counter === undefined` early return —
+  hooks must run on every render.
+- A hardcoded origin, or `window.location.origin` alone, in a deployed
+  app — the widget runs on the backend's origin but the web app is on its
+  own domain. Use `webAppUrl()` (`frontend/mcp/web-app-url.ts`), which
+  reads `VITE_WEB_APP_URL` from `web/.env.production` (the `deploy`
+  skill sets it).
 
-- `useMcpApp()` is re-exported from `@reboot-dev/reboot-react`; its
-  value is the `@modelcontextprotocol/ext-apps` `App`, whose
-  `openLink({ url })` resolves to `{ isError }` (the host denies
-  blocked domains or a cancelled request).
-- Hardcoding the web app's origin is fine for local development;
-  for deployed apps, source it from config rather than assuming a
-  port.
+## Limits
+
+- `useMcpApp()` (re-exported from `@reboot-dev/reboot-react`) returns the
+  `@modelcontextprotocol/ext-apps` `App`; `openLink({ url })` resolves to
+  `{ isError }` — the host may deny a blocked domain or the user cancel.
+- The entity's authorizer still applies in the web app: the signed-in
+  user must be allowed to read the deep-linked entity.
+
+## Scales as
+
+- Not measured.
+
+## Errors you will see
+
+None known.
+
+## See also
+
+- [`react-app-tsx.md`](react-app-tsx.md) — how the hook resolves the entity
+- [`react-generated-client.md`](../../python/references/react-generated-client.md) — the handle's `state_id`

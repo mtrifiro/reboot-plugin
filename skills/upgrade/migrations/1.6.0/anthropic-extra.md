@@ -1,3 +1,12 @@
+---
+title: "Anthropic agents install reboot[anthropic]"
+summary: "Replace direct anthropic or pydantic-ai-slim[anthropic] dependencies with the reboot[anthropic] extra."
+kind: migration
+audience: agent
+applies: [mcp-ui, web-app, backend-only]
+when: "the project depends on anthropic or pydantic-ai-slim[anthropic]"
+---
+
 ## Anthropic agents install `reboot[anthropic]`
 
 The `reboot` package now ships the Anthropic SDK as the

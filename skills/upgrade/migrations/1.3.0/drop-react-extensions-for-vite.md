@@ -1,3 +1,12 @@
+---
+title: "The React extensions generate flag is no longer needed for Vite frontends"
+summary: "Remove the React extensions flag from .rbtrc for Vite frontends."
+kind: migration
+audience: agent
+applies: [mcp-ui, web-app]
+when: ".rbtrc generates React code with explicit .js extensions"
+---
+
 ## `generate --react-extensions` is no longer needed for Vite frontends
 
 Reboot's React frontends — including MCP UIs — build with

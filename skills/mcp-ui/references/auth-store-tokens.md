@@ -3,36 +3,32 @@ title: Capturing the Identity Provider's Tokens with `store_tokens=True`
 impact: HIGH
 impactDescription: The `store_tokens=True` capture path is opt-in and easy to get subtly wrong — the wrong scope, a missing library, or the real provider absent in `dev=` all fail at runtime, not startup.
 tags: auth, oauth, scopes, tokens, store_tokens, ciphertext, google, github, auth0, workflow, api, external
+summary: "`store_tokens=True` captures only the sign-in provider's tokens, none under `Development()`; extra `scopes=[...]`, three libraries, root keys."
+step: auth
+applies: [mcp-ui]
+always: false
+when: "the app acts as the user at its own identity provider's API"
+verified: 1.6.0
+docs: ""
 ---
 
-## Capturing the Identity Provider's Tokens with `store_tokens=True`
+# Capturing the Identity Provider's Tokens with `store_tokens=True`
 
-Your app can act **as the user** at an external service — read their
-Google Calendar, open GitHub issues, post to their Slack. It always has
-two halves: **capture** the service's OAuth tokens once (stored encrypted
-in an `OAuthTokenManager`), then **use** them by reading them back and
-calling the API **inside a `Workflow`**. This reference covers only the
-MCP UI shortcut for the capture half.
+## When you are here
 
-The full, host-agnostic recipe — capturing tokens via your own OAuth
-endpoints, the read-back, the in-`Workflow` call, refresh tokens, and
-token erasure — lives in the python skill:
+The app calls the sign-in provider's API (`Application(oauth=...)`:
+`Google` / `GitHub` / `Auth0`) **as the user**. This file is only the
+capture shortcut; other services' OAuth endpoints, read-back, the
+in-`Workflow` call, refresh and erasure are in
 [`python/references/auth-external-api-calls.md`](../../python/references/auth-external-api-calls.md).
-**Read that for everything except the one shortcut below.**
 
-## The MCP UI shortcut: `store_tokens=True`
+## Do this
 
-When the API you want belongs to the **identity provider** in
-`Application(oauth=...)` (`Google` / `GitHub` / `Auth0`), the OAuth
-server captures its tokens for you — no endpoints to write. The same
-shortcut works for web apps: every frontend that signs in through
-`oauth=` captures tokens at the same `/__/oauth/callback` exchange.
-
-`scopes=` is the **extra** OAuth scopes to request on top of the base
-identity scope the provider always asks for — list only the additional
-permissions your API calls need. `store_tokens=True` tells the OAuth
-server to capture the access/refresh tokens at the code exchange and
-persist them encrypted.
+`scopes=` lists only the **extra** scopes your API calls need, beyond the
+base identity scope. `store_tokens=True` captures access/refresh tokens at
+the code exchange (`/__/oauth/callback`) into the provider's
+`OAuthTokenManager`, encrypted. Web apps signing in through `oauth=` get
+the same capture.
 
 ```python
 import os
@@ -49,8 +45,7 @@ from reboot.std.collections.ordered_map.v1.ordered_map import (
 from reboot.std.oauth.v1.oauth import oauth_library
 from servicers.calendar import UserServicer
 
-# Read/write the user's calendar *events* (narrower than the full
-# `calendar` scope). Request the least you need.
+# Calendar *events* only — narrower than the full `calendar` scope.
 _CALENDAR_SCOPE = "https://www.googleapis.com/auth/calendar.events"
 
 
@@ -58,10 +53,7 @@ def _google() -> Google:
     return Google(
         client_id=os.environ.get("GOOGLE_OAUTH_CLIENT_ID"),
         client_secret=os.environ.get("GOOGLE_OAUTH_CLIENT_SECRET"),
-        # Ask for Calendar access on top of the base `openid` scope.
-        scopes=[_CALENDAR_SCOPE],
-        # Capture + persist the Google tokens so the app can call the
-        # Calendar API. Requires the `oauth` library (below).
+        scopes=[_CALENDAR_SCOPE],   # on top of the base `openid` scope
         store_tokens=True,
     )
 
@@ -69,16 +61,12 @@ def _google() -> Google:
 async def main() -> None:
     application = Application(
         servicers=[UserServicer],
-        # `store_tokens=True` persists tokens via the `oauth` library,
-        # which encrypts them via `ciphertext`, which in turn needs
-        # `ordered_map`. Without all three the app fails fast at startup.
+        # oauth -> ciphertext -> ordered_map; all three, or startup fails.
         libraries=[oauth_library(), ciphertext_library(),
                    ordered_map_library()],
         oauth=OAuth(
             provider=OAuthProviderByEnvironment(
-                # The calendar needs a real provider token even in
-                # local dev (`Development()` issues none), so both
-                # arms are `Google`.
+                # `Development()` issues no tokens: real provider in dev.
                 dev=_google(),
                 prod=_google(),
             ),
@@ -87,50 +75,55 @@ async def main() -> None:
     await application.run()
 ```
 
-**Two setup requirements that fail at startup if missing:**
+Read back with `OAuthTokenManager.ref(<service id>).fetch(...)` inside a
+`Workflow` (`auth-external-api-calls.md`, "Use: inside a `Workflow`").
 
-- **The `oauth` + `ciphertext` + `ordered_map` libraries** (as above) —
-  omitting any makes the app fail fast.
-- **`REBOOT_CRYPTO_ROOT_KEYS`** backs the encryption. It's
-  **auto-provisioned under `rbt dev run`**, so local dev needs no setup;
-  in production it's part of your deploy. See
-  `python/references/stdlib-ciphertext.md`.
+## Never
 
-**`Development()` issues no tokens.** It's a fake account picker with no
-real provider behind it, so `fetch(...)` reports nothing stored under it.
-If a feature genuinely needs the provider's API, use the real provider in
-the `dev=` arm too (as above) — you'll need real credentials in dev then.
+- Expect a Google/GitHub token from `Auth0` — `store_tokens=True`
+  captures the provider's **own** tokens: an **Auth0** token under the
+  tenant-domain service ID, good for Auth0's APIs, not Google Calendar.
+  For the upstream API: the federated IdP token via Auth0's Management API
+  (`GET /api/v2/users/{sub}`, Management API token with
+  `read:user_idp_tokens`; Auth0's "Call an Identity Provider API" docs),
+  the upstream service's own flow (Path B, `auth-external-api-calls.md`),
+  or `Google(...)` sign-in directly if its API is the point.
+- Use `store_tokens=True` for a service that isn't the sign-in provider
+  (sign in with Google, call Slack) — no shortcut; Path B.
+- `dev=Development()` for a feature that needs provider tokens — the fake
+  picker stores nothing. Real provider (and credentials) in `dev=`.
+- Request broad scopes "just in case" — least you need.
 
-## Reboot stores only the provider's _own_ tokens
+## Limits
 
-`store_tokens=True` captures the tokens of the identity provider itself
-— nothing upstream of it. This matters most with `Auth0`: it's a broker,
-so when a user signs in "with Google" through Auth0, what Reboot stores
-(under the tenant-domain service id) is an **Auth0** access/refresh
-token, which authorizes Auth0's own APIs — **not** a Google token, and
-it will not work against the Google Calendar API. To call the upstream
-service you have two options:
+- **At 1.6.0 the published wheel lacks `reboot.std.oauth`**, so any
+  provider with `store_tokens=True` fails at startup with
+  `ModuleNotFoundError` until you install the plugin's vendored
+  `reboot-std-oauth` package (`python/references/stdlib-oauth-tokens.md`,
+  Do this; tool-checks-01, open upstream).
+- Any provider storing tokens requires the `oauth` + `ciphertext` (+
+  `ordered_map`) libraries at startup.
+- `REBOOT_CRYPTO_ROOT_KEYS` backs the encryption; auto-provisioned under
+  `rbt dev run`, part of your deploy in production
+  (`python/references/stdlib-ciphertext.md`).
+- Built-in service IDs: `Google` stores under `"google.com"`, `GitHub`
+  under `"github.com"`, `Auth0` under its tenant domain.
+- Refresh tokens: `Google` sends `access_type=offline`; `Auth0` adds
+  `offline_access`; a GitHub OAuth App never issues one (use a GitHub App
+  with expiring user tokens). Reboot does not refresh access tokens.
 
-- **Ask Auth0 for the upstream token.** Auth0 keeps the federated IdP's
-  access token on the user's profile; retrieve it via Auth0's Management
-  API (`GET /api/v2/users/{sub}`, which requires a Management API token
-  with the `read:user_idp_tokens` scope), using the stored Auth0 tokens
-  to identify the user. Follow Auth0's "Call an Identity Provider API"
-  docs for the exact setup (token expiry caveats apply).
-- **Get the token yourself.** Run the upstream service's own OAuth flow
-  with your own endpoints (Path B in
-  [`python/references/auth-external-api-calls.md`](../../python/references/auth-external-api-calls.md))
-  and store what it issues in that service's `OAuthTokenManager` — or,
-  if Google's API is the whole point of the app, sign users in with
-  `Google(...)` directly instead of brokering through Auth0.
+## Scales as
 
-## Then: read back and call the API
+- Not measured.
 
-Once captured, reading the tokens with `OAuthTokenManager.fetch` and
-making the call **inside a `Workflow`** is identical to the custom path,
-and is documented once in
-[`python/references/auth-external-api-calls.md`](../../python/references/auth-external-api-calls.md)
-("Using tokens — inside a `Workflow`"), along with refresh-token behavior
-and token erasure. For a service that is **not** your identity provider
-(e.g. sign in with Google, call Slack), there is no `store_tokens=True`
-shortcut — use the custom-endpoint Path B in that same recipe.
+## Errors you will see
+
+| Error text (stable prefix) | Meaning | Fix |
+| --- | --- | --- |
+| ``An OAuth provider with `store_tokens=True` needs the `oauth` and `ciphertext` libraries`` | Libraries not mounted | Add all three to `libraries=` |
+
+## See also
+
+- [`auth-oauth-providers.md`](auth-oauth-providers.md) — choosing and configuring the provider
+- [`python/references/auth-external-api-calls.md`](../../python/references/auth-external-api-calls.md) — Path B, the Workflow call
+- [`python/references/stdlib-oauth-tokens.md`](../../python/references/stdlib-oauth-tokens.md) — `OAuthTokenManager` surface

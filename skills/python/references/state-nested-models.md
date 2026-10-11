@@ -3,37 +3,36 @@ title: Compose State with Nested `Model`s
 impact: MEDIUM
 impactDescription: Flat-only state forces unwieldy parallel field naming as state grows; nesting a *state* Model inside another state Model collapses N actors into one.
 tags: state, nested, models, sub-objects, structure
+summary: "Never a state `Model` inside another; group related fields in nested non-state `Model`s, mutated in place."
+step: api
+applies: [mcp-ui, web-app, backend-only]
+always: false
+verified: 1.6.0
+docs: ""
 ---
 
-## Compose State with Nested `Model`s
+# Compose State with Nested `Model`s
 
-> **Critical:** only **non-state** `Model`s should be nested fields.
-> Don't put a state `Model` (one bound as `state=` in a `Type(...)`)
-> inside another state `Model` — store its **string ID** instead and
-> reference via `<OtherType>.ref(id)`. This is the same rule as
-> "collections of entities live in their own actors" — see
-> `state-collections.md` for the three container shapes (in-state
-> `list[Sub]`, in-state `list[str]` of IDs, stdlib map of IDs) and
-> when to pick each.
+## When you are here
 
-A state `Model`'s fields can themselves be `Model`s. Use nested
-models to group related fields and keep the state shape readable.
+State has groups of fields that belong together (shipping and billing
+addresses). Whether a group is part of this actor or its own actor:
+[`state-collections.md`](state-collections.md) (entity collections) and
+[`state-actor-decomposition.md`](state-actor-decomposition.md)
+(unrelated concerns).
 
-**Incorrect (parallel flat fields):**
+## Do this
 
-```python
-class OrderState(Model):
-    shipping_street: str = Field(tag=1, default="")
-    shipping_city: str = Field(tag=2, default="")
-    shipping_zip: str = Field(tag=3, default="")
-    billing_street: str = Field(tag=4, default="")
-    billing_city: str = Field(tag=5, default="")
-    billing_zip: str = Field(tag=6, default="")
-```
-
-**Correct (nested model):**
+Group related fields into a nested **non-state** `Model` instead of
+parallel flat names (`shipping_street`, `shipping_city`,
+`billing_street`, …):
 
 ```python
+from typing import Optional
+
+from reboot.api import Field, Model
+
+
 class Address(Model):
     street: str = Field(tag=1, default="")
     city: str = Field(tag=2, default="")
@@ -41,18 +40,12 @@ class Address(Model):
 
 
 class OrderState(Model):
-    # `Model`-typed fields owned 1:1 by the parent must be Optional with
-    # `default=None` — see `api-pydantic.md` for the zero-default rule.
+    # A single nested `Model` is Optional, `default=None` (`api-pydantic.md`).
     shipping: Optional[Address] = Field(tag=1, default=None)
     billing: Optional[Address] = Field(tag=2, default=None)
-```
 
-## Mutating Nested Models
 
-Inside a writer/transaction, assign sub-models directly or assign
-field-by-field:
-
-```python
+# In a writer/transaction: assign a whole sub-model, or set fields one by one.
 async def update_shipping(
     self, context: WriterContext, request: Order.UpdateShippingRequest,
 ) -> None:
@@ -63,19 +56,39 @@ async def update_shipping(
     )
 ```
 
-## Avoid Nesting State `Model`s Inside State `Model`s
+- Field-by-field assignment needs a guard while the field is `None`
+  (`if self.state.shipping is None: ...`).
+- `list[Address]` / `dict[str, Address]` use `default_factory=list` /
+  `dict`.
 
-Only **non-state** `Model`s should be used as nested fields. A state
-`Model` (one bound as `state=` in a `Type(...)`) used as a nested
-field would mean "state inside state", which Reboot does not model
-that way. Instead, keep the nested actor as its own state machine
-and store its **ID** (a string) in the parent.
+## Never
 
-The same rule applies to **collections** of state Models. If the
-items in a `list[X]` or `dict[str, X]` have their own identity,
-lifecycle, or methods (i.e. `X` would be a state `Type`), don't
-inline them — make `X` its own `Type(state=X)` and have the parent
-hold IDs instead of `X` instances. The three container shapes for
-holding those IDs (in-state `list[str]`, `dict[str, str]`, or a
-stdlib `OrderedMap`) and the decision flow between them are in
-`state-collections.md`.
+- Use a **state** `Model` (one bound as `state=` in a `Type(...)`) as
+  a field of another state `Model`, alone or in a `list`/`dict` —
+  collapses separate actors into one. Store the other actor's string ID
+  and use `<OtherType>.ref(id)`; the ID container (`list[str]`,
+  `dict[str, str]`, a stdlib `OrderedMap`) is in `state-collections.md`.
+- Inline items that have their own identity, lifecycle or methods —
+  they are a `Type` of their own (same rule, `state-collections.md`).
+
+## Limits
+
+- Protobuf rejects messages nested more than 100 levels deep; a method
+  that hits it fails with `Unknown` and a `DecodeError` in the log
+  (1.6.0 template).
+
+## Scales as
+
+- A nested `Model` is read and written with the whole actor; see
+  `state-collections.md` § Scales as.
+
+## Errors you will see
+
+None known beyond the nested-`Model` default rows in
+[`api-pydantic.md`](api-pydantic.md) § Errors you will see.
+
+## See also
+
+- [`state-collections.md`](state-collections.md) — when a group becomes its own actor
+- [`api-pydantic.md`](api-pydantic.md) — `Optional` nested-Model default rule
+- [`patterns-cross-actor-reads.md`](patterns-cross-actor-reads.md) — read models across actors

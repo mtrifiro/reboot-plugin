@@ -3,83 +3,105 @@ title: Compose Predicates with `allow_if(all=...)` / `allow_if(any=...)`
 impact: HIGH
 impactDescription: All non-trivial authorization is composed from `allow_if` and predicates
 tags: auth, allow_if, predicate, all, any, composition
+summary: "`is_app_internal` in `any` turns anonymous `Unauthenticated` into `PermissionDenied`; `allow_if(all=[...])` or `allow_if(any=[...])`, never both or nested; `all` short-circuits."
+step: auth
+applies: [mcp-ui, web-app, backend-only]
+always: false
+verified: 1.6.0
+docs: ""
 ---
 
-## Compose Predicates with `allow_if(all=...)` / `allow_if(any=...)`
+# Compose Predicates with `allow_if(all=...)` / `allow_if(any=...)`
 
-> **Critical:** pass exactly one of `all=` **or** `any=` (passing both
-> asserts at runtime). For `all=`, list cheap auth-establishing
-> predicates first — short-circuiting + later predicates can rely on
-> earlier `Ok` results.
+## When you are here
 
-`allow_if` composes a list of predicate callables into an authorizer
-rule. Pass `all=[...]` to require every predicate to return `Ok`, or
-`any=[...]` to require at least one. The two are mutually exclusive —
-exactly one keyword is allowed.
+Combining predicates into one rule. Shipped predicates:
+`auth-built-in-predicates.md`; your own: `auth-custom-predicates.md`;
+per-method rules: `servicer-authorizer.md`.
 
-**Incorrect (passing both `all` and `any`):**
+## Do this
 
-```python
-allow_if(all=[has_verified_token], any=[is_app_internal])  # asserts at runtime
-```
-
-**Correct (one or the other):**
+Pass exactly one keyword: `all=[...]` (every predicate `Ok`) or `any=[...]`
+(at least one `Ok`).
 
 ```python
 from reboot.aio.auth.authorizers import (
-    allow_if, has_verified_token, is_app_internal,
+    allow_if, has_verified_token, is_app_internal, state_id_is_user_id,
 )
 
 
 def authorizer(self):
-    # Caller must be authenticated AND match some other condition.
+    # Authenticated AND an app condition; cheap check first.
     return allow_if(all=[has_verified_token, my_predicate])
 
 
 def authorizer(self):
-    # Either internal-app calls OR authenticated user-facing calls work.
-    return allow_if(any=[is_app_internal, has_verified_token])
+    # The owner, OR any in-app call (initialize, scheduled work, servicers).
+    return allow_if(any=[state_id_is_user_id, is_app_internal])
 ```
 
-## Built-In Predicates
+Evaluation (1.6.0 `AllowIfAuthorizerRule`):
 
-Three predicates are shipped:
+- Predicates run **one at a time, in list order**, never concurrently — for
+  `all` and `any` alike.
+- `all` returns the first `Unauthenticated` / `PermissionDenied`; later
+  predicates may assume earlier ones returned `Ok` (put one reading
+  `context.auth.user_id` after `has_verified_token`). Cheap,
+  identity-establishing predicates first.
+- `any` returns the first `Ok`; else `PermissionDenied` if any predicate
+  returned it, otherwise `Unauthenticated`. Clients use this to choose
+  "sign in" vs "forbidden".
 
-- `has_verified_token` — caller has a verified auth token.
-- `is_app_internal` — call is from the app itself (another Reboot
-  servicer, not an external client).
-- `state_id_is_user_id` — the caller's `user_id` equals the actor's
-  state ID. Useful for per-user resources.
+`context.app_internal` is true in every nested call (other servicer,
+`initialize`, scheduled work, the framework's `User.set_claims`), so
+`any=[is_app_internal, <user predicate>]` fits a type other actors call.
+The stdlib `OrderedMapServicer` defaults to `allow_if(all=[is_app_internal])`.
 
-See `auth-built-in-predicates.md` for details.
+## Never
 
-## Evaluation Order Matters for `all`
+- `allow_if(all=[...], any=[...])` — asserts
+  ``Exactly one of `all` or `any` must be passed``.
+- `allow_if(any=[is_app_internal, allow_if(all=[a, b])])` — rules do not
+  nest (an `AuthorizerRule` is not a predicate; `mypy` rejects it). Write
+  one predicate combining `a` and `b` (`auth-custom-predicates.md`).
+- Read a `PermissionDenied` from `allow_if(any=[is_app_internal,
+  has_verified_token])` as "signed in but forbidden". `is_app_internal`
+  returns `PermissionDenied` to every external caller, so anonymous callers
+  never get `Unauthenticated` and never learn to sign in. When it matters,
+  use one predicate:
 
-Predicates are invoked one at a time. For `all=[...]`, list cheap or
-authentication-establishing predicates first — later predicates can rely
-on earlier ones having returned `Ok` (so e.g. a predicate that reads
-`context.auth.user_id` can come after `has_verified_token`).
+  ```python
+  import rbt.v1alpha1.errors_pb2 as errors
 
-## Short-Circuiting
 
-`all` short-circuits on the first `PermissionDenied` or
-`Unauthenticated`. `any` short-circuits on the first `Ok`.
+  def internal_or_signed_in(*, context, **kwargs):
+      if context.app_internal:
+          return errors.Ok()
+      if context.auth is None:
+          return errors.Unauthenticated()
+      return errors.Ok()
+  ```
 
-## Aggregated Decision
+- An expensive predicate (one that reads another actor) before
+  `has_verified_token` in `all=[...]` — it runs for unauthenticated callers.
 
-When `any=[...]` runs out without finding an `Ok`:
+## Limits
 
-- If at least one predicate returned `PermissionDenied`, the aggregate
-  is `PermissionDenied`.
-- Otherwise (all returned `Unauthenticated`), the aggregate is
-  `Unauthenticated`.
+- One level of composition per `allow_if`; anything more is a custom predicate.
 
-This shape lets callers know whether to retry with auth (the call was
-unauthenticated) or stop trying entirely (denied).
+## Scales as
 
-## Stdlib Uses It Internally
+- Each predicate that reads another actor adds one reader call per
+  authorized call; only short-circuiting skips it.
 
-`OrderedMapServicer` defaults to
-`allow_if(all=[is_app_internal])` — only other Reboot code in the same
-app can call it. Apply the same pattern when a stdlib-style helper
-shouldn't be reachable from outside.
+## Errors you will see
+
+| Error text (stable prefix) | Meaning | Fix |
+| --- | --- | --- |
+| ``Exactly one of `all` or `any` must be passed`` | Both or neither keyword given | Pass one of `all=` / `any=` |
+
+## See also
+
+- [`auth-built-in-predicates.md`](auth-built-in-predicates.md) — the three shipped predicates
+- [`auth-custom-predicates.md`](auth-custom-predicates.md) — combining checks in one predicate
+- [`servicer-authorizer.md`](servicer-authorizer.md) — per-method rules, tokenless call paths

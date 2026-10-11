@@ -1,0 +1,48 @@
+# `.rbtrc` is line-based: `<subcommand> <flag>`, not YAML.
+# See `python/references/lifecycle-rbtrc.md`.
+
+# Find API definitions in 'api/'. `rbt dev run` also regenerates
+# and restarts when a file under 'api/' changes (`--generate-watch`
+# is on by default), so 'api/' needs no `--watch` line.
+generate api/
+
+# Tell `rbt generate` where to put generated files: the Python
+# package the backend imports, and the React client the SPA imports.
+generate --python=backend/api/
+generate --react=web/src/api
+
+# Restart when the backend changes. `backend/api/` is regenerated
+# from `api/`; `backend/src/` is what you write.
+dev run --watch=backend/api/**/*.py
+dev run --watch=backend/src/**/*.py
+
+# Tell `rbt` that this is a Python application.
+dev run --python
+
+# Save state between `rbt dev run` restarts.
+dev run --application-name=__project__
+dev expunge --application-name=__project__
+
+# This project's ports, chosen when it was scaffolded (copy.sh) so that
+# two projects on one machine don't meet: the backend, the dashboard
+# `rbt dev run` looks for, and where `rbt dashboard` serves. A flag set
+# here can't also be passed on the command line.
+dev run --port=9991
+dev run --dashboard-port=9871
+dashboard --port=9871
+
+# Load secrets from a git-ignored env file. Put one KEY=VALUE line
+# per secret in `.env`. See `python/references/lifecycle-secrets.md`.
+dev run --env-file=.env
+
+# Run the application!
+dev run --application=backend/src/main.py
+
+# Production config used by `rbt serve run` (and so by Reboot Cloud,
+# whose containers run `CMD ["rbt", "serve", "run"]`). Mirrors the
+# `dev run` block above, minus the dev-only knobs (`--watch`,
+# `--env-file`). The SPA is published separately (see the `deploy` skill).
+serve run --python
+serve run --application=backend/src/main.py
+serve run --application-name=__project__
+serve run --tls=external

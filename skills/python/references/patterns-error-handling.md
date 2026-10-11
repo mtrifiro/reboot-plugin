@@ -2,85 +2,106 @@
 title: Error Handling Patterns
 impact: MEDIUM
 impactDescription: Inconsistent error handling makes failures opaque to callers
-tags: patterns, errors, MethodAborted, raise, catch
+tags: patterns, errors, MethodAborted, catch, propagate, SystemAborted, timeout
+summary: "`<Method>Aborted` also carries timeouts and system errors: inspect `.error`, re-raise the rest; typed errors across actors."
+step: any
+applies: [mcp-ui, web-app, backend-only]
+always: false
+verified: 1.6.0
+docs: ""
 ---
 
-## Error Handling Patterns
+# Error Handling Patterns
 
-> **Critical:** raise `<Service>.<Method>Aborted(<ErrorMessage>(...))`
-> from inside the Servicer (the exception class is named after the
-> **method**, not the error). Catch the same `<Method>Aborted` at the
-> call site and inspect `.error`. Don't smuggle errors as `None`
-> returns or `ValueError`s — the framework's typed-error contract is
-> what callers depend on.
+## When you are here
 
-Reboot has one canonical failure mode for typed business errors:
-declare the error `Model` in the API file, list it in `errors=[...]`
-on the method factory, and `raise <Service>.<Method>Aborted(<ErrorModel>(...))`
-from inside the Servicer. Callers catch the same `<Method>Aborted`
-class and inspect `.error`.
+Calling a method that can abort (servicer, workflow, test) and
+deciding what to catch, what to let through, and how a nested typed
+error reaches your caller. Declaring and raising errors:
+[`api-errors.md`](api-errors.md).
 
-**Incorrect (smuggling errors as `None` returns):**
+## Do this
+
+Catch `<Method>Aborted`, branch on the type of `.error`, re-raise the
+rest:
 
 ```python
-async def withdraw(self, context, request):
-    if self.state.balance < request.amount:
-        return None  # ambiguous, untyped
-    self.state.balance -= request.amount
+from bank.v1.account import OverdraftError
+from bank.v1.account_rbt import Account
+
+try:
+    await Account.ref(account_id).withdraw(context, amount=100)
+except Account.WithdrawAborted as aborted:
+    if not isinstance(aborted.error, OverdraftError):
+        raise
+    # aborted.error.amount says how far over the balance this was.
+    ...
 ```
 
-**Correct (typed error):**
+`.error` is the union of the method's declared error `Model`s **plus**
+every gRPC error (`DeadlineExceeded`, `Unavailable`, `Unknown`, …) and
+every Reboot error (`StateNotConstructed`, `StateAlreadyConstructed`,
+…) (1.6.0 source, `reboot/aio/aborted.py`), so the `isinstance` check
+is required.
 
-```python
-class OverdraftError(Model):
-    amount: int = Field(tag=1, default=0)
+Typed errors are the UI contract: `SeatUnavailableError(seat_ids=[...])`
+lets it say "F-11 and F-12 were just taken" and repaint them; a generic
+exception collapses to "something went wrong" (observed at 1.4.1).
 
-withdraw=Writer(
-    request=WithdrawRequest,
-    response=None,
-    errors=[OverdraftError],
-    description="Take funds out, or raise `OverdraftError` if the "
-    "balance would go negative.",
-    mcp=None,
-),
-```
+### Carrying a typed error across an actor boundary
 
-```python
-async def withdraw(
-    self, context: WriterContext, request: Account.WithdrawRequest,
-) -> None:
-    self.state.balance -= request.amount
-    if self.state.balance < 0:
-        raise Account.WithdrawAborted(
-            OverdraftError(amount=-self.state.balance)
-        )
-```
-
-## Catching at the Caller
+If `User.add_seats` calls `Showing.hold_seats` and both declare the
+**same** `SeatUnavailableError` class, an uncaught inner abort is
+re-raised as `User.AddSeatsAborted` with the payload intact, logging
+`Propagating unhandled but declared error` (1.6.0 template); otherwise
+the caller gets `Unknown`. At 1.4.1 the payload arrived empty. To be
+sure, or when the classes differ, re-raise explicitly:
 
 ```python
 try:
-    await account.withdraw(context, amount=request.amount)
-except Account.WithdrawAborted as e:
-    if isinstance(e.error, OverdraftError):
-        # e.error.amount tells the caller how much over the limit.
-        ...
+    await showing.hold_seats(context, seat_ids=request.seat_ids)
+except Showing.HoldSeatsAborted as aborted:
+    if isinstance(aborted.error, SeatUnavailableError):
+        raise User.AddSeatsAborted(
+            SeatUnavailableError(seat_ids=aborted.error.seat_ids)
+        ) from None
+    raise
 ```
 
-## Errors Roll Back Mutations
+## Never
 
-A `<Method>Aborted` raised inside a writer or transaction rolls back any
-state it had already mutated. Don't write compensating-undo logic; the
-runtime handles it.
+- `except Seat.PlaceAborted: pass` for "already exists" tolerance — a
+  timeout under load is also `PlaceAborted` and gets swallowed; check
+  `isinstance(aborted.error, StateAlreadyConstructed)`, re-raise the rest.
+- `except Exception:` around a Reboot call — swallows infrastructure
+  failures and retries; catch the typed `<Method>Aborted`.
+- Catch only to log and continue — let it propagate; the framework logs
+  the typed payload.
+- Write compensating undo after catching your own method's abort — a
+  raised `<Method>Aborted` already rolled back its writes
+  (`api-errors.md`).
 
-## Avoid `except Exception:` Around Servicer Calls
+## Limits
 
-Catching the broad `Exception` class swallows infrastructure failures and
-makes diagnosis harder. Catch the typed `<Method>Aborted` you declared,
-and let unexpected errors propagate.
+- An undeclared exception (`ValueError`, `KeyError`) reaches callers as
+  `Unknown`; the message is only in the server log (1.6.0 template).
+- Retryable aborts (gRPC `UNAVAILABLE`) propagate as-is so the client
+  retries transparently (1.6.0 template).
+- Automatic propagation needs the exact same class on the outer method
+  (not a subclass or per-package copy).
 
-## Don't Catch Errors Just to Log Them
+## Scales as
 
-If the caller needs to act on a typed error, catch and act. If it just
-needs to log, let the error propagate; Reboot's logging will already show
-the typed payload at the call site.
+- Not measured.
+
+## Errors you will see
+
+| Error text (stable prefix) | Meaning | Fix |
+| --- | --- | --- |
+| `Propagating unhandled but declared error (in '` | An inner call's declared error passed through a method that also declares it; it is re-raised as that method's `Aborted` | Nothing, if intended; catch it to add context |
+
+## See also
+
+- [`api-errors.md`](api-errors.md) — declaring and raising typed errors
+- [`rpc-refs.md`](rpc-refs.md) — probing existence via `StateNotConstructed`
+- [`react-generated-client.md`](react-generated-client.md) — errors in the browser

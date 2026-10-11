@@ -1,0 +1,11 @@
+/* The MCP UIs' stylesheet: the shared tokens and classes in
+   `frontend/styles.css` (the web app imports the same file), plus the
+   rules only a UI inside a host's frame needs. Each UI's `index.css`
+   imports this file. The host owns light and dark: `useHostTheme()`
+   (`host-theme.ts`) sets data-theme on <html>. A widget has no topbar,
+   brand-band, filter-panel or drawer; it uses the accent and tints.
+   Keep the system font stack: a host may block web fonts in its frame. */
+@import "../styles.css";
+
+.ui { --topbar-h: 0px; --font-display: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; --font-text: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-family: var(--font-text); padding: var(--space-4); display: grid; gap: var(--space-3); align-content: start; }  /* an MCP UI's root, inside the host's frame; system fonts, since a host may block web fonts */
+.ui > * { min-width: 0; }

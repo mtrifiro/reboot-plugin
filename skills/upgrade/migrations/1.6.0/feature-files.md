@@ -1,3 +1,12 @@
+---
+title: "Tests become feature files"
+summary: "Convert unittest test classes into Gherkin feature files run by reboot.bdd."
+kind: migration
+audience: agent
+applies: [mcp-ui, web-app, backend-only]
+when: "the tests are unittest classes rather than feature files"
+---
+
 ## Tests become feature files
 
 Reboot applications now specify and test their behavior with
@@ -8,9 +17,8 @@ Features page. An existing suite of `unittest.IsolatedAsyncioTestCase`
 tests keeps running, but the developer gets none of that until the
 tests are feature files.
 
-Convert the suite with the `feature` skill's "Converting an existing
-test suite" section, after the `reboot[dev]` fragment has been
-applied:
+Convert the suite with the `feature` skill (its Steps 1 and 2 per
+feature), after the `reboot[dev]` fragment has been applied:
 
 1. List what each existing test shows, in English.
 2. Group the tests into features by capability (deposits,

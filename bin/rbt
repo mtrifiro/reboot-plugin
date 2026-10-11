@@ -4,11 +4,22 @@
 #
 # Claude Code prepends this script's directory to the agent's `PATH`, so
 # the agent's `rbt ...` invocations land here.
-# Delegates to the plugin's pinned `uvx`, which fetches the
-# pinned Reboot CLI from PyPI on demand and caches it. We call
-# the sibling `uvx` shim by absolute path rather than via
-# `PATH` so the dependency is explicit and immune to `PATH`
-# ordering or to an agent that has shadowed `uvx`.
+# In a project with its own virtual environment (`.rbtrc` beside a
+# `.venv/`), runs that environment's `rbt`, so `rbt` and `uv run rbt`
+# are one install (a patch to one used to miss the other). Elsewhere,
+# delegates to the plugin's pinned `uvx`, which fetches the pinned
+# Reboot CLI from PyPI on demand and caches it. We call the sibling
+# `uvx` shim by absolute path rather than via `PATH` so the dependency
+# is explicit and immune to `PATH` ordering or to an agent that has
+# shadowed `uvx`.
+#
+# Before running, three guards for the traps every project hit
+# (findings P3.17, P3.50, P3.39, P3.145, P1.12): `dev expunge` with no
+# `--yes` and no terminal would wait forever, so it is refused with
+# the fix; `dev expunge` and a second `dev run` while a backend holds
+# the application's state lock would loop or crash-loop, so they are
+# refused naming the holder; `dashboard` gets the Node heap pyright
+# needs on a mid-sized app.
 
 set -eu
 
@@ -23,9 +34,109 @@ PYTHON_VERSION="3.12"
 
 # `$CLAUDE_PLUGIN_ROOT` is documented to be set for "hook commands and
 # plugin executables" but is not exported into the agent's Bash env when
-# `bin/` shims run. Fall back to `$0`-derivation; the env var (when
-# present) points at the same physical dir.
-PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(cd "$(dirname -- "$0")/.." && pwd)}"
+# `bin/` shims run. Fall back to `$0`-derivation, through any symlink
+# (a linked `bin/` used to fail with a bare "No such file" from the
+# installer it could not find); the env var (when present) points at
+# the same physical dir.
+self="$0"
+while [ -L "$self" ]; do
+    link="$(readlink "$self")"
+    case "$link" in
+        /*) self="$link" ;;
+        *) self="$(dirname -- "$self")/$link" ;;
+    esac
+done
+PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(cd "$(dirname -- "$self")/.." && pwd)}"
+if [ ! -f "$PLUGIN_ROOT/lib/own.sh" ]; then
+    echo "rbt: $PLUGIN_ROOT/lib/ is missing (this shim is $self; the plugin's lib/ must sit beside its bin/). Reinstall the plugin, or set CLAUDE_PLUGIN_ROOT to its directory." >&2
+    exit 1
+fi
+
+# The project: the nearest directory at or above the working directory
+# with an `.rbtrc`.
+project=""
+dir="$PWD"
+while [ -n "$dir" ] && [ "$dir" != "/" ]; do
+    if [ -f "$dir/.rbtrc" ]; then
+        project="$dir"
+        break
+    fi
+    dir="${dir%/*}"
+done
+
+# "<pid> <command>" of the process holding the application's state
+# lock (`.rbt/dev/<application-name>/*/LOCK`), or nothing.
+lock_holder() {
+    [ -n "$project" ] || return 0
+    command -v lsof >/dev/null 2>&1 || return 0
+    app="$(sed -n 's/^dev run --application-name=//p' "$project/.rbtrc" | head -n 1)"
+    [ -n "$app" ] || return 0
+    for lock in "$project/.rbt/dev/$app"/*/LOCK; do
+        [ -f "$lock" ] || continue
+        pid="$(lsof -t -- "$lock" 2>/dev/null | head -n 1 || true)"
+        [ -n "$pid" ] || continue
+        printf '%s %s\n' "$pid" "$(ps -o command= -p "$pid" 2>/dev/null || true)"
+        return 0
+    done
+}
+
+case "${1:-} ${2:-}" in
+    "dev expunge")
+        yes=0
+        for arg in "$@"; do
+            [ "$arg" = "--yes" ] && yes=1
+        done
+        if [ "$yes" = 0 ] && [ ! -t 0 ]; then
+            echo "rbt: dev expunge asks for confirmation on a terminal, and this shell has none, so it would wait forever. Stop the application completely (the run skill, \"Stop, restart, reset\"), then pass --yes." >&2
+            exit 1
+        fi
+        holder="$(lock_holder)"
+        if [ -n "$holder" ]; then
+            echo "rbt: the application's state lock is held by pid ${holder%% *} (${holder#* }); an expunge under a running backend leaves it looping on a deleted file. Stop it completely first (the run skill, \"Stop, restart, reset\")." >&2
+            exit 1
+        fi
+        ;;
+    "dev run")
+        # A backend stopped with SIGINT releases the lock a moment later;
+        # a running one never does, and a second dev run over its store
+        # crash-loops on the RocksDB LOCK.
+        waited=0
+        holder="$(lock_holder)"
+        while [ -n "$holder" ] && [ "$waited" -lt "${REBOOT_LOCK_WAIT:-10}" ]; do
+            sleep 1
+            waited=$((waited + 1))
+            holder="$(lock_holder)"
+        done
+        if [ -n "$holder" ]; then
+            echo "rbt: the application's state lock is still held by pid ${holder%% *} (${holder#* }) after ${waited}s; a second rbt dev run over one store crash-loops. Stop it completely first (the run skill, \"Stop, restart, reset\")." >&2
+            exit 1
+        fi
+        ;;
+    "dashboard "*)
+        # The dashboard's pyright runs out of Node's default heap on a
+        # mid-sized app and keeps retrying; give it room unless the
+        # caller chose.
+        [ -n "${NODE_OPTIONS:-}" ] || export NODE_OPTIONS="--max-old-space-size=12288"
+        ;;
+esac
+
+# Record which agent session owns a long-running dev command; see
+# `lib/own.sh`. Never fails this shim.
+"$PLUGIN_ROOT/lib/own.sh" $$ rbt "$@" || true
+
+if [ -n "$project" ] && [ -x "$project/.venv/bin/rbt" ]; then
+    # The project's own install. Its `bin/` goes first on PATH, as
+    # `uv run` arranges, so `rbt generate` finds its protoc plugins.
+    venv_version="$(ls -d "$project"/.venv/lib/python*/site-packages/reboot-*.dist-info 2>/dev/null \
+        | head -n 1 | sed 's/.*reboot-\(.*\)\.dist-info/\1/')"
+    if [ -n "$venv_version" ] && [ "$venv_version" != "$REBOOT_VERSION" ]; then
+        echo "rbt: running the project's reboot $venv_version (.venv); the plugin pins $REBOOT_VERSION, which the upgrade skill brings the app to." >&2
+    fi
+    PATH="$project/.venv/bin:$PATH"
+    VIRTUAL_ENV="$project/.venv"
+    export PATH VIRTUAL_ENV
+    exec "$project/.venv/bin/rbt" "$@"
+fi
 
 exec "$PLUGIN_ROOT/bin/uvx" \
     "--from=reboot==$REBOOT_VERSION" \

@@ -1,30 +1,29 @@
 ---
 title: Get Actor References with `Service.ref(id)`
 impact: MEDIUM
-impactDescription: Wrong ref-construction calls hit nonexistent actors or crash at startup
-tags: rpc, ref, actor, identity
+impactDescription: Wrong ref construction hits nonexistent actors, aborts readers with `StateNotConstructed`, or raises `AttributeError` / `MixedContextsError`
+tags: rpc, ref, actor, identity, state_id, StateNotConstructed, MixedContextsError, existence check
+summary: "`self.state_id` raises, use `self.ref().state_id`; probing existence without `StateNotConstructed`; caller-supplied IDs; reserved method names."
+step: servicer
+applies: [mcp-ui, web-app, backend-only]
+always: false
+verified: 1.6.0
+docs: ""
 ---
 
-## Get Actor References with `Service.ref(id)`
+# Get Actor References with `Service.ref(id)`
 
-> **Critical:** `self.state_id` does **not** exist on a Servicer
-> instance. Use `self.ref().state_id` inside writer/reader/transaction
-> methods, and `context.state_id` inside `@classmethod` workflows. Plain
-> `self.state_id` raises `AttributeError`.
+## When you are here
 
-`Service.ref(id)` returns a typed handle to the actor with the given
-string ID. The ref is cheap to construct, doesn't hit storage, and can be
-made anywhere a context is in scope.
+You need a handle on an actor (possibly your own) to call it or to ask
+whether it exists. Arguments: `rpc-calls.md`; constructing:
+`rpc-constructor-calls.md`.
 
-**Incorrect (instantiating the Servicer directly):**
+## Do this
 
-```python
-# DON'T — Servicer instances are managed by Reboot, not callers.
-servicer = ChatRoomServicer()
-await servicer.send(...)
-```
-
-**Correct (use `.ref(id)`):**
+`Service.ref(id)` returns a typed handle (a `WeakReference`) to the
+actor with that string ID; it is cheap, touches no storage, and does
+**not** create the actor.
 
 ```python
 from chat_room.v1.chat_room_rbt import ChatRoom
@@ -33,75 +32,115 @@ chat_room = ChatRoom.ref("reboot-chat-room")
 await chat_room.send(context, message="Hello!")
 ```
 
-## IDs Are Caller-Supplied Strings
+### Your own actor and its ID
 
-The actor ID is whatever string the caller chooses. Common patterns:
-
-- A semantic key (account ID, room name).
-- A UUID generated at creation time.
-
-```python
-from uuid import uuid4
-
-self.state.account_ids_map_id = str(uuid4())
-# OrderedMap is constructed implicitly on the first `insert`.
-```
-
-## `self.ref()` Inside a Servicer Refers to the Current Actor
-
-A Servicer can get a ref to itself with `self.ref()`. Useful for
-self-scheduling:
-
-```python
-async def open(
-    self, context: WriterContext, request: OpenRequest,
-) -> OpenResponse:
-    await self.ref().schedule(when=timedelta(seconds=1)).interest(context)
-    return OpenResponse()
-```
-
-## Use `self.ref().state_id` (Not `self.state_id`) Inside Servicers
-
-A Servicer instance does **not** carry the actor's ID as `self.state_id`
-— that attribute doesn't exist and accessing it raises `AttributeError`.
-The right form depends on the context type:
+A servicer has no `self.state_id`:
 
 | Context                                                  | Get the actor's state ID via |
 | -------------------------------------------------------- | ---------------------------- |
 | `ReaderContext` / `WriterContext` / `TransactionContext` | `self.ref().state_id`        |
 | `WorkflowContext`                                        | `context.state_id`           |
 
-**Incorrect (raises `AttributeError: 'XServicer' object has no attribute 'state_id'`):**
+`self.ref()` also schedules the servicer on itself:
+`await self.ref().schedule(when=timedelta(seconds=1)).interest(context)`.
+
+### IDs are caller-supplied strings
+
+Any string the caller chooses: a semantic key (account ID, room name),
+one derived from the parent (`f"{self.ref().state_id}-accounts"`, no
+stored field, always re-derivable), or a UUID minted once and stored
+(`self.state.account_ids_map_id = str(uuid4())`; an `OrderedMap` is
+constructed implicitly on its first `insert`).
+
+Minting `uuid4()` in a writer, transaction or constructor and storing
+it in the same call is safe: dev-mode effect validation runs the body,
+aborts it (discarding every effect, including actors a transaction
+constructed), reruns and commits only the second run, never comparing
+them (1.6.0 source, `maybe_raise_effect_validation_retry`). A random ID
+is a bug only where something re-derives it later: a second call that
+recomputes it, or a workflow body outside a memoized step.
+
+### "Does this actor exist?"
+
+A reader on a never-constructed actor **aborts** `StateNotConstructed`
+for every type, with or without a `factory=True` constructor (1.6.0
+source). Probe by catching the reader's `<Method>Aborted`:
 
 ```python
-async def tick(self, context: WriterContext, request) -> None:
-    rng = random.Random(hash((self.state_id, ...)))  # self.state_id doesn't exist
+from rbt.v1alpha1.errors_pb2 import StateNotConstructed
+
+
+async def airport_exists(context, iata: str) -> bool:
+    try:
+        await Airport.ref(iata).details(context)
+    except Airport.DetailsAborted as aborted:
+        if not isinstance(aborted.error, StateNotConstructed):
+            raise
+        return False
+    return True
 ```
 
-**Correct (writer/reader/transaction):**
+A writer on a type with no explicit constructor constructs the actor
+implicitly; on a type with a `factory=True` constructor it aborts
+`StateNotConstructed` (`requires_constructor: true`).
 
-```python
-async def tick(self, context: WriterContext, request) -> None:
-    rng = random.Random(hash((self.ref().state_id, ...)))
-```
+## Never
 
-**Correct (workflow):**
+- Assume a reader on a missing actor returns zero-valued state — it
+  aborts, so "empty field means unknown" validation fails only in the
+  negative-path test. Wrap cross-actor reads in the probe unless the
+  caller guarantees existence; decide what a failed decorative lookup
+  means (default it) first.
+- `self.state_id` — `AttributeError: 'XServicer' object has no
+  attribute 'state_id'`. Use `self.ref().state_id` (`context.state_id`
+  in a workflow).
+- `ChatRoomServicer().send(...)` — servicer instances belong to Reboot;
+  call through `ChatRoom.ref(id)`.
+- One ref used from two contexts (e.g. `program =
+  Program.ref("BS-CS")`, called as the registrar and again as a second
+  user) — `MixedContextsError` even without concurrency. Keep the ID;
+  call `Program.ref(id)` inline per context.
+- Expect `Service.create(...)` / a factory on an existing actor to rerun
+  its body (`rpc-constructor-calls.md` § Never). A field added to
+  the constructor later is never back-filled on existing actors
+  (`InvalidStateRefError: The 'state_id' option must be at least 1
+  character(s) long` when used as a ref); allocate lazily:
+  `if self.state.x == "": ...`.
+- Expect the caller's identity to travel through a ref call from inside
+  a servicer — it does not (`servicer-authorizer.md`).
 
-```python
-@classmethod
-async def control_loop(cls, context: WorkflowContext, request):
-    queue = Queue.ref(f"{context.state_id}-messages-queue")
-    ...
-```
+## Limits
 
-This is also why composite-key patterns (e.g. naming an `OrderedMap`
-after the parent actor) reach for `self.ref().state_id` from a writer/
-transaction and `context.state_id` from a workflow.
+- Method names `read`, `write`, `delete`, `state`, `schedule`, `spawn`
+  are rejected by codegen (they collide with the ref API); `User` also
+  reserves `create` and `set_claims`; names may not start with `_`
+  (1.6.0 source).
+- `Type.ref()` with no ID is legal only inside a workflow (it means the
+  workflow's own actor); elsewhere it raises `RuntimeError: \`ref()\`
+  called without a \`state_id\` can only be used within a Workflow.`
+- Every probe of a missing actor logs a `WARNING ... not constructed`
+  line, silenced for 5 minutes per process (1.6.0 source), which can
+  drown test output.
 
-## Refs Don't Materialize Actors
+## Scales as
 
-Calling `Service.ref(id)` does **not** create the actor. The actor exists
-when its constructor (explicit or implicit) has been called. A reader call
-on a non-existent actor returns the zero-valued state; a writer
-call against a state without an explicit constructor implicitly creates
-the actor and proceeds.
+- A ref costs nothing; each call is an RPC; an existence probe is a
+  full reader call (`patterns-load-and-benchmarking.md`).
+
+## Errors you will see
+
+| Error text (stable prefix) | Meaning | Fix |
+| --- | --- | --- |
+| `aborted with 'StateNotConstructed'` | A reader (or, on a factory type, a writer) ran against an actor never constructed | Construct it first, or catch `<Method>Aborted` and check `isinstance(aborted.error, StateNotConstructed)` |
+| `aborted with 'StateNotConstructed { requires_constructor: true }'` | A non-constructor writer on a type with a `factory=True` constructor | Call the constructor first |
+| `AttributeError: 'XServicer' object has no attribute 'state_id'` | `self.state_id` on a servicer | `self.ref().state_id` / `context.state_id` |
+| `MixedContextsError` / `has previously been used by a different \`Context\`` | One `WeakReference` reused across contexts | Fresh `Type.ref(id)` per context |
+| `has illegal name: <Name> is reserved`, or only `protoc failed with exit status 1` | A method named `read`, `write`, `delete`, `state`, `schedule` or `spawn` | Rename it; `scripts/api_lint.py` finds it before generate |
+| `InvalidStateRefError: The 'state_id' option must be at least 1 character(s) long` | Ref built from an empty stored ID, usually a new ID field never back-filled on an existing actor | Allocate the ID lazily on first use; treat `""` as empty in readers; see Never |
+| `State '<id>' for state type '<type>' not constructed (call any writer to construct). Will silence this message for the next 5 minutes.` | A WARNING per probe of a missing actor | Expected when probing existence; construct singletons from `initialize` with a no-op writer |
+
+## See also
+
+- [`rpc-calls.md`](rpc-calls.md) — kwargs, gather, call conventions
+- [`rpc-constructor-calls.md`](rpc-constructor-calls.md) — constructing actors, idempotently
+- [`servicer-authorizer.md`](servicer-authorizer.md) — nested calls carry no identity

@@ -1,3 +1,12 @@
+---
+title: "Reorganize the frontend into frontend/{mcp,web,api}"
+summary: "Move web/ui, web/api and the rest of web/ into one frontend/ tree."
+kind: migration
+audience: agent
+applies: [mcp-ui, web-app]
+when: "the frontend still lives under web/"
+---
+
 ## Reorganize the frontend into `frontend/{mcp,web,api}`
 
 An app's frontend used to be split across `web/ui/` for MCP UIs, `web/`

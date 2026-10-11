@@ -3,133 +3,85 @@ title: Writing Your Own OAuth Provider
 impact: MEDIUM
 impactDescription: Only needed when no shipped provider fits; the contract is small but strict — an unstable user id silently fragments user state, and a wrong `state`/`redirect_uri` handling breaks the flow at runtime, not startup.
 tags: auth, oauth, provider, custom, oidc, okta, keycloak, sso, identity, exchange-code, authorization-url, store_tokens
+summary: "An unstable `exchange_code` user id strands users; subclass `RegisteredOAuthProvider`: `authorization_url`, `validate()`, `mount_routes()`, `token_service_id`."
+step: auth
+applies: [mcp-ui]
+always: false
+when: "none of the shipped OAuth providers fits"
+verified: 1.6.0
+docs: ""
 ---
 
-## Writing Your Own OAuth Provider
+# Writing Your Own OAuth Provider
 
-Reach here **last**. The order of preference for
-`Application(oauth=...)`:
+## When you are here
 
-1. **`Google` / `GitHub`** when users sign in with one of those
-   directly.
-2. **`Auth0`** when you need several login methods behind one provider,
-   or user management beyond a bare user id (profiles, password resets,
-   MFA, …) — Auth0 brokers most IdPs, including enterprise SSO.
-   **`Ory`** when the users live in an Ory Network project or
-   self-hosted Ory deployment.
-3. **A custom provider** only when none of those work: a self-hosted
-   Keycloak, an internal SSO you can't put Auth0 in front of, an OAuth
-   service Auth0 can't broker.
+No shipped provider fits `Application(oauth=...)`. Reach here **last**:
 
-A provider is a subclass of `OAuthProvider`
-(`reboot.aio.auth.oauth_providers`). For the standard case — an
-authorization-code IdP with pre-registered `client_id` /
-`client_secret` — subclass **`RegisteredOAuthProvider`**, which already
-handles credentials, extra `scopes=`, `store_tokens=`, and fail-fast
-`validate()`. Subclass `OAuthProvider` directly only for non-standard
-schemes (`Development` and `Anonymous` are the in-tree examples).
+1. **`Google` / `GitHub`** for direct sign-in with those.
+2. **`Auth0`** for several login methods or user management (brokers most
+   IdPs, enterprise SSO included); **`Ory`** for Ory Network / self-hosted Ory.
+3. **Custom** only for the rest: self-hosted Keycloak, internal SSO you
+   can't front with Auth0, an OAuth service Auth0 can't broker.
 
-## The contract
+Choosing shipped providers: `auth-oauth-providers.md`.
 
-You implement two methods; Reboot's OAuth server does everything else
-(its own `/__/oauth/...` endpoints, `state` minting and verification,
-minting the app's own access tokens, populating
-`context.auth.user_id`).
+## Do this
 
-- **`authorization_url(state, redirect_uri) -> str`** — build the IdP's
-  authorize URL: your `client_id`, the requested scopes,
-  `response_type=code`, and **`state` and `redirect_uri` passed through
-  verbatim** — `state` is a JWT the server verifies on callback (CSRF
-  protection), and `redirect_uri` is the server's own
-  `/__/oauth/callback`, which must also be registered with the IdP.
+Subclass **`RegisteredOAuthProvider`** (`reboot.aio.auth.oauth_providers`)
+for an authorization-code IdP with a pre-registered `client_id` /
+`client_secret`; it handles credentials, extra `scopes=`, `store_tokens=`,
+and a fail-fast `validate()`. Subclass `OAuthProvider` only for
+non-standard schemes (in-tree: `Development`, `Anonymous`).
+
+**Copy the closest shipped provider's source** (installed `reboot`
+package), changing only endpoint URLs, `_REQUIRED_SCOPE`, constructor
+extras (base URL, realm, tenant), and `token_service_id`:
+
+- **`Auth0`** — model for OIDC IdPs (Keycloak, Okta): user id from the ID
+  token's `sub`, a constructor extra (`domain=`) checked in `validate()`,
+  full `store_tokens=True` incl. `offline_access`.
+- **`GitHub`** — model for plain OAuth (no ID token): user id from the
+  IdP's user-info API with the new access token.
+- **`Google`** — refresh-token knob in `authorization_url`
+  (`access_type=offline`).
+
+Implement two methods; Reboot's OAuth server does the rest (`/__/oauth/...`
+endpoints, minting/verifying `state`, minting app access tokens, setting
+`context.auth.user_id`):
+
+- **`authorization_url(state, redirect_uri) -> str`** — IdP authorize URL
+  with `client_id`, scopes, `response_type=code`, and **`state` and
+  `redirect_uri` verbatim** (`state` is a JWT verified on callback for
+  CSRF; `redirect_uri` is the server's `/__/oauth/callback`).
 - **`exchange_code(code, redirect_uri) -> ExchangeResult`** — POST the
-  `code` to the IdP's token endpoint (plain `aiohttp` / `httpx`) and
-  resolve the user's id: from the OIDC `id_token`'s `sub` claim, or for
-  a plain-OAuth IdP by calling its user-info API with the access token
-  (that's what `GitHub` does). Raising any exception here is safe — the
-  server logs it and turns it into a graceful `access_denied` redirect.
-  Also fill `ExchangeResult.claims` with the user's verified identity
-  claims if your IdP can supply any: declare the claims it can
-  deliver — and the OAuth scope each one needs — in the class-level
-  `_AVAILABLE_CLAIMS` mapping, accept `claims=` at construction
-  (pass it through to `super().__init__`, which rejects unavailable
-  claims and derives the needed scopes), and pass the decoded ID
-  token (or userinfo response) through
-  `self._presented_claims(...)`, which keeps only the claims the
-  developer requested — under their presented names — so ephemeral
-  protocol claims (`exp`, `nonce`, …) and IdP-specific claim names
-  never leak out of the provider. Claims must come from a verified
-  source only: an ID token straight from the token endpoint over
-  TLS, or the userinfo endpoint over TLS. They are delivered to the
-  auto-constructed `User` type's `set_claims` method on every
-  sign-in; when the developer requested no claims,
-  `_presented_claims` returns `None` and nothing is ever delivered.
+  code to the token endpoint (plain `aiohttp` / `httpx`); user id from the
+  `id_token`'s `sub` or the user-info API. Raising is safe: the server
+  logs it and redirects with `access_denied`.
 
-> **The user id must be stable.** Whatever `exchange_code` returns
-> becomes `context.auth.user_id` and the key of all user-keyed state —
-> the same human must get the same id on every sign-in (an OIDC `sub`,
-> a numeric account id; never an email that can change or anything
-> session-scoped). It also fixes your user-ID namespace, so the
-> provider-permanence rule of `auth-oauth-providers.md` applies to your
-> custom provider too.
+**Identity claims** (optional): declare deliverable claims and each one's
+scope in class-level `_AVAILABLE_CLAIMS`; pass `claims=` to
+`super().__init__` (rejects unavailable claims, derives scopes); pass the
+decoded ID token / userinfo through `self._presented_claims(...)` into
+`ExchangeResult.claims` — it keeps only requested claims under their
+presented names (protocol claims like `exp`, `nonce`, … never leak) and
+returns `None` when none were requested. Claims reach `User.set_claims`
+on every sign-in.
 
 Optional hooks:
 
-- **`validate()`** — raise `InputError` on missing/invalid
-  configuration. Called once, when the provider is actually selected
-  for the current environment, so a misconfigured `prod=` arm fails at
-  startup, not mid-sign-in. `RegisteredOAuthProvider` already checks
-  `client_id` / `client_secret`; override to check your extras (call
-  `super().validate()` first — see `Auth0.validate` for the shape).
-- **`mount_routes(http)`** — register provider-specific HTTP routes,
-  rarely needed (`Development` uses it for its login page; `Ory` uses
-  it for a settings-flow webhook). A route that delivers identity
-  changes from the IdP between sign-ins can call
-  `self._set_claims_if_exists(...)` — the application's
-  set-claims-if-exists entrypoint, wired in by the OAuth server via
-  `use_set_claims_if_exists` before `mount_routes` runs — but must
-  authenticate its caller first (a shared secret, a signature):
-  claims assert a user's identity, so the route is a
-  who-can-impersonate-users boundary. It delivers only to a `User`
-  that already exists, never materializing one for an identity that
-  never signed in (webhooks fire instance-wide). Deliveries may run
-  repeatedly (`set_claims` is a full replace, idempotent by
-  contract), so re-delivering the same change is harmless — but
-  ordering is last-write-wins: a delayed retry can transiently
-  overwrite a newer change until the next delivery or sign-in
-  converges the state again. See `Ory._webhook` for the model.
-- **`token_service_id`** — see "Supporting `store_tokens=True`" below.
+- **`validate()`** — raise `InputError` on bad config; called once when
+  the provider is selected, so a misconfigured `prod=` arm fails at
+  startup. Call `super().validate()` first (see `Auth0.validate`).
+- **`mount_routes(http)`** — provider-specific routes, rarely needed
+  (`Development`'s login page; `Ory`'s settings-flow webhook). A route
+  delivering identity changes between sign-ins may call
+  `self._set_claims_if_exists(...)` (wired via `use_set_claims_if_exists`
+  before `mount_routes` runs; see `Ory._webhook`).
 
-## Model your provider on the shipped ones
-
-Don't write a provider from a blank page — read the shipped providers
-in `reboot.aio.auth.oauth_providers` (the module is part of the
-installed `reboot` package; open its source) and adapt the closest one:
-
-- **`Auth0`** is the model for any OIDC IdP (Keycloak, Okta, a
-  self-hosted SSO): authorization-code exchange, the user id from the
-  ID token's `sub` claim, a constructor extra (`domain=`) with its
-  `validate()` check, and full `store_tokens=True` support including
-  the `offline_access` refresh-token scope.
-- **`GitHub`** is the model for a plain-OAuth (non-OIDC) IdP: no ID
-  token, so it resolves the user id by calling the IdP's user-info API
-  with the freshly exchanged access token.
-- **`Google`** shows a provider-specific refresh-token knob added in
-  `authorization_url` (`access_type=offline`).
-
-Your subclass differs from its model only in the endpoint URLs, the
-`_REQUIRED_SCOPE`, any constructor extras (a base URL, a realm, a
-tenant), and `token_service_id` — the rest carries over line by line.
-
-Wire the instance like any shipped provider. Reboot serves the
-callback route (`<base-url>/__/oauth/callback`) automatically, but the
-IdP only redirects to URLs on its per-client allowlist — and that
-allowlist lives in the IdP's own console, where only the **user** can
-go. **Tell the user explicitly** to add that URL as an authorized
-redirect URI there (along with registering the client and obtaining
-the `client_id` / `client_secret`); don't assume it's done — the
-provider won't work until it is. This is the same hand-off
-`auth-oauth-providers.md` describes for the shipped providers:
+Wire it like a shipped provider, then **tell the user** to register the
+client in the IdP console, get `client_id` / `client_secret`, and allow
+`<base-url>/__/oauth/callback` as redirect URI — only they can:
 
 ```python
 oauth=OAuth(
@@ -143,26 +95,60 @@ oauth=OAuth(
 )
 ```
 
-## Supporting `store_tokens=True`
+### Supporting `store_tokens=True`
 
-To let your provider participate in the token-capture machinery of
-`auth-store-tokens.md` (so the app can call the IdP's API as the
-user):
+1. Override **`token_service_id`** with the service's state ID (e.g.
+   `"sso.example.com"`); apps call `OAuthTokenManager.ref(<that id>).fetch(...)`.
+2. When `self._store_tokens` is set, return `ExchangeResult.tokens` as
+   `OAuthTokens` (`rbt.std.oauth.v1.oauth_rbt`: `access_token`,
+   `refresh_token`, `expires_at`, `scopes`); else `tokens=None`.
+3. Add refresh-token knobs (`access_type=offline`, `offline_access`) in
+   `authorization_url` only when `self._store_tokens` is set.
 
-1. Override **`token_service_id`** with the state id naming the service
-   (e.g. `"sso.example.com"`) — apps read tokens back with
-   `OAuthTokenManager.ref(<that id>).fetch(...)`.
-2. When `self._store_tokens` is set, have `exchange_code` return an
-   `OAuthTokens` (`rbt.std.oauth.v1.oauth_rbt`) built from the token
-   response — `access_token`, `refresh_token`, `expires_at`, and
-   `scopes`. Return `tokens=None` when it isn't — apps that don't opt
-   in must never carry these secrets around.
-3. If the IdP needs a special knob to issue refresh tokens (Google's
-   `access_type=offline`, Auth0's `offline_access` scope), add it in
-   `authorization_url` — only when `self._store_tokens` is set.
+The server stores them encrypted and carries a prior `refresh_token`
+forward (`auth-store-tokens.md`).
 
-The server then persists the tokens encrypted under the matching
-`OAuthTokenManager` (requiring the `oauth` + `ciphertext` +
-`ordered_map` libraries) and carries a previously stored
-`refresh_token` forward when a later sign-in omits one — identical to
-the shipped providers.
+## Never
+
+- Return an unstable user id from `exchange_code` — it becomes
+  `context.auth.user_id`, the key of all user-keyed state. Use an OIDC
+  `sub` or numeric account id, never a changeable email or anything
+  session-scoped. It fixes the user-ID namespace
+  (provider-permanence rule, `auth-oauth-providers.md`).
+- Rewrite or re-mint `state` / `redirect_uri` in `authorization_url` —
+  the server verifies both on callback.
+- Return tokens when `store_tokens` is off — non-opted-in apps must never
+  carry these secrets.
+- Put claims from an unverified source in `ExchangeResult.claims` — only
+  an ID token from the token endpoint, or the userinfo endpoint, over TLS.
+- A claims-delivering route in `mount_routes` that doesn't authenticate
+  its caller (a shared secret, a signature) — it decides who can impersonate
+  users.
+- Write the provider from a blank page — adapt `Auth0` / `GitHub`.
+
+## Limits
+
+- `_set_claims_if_exists` delivers only to a `User` that already exists;
+  it never creates one (webhooks fire instance-wide).
+- Deliveries may repeat (`set_claims` is a full replace, idempotent) and
+  are last-write-wins: a delayed retry can briefly overwrite a newer
+  change until the next delivery or sign-in.
+- `oauth=` takes one provider; the selector picks one per environment.
+- At 1.6.0, `store_tokens=True` fails at startup because the wheel lacks
+  `reboot.std.oauth` (`auth-store-tokens.md` § Limits).
+
+## Scales as
+
+- Not measured.
+
+## Errors you will see
+
+| Error text (stable prefix) | Meaning | Fix |
+| --- | --- | --- |
+| `access_denied` | `exchange_code` raised; the server logged it and redirected | Read the server log for the exchange error |
+
+## See also
+
+- [`auth-oauth-providers.md`](auth-oauth-providers.md) — provider choice is permanent
+- [`auth-store-tokens.md`](auth-store-tokens.md) — the token-capture machinery
+- [`python/references/auth-claims.md`](../../python/references/auth-claims.md) — handling delivered claims

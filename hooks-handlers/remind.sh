@@ -120,14 +120,27 @@ awk 'NR > 1 { printf "\\n" } { printf "%s", $0 }' <<'EOF'
 - Do not guess Reboot platform behavior (idempotency, scheduling,
 authorizers, state construction, contexts, generated APIs). Before
 coding around any Reboot behavior, read the relevant reference in the
-Reboot plugin's skills (`python`, `feature`, `mcp-ui`, `web-app`,
-`run`, `upgrade`) and state what it says.
+Reboot plugin's skills (`build`, `python`, `feature`, `mcp-ui`,
+`web-app`, `run`, `upgrade`) and state what it says.
+- Holding an error string? Grep a distinctive fragment of it in the
+`python` skill's `references/errors.md` first; each row names the
+reference that explains it.
+- When a skill turns out wrong or silent about something you hit,
+append an item to the project's `FINDINGS.md` (format inside it).
 - An application's behavior is specified and tested as `.feature`
 files (the `feature` skill): agree on a feature in English before
 writing its API or code, and iterate on its scenarios with the user.
+- Work follows the Reboot Flywheel (Design, Prove, Observe): write no
+implementation until the user accepts the domain model and feature
+files (the build skill, Accept the Design), recorded in
+`design/accepted.json`. A change to a rule, to `api/` or to an
+authorizer goes back there; `scripts/model_diff.py` sorts each change
+from that record.
 - Before hand-rolling a primitive (maps, queues, pub/sub, presence,
 encryption), check Reboot's standard library: the `stdlib-*.md`
 references in the `python` skill.
+- Read one reference per tool call — several in one `cat` can exceed
+the tool output limit and get silently truncated.
 - Deploys and dev-loop restarts are slow; never use repeated deploys
 or restarts to discover how Reboot behaves. After two failed attempts
 at the same goal, stop, read the relevant skill reference, and explain

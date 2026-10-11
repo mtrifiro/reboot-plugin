@@ -1,131 +1,102 @@
 ---
 title: `allow()` and `deny()` — Narrow Uses, Not Defaults
 impact: HIGH
-impactDescription: `allow()` is for genuinely public endpoints; do not use it to silence dev-mode auth warnings
+impactDescription: `allow()` is for genuinely public endpoints; do not use it to silence dev-mode auth warnings or to get tests past `PermissionDenied`
 tags: auth, allow, deny, authorizer, rule
+summary: "`allow()` to silence warnings, pass tests or mark internal methods makes them public; `deny()` blocks everyone; `return allow()`."
+step: auth
+applies: [mcp-ui, web-app, backend-only]
+always: false
+verified: 1.6.0
+docs: ""
 ---
 
-## `allow()` and `deny()` — Narrow Uses, Not Defaults
+# `allow()` and `deny()` — Narrow Uses, Not Defaults
 
-> **Critical:** `allow()` is **not** the "default" authorizer to slap
-> on every Servicer. In `rbt dev` you can omit `authorizer()` entirely;
-> the runtime allows the call and logs a warning that flags real
-> production work. See `servicer-authorizer.md` for the dev-vs-prod
-> rules.
+## When you are here
 
-`allow()` returns an `Ok` decision for every call. `deny()` returns
-`PermissionDenied` for every call. Both are valid authorizer rule
-_instances_, but each has a narrow legitimate use; neither is a
-sensible default for application Servicers.
+You are about to return `allow()` / `deny()`, or `allow()` looks like the fix
+for a `PermissionDenied` test. Each has one narrow use; neither is a default.
+Composing real rules: `auth-allow-if.md`.
 
-## When `allow()` Is Acceptable
+## Do this
 
-`allow()` means "any caller on the public internet may invoke this
-method, anonymously." There is exactly one legitimate use:
+- Write the real rule **before the tests**: `rbt dev` allows (with a
+  warning) calls to a servicer with no `authorizer()`; the `Reboot()` harness
+  and production deny them (`servicer-authorizer.md`). Under `oauth=` every
+  caller has a verified identity (`dev-{hash}` under `Development()`), so
+  `allow_if(...)` works from day one.
+- `allow()` only for a deliberately public, anonymous endpoint: health
+  check, public catalog read, sign-up.
+- `deny()` only to switch a method off without removing it (deprecated
+  endpoint).
 
-- **Intentionally public endpoints** you've consciously decided to
-  expose to the world unauthenticated — e.g. a health check, an
-  unauthenticated catalog read, a public sign-up endpoint. Open access
-  is the product, not an accident.
+```python
+from reboot.aio.auth.authorizers import allow, deny
 
-That's it. In particular, `allow()` is **not** appropriate for:
 
-- **"Methods only called from inside the app."** Every Reboot method
-  is reachable from the internet by default — there is no network
-  boundary that makes a method app-internal. If you want to enforce
-  app-internal-only, say so: `allow_if(all=[is_app_internal])`. Using
-  `allow()` here is a security hole the moment someone discovers the
-  endpoint.
-- **Examples, tutorials, and scaffolding.** Don't write `allow()` "to
-  make the example work" — omit `authorizer()` entirely. The example
-  then runs in `rbt dev` (with the runtime's missing-auth warning) and
-  refuses to start serving externally without real auth, which is the
-  correct teaching signal.
+class StatusServicer(Status.Servicer):
+    def authorizer(self):
+        return allow()          # a constructed rule, not `allow`
 
-For everything else — anything reachable from a browser, an MCP
-client, an external service, or any caller you'd want to identify —
-compose an `allow_if(...)` rule with predicates from
-`auth-built-in-predicates.md` and/or `auth-custom-predicates.md`.
 
-## When `allow()` Is NOT a Substitute
+class LegacyServicer(Legacy.Servicer):
+    def authorizer(self):
+        return deny()
+```
 
-Common anti-patterns the agent should refuse:
+- One method `allow()` / `deny()`, the rest a real rule:
+  `<Type>.Authorizer(<method>=allow(), _default=...)` (`servicer-authorizer.md`).
+- Everything else gets `allow_if(...)` (`auth-built-in-predicates.md`,
+  `auth-custom-predicates.md`).
 
-- "Add `allow()` to every Servicer so dev warnings stop." Don't. The
-  warning is the TODO list for production auth.
-- "Use `allow()` everywhere now; tighten before shipping." This
-  approach loses track of _which_ Servicers needed real rules, and the
-  `allow()` calls survive into production code.
-- "Use `allow()` because there's no auth yet." Pick the right
-  identity wiring for your app instead:
+| Outcome | Meaning |
+| --- | --- |
+| `Ok` | Allow. `allow()` always returns it. |
+| `Unauthenticated` | No valid identity; caller should retry with credentials. |
+| `PermissionDenied` | Identity fine but not allowed. `deny()` always returns it. |
+
+## Never
+
+- `return allow` — the function, not a rule. `return allow()`.
+- `allow()` on every servicer to silence the `rbt dev` missing-authorizer
+  warning — the warning is the TODO list for real rules.
+- `allow()` "for now, tighten before shipping" — it survives into production.
+- `allow()` because "there's no auth yet" — wire identity:
   `Application(oauth=OAuth(provider=OAuthProviderByEnvironment(dev=Development(), prod=...)))`
-  gives every caller a verified `dev-{hash}` identity in dev (and a real
-  one in prod), letting you write real `allow_if(...)` rules from day
-  one — typical for MCP UIs; and `Application(token_verifier=...)`
-  integrates an external IdP (typical for web apps; until it's wired,
-  omit `authorizer()` so the dev-mode warning flags what's
-  outstanding). See `servicer-authorizer.md` for the full table.
-- "Subclass each servicer in the test suite and override
-  `authorizer()` to `allow()`." Don't make this the default — it
-  leaves the app's authorization untested. Impersonate users
-  instead with `await rbt.create_external_context_as(name, user_id)`;
-  web apps keep their `token_verifier=...` exactly as in production —
-  the test harness's OAuth server verifies the impersonation token
-  `create_external_context_as` mints, and any custom bearer a test
-  constructs by hand still hits the app's verifier. See
-  "Test Against the Real Authorizers"
-  in the `python` skill's `testing-harness.md` (which also covers
-  the narrow last-resort carve-out).
+  identifies every caller in dev and prod; an app on `token_verifier=...`
+  writes rules once the verifier is wired, no later than the first harness test.
+- `allow()` for "methods only called from inside the app" — every Reboot
+  method is internet-reachable; use `allow_if(all=[is_app_internal])`.
+- `allow()` "to make the example work" in examples, tutorials, or
+  scaffolding — the example is what gets copied.
+- `allow()` to get tests past `PermissionDenied` — omitting `authorizer()`
+  fails too (harness denies). Impersonate:
+  `await rbt.create_external_context_as(name, user_id)`; `app_internal=True`
+  contexts for internal paths; web apps keep their production
+  `token_verifier=...` (`testing-harness.md`, "Test Against the Real
+  Authorizers").
+- Subclassing each servicer in tests to override `authorizer()` with
+  `allow()` — the app's authorization goes untested.
+- `deny()` for "only other servicers may call this" — it blocks **every**
+  caller, app-internal included. Use `allow_if(all=[is_app_internal])`.
 
-## `deny()` for Locked-Out Methods
+## Limits
 
-`deny()` blocks **all** callers — including app-internal ones. There
-is no carve-out for other servicers in the same app. Its narrow
-legitimate use is temporarily disabling a method without removing it
-from the API file (e.g. a deprecated endpoint you haven't deleted
-yet).
+- `allow()` / `deny()` ignore `context`, `state`, `request`; decision is fixed.
+- One `authorizer()` per servicer, covering every method unless it returns
+  `<Type>.Authorizer(...)` with per-method rules.
 
-If your intent is "only other servicers in the same app may call
-this," that's `allow_if(all=[is_app_internal])`, not `deny()`.
+## Scales as
 
-```python
-from reboot.aio.auth.authorizers import deny
+- Not measured.
 
-def authorizer(self):
-    return deny()
-```
+## Errors you will see
 
-## Return an Instance, Not the Function
+`PermissionDenied` and `IS MISSING AUTHORIZATION`: see `servicer-authorizer.md`.
 
-When you do call `allow()` or `deny()`, construct the rule — don't
-return the function reference. This is the single most common bug
-when writing authorizers:
+## See also
 
-```python
-# Wrong — function reference, not a rule:
-def authorizer(self):
-    return allow
-
-# Right — constructed rule instance:
-def authorizer(self):
-    return allow()
-```
-
-## Decision Outcomes
-
-A rule's `execute` returns one of three outcomes:
-
-| Outcome            | Meaning                                                           |
-| ------------------ | ----------------------------------------------------------------- |
-| `Ok`               | Allow the call.                                                   |
-| `Unauthenticated`  | No valid identity attached. Caller should retry with credentials. |
-| `PermissionDenied` | Identity is fine but is not allowed to perform this action.       |
-
-`allow()` always returns `Ok`; `deny()` always returns
-`PermissionDenied`.
-
-## One Authorizer per Servicer
-
-One rule covers every method on the Servicer; see
-`servicer-authorizer.md` for what to do when methods need
-different rules.
+- [`servicer-authorizer.md`](servicer-authorizer.md) — when rules are required, per mode
+- [`auth-allow-if.md`](auth-allow-if.md) — composing real rules
+- [`testing-harness.md`](testing-harness.md) — impersonating users in tests

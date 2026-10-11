@@ -1,0 +1,4 @@
+interface:
+  display_name: "Reboot Feature"
+  short_description: "Specify a Reboot app's capability or fix as a @wip Gherkin feature file before building it"
+  default_prompt: "Use Reboot Feature to agree on this capability in English and write its feature file before the code."

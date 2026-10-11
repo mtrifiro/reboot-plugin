@@ -1,68 +1,73 @@
 ---
 title: Use `OrderedMap` for Distributed Sorted Key/Value Storage
 impact: HIGH
-impactDescription: Without a stdlib sorted map, large or paginated collections must be hand-rolled
-tags: stdlib, OrderedMap, B-tree, collections, range, paginated, ordered
+impactDescription: Without a stdlib sorted map, large or paginated collections must be hand-rolled; misusing it hangs bulk loads or aborts first reads
+tags: stdlib, OrderedMap, B-tree, collections, range, paginated, ordered, bulk insert, seeding
+summary: "Construct explicitly if a read may come first; sorted map for large collections: bulk `insert`, key design, paging."
+step: servicer
+applies: [mcp-ui, web-app, backend-only]
+always: false
+when: "the design uses an `OrderedMap`"
+verified: 1.6.0
+docs: ""
 ---
 
-## Use `OrderedMap` for Distributed Sorted Key/Value Storage
+# Use `OrderedMap` for Distributed Sorted Key/Value Storage
 
-> **Critical:** must register `ordered_map_library()` in
-> `Application(libraries=[...])`. Forgetting it produces a runtime
-> error about an unknown actor type. `range` / `reverse_range`
-> require a non-zero `limit=`. Each entry's value is one of
-> `value` (`google.protobuf.Value`), `bytes`, or `any`
-> (`google.protobuf.Any`) — pick **one** per entry. Until the map is
-> constructed, by its first `insert` or by `create`, reading it aborts
-> with `StateNotConstructed`.
+## When you are here
 
-`OrderedMap` (`reboot.std.collections.ordered_map.v1.ordered_map`) is
-a B-tree-backed sorted `(string key → value)` map. It stores entries
-across many `Node` actors so concurrent writes scale, and exposes
-single-key and bulk variants of `insert` / `remove`, plus `search`,
-`range`, and `reverse_range`. Each `OrderedMap` is its own actor
-identified by a string ID — your code **must** persist that ID as a
-field on the parent's state (e.g. `<thing>_index_id: str`),
-allocate it once in the parent's constructor, and reference the map
-via `OrderedMap.ref(self.state.<id>)`.
+`state-collections.md` sent you to Shape C (unbounded, paginated or
+ordered index of IDs). You are writing code that creates, fills and
+pages an `OrderedMap` (`reboot.std.collections.ordered_map.v1.ordered_map`):
+a B-tree of `(string key → value)` across many `Node` actors. Whether
+to use one, and why its ID is a persisted field: `state-collections.md`.
 
-> **Anti-pattern — do not synthesize the map ID inline from the
-> owner's `state_id`** (e.g.
-> `OrderedMap.ref(f"{self.ref().state_id}-drafts")` or
-> `OrderedMap.ref(f"{context.state_id}-drafts")` inside a workflow).
-> It "works" but hides the parent → map relationship from the state
-> schema, repeats the magic string at every callsite, and skips the
-> constructor allocation that marks ownership. The full rationale,
-> and the generalization to every cross-`Type` reference (stdlib or
-> user-defined), is in `state-collections.md`'s "Relationships
-> Between State Types" section.
+## Do this
 
-### Methods
-
-| Method          | Type        | Signature                                                                                                                                                   |
-| --------------- | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `create`        | transaction | `degree?: int = 128, maintain_size?: bool = False`; call it on a ref: `OrderedMap.ref(id).create(context)`                                                  |
-| `insert`        | transaction | single: `key: str` + one of `value` / `bytes` / `any`; bulk: `entries: dict[str, Item]`. May also pass `degree` / `maintain_size` on implicit construction. |
-| `remove`        | transaction | single: `key: str`; bulk: `keys: list[str]`                                                                                                                 |
-| `search`        | reader      | `key: str` → `SearchResponse(found: bool, value? / bytes? / any?)`                                                                                          |
-| `range`         | reader      | `start_key?: str, limit: int` (required, non-zero) → `RangeResponse(entries, total_size?)`                                                                  |
-| `reverse_range` | reader      | `start_key?: str, limit: int` (required, non-zero)                                                                                                          |
-| `stringify`     | reader      | debug; renders the tree                                                                                                                                     |
-
-`range` / `reverse_range` raise
-`OrderedMap.RangeAborted(InvalidRangeError(...))` on `limit=0`.
-`create` and the construction-option fields on `insert` raise
-`InvalidArgument` if `degree < 2`, or `StateAlreadyConstructed` if
-the map was already constructed with different options.
-
-### Register the Library
-
-Always pass `ordered_map_library()` to the `Application`:
+Register the library, persist the map's ID on the parent, insert from
+a transaction, page with `range`. `ordered_map_library()` takes an
+optional `authorizer=` (default `allow_if(all=[is_app_internal])`).
 
 ```python
 from reboot.std.collections.ordered_map.v1.ordered_map import (
     OrderedMap, ordered_map_library,
 )
+from reboot.std.item.v1.item import Item
+from uuid import uuid4
+from uuid7 import create as uuid7
+
+
+class BankServicer(Bank.Servicer):
+
+    async def create(
+        self, context: TransactionContext, request: CreateRequest,
+    ) -> CreateResponse:
+        self.state.account_ids_map_id = str(uuid4())
+        # Construct up front only if a read may come before any insert;
+        # otherwise the first `insert` constructs it.
+        await OrderedMap.ref(self.state.account_ids_map_id).create(context)
+        return CreateResponse()
+
+    async def sign_up(
+        self, context: TransactionContext, request: SignUpRequest,
+    ) -> SignUpResponse:
+        await OrderedMap.ref(self.state.account_ids_map_id).insert(
+            context,
+            key=str(uuid7()),                # time-ordered keys
+            bytes=request.account_id.encode(),
+        )
+        # Bulk (seeds, batches): entries={key: Item(bytes=...), ...}
+        return SignUpResponse()
+
+    async def account_balances(
+        self, context: ReaderContext, request: AccountBalancesRequest,
+    ) -> AccountBalancesResponse:
+        page = await OrderedMap.ref(self.state.account_ids_map_id).range(
+            context, limit=32,
+        )
+        for entry in page.entries:
+            key, value = entry.key, entry.bytes   # whichever field was set
+        ...
 
 
 async def main():
@@ -73,135 +78,115 @@ async def main():
     ).run()
 ```
 
-`ordered_map_library()` accepts an optional `authorizer=` parameter
-if you need something stricter than the default
-(`allow_if(all=[is_app_internal])`).
+### Methods
 
-### Construct Explicitly or Implicitly
+| Method | Type | Signature |
+| --- | --- | --- |
+| `create` | transaction | `degree?: int = 128, maintain_size?: bool = False`; on a ref: `OrderedMap.ref(id).create(context)` |
+| `insert` | transaction | single: `key: str` + one of `value` / `bytes` / `any`; bulk: `entries: dict[str, Item]`. On an existing key, replaces its value. May pass `degree` / `maintain_size` on implicit construction. |
+| `remove` | transaction | single: `key: str`; bulk: `keys: list[str]` |
+| `search` | reader | `key: str` → `SearchResponse(found: bool, value? / bytes? / any?)` |
+| `range` | reader | `start_key?: str, limit: int` (required, non-zero) → `RangeResponse(entries, total_size?)` |
+| `reverse_range` | reader | `start_key?: str, limit: int` (required, non-zero) |
+| `stringify` | reader | debug; renders the tree |
 
-You can construct the map up front with `create`, a transaction
-called on a ref:
+### Values, keys, pages
 
-```python
-from reboot.std.collections.ordered_map.v1.ordered_map import OrderedMap
-from uuid import uuid4
+- **Construction:** options on the first `insert` (`degree=`,
+  `maintain_size=`) override defaults; later calls are validated
+  against the stored configuration. `degree` (default 128): higher for
+  shallower trees, lower for narrower.
+- **Value field:** exactly one of `value` (`google.protobuf.Value`,
+  e.g. `from_str(...)`), `bytes` (simplest for string IDs:
+  `id.encode()`) or `any`. Bulk `entries` use the same `Item` as
+  `Queue` / `Topic` (`stdlib-item.md`).
+- **Keys are an API decision;** design them for your queries. A
+  `date#origin#destination#...` key makes "flights on this route today"
+  a prefix scan. A zero-padded counter (`f"{seq:012d}"` from a counter
+  on the parent) is deterministic, sorts by insertion, and makes
+  "newest first" a plain `reverse_range`. UUIDv7 sorts by time but is
+  not deterministic.
+- **Paging:** pass the last `entry.key` as the next `start_key`. It is
+  inclusive: fetch `limit + 1` and skip the cursor row, or append
+  `"\x00"` to the cursor.
+- **`maintain_size=True`** (on `create` or first `insert`) returns
+  `total_size` on each `range` but writes the root on every
+  insert/remove, serializing all mutations. Opt in only if you need the
+  count.
+- **`Node`** actors are exported for custom traversal and debugging
+  only; use the `OrderedMap` methods.
 
+## Never
 
-async def create(
-    self, context: TransactionContext, request: CreateRequest,
-) -> CreateResponse:
-    self.state.account_ids_map_id = str(uuid4())
-    await OrderedMap.ref(self.state.account_ids_map_id).create(context)
-    return CreateResponse()
-```
+- `await OrderedMap.create(context, map_id)` — the class has no
+  `create`; use `OrderedMap.ref(map_id).create(context)`.
+- Omitting `ordered_map_library()` from `Application(libraries=[...])` —
+  fails on first call with an unknown state type error; at startup
+  with `Missing required libraries: reboot.std.collections.ordered_map.v1.ordered_map`
+  when a library that needs it (e.g. `Ciphertext`) is registered.
+- `OrderedMap.ref(f"{self.ref().state_id}-drafts")` — persist the ID
+  as a field (`state-collections.md`).
+- Calling `insert` / `create` / `remove` from a `Writer` — they take a
+  `TransactionContext` (or workflow / external context).
+- `create` then `insert` on the same map in one transaction — hung
+  when bisected at 1.3.0 (not re-verified at 1.6.0). Let the first
+  `insert` construct it, or `create` in an earlier transaction.
+- Bulk-loading from concurrent transactions that insert into the same
+  map — see Scales as; load one transaction at a time.
+- Setting single-key (`key` + value) and bulk (`entries`) fields on one call,
+  or more than one value field per entry — mutually exclusive.
+- `from uuid7 import ...` without declaring `uuid7` in
+  `pyproject.toml` — third-party, not part of `reboot`.
 
-Or skip `create` and let the first `insert` construct the map
-implicitly (pass `degree=` / `maintain_size=` on that first call if
-you want to override the defaults; once constructed, those fields
-are validated against the existing configuration on every subsequent
-call). `degree` defaults to 128 — raise it for shallower trees,
-lower it for narrower ones. The right number depends on key/value
-sizes and write/read mix.
+## Limits
 
-Until one of those happens the map does not exist, and reading it —
-`search`, `range`, `reverse_range` — aborts with
-`StateNotConstructed`. If something may read the map before anything
-is inserted, such as a listing that starts out empty, construct it
-with `create` up front.
+- Reading (`search`, `range`, `reverse_range`) before construction
+  aborts with `StateNotConstructed`; there is no `exists` reader and
+  `search` does not answer `found=False`. Catch
+  `OrderedMap.SearchAborted` / `RangeAborted` as empty, or construct
+  up front.
+- `range` / `reverse_range` require `limit > 0`.
+- No exclusive start (`after_key`); see Paging.
+- At 1.5.0 a `range` page could start up to 64 rows *before*
+  `start_key` at a leaf boundary. The 1.6.0 leaf walk bisects to the
+  first key ≥ `start_key`; dropping rows below the cursor is still a
+  cheap guard, but judge "more pages" on the raw page size.
+- `create` and construction options on `insert` raise `InvalidArgument`
+  if `degree < 2`, or `StateAlreadyConstructed` if the map exists with
+  different options.
 
-### Canonical Usage
+## Scales as
 
-Single-key inserts take `key=` plus one of `value=` / `bytes=` /
-`any=`:
+- `rbt dev run`: a four-hop transaction (two reads, one create, one
+  `insert`) took about 1.5 s including the effect-validation re-run
+  (1.5.0); 193 such calls took nearly five minutes. Seed with one
+  transaction per parent using bulk `entries=`, not one per row.
+- Concurrent transactions inserting into one map queue on its node
+  locks, time out and retry: four in flight gave about one sixth the
+  throughput of sequential (1.5.0). "Concurrent writes scale" holds
+  for independent writers, not overlapping transactions.
+- Hundreds of inserts into one map in a single transaction can exceed
+  the lock deadline: 138 actors plus inserts worked, 360 hung (1.4.1).
+  Split into transactions of proven size, each with its own
+  idempotency alias (`lifecycle-initialize-hook.md`).
+- Key shape dominates query cost: dropping the leading key component
+  turned a prefix scan into a whole-day scan plus fan-out, about 100x
+  slower (load test at 1.4.1). Point reads of a well-keyed map: p50
+  6 ms locally.
 
-```python
-from reboot.std.collections.ordered_map.v1.ordered_map import OrderedMap
-from uuid import uuid4
-from uuid7 import create as uuid7
+## Errors you will see
 
+| Error text (stable prefix) | Meaning | Fix |
+| --- | --- | --- |
+| `OrderedMap.SearchAborted: aborted with 'StateNotConstructed'` | Read before the first `insert` / `create` (also `RangeAborted`) | `create` up front, or catch and treat as empty |
+| `` Range requires a non-zero `limit` value. `` | `range(limit=0)` or no `limit` (`InvalidRangeError`) | Pass `limit=` |
+| `"type[OrderedMap]" has no attribute "create"` | Called `create` on the class | `OrderedMap.ref(id).create(context)` |
+| `` `degree` must be >= 2 `` | Bad construction option (`InvalidArgument`) | `degree >= 2` |
+| `StateAlreadyConstructed` | `create` / first-`insert` options differ from the existing map | Drop the options or match them |
+| `acquire_shared` … `CancelledError` (traceback through `ordered_map_servicer.py` `_Insert`) | Overlapping transactions waiting on node locks | Run the transactions sequentially |
 
-class BankServicer(Bank.Servicer):
+## See also
 
-    async def create(
-        self, context: TransactionContext, request: CreateRequest,
-    ) -> CreateResponse:
-        # Allocate a fresh ID for our OrderedMap and remember it.
-        # Construction happens implicitly on the first `insert`.
-        self.state.account_ids_map_id = str(uuid4())
-        return CreateResponse()
-
-    async def sign_up(
-        self, context: TransactionContext, request: SignUpRequest,
-    ) -> SignUpResponse:
-        # ... open the account ...
-        # UUIDv7 keys give time-ordered iteration for free.
-        await OrderedMap.ref(self.state.account_ids_map_id).insert(
-            context,
-            key=str(uuid7()),
-            bytes=request.account_id.encode(),
-        )
-        return SignUpResponse()
-
-    async def account_balances(
-        self, context: ReaderContext, request: AccountBalancesRequest,
-    ) -> AccountBalancesResponse:
-        account_ids_map = OrderedMap.ref(self.state.account_ids_map_id)
-        # First "page" of 32 entries:
-        page = await account_ids_map.range(context, limit=32)
-        for entry in page.entries:
-            key = entry.key            # str
-            value = entry.bytes        # whichever value field was set
-        ...
-```
-
-### Bulk `insert` Uses `Item`
-
-For multi-key writes, pass `entries={key: Item(...)}` — the same
-`Item` envelope `Queue` / `Topic` use (see `stdlib-item.md`):
-
-```python
-from reboot.std.collections.ordered_map.v1.ordered_map import OrderedMap
-from reboot.std.item.v1.item import Item
-
-await OrderedMap.ref(self.state.account_ids_map_id).insert(
-    context,
-    entries={
-        str(uuid7()): Item(bytes=account_id.encode()),
-        # ...
-    },
-)
-```
-
-Bulk and single-key fields are mutually exclusive on a given call.
-
-### Pick a Value Field
-
-`value` (`google.protobuf.Value`), `bytes`, and `any`
-(`google.protobuf.Any`) are alternatives; set exactly one per entry.
-For storing string IDs, `bytes=value.encode()` is the simplest
-choice. For JSON-shaped payloads, `value=from_str(...)` (or other
-`google.protobuf.Value` constructors) is more ergonomic. For typed
-messages, pack into `Any`. See `stdlib-item.md` for the same
-discrimination on `Queue` / `Topic` and the
-`reboot.protobuf.from_str` / `as_str` helpers.
-
-### Pagination
-
-Hand back the last `entry.key` as the next call's `start_key` to
-page forward. `range`'s `start_key` is inclusive, so add a one-byte
-suffix or remember to skip the duplicate first row when paging.
-
-### `maintain_size`
-
-`create(..., maintain_size=True)` (or `insert(..., maintain_size=True)`
-on the first call) makes the map track a running total. The size is
-returned as `total_size` on each `range` response. This requires a
-write to the root on every insert/remove, which serializes all
-mutations — only opt in when you actually need the count.
-
-### `Node` Is an Implementation Detail
-
-`OrderedMap` is composed of `Node` actors at runtime. You should not
-typically interact with `Node` directly — use the `OrderedMap`
-methods. The `Node` API is exported for advanced cases (custom
-traversal, debugging) but isn't the day-to-day surface.
+- [`state-collections.md`](state-collections.md) — when to use one
+- [`stdlib-item.md`](stdlib-item.md) — the `Item` value envelope
+- [`servicer-transaction.md`](servicer-transaction.md) — locks and transaction size
