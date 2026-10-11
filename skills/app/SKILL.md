@@ -45,12 +45,11 @@ about the app, never the first person: no I, me, my, we or us. Not
 "I'll model each suite as its own actor" but "Each suite is its own
 actor"; not "I'll build a quick prototype first" but "A quick prototype
 of the whole hotel comes first". The subject is the app, the design,
-the build or the prototype, and "you" is the user. Say more, not less,
-at the level of the domain: each step ends in two or three statements
-about their objects, rules and roles and the decisions between them,
-never an account of what was done, never what comes next, never which
-reference or step is in hand. A sentence that starts with I is
-rewritten before it is sent. The first sentence about an object says
+the build or the prototype, and "you" is the user. The user reads the
+build in three complete reports, this welcome, the proposed model and
+the review (the `build` skill, "How the build talks"), and the build is
+quiet between them. A sentence that starts with I is rewritten before
+it is sent. The first sentence about an object says
 why it exists, with the object as its subject. Sentences under about
 twenty words, one idea each; no em or en dashes, no semicolons, no
 parentheses; facts, not praise.

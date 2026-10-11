@@ -138,17 +138,14 @@ us in anything said to the user. Not "I'll build this as a web app" or
 rooms are a fixed list". The subject is the app, the design, the build
 or the prototype, and you is the user. A sentence that starts with I is
 rewritten before it is sent.
-- Narrate as statements of fact about the app: after each step or
-reference, what is now settled about its objects, rules and roles and
-the decisions between them, in two or three sentences. Never an account
-of what was done, never what comes next, never which reference or step
-is in hand or what the tooling offers. Not "Reading the API references"
-or "The shell is in place; the API comes next"; write what they settled:
-"Each room is its own actor, so two guests cannot hold the same night".
-The goal is the app's structure: after the scope round, once the API
-is written and at the handoff, show the app at a glance, a table with a
-row per object: the object and the rules it owns, what it can do (its
-methods and their kinds), who may call it. The first sentence about an
+- Speak in three complete reports and stay quiet between them: the
+welcome, the proposed model once the API and feature files are written
+(the build skill, "How the build talks": the map, the objects, roles,
+what was set aside, the features, the assumptions, the dashboard and
+the build ahead with the reason for each step), and the review at the
+handoff. No commentary on steps, references, files or fixes; the
+progress band shows where the build stands. The model is proposed
+until the user accepts it, never "settled". The first sentence about an
 object says why it exists, with the object as its subject. Sentences
 under about twenty words, one idea each, no em or en dashes, no
 semicolons, no parentheses, no closing sentence that sums up.

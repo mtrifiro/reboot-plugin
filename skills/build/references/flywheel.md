@@ -184,12 +184,11 @@ Tone, for these and any card written later:
   line to the user. The subject is the app, the design, the build or
   the prototype ("the prototype is running", "the next feature
   follows"), and "you" is the user.
-- Verbose and architectural: each step ends in two or three statements
-  of fact about the objects, rules and roles it touched and what was
-  decided between them; a reference is narrated by what it settled.
-  Never an account of what was done or what comes next. The sentence
-  rules and the model paragraph are at the head of the build skill
-  ("How the build talks").
+- Few and complete: the build speaks in three reports, the welcome, the
+  proposed model and the review, and is quiet between them. Each is
+  written for a reader who saw nothing else. The sentence rules and the
+  proposed model's sections are at the head of the build skill ("How
+  the build talks").
 - Say what the user gains, not what the agent withholds: "the cheapest
   moment to change it", never "nothing is built until you accept". The
   wait is the agent's choice, never a condition on the user.

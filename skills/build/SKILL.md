@@ -18,19 +18,21 @@ front door's concepts, the project layout, and each step's reading list
 under **"Which References to Read, and When"**. Differences are marked
 inline (`mcp-ui: … / web-app: …`); a dual-frontend app does both.
 Backend-only work starts from the [`python` skill](../python/SKILL.md).
-Every line to the user is a statement of fact about the app, in the
-build's voice: the user reads the build as it happens, so each step
-ends in two or three statements about their objects, rules and roles
-and the decisions between them (what a stay holds, why a suite is its
-own object, which rule a night enforces, who may cancel). Never an
-account of what was done, never what comes next, never which reference
-or step is in hand, never the first person: a sentence that starts
-with I is rewritten before it is sent (`references/flywheel.md`, Tone).
-Not "Reading the API references" or "The shell is in place; the API
-comes next", but what they settled: "Each room is its own actor, so two
-guests cannot hold the same night". A page or a question is said from the app's side, "the guest's
-reservations", "the refunds waiting on a manager", never "my
-reservations".
+
+**How the build talks: three reports, quiet between.** The user reads
+the build in three complete reports, each written for a reader who saw
+nothing else: the welcome (`app` skill), the proposed model (below)
+and the review at the handoff (Step 7). Between them the build is
+quiet: no commentary on steps, references, files or fixes, since the
+progress band shows where it stands. The only lines between reports:
+the scope questions, one line after them ("A proposed model is being
+built. Objects include flights, gates, and the assignments between
+them."), a question only the user can answer, and one sentence when a
+step runs past ten minutes, saying what takes the time. Never the
+first person: a sentence that starts with I is rewritten before it is
+sent. The model is proposed until the user accepts it at the review,
+never "settled". A page or a question is said from the app's side,
+"the guest's reservations", never "my reservations".
 
 The sentences, so a newcomer understands on one reading: the first
 sentence about an object says why it exists, the harm it prevents or
@@ -39,51 +41,69 @@ comes after. Each sentence under about twenty words, one idea, an
 active verb. The user's own nouns, and Reboot's own terms (actor,
 writer, transaction, authorizer, scenario), each said in a few words
 the first time. Facts stated directly, no hedging, no praise. No em or
-en dashes, no semicolons, no parentheses, no headings or lists in the
-narration, no closing sentence that sums up, and none of: crucial,
+en dashes, no semicolons, no parentheses, no closing sentence that
+sums up; a report's structure is short headings, a table and lists, and none of: crucial,
 essential, vital, key, robust, seamless, leverage, delve, empower,
 comprehensive, pivotal.
 
 A new build whose first words to the user were not the `app` skill's
 welcome says it now, with its examples from the brief, before anything else.
 
-**How the build talks**, the model to imitate, a hotel; write yours in
-the user's nouns, this shape, this length, at every step:
+**The proposed model**, the second report, comes once Step 1 has
+written the API file and every feature file and the dashboard is open.
+It opens "A proposed model is being built." and holds, under short
+headings, in this order:
 
-> **Suites and stays.** The 23 suites are a fixed list on the hotel,
-> one object each: a suite is the thing that is occupied, so it owns
-> the rule that it hosts one stay per night, and its `hold` is a
-> writer, called only by the app when a stay is booked. A stay is the
-> guest's visit, its nights, its suite and its services, and is its own
-> object because it grows through the visit and is what the butler
-> reads: `book` is a transaction, because it holds every night or none;
-> `request` is a writer the guest calls on their own stay; the butler's
-> `requests` is a reader over every stay. The spa has capacity, so it
-> owns the rule that a slot takes one guest; dinner seatings the same.
-> Set aside: a calendar on each suite, which would grow without bound,
-> and a single hotel object holding every stay, which would serialize
-> every booking behind every other.
->
-> The staff are one roster with roles, so the butler and the concierge
-> see different things, and the first manager is named by a setting,
-> never whoever signs in first. Assumed, open to change at the review:
-> guests sign in with the development picker, local data is seed data,
-> and a stay is paid at booking.
+1. **The map**, a table with one row per object, in the user's nouns.
+   Its columns are the welcome's three questions:
 
-**The map, then the details.** Everything said serves one goal: the
-user understands the app's structure. Three times, after the scope
-round, once the API file is written and at the handoff, the build shows
-the app at a glance, a table with one row per object, in the user's
-nouns:
+   | Object, and the rules it owns | What it can do | Who may call it |
+   | --- | --- | --- |
+   | `Suite`, one of the 23: one stay per night | `hold`, a writer | only the app, when a stay is booked |
+   | `Stay`, a guest's visit: every night or none | `book`, a transaction; `request`, a writer | the guest; the butler reads |
 
-| Object, and the rules it owns | What it can do | Who may call it |
-| --- | --- | --- |
-| `Suite`, one of the 23: one stay per night | `hold`, a writer | only the app, when a stay is booked |
-| `Stay`, a guest's visit: every night or none | `book`, a transaction; `request`, a writer | the guest; the butler reads |
+2. **The objects**, one short paragraph each: why it is its own object,
+   the rules it owns, its methods with their kinds and callers, and the
+   principle behind each choice, said once in Reboot's terms. The model
+   to imitate, a hotel:
 
-Every other sentence names the row it changed and how. What leaves the
-map unchanged goes unsaid: a typo fixed, a predicate's order, a lock
-mode.
+   > **Suites and stays.** The 23 suites are a fixed list on the hotel,
+   > one object each: a suite is the thing that is occupied, so it owns
+   > the rule that it hosts one stay per night, and its `hold` is a
+   > writer, called only by the app when a stay is booked. A stay is the
+   > guest's visit, its nights, its suite and its services, and is its own
+   > object because it grows through the visit and is what the butler
+   > reads: `book` is a transaction, because it holds every night or none;
+   > `request` is a writer the guest calls on their own stay; the butler's
+   > `requests` is a reader over every stay. The spa has capacity, so it
+   > owns the rule that a slot takes one guest; dinner seatings the same.
+   > Set aside: a calendar on each suite, which would grow without bound,
+   > and a single hotel object holding every stay, which would serialize
+   > every booking behind every other.
+   >
+   > The staff are one roster with roles, so the butler and the concierge
+   > see different things, and the first manager is named by a setting,
+   > never whoever signs in first. Assumed, open to change at the review:
+   > guests sign in with the development picker, local data is seed data,
+   > and a stay is paid at booking.
+
+3. **Roles**: who signs in and what each role may do.
+4. **Set aside**: each alternative not taken, with its reason.
+5. **The features and their scenarios**: each feature by name, then
+   each rule and, under it, each scenario in plain English, its name
+   and what it shows ("A second guest asks for a booked room: refused,
+   the first stay unchanged"). These are the app's tests and the rules
+   it promises, so the user corrects them here, before any code; the
+   dashboard's Features page shows the same.
+6. **Assumed**, open to change at the review.
+7. **The dashboard**: its Models page shows each object's state and
+   methods now. The Call Graph, which method calls which, fills in once
+   Step 3 writes the methods' code.
+8. **The build ahead**: the steps still to come, one line each with
+   its reason. The red run: every scenario runs before any method has
+   code, so each is proven able to fail; one that passes then would
+   check nothing. Then the methods' code, who may call each, the pages,
+   and the full suite before the review.
 
 The flow is the **Reboot Flywheel**'s first two stages
 ([`references/flywheel.md`](references/flywheel.md)): **Design** runs
@@ -107,14 +127,8 @@ Everything read is re-sent every later turn:
   in a single turn as parallel calls. `cat`-ing several into one call
   can exceed the output limit and be cut off unseen.
 - Skip a reading-list line ending *only when …* unless it holds.
-- **A reference is narrated by what it settled.** After it, one or two
-  statements of fact about the app ("the staff are one roster with
-  roles, so the butler and the concierge see different things");
-  nothing before it, nothing about the reference or the tooling it
-  describes, nothing about what comes next. A silent read is a failure.
-- When a reference is wrong or silent about something you hit, append
-  an item to the project's `FINDINGS.md` (format inside it) and keep
-  going; the `report` skill files them later.
+- **A reference is read silently.** What it decides shows in the
+  proposed model or the handoff, never as a line after reading it.
 
 ### Never Read Generated or Installed Source in the Main Thread
 
@@ -161,19 +175,17 @@ waits.
    answers go into `design/design.md` under "Scope", the rest under
    "Assumed" (defaults: the web app, the `Development()` sign-in).
    Local data is seed data, reset when the model changes, never asked.
-   Then one line on the model the design turns to, its objects in the
-   user's nouns, never the first person and never the prototype: "The
-   model comes first: flights, gates, and the assignments between
-   them."
-1. **The whole app, said object by object.** Write every capability's
-   `@wip` feature file from the scope ([`feature`
+   Then one line, its objects in the user's nouns: "A proposed model is
+   being built. Objects include flights, gates, and the assignments
+   between them."
+1. **The whole app, in one report.** Write every capability's `@wip`
+   feature file from the scope ([`feature`
    skill](../feature/SKILL.md), Step 2; its Step 2a is this flow's).
-   As the model takes shape (items 3 and 4), say each object as it is
-   created, in the user's nouns: what it is, why it is its own object,
-   its methods with their kinds and callers, and the choice set aside
-   ("`Night` rather than a calendar on `Room`: a room's calendar grows
-   without bound"). Say each decision as it is made, with what it buys
-   or costs; the decisions log keeps them (Step 2, item 5). After the
+   Each object and decision, with what it buys or costs and the choice
+   set aside ("`Night` rather than a calendar on `Room`: a room's
+   calendar grows without bound"), goes into the proposed-model report,
+   not into lines as it is made; the decisions log keeps them (Step 2,
+   item 5). After the
    review, each later feature follows the feature skill's Step 1:
    agree it in plain English, show its slice of the model as rows
    under the review table, build it, hand it off, ask what comes next.
@@ -225,6 +237,13 @@ waits.
    words the user reads: every choice with its why, the deviations
    from the brief, the alternatives set aside. Keep it current until
    accepted; it outlives the conversation.
+6. **Following naming decisions.** When the user picks an option, that
+   pick is final. A later side-question ("should it be X?") is a
+   question to answer, not a new decision. Keep the pick unless the
+   user clearly replaces it. When an instruction is unclear ("go with
+   day" when no option is called just "day"), ask one short question.
+   Never guess and act. After a rename, confirm the final name in one
+   line and say what it touched.
 Updates start with the design too (Update Flow).
 
 ### Writing the Design for a Human Reader
@@ -303,6 +322,23 @@ The reader hasn't read the skill files; make the design stand alone:
     ID, on `User` when it is about the user (mcp-ui skill, "UI
     Placement"). web-app: the pages and the methods each calls.
 
+### Naming domain objects
+
+- Name each state type for what it holds and what it is for, in the
+  domain's own words. Never name it after its id or key.
+  - Bad: `GateDay`, keyed by gate plus date. The name says how it is
+    looked up, not what it is.
+  - Good: `GateSchedule`. One gate's schedule for one day: its flights
+    and closures, and the rule that no two flights overlap.
+- Test each name: would a gate controller know what it holds without
+  being told? If the name only makes sense once its id is explained,
+  rename it.
+- Before showing the design, read the type list once with this test.
+  Flag any type named after its key or its time period, such as `Day`
+  for a day's list of flights, and propose a better name.
+- Propose names before writing the API. Renaming later touches the
+  API, servicers, feature files and generated code.
+
 ### When Correct Decomposition Fights the UI
 
 One hook on one actor tempts a flattened `list[Item]`. The data model
@@ -323,41 +359,31 @@ from then on "Accept the Design" sits before each feature's
 implementation.
 
 **The first prototype is the whole design, built straight through and
-said as it goes.** Steps 1 to 7 build every feature file's model,
-methods, pages or tools and scenarios. Each step's narration names
-the object, method or file being written and the decision behind it,
-in the user's nouns, in two or three sentences before each tool call
-or group of calls; a step past ten minutes says what takes the time
-and what it would cut. The first prototype skips the screenshot pass
+reported at both ends.** Steps 1 to 7 build every feature file's
+model, methods, pages or tools and scenarios. The proposed-model report
+comes after Step 1, the review after Step 7, and the steps between are
+quiet. The first prototype skips the screenshot pass
 and page timing (Step 5); they come with the first update.
 
-**Teach as you build, design first.** The first build is the user's
-first look at Reboot, and the design is what it teaches most. Each
-design decision says which of the welcome's three questions it answers
-and the principle behind the answer, in the user's nouns: "A
+**Teach in the reports, design first.** The first build is the user's
+first look at Reboot, and the design is what it teaches most. In the
+proposed-model report, each object's paragraph names the welcome's
+question its choices answer and the principle behind them: "A
 reservation is its own object, because it lives and changes apart from
-the room" (what are the objects); "`book` is a transaction, because it
-holds every night or none" (what can it do); "only the app calls
-`hold`, so no guest can claim a night directly" (who may call it). The
-first map says its columns are those three questions. Later steps add
-one or two sentences on the idea each rests on, never a lecture. Step 1:
-a state type is an actor, its state kept by Reboot and its methods run
-one at a time, so two guests cannot book the same night; a reader,
-writer, transaction or workflow is what a method may touch. Steps 2a
-and 6: a scenario is the rule in English that the suite runs. Step 4:
-an authorizer is who may call each method, enforced in production.
-Step 7: the dev loop restarts on every edit, the dashboard shows the
-model and the features, `rbt inspect` reads what is stored. A term the
+the room"; "`book` is a transaction, because it holds every night or
+none"; "only the app calls `hold`, so no guest can claim a night
+directly". Reboot's terms are defined once there: an actor keeps its
+state and runs its methods one at a time; a reader, writer,
+transaction or workflow is what a method may touch; an authorizer is
+who may call it; a scenario is a rule in English the suite runs. The
+review adds the dev loop, the dashboard and `rbt inspect`. A term the
 user asks about gets the reference's answer, in their words.
 
 **Once Step 1 has written the API file, start the developer
 dashboard** ([`dashboard` skill](../dashboard/SKILL.md)): it opens on
 its Models page with the model to show, and its Features page has the
 feature files. Started earlier, it opens on "Waiting for your API".
-When it opens, say what the user is looking at: the Models page shows
-each object, its state and its methods, the map's first two questions.
-The Call Graph, which method calls which, stays empty until Step 3
-writes the methods' code, then fills in. If it fails, say so in a
+The proposed-model report says what it shows. If it fails, say so in a
 sentence and keep building.
 
 ### Step 1: API definition
@@ -429,16 +455,7 @@ placeholders, renames paths, keeps every file the project already has
 (step 1's API file, a `CLAUDE.md`) and replaces the dashboard's three
 stubs (the dashboard keeps running). The sample servicer, feature, test
 module and UI are replaced in steps 3, 5 and 6; a dual-frontend app
-copies `templates/both/`. Then say what the folder now holds, directory
-by directory, each with its job in the user's terms, from the table in
-`templates/README.md`: `api/`, the objects and their methods, the one
-definition the backend and the browser are generated from; `backend/src/`,
-the code behind each method; `tests/`, the feature files and the
-scenarios that run them; the frontend directory, the pages; `scripts/`,
-the test, deploy and backup commands; `deploy/`, the deploy's settings
-and record; `AGENTS.md`, the project's map for a coding agent. From
-here on, a step that adds a file names it and its job the moment it
-lands. Then:
+copies `templates/both/`. Then:
 
 1. `uv sync`.
 2. `uv run rbt generate`. Don't read the output; the servicer signature
@@ -688,7 +705,13 @@ cards"), then:
    when there are any, offer the [`report` skill](../report/SKILL.md).
 6. Unless the user asked for only one front door, the one-line offer of
    the other (`app` skill, "At handoff").
-7. What to add next, proposed; the user picks.
+7. The map as built, and the project's folders, directory by
+   directory with each one's job in the user's terms, from the table in
+   `templates/README.md`: `api/` the objects and methods, `backend/src/`
+   the code behind them, `tests/` the feature files and scenarios, the
+   frontend directory the pages, `scripts/` and `deploy/` the commands
+   and settings, `AGENTS.md` the project's map for a coding agent.
+8. What to add next, proposed; the user picks.
 
 ## Update Flow
 
