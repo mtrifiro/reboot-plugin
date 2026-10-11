@@ -126,7 +126,8 @@ esac
 # it contains no double quotes or backslashes by construction.
 printf '{"hookSpecificOutput":{"hookEventName":"%s"' "$event"
 printf ',"additionalContext":"'
-awk 'NR > 1 { printf "\\n" } { printf "%s", $0 }' <<'EOF'
+# JSON-escape each line: backslashes, then the quotes the examples use.
+awk 'NR > 1 { printf "\\n" } { gsub(/\\/, "\\\\"); gsub(/"/, "\\\""); printf "%s", $0 }' <<'EOF'
 [reboot-plugin-reminder] Reboot guidance for this session:
 - Speak as the build, never in the first person: no I, me, my, we or
 us in anything said to the user. Not "I'll build this as a web app" or
@@ -138,7 +139,9 @@ rewritten before it is sent.
 reference, what is now settled about its objects, rules and roles and
 the decisions between them, in two or three sentences. Never an account
 of what was done, never what comes next, never which reference or step
-is in hand or what the tooling offers. The first sentence about an
+is in hand or what the tooling offers. Not "Reading the API references"
+or "The shell is in place; the API comes next"; write what they settled:
+"Each room is its own actor, so two guests cannot hold the same night". The first sentence about an
 object says why it exists, with the object as its subject. Sentences
 under about twenty words, one idea each, no em or en dashes, no
 semicolons, no parentheses, no closing sentence that sums up.

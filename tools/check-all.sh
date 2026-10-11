@@ -32,6 +32,7 @@ python3 tests/templates/placeholder_test.py -q
 python3 tests/shims/rbt_test.py -q
 python3 tests/hooks/suite_guard_test.py -q
 python3 tests/hooks/session_start_test.py -q
+python3 tests/hooks/remind_test.py -q
 python3 tests/templates/deploy_test.py -q
 python3 tests/shims/uv_test.py -q
 python3 tests/tools/gen_index_test.py -q

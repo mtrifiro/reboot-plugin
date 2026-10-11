@@ -26,7 +26,9 @@ own object, which rule a night enforces, who may cancel). Never an
 account of what was done, never what comes next, never which reference
 or step is in hand, never the first person: a sentence that starts
 with I is rewritten before it is sent (`references/flywheel.md`, Tone).
-A page or a question is said from the app's side, "the guest's
+Not "Reading the API references" or "The shell is in place; the API
+comes next", but what they settled: "Each room is its own actor, so two
+guests cannot hold the same night". A page or a question is said from the app's side, "the guest's
 reservations", "the refunds waiting on a manager", never "my
 reservations".
 
@@ -83,8 +85,9 @@ through the acceptance.
 Everything read is re-sent every later turn:
 
 - Read each reference **once**, at the step that needs it.
-- **One reference per tool call**; `cat`-ing several can exceed the
-  output limit and be cut off unseen.
+- **A step's whole list at once**: one Read per reference, all of them
+  in a single turn as parallel calls. `cat`-ing several into one call
+  can exceed the output limit and be cut off unseen.
 - Skip a reading-list line ending *only when …* unless it holds.
 - **A reference is narrated by what it settled.** After it, one or two
   statements of fact about the app ("the staff are one roster with
@@ -289,7 +292,9 @@ web-app: `python/references/patterns-cross-actor-reads.md`.
 ## Step-by-Step Build Flow
 
 **Run all commands from the application directory**; before each step,
-read its front-door reading list. Step 1 closes the first prototype's
+read its front-door reading list. The design, the feature files and the
+API file are written into the bare folder; the template arrives at Step
+2, after them. Step 1 closes the first prototype's
 design; its acceptance comes with the running prototype (Step 7), and
 from then on "Accept the Design" sits before each feature's
 implementation.
