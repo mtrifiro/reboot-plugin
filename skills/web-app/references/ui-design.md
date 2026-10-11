@@ -53,26 +53,16 @@ app, [`ui-restyle.md`](ui-restyle.md).
 
 ### The default look: the house default
 
-The template ships in it: the skills' own look, no one's brand. Keep it
-when the user names no brand; replace it whole when they do.
-
-| Token | Light | Dark |
-| --- | --- | --- |
-| `--bg` page | paper `#f4f4f7` | `#14151c` |
-| `--panel`, `--bg-2` | white `#ffffff` | `#1d1f29` |
-| `--ink` | near-black `#1b1d26` | `#ecebf4` |
-| `--muted` | `#5c6070` | `#a0a3b3` |
-| `--accent` / `--on-accent` | violet `#5b3fd6` / white | lilac `#b4a1ff` / `#1b1340` |
-| `--accent-deep` (top bar, page band) | `#2b1a6b` | `#0f0b2a` |
-| `--accent-tint` (selection, highlight) | `#ebe6fb` | `#2a2448` |
-| `--good` / `--warn` / `--bad` | `#3f7a2e` / `#a8660f` / `#b42318` | `#8ccb6b` / `#f2c784` / `#f07a6e` |
-
-Type: Bricolage Grotesque 500 for headings and big numbers
-(`--font-display`), Instrument Sans for text (`--font-text`), JetBrains
-Mono for code and ids (`--font-mono`), bundled from `@fontsource` in
-`main.tsx`; no font CDN. Headings are weight 500 with slightly tight
-tracking, not bold. The tint is the accent's own pale shade, never a
-second hue. MCP UIs keep the colors and use the system fonts
+The template's `styles.css` ships it: the skills' own look, no one's
+brand. Its `:root` and dark blocks name every token: paper page,
+near-black ink, a violet accent with a deep shade for the top bar and
+a pale tint for selection, `--good`/`--warn`/`--bad`. Type is Bricolage
+Grotesque 500 for headings and big numbers, Instrument Sans for text,
+JetBrains Mono for code and ids, bundled from `@fontsource` in
+`main.tsx`, no CDN; headings weight 500, slightly tight, never bold.
+The tint is the accent's own pale shade, never a second hue. Keep the
+look when the user names no brand; replace it whole when they do. MCP
+UIs keep the colors and use the system fonts
 (`mcp-ui/references/ui-design.md`).
 
 **02 Primary view by task.**
@@ -152,19 +142,17 @@ build keeps `ThemeToggle` (`web/src/theme.tsx`) in the top bar:
 remembered per browser, the OS setting until chosen. The user may ask
 to remove it later.
 
-**12 Review the screenshots.** Every page at desktop (1440×900) and
-phone (375×812, full page) width, light and dark. With the app running,
+**12 Review the screenshots.** With the app running,
 `uv run --with playwright python scripts/screenshots.py / /other-route`
-signs in through the dev login and saves each one to `screenshots/`. Open every image
-and look at it. Compute contrast for every text and background token
-pair in both schemes with a short script, not by eye. Toggling the
-theme by hand, wait about 300 ms before a screenshot: cards fade their
-background over 160 ms, and a mid-fade capture looks like a contrast
-bug. Check 03–09 and Never, fix in one pass, then pin with a
-look scenario per page (`testing-web-app.md`, "Look steps"). A plan's
-exact numbers (row heights, chart types) are starting points; when the
-screenshots show one hurts legibility, deviate and say so in the
-handoff.
+signs in through the dev login and saves every route at desktop
+(1440×900) and phone (375×812, full page) width, light and dark, to
+`screenshots/`. Open every image. Compute the contrast of every text
+and background pair in both schemes with a short script, not by eye.
+After a hand toggle wait about 300 ms: cards fade over 160 ms and a
+mid-fade capture looks like a contrast bug. Check 03–09 and Never, fix
+in one pass, then pin a look scenario per page (`testing-web-app.md`,
+"Look steps"). A plan's exact numbers are starting points; when a
+screenshot shows one hurts legibility, deviate and say so at handoff.
 
 **Build on the template's `styles.css`.** Change token values to the
 brief's, keep the names, use its classes (the table in 02, plus
@@ -172,17 +160,10 @@ brief's, keep the names, use its classes (the table in 02, plus
 file.
 
 **13 Restyle by changing values, not adding layers.** Asked to restyle
-an existing app, edit the token values in place, in `:root` and both
-dark blocks. Never append a block that redefines tokens or re-pins
-colors ("a Linear look", "friendlier"): a later block silently beats
-the token edit, and its raw hex outlives the look. Before editing, grep
-the whole file for `:root` and raw hex below the token blocks; fold
-those layers into the tokens or delete them. Then change what lives
-outside `styles.css`: the favicon in `index.html`, a logo component, the
-font imports in `main.tsx`, and `font-feature-settings` tied to the old
-font. Offer the depth: colors and type only (tokens, fonts, logo), or
-the brand's whole visual language (its label style, highlights,
-textures); for a working tool, default to colors and type.
+a running app, edit the token values in place in `:root` and both dark
+blocks; never append a block that redefines them, since a later block
+silently beats the edit. The steps, the layers to fold first and the
+depth to offer are in [`ui-restyle.md`](ui-restyle.md).
 
 ## Never
 

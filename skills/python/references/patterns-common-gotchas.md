@@ -635,6 +635,10 @@ section. Add or change a trap in its owning reference, not here. -->
 - Choosing between `main` and branches for the developer, or going against the `Workflow:` line in `AGENTS.md`
 - Pushing, or opening, merging or closing a pull request, without the developer's yes for that one
 
+**`dashboard/references/known-issues.md`**
+- Restarting the app or regenerating to fix a dashboard symptom: the dashboard is a separate process
+- Killing every `rbt` process on the machine: other projects' apps and dashboards share it
+
 **`mcp-ui/references/pop-out-to-web-app.md`**
 - `window.open(url)` alone
 - `mcpApp.openLink(...)` without `?.`

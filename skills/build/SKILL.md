@@ -26,6 +26,9 @@ own object, which rule a night enforces, who may cancel). Never an
 account of what was done, never what comes next, never which reference
 or step is in hand, never the first person: a sentence that starts
 with I is rewritten before it is sent (`references/flywheel.md`, Tone).
+A page or a question is said from the app's side, "the guest's
+reservations", "the refunds waiting on a manager", never "my
+reservations".
 
 The sentences, so a newcomer understands on one reading: the first
 sentence about an object says why it exists, the harm it prevents or
@@ -239,85 +242,62 @@ The reader hasn't read the skill files; make the design stand alone:
 
 ## State Model Assessment
 
-1. **Application types — decompose aggressively.** Every entity the
-   user will add / edit / list / `find` over time (people, posts,
-   tasks, accounts) is its own `Type` with its own state, even if each
-   user has only a few. Packing them into one parent as `list[Person]`
-   flattens N actors, blocks per-entity auth and methods, and forces a
-   rewrite as it grows. A collection **synced or scraped from
-   an external system** (a repo's issues, a mailbox) is an entity
-   collection, unbounded by definition. Signals:
-   `python/references/state-collections.md` Step 1. Counter-test: items
-   one action must change all-or-none ("hold these 4 seats") stay
-   inline on one actor, which is the lock (its "Counter-test:
-   cohesion").
-2. **`User`: always** — the MCP front door, and the owner of per-user
-   state in the web app; route creation through it in both. `User`
-   holds identity and the **IDs** of what it owns; unrelated concerns
-   (auth/session, persona, background-engine config, caches) are their
-   own Types, or its writers serialize
+1. **Application types: decompose aggressively.** Every entity the
+   user adds, edits, lists or finds over time is its own `Type` with
+   its own state, even when each user has few. One parent holding
+   `list[Person]` flattens N actors, blocks per-entity auth and methods
+   and forces a rewrite as it grows. A collection synced from an
+   external system is unbounded by definition. Items one action must
+   change all or none ("hold these 4 seats") stay inline on one actor,
+   the lock (`python/references/state-collections.md`, Step 1 and its
+   counter-test).
+2. **`User`: always.** The MCP front door and the owner of per-user
+   state in the web app; creation routes through it in both. It holds
+   identity and the IDs of what it owns; auth, persona, engine config
+   and caches are their own Types
    (`python/references/state-actor-decomposition.md`).
-3. **Container shape per collection** — the parent stores
-   **references**, not objects (table and worked example in
-   `state-collections.md`):
-   - `list[Sub]` of non-state `Model`s — bounded sub-records with no
-     identity (line items, tags). NOT for entity collections.
-   - `list[str]` of foreign state IDs — a bounded entity collection
-     (low hundreds, occasionally low thousands) always read whole.
-   - `OrderedMap` of foreign state IDs — unbounded, or needs
-     pagination, range queries or ordered iteration. The default for
-     anything the user keeps adding to or that is externally synced.
-
-   **Boundedness is a domain fact**: if you add a cap
-   (`MAX_ITEMS = 40`) to make a collection bounded, it is unbounded —
-   use `OrderedMap`.
-4. **Creation.** Each application type is created by a `Transaction` on
-   its owner (typically `User`) that calls `<Type>.create(context)` and
-   registers the new ID in the owner's container; the type's own
-   constructor is a `create` Writer with `factory=True`.
-5. **State shape.** Every field has `Field(tag=N)`, a zero-value default
-   and `description=`. A nested `Model` owned 1:1 by a parent state is
-   `Optional[X] = Field(tag=N, default=None)`, hydrated in the parent's
-   factory `create` Writer; non-Optional `Model`-typed fields reject
-   `default=` / `default_factory=`. Rules: `python/references/api-pydantic.md`
-   (mcp-ui also `mcp-ui/references/api-state-shapes.md`).
+3. **Container shape per collection.** The parent stores references,
+   not objects: `list[Model]` for bounded sub-records with no identity,
+   `list[str]` of IDs for a bounded entity collection read whole,
+   `OrderedMap` for anything unbounded, paginated or externally
+   synced. A cap added to make a collection bounded proves it unbounded
+   (`state-collections.md`, Step 2).
+4. **Creation.** A `Transaction` on the owner calls
+   `<Type>.create(context)` and registers the ID in the owner's
+   container; the type's constructor is a `create` Writer with
+   `factory=True`.
+5. **State shape.** Every field has `Field(tag=N)`, a zero-value
+   default and `description=`; a nested `Model` owned 1:1 is
+   `Optional[X] = Field(tag=N, default=None)`, hydrated in `create`
+   (`python/references/api-pydantic.md`; mcp-ui also
+   `mcp-ui/references/api-state-shapes.md`).
 6. **Method type.** `Reader`: read-only. `Writer`: one state.
-   `Transaction`: anything touching more than one state instance (a
-   transfer; `User` creating an application-type instance). `Workflow`:
-   long-running control flow (loops, scheduling, idempotency helpers)
-   and every external-service call.
+   `Transaction`: more than one state instance. `Workflow`: long-running
+   control flow and every external-service call.
 7. **Identity.** A singleton created in `initialize`, or many with
    their own IDs?
-8. **Stdlib before your own types**: durable FIFO `Queue`;
-   sorted/paginated map `OrderedMap`; who's-online `Presence`;
-   broadcast `Topic` (PubSub); payload envelopes `Item`; a provider's
-   OAuth tokens `OAuthTokenManager`; a secret/API key/PII field
-   `Ciphertext`. Never declare a `Model` with one of those names — it
-   forfeits durability, ordering and concurrency guarantees. Register
-   each in `servicers/registry.py`, its `<thing>.servicers()` and
-   `<thing>_library()`: a missing one fails on first call with an
-   unknown-state-type error; a missing library dependency (e.g.
-   `ordered_map_library()` for `Ciphertext`) fails at startup with
-   `Missing required libraries: …`.
-9. **Backend LLM calls** use the durable
-   `reboot.agents.pydantic_ai.Agent`, never a raw `anthropic` / `openai`
-   SDK or bare `pydantic_ai.Agent` (re-bills the provider on every
-   workflow replay) (`python/references/agent-pydantic-ai.md`).
-10. **Front-door surface.** mcp-ui: `mcp=Tool()` (AI-callable) vs.
-    `mcp=None` per method; a `UI()` goes on the entity's own `Type` when
-    the AI passes an entity ID, on `User` when it is about the user as a
-    whole (mcp-ui skill, "UI Placement"). web-app: the pages and the
-    methods each calls, through generated React hooks.
+8. **Stdlib before your own types.** `Queue`, `OrderedMap`, `Presence`,
+   `Topic`, `Item`, `OAuthTokenManager`, `Ciphertext`: never a `Model`
+   with one of those names. Each is registered in
+   `servicers/registry.py` with its `servicers()` and `_library()`;
+   a missing one fails the first call with an unknown state type, a
+   missing library fails startup.
+9. **Backend LLM calls** use `reboot.agents.pydantic_ai.Agent`, never a
+   raw provider SDK or a bare `pydantic_ai.Agent`, which re-bills on
+   every replay (`python/references/agent-pydantic-ai.md`).
+10. **Front-door surface.** mcp-ui: `mcp=Tool()` or `mcp=None` per
+    method; a `UI()` on the entity's own `Type` when the AI passes its
+    ID, on `User` when it is about the user (mcp-ui skill, "UI
+    Placement"). web-app: the pages and the methods each calls.
 
 ### When Correct Decomposition Fights the UI
 
-One hook on one actor tempts you to flatten a collection into
-`list[Item]`. **The data model wins**: one actor per item with an
-`OrderedMap` index on the parent, and a **composing reader** on the
-parent that ranges one page of IDs, reads each item actor, and returns
-hydrated items plus a `next_cursor`; the page subscribes to it. mcp-ui: `mcp-ui/references/react-app-tsx.md`.
-web-app (summary vs. detail readers, aggregation, per-caller views):
-`python/references/patterns-cross-actor-reads.md`.
+One hook on one actor tempts a flattened `list[Item]`. The data model
+wins: one actor per item, an `OrderedMap` index on the parent, and a
+composing reader on the parent that ranges one page of IDs, reads each
+item and returns hydrated items with a `next_cursor`; the page
+subscribes to it. mcp-ui: `mcp-ui/references/react-app-tsx.md`;
+web-app: `python/references/patterns-cross-actor-reads.md`.
 
 ## Step-by-Step Build Flow
 

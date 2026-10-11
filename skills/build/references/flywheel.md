@@ -30,24 +30,24 @@ change goes back to Design. The evidence each decision rests on is in
 
 | Stage | Skills and steps | Evidence | Ends with |
 | --- | --- | --- | --- |
-| **Design** | `app` (routing); `feature` 1–2; `build` Design Phase, State Model Assessment, Step 1; `dashboard` (Models, Features); Update Flow 1–4 | Domain model: state types, state IDs, methods, method kinds, who may call. `@wip` feature files | **Accept**: the user accepts the domain model and feature files (`build`, "Accept the design"): the first prototype's on the running app, each later feature's before its implementation |
-| **Prove** | `build` Steps 2–7; `feature` 2a–5 and fixes; `python`; `run`; `upgrade`; `deploy` checks | Scenario results (`tests/.last-run.json`), mypy, page timing, the model diff | **Merge** (the pull request body) and **Promote** (`scripts/deploy.sh`, its release record) |
-| **Observe** | `inspect` (and its "From a finding to a scenario"); `deploy` Step 7; the app's logs | Stored state (`rbt inspect`): the history the design chose to record | A finding becomes a ticket, routed below |
+| **Design** | `app`; `feature` 1–2; `build` Design Phase, State Model Assessment, Step 1; `dashboard` Models and Features; Update Flow 1–4 | The domain model: state types, IDs, methods, kinds, who may call; the `@wip` feature files | **Accept**: the user accepts the model and the feature files on the running first prototype, and each later feature's slice before its implementation (`build`, "Accept the Design") |
+| **Prove** | `build` 2–7; `feature` 2a–5 and fixes; `python`; `run`; `upgrade`; `deploy` checks | Scenario results (`tests/.last-run.json`), mypy, page timing, the model diff | **Merge** (the pull request body) and **Promote** (`scripts/deploy.sh` and its release record) |
+| **Observe** | `inspect`; `deploy` Step 7; the app's logs | Stored state (`rbt inspect`): the history the design chose to record | A finding becomes a ticket, routed below |
 
-The decisions are the user's. The skills put the evidence in front of
-them and wait; they never accept, merge or promote on the user's behalf.
-`report` and `FINDINGS.md` sit outside the loop: they are feedback on
-Reboot and on these skills, not on the app.
+The decisions are the user's: the skills put the evidence in front of
+them and wait, never accepting, merging or promoting for them.
+`report` and `FINDINGS.md` are feedback on Reboot and on these skills,
+outside the loop.
 
 ### The routing rule
 
-Every change, whether from a ticket, a failed scenario or a production
-finding, goes to one stage. `scripts/model_diff.py` sorts each change
-by this rule, measuring from the accepted design (the commit that added
-`design/accepted.json`; `<base>` names another revision); use it, don't
-judge by eye. A project older than it has no copy: take
-`scripts/model_diff.py`, and `tests/last_run.py` with its import in
-`tests/conftest.py`, from `build/templates/<front door>/`.
+Every change, from a ticket, a failed scenario or a production finding,
+goes to one stage. `scripts/model_diff.py` sorts each by this rule,
+measuring from the accepted design (the commit that added
+`design/accepted.json`; `<base>` names another revision). Use it, never
+judge by eye. A project older than the script takes it, with
+`tests/last_run.py` and its `conftest.py` import, from
+`build/templates/<front door>/`.
 
 | Change | Goes to |
 | --- | --- |
@@ -59,28 +59,25 @@ judge by eye. A project older than it has no copy: take
 | A new scenario under a `Rule:` that already exists (a fix's reproducing case) | **Prove** |
 | `@wip` taken off a scenario, with the user's agreement | **Prove** |
 
-The design names who may call each method (the review table's column),
-so an authorizer is design written as code: `model_diff.py` lists every
-authorizer change as Design, including one that only carries out the
-accepted column; the review says which. A fix that turns out to need a
-Design change stops there: show the
-model diff, say which rule or declaration changes and why, and take it
-through "Accept the design" before writing more code.
+An authorizer is design written as code, so `model_diff.py` lists every
+authorizer change as Design, even one that only carries out the
+accepted column; the review says which. A fix that needs a Design
+change stops: show the model diff, say which rule or declaration
+changes and why, and take it through "Accept the Design" before
+writing more code.
 
 ### Where the work happens
 
 The developer decides whether changes go straight onto `main` or onto
-a branch each. The skills follow that choice and never make it for
-them.
+a branch each. The skills follow that choice, never make it.
 
 1. **Follow what the project already does.** The `Workflow:` line in
-   `AGENTS.md`, once it names a choice; else a branch other than `main` already checked out
-   (keep working there); else what the repository shows, such as a
-   `CONTRIBUTING.md`, a rule in `AGENTS.md` or `CLAUDE.md`, or merged
-   pull requests in `git log`. Say in one line which you're following.
-2. **Otherwise ask once,** at the first change after the first build.
-   The first build stays on `main` and ends in its "Design accepted"
-   commit. Ask:
+   `AGENTS.md` once it names a choice; else a branch other than `main`
+   already checked out; else what the repository shows
+   (`CONTRIBUTING.md`, a rule in `AGENTS.md` or `CLAUDE.md`, merged
+   pull requests in `git log`). Say in one line which applies.
+2. **Otherwise ask once,** at the first change after the first build,
+   which stays on `main` and ends in its "Design accepted" commit:
    > Where should changes go from now on? Straight onto `main`, or a
    > branch for each change that you merge when you're happy with it?
    > With a branch, a pull request on GitHub runs the app's tests and
@@ -88,16 +85,15 @@ them.
 
    The last sentence only when `origin` is on GitHub.
 3. **Record the answer** as the `Workflow:` line in `AGENTS.md`
-   (`main`, or `a branch per change, pull requests on GitHub`) and
-   commit it with the change. The developer changes it by saying so.
-4. **On a branch,** name it for the change or its ticket
-   (`add-transfers`, `hotel-7-late-checkout`). Say so in one line
-   before creating or switching, and never switch while the developer
-   has uncommitted changes. When the change is proven, the feature or
-   fix card offers the pull request with the
-   [`evidence.md`](evidence.md) body; push and open it only on the
-   developer's yes. A deploy ships `main`, so the merge comes first,
-   and it is the developer's.
+   (`main`, or `a branch per change, pull requests on GitHub`),
+   committed with the change. The developer changes it by saying so.
+4. **On a branch,** named for the change or its ticket
+   (`add-transfers`, `hotel-7-late-checkout`): say so in one line
+   before creating or switching, and never switch over uncommitted
+   changes. When the change is proven, the card offers the pull
+   request with the [`evidence.md`](evidence.md) body; push and open
+   it only on the developer's yes. A deploy ships `main`, so the
+   merge, the developer's, comes first.
 
 ### Where the work stands
 
@@ -107,10 +103,10 @@ list of files touched.
 
 ### The decisions log
 
-`design/decisions.md` keeps why the design is what it is, after the
-conversation that settled it is gone. Each acceptance appends one entry,
-newest last; no entry is edited or removed, so a later change that
-overturns one adds its own entry naming it.
+`design/decisions.md` keeps why the design is what it is after the
+conversation that settled it is gone. Each acceptance appends one
+entry, newest last; no entry is edited or removed, so a later change
+that overturns one adds its own entry naming it.
 
 ```markdown
 ## 2026-10-10 — Design accepted: Front desk
@@ -125,20 +121,15 @@ overturns one adds its own entry naming it.
 - **Replaces:** nothing (first design).
 ```
 
-- One **Decided** / **Why** pair per choice the user would need
-  explained later: a state type, a container, a method type, who may
-  call, the primary view, a deviation from the brief.
-- **Set aside** only for alternatives actually raised.
-- **The user's words** quotes them, or says they accepted without
-  comment.
-- **Replaces** names the earlier entries it overturns by heading, or
-  "nothing".
-- A build without stopping still gets its entry, headed "Design not
-  accepted: <title>".
-
-Before a change, read the log: a change that goes against an entry
-says so to the user, naming the entry and its why, before the design
-changes.
+One **Decided** and **Why** pair per choice the user would need
+explained later: a state type, a container, a method type, who may
+call, the primary view, a deviation from the brief. **Set aside** only
+for alternatives raised. **The user's words** quoted, or "accepted
+without comment". **Replaces** names the entries overturned, by
+heading, or "nothing". A build without stopping gets its entry, headed
+"Design not accepted: <title>". Before a change, read the log: a change
+against an entry says so to the user first, naming the entry and its
+why.
 
 ### Stage cards
 
@@ -188,27 +179,23 @@ first deploy.
 
 Tone, for these and any card written later:
 
-- Say what the user gains, not what the agent withholds: "the cheapest
-  moment to change it", never "nothing is built until you accept".
-- The wait is the agent's choice, not a condition on the user: "the
-  build waits for your go-ahead", never "silence does not count". The
-  rule itself is for the agent (Never, below), not for the user to hear.
 - Never the first person: no I, me, my, we or us, in a card or in any
   line to the user. The subject is the app, the design, the build or
   the prototype ("the prototype is running", "the next feature
   follows"), and "you" is the user.
-- Verbose by design, and architectural: the build is read as it
-  happens, at the level of the domain. Each step ends in two or three
-  statements of fact about the objects, rules and roles it touched and
-  what was decided between them; a reference is narrated by what it
-  settled for the app. Never an account of what was done or what comes
-  next. The sentence rules and the model paragraph are at the head of
-  the build skill ("How the build talks").
+- Verbose and architectural: each step ends in two or three statements
+  of fact about the objects, rules and roles it touched and what was
+  decided between them; a reference is narrated by what it settled.
+  Never an account of what was done or what comes next. The sentence
+  rules and the model paragraph are at the head of the build skill
+  ("How the build talks").
+- Say what the user gains, not what the agent withholds: "the cheapest
+  moment to change it", never "nothing is built until you accept". The
+  wait is the agent's choice, never a condition on the user.
 - The next stage is described when it happens, in the model diff's own
-  words, not announced as a gate.
+  words, never announced as a gate.
 - Their nouns, two or three of their own rules, never the table
-  restated.
-- One clause of orientation; no stage labels in headers.
+  restated. One clause of orientation; no stage labels in headers.
 
 **The ask, in one line.** When a card stops for the user's call (the
 design, the deploy), the ask is the card's last line, plain prose in
