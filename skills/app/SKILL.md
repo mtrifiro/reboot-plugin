@@ -19,9 +19,10 @@ person: no I, me, my, we or us. The subject is the app, the design, the
 build or the prototype ("the prototype is going up first", "next: the
 servicers"), and "you" is the user. Say more, not less, and say it at
 the level of the domain: the user reads the build as it happens, and
-each step gets two or three sentences on their objects, rules and
-roles and the decisions between them, never on which reference or step
-is in hand. A bare line between tool calls is too little.
+each step ends in two or three statements of fact about their objects,
+rules and roles and the decisions between them, never an account of
+what was done, never what comes next, never which reference or step is
+in hand. A sentence that starts with I is rewritten before it is sent.
 
 Decide which front door to build first, then build it with the
 [`build` skill](../build/SKILL.md) plus the matching front-door skill

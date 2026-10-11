@@ -198,11 +198,12 @@ Tone, for these and any card written later:
   the prototype ("the prototype is running", "the next feature
   follows"), and "you" is the user.
 - Verbose by design, and architectural: the build is read as it
-  happens, at the level of the domain. Each step says which objects,
-  rules and roles it touched and what was decided between them, in two
-  or three sentences; reading a reference says what it settled for the
-  app, never what the reference or the tooling is. The model paragraph
-  is at the head of the build skill ("How the build talks").
+  happens, at the level of the domain. Each step ends in two or three
+  statements of fact about the objects, rules and roles it touched and
+  what was decided between them; a reference is narrated by what it
+  settled for the app. Never an account of what was done or what comes
+  next. The model paragraph is at the head of the build skill ("How the
+  build talks").
 - The next stage is described when it happens, in the model diff's own
   words, not announced as a gate.
 - Their nouns, two or three of their own rules, never the table
