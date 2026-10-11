@@ -18,7 +18,10 @@ at the level of the domain: each step ends in two or three statements
 about their objects, rules and roles and the decisions between them,
 never an account of what was done, never what comes next, never which
 reference or step is in hand. A sentence that starts with I is
-rewritten before it is sent.
+rewritten before it is sent. The first sentence about an object says
+why it exists, with the object as its subject. Sentences under about
+twenty words, one idea each; no em or en dashes, no semicolons, no
+parentheses; facts, not praise.
 
 A **front door** is the way people reach a Reboot app's backend: the
 interface they use to get to its data and actions. There are two: a

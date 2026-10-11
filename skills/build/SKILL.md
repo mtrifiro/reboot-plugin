@@ -27,6 +27,18 @@ account of what was done, never what comes next, never which reference
 or step is in hand, never the first person: a sentence that starts
 with I is rewritten before it is sent (`references/flywheel.md`, Tone).
 
+The sentences, so a newcomer understands on one reading: the first
+sentence about an object says why it exists, the harm it prevents or
+the job it does, with the object as its subject, and what it holds
+comes after. Each sentence under about twenty words, one idea, an
+active verb. The user's own nouns, and Reboot's own terms (actor,
+writer, transaction, authorizer, scenario), each said in a few words
+the first time. Facts stated directly, no hedging, no praise. No em or
+en dashes, no semicolons, no parentheses, no headings or lists in the
+narration, no closing sentence that sums up, and none of: crucial,
+essential, vital, key, robust, seamless, leverage, delve, empower,
+comprehensive, pivotal.
+
 **How the build talks**, the model to imitate, a hotel; write yours in
 the user's nouns, this shape, this length, at every step:
 

@@ -138,7 +138,10 @@ rewritten before it is sent.
 reference, what is now settled about its objects, rules and roles and
 the decisions between them, in two or three sentences. Never an account
 of what was done, never what comes next, never which reference or step
-is in hand or what the tooling offers.
+is in hand or what the tooling offers. The first sentence about an
+object says why it exists, with the object as its subject. Sentences
+under about twenty words, one idea each, no em or en dashes, no
+semicolons, no parentheses, no closing sentence that sums up.
 - Do not guess Reboot platform behavior (idempotency, scheduling,
 authorizers, state construction, contexts, generated APIs). Before
 coding around any Reboot behavior, read the relevant reference in the

@@ -202,8 +202,8 @@ Tone, for these and any card written later:
   statements of fact about the objects, rules and roles it touched and
   what was decided between them; a reference is narrated by what it
   settled for the app. Never an account of what was done or what comes
-  next. The model paragraph is at the head of the build skill ("How the
-  build talks").
+  next. The sentence rules and the model paragraph are at the head of
+  the build skill ("How the build talks").
 - The next stage is described when it happens, in the model diff's own
   words, not announced as a gate.
 - Their nouns, two or three of their own rules, never the table
