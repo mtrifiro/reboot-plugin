@@ -114,20 +114,33 @@ _COUNTED = (
     "build/references/flywheel.md and build/templates/README.md, read by every "
     "build (Accept the Design, Step 2), counted at last"
 )
+# The third raise of 2026-10-10: the design conversation, after the user
+# asked for a faster, more involved prototype loop. About a hundred
+# words net on each front door, after cuts elsewhere in the build skill.
+_SLICES = (
+    "the design conversation: questions first and a slice of the model per "
+    "feature (build Design Phase items 0 and 1, Accept the Design; feature "
+    "Step 1)"
+)
+_SLICES_SIGNAL = (
+    "the asks-first and slices graders on the design cases stay green with "
+    "the plugin, and no build is reported as having skipped the questions"
+)
 CEILINGS = {
     "mcp-ui": Ceiling(
-        47500, was=40500, since="2026-10-10",
-        closes=f"{_COUNTED}, and web-app/references/ui-design.md, which mcp-ui/SKILL.md "
-               f"names as the principles every front door follows; before that: "
-               f"P1.23, P4.26 (mcp-ui/SKILL.md); P4.25, P4.27, P4.32 "
-               f"(api-method-types.md); P3.175 (api-state-shapes.md); "
-               f"{_WAVE_3_BUILD}; {_WAVE_3_REACT}; {_WAVE_3_PYTHON}",
-        signal=_WAVE_3_SIGNAL),
+        47800, was=47500, since="2026-10-10",
+        closes=f"{_SLICES}; before that: {_COUNTED}, and "
+               f"web-app/references/ui-design.md, which mcp-ui/SKILL.md names as "
+               f"the principles every front door follows; P1.23, P4.26 "
+               f"(mcp-ui/SKILL.md); P4.25, P4.27, P4.32 (api-method-types.md); "
+               f"P3.175 (api-state-shapes.md); {_WAVE_3_BUILD}; {_WAVE_3_REACT}; "
+               f"{_WAVE_3_PYTHON}",
+        signal=f"{_SLICES_SIGNAL}; {_WAVE_3_SIGNAL}"),
     "web-app": Ceiling(
-        45000, was=40000, since="2026-10-10",
-        closes=f"{_COUNTED}; before that: {_WAVE_3_BUILD}; {_WAVE_3_REACT}; "
-               f"P3.94 (react-client.md); {_WAVE_3_PYTHON}",
-        signal=_WAVE_3_SIGNAL),
+        45300, was=45000, since="2026-10-10",
+        closes=f"{_SLICES}; before that: {_COUNTED}; {_WAVE_3_BUILD}; "
+               f"{_WAVE_3_REACT}; P3.94 (react-client.md); {_WAVE_3_PYTHON}",
+        signal=f"{_SLICES_SIGNAL}; {_WAVE_3_SIGNAL}"),
     "backend-only": Ceiling(
         27000, was=26000, since="2026-10-10",
         closes=_WAVE_3_PYTHON,

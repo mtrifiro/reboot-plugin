@@ -149,8 +149,8 @@ pass; the merge needs the last one"). The stage's name appears once, in
 a clause that says what it is for, never as a label; no chapter numbers
 or links. The models below are the hotel; write yours.
 
-> **The design, for your review.** Here is the design as I understood
-> it: `Room` owns "booked at most once per night", `Reservation.create`
+> **The design, for your review.** Here is the design as we settled
+> it, feature by feature: `Room` owns "booked at most once per night", `Reservation.create`
 > books every room or none and is called only by the app, and each
 > rule has a scenario that will test it. The look: navy on cream,
 > Reboot's default since you named no brand; name one, or a site, and

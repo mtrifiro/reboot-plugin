@@ -2,7 +2,7 @@
 name: build
 description: The shared design-and-build flow every Reboot app with a frontend follows, reached from the app, mcp-ui and web-app skills (use it through one of them, with that front-door skill open) — design phase, state model assessment, the build steps in dependency order (API definition → project shell → servicer → authorizers → frontend → tests → run) and the update flow for an existing app.
 argument-hint: [<app-description>]
-allowed-tools: Bash, Read, Write, Glob, Grep, Edit
+allowed-tools: Bash, Read, Write, Glob, Grep, Edit, AskUserQuestion
 ---
 
 # build — Design and Build a Reboot App
@@ -70,17 +70,34 @@ method types mean regenerating a dozen or more files.
 
 ### Design Phase
 
-0. Per capability, follow the [`feature` skill](../feature/SKILL.md):
-   agree on it in plain English and write a `@wip` feature file before
-   the API exists. The design derives from those features. Its Step 2a
-   (run each scenario and see it fail) is this flow's Step 2a.
-1. **Implement the brief literally** — the interactions the user
+Design is a conversation in slices: ask what the brief leaves open,
+agree one feature, show the slice of the model it adds, ask again;
+"Accept the Design" closes the conversation. Said up front, "just
+build it" or "don't check with me" skips the questions and the waits:
+take item 0's defaults and say so at the handoff.
+
+0. **Questions first.** Before any file, ask what the brief leaves
+   open, up to five (`AskUserQuestion` where the host has it, prose
+   otherwise): who uses it and how they sign in; the one thing the
+   primary view answers; what must never happen; what is out of scope
+   for now; whether the data stays disposable while prototyping
+   (`AGENTS.md`'s `Data:` line; "keep the data", said at any point,
+   writes `keep since <date>` there, committed). Defaults: the web
+   app, disposable data, no invariant beyond the brief.
+1. **A slice per feature.** Per capability, follow the [`feature`
+   skill](../feature/SKILL.md): agree on it in plain English and write
+   its `@wip` feature file before the API exists. Then show the slice
+   of the domain model it adds, as rows of the review table ("Accept
+   the Design") under the rows so far, and ask: the next feature, or is
+   that the app? The design derives from those features; the feature
+   skill's Step 2a is this flow's Step 2a.
+2. **Implement the brief literally** — the interactions the user
    described, not a pattern "common on sites like this". List any
    deviation (extra confirm step, staging area, batching) with its
    reason and ask first (select-then-confirm where the brief said
    "click to hold" is rework).
-2. Run the State Model Assessment below.
-3. State the design:
+3. Run the State Model Assessment below.
+4. State the design:
    - Application types: state shape (fields, types, tags).
    - Method map, one line per method: its method type
      (Reader/Writer/Transaction/Workflow) and its AI role (a tool the
@@ -97,9 +114,8 @@ method types mean regenerating a dozen or more files.
      approval, a refund, anything that waits on a person or a provider),
      the events the owning state records: who, when, which step, the
      provider's reference. The runtime keeps no history the design
-     doesn't name; the `inspect` skill reads only what is stored. Events
-     go on the short-lived entity they explain (a check, a reservation)
-     or in an `OrderedMap` or per-day actor, never on a singleton that
+     doesn't name. Events go on the short-lived entity they explain or
+     in an `OrderedMap` or per-day actor, never on a singleton that
      lives as long as the app: every write re-serializes the whole list
      (`python/references/state-collections.md`, Scales as).
    - Demo data: a believable dev dataset (a dozen rooms on three floors,
@@ -127,11 +143,11 @@ method types mean regenerating a dozen or more files.
      turn that renders a `UI()`.
    - web-app: the SPA's pages and the methods each calls; the visual
      brief per `web-app/references/ui-design.md`.
-4. Write the design, as you state it, to `design/design.md` in the
-   project: the same words the user reads, every choice with its why,
-   the deviations from the brief and the alternatives set aside. Keep
-   it current as the user changes the design; it is the document
-   "Accept the Design" asks them to accept, and it stays in the
+5. Write the design, as you state it, to `design/design.md` in the
+   project, a slice at a time: the same words the user reads, every
+   choice with its why, the deviations from the brief and the
+   alternatives set aside. Keep it current as the design changes; it
+   is what "Accept the Design" asks them to accept, and it stays in the
    repository when the conversation is gone, a build without stopping
    included.
 Updates start with the design too (Update Flow).
@@ -166,11 +182,10 @@ The reader hasn't read the skill files; make the design stand alone:
 
 1. **Application types — decompose aggressively.** Every entity the
    user will add / edit / list / `find` over time (people, posts,
-   tasks, documents, accounts) is its own `Type` with its own state,
-   even if each user has only a few. Packing them into one parent
-   (usually `User`) as `list[Person]` / `list[Post]` / `list[Task]`
-   flattens N actors, blocks per-entity auth/methods, and
-   forces a rewrite as it grows. A collection **synced or scraped from
+   tasks, accounts) is its own `Type` with its own state, even if each
+   user has only a few. Packing them into one parent as `list[Person]`
+   flattens N actors, blocks per-entity auth and methods, and forces a
+   rewrite as it grows. A collection **synced or scraped from
    an external system** (a repo's issues, a mailbox) is an entity
    collection, unbounded by definition. Signals:
    `python/references/state-collections.md` Step 1. Counter-test: items
@@ -238,11 +253,10 @@ The reader hasn't read the skill files; make the design stand alone:
 ### When Correct Decomposition Fights the UI
 
 One hook on one actor tempts you to flatten a collection into
-`list[Item]`. **The data model wins**: keep one actor per item with an `OrderedMap` index on the
-parent, and add a **composing reader** on the parent — a `Reader` that
-ranges one page of IDs, reads each item actor, and returns hydrated
-items plus a `next_cursor`. The page subscribes to that reader;
-fan-out is server-side. mcp-ui: `mcp-ui/references/react-app-tsx.md`.
+`list[Item]`. **The data model wins**: one actor per item with an
+`OrderedMap` index on the parent, and a **composing reader** on the
+parent that ranges one page of IDs, reads each item actor, and returns
+hydrated items plus a `next_cursor`; the page subscribes to it. mcp-ui: `mcp-ui/references/react-app-tsx.md`.
 web-app (summary vs. detail readers, aggregation, per-caller views):
 `python/references/patterns-cross-actor-reads.md`.
 
@@ -252,7 +266,7 @@ web-app (summary vs. detail readers, aggregation, per-caller views):
 read its front-door reading list. Step 1 closes Design; "Accept the
 Design" sits between it and Step 2, where Prove begins.
 
-**Once the first feature file exists (Design Phase, item 0), start the
+**Once the first feature file exists (Design Phase, item 1), start the
 developer dashboard** with the [`dashboard` skill](../dashboard/SKILL.md):
 its Features page shows the rules and scenarios as they are written,
 its Models page the API once Step 1 writes it (it stubs
@@ -285,10 +299,11 @@ reshapes a state type or method.
 ### Accept the Design
 
 Design ends here: the domain model (`api/`, generated) and the `@wip`
-feature files exist, and no implementation does. The first time a
-project reaches this point, open with the design card
+feature files exist, and no implementation does. The review table has
+grown on screen a slice at a time; now close the conversation. The
+first time a project reaches this point, open with the design card
 ([`references/flywheel.md`](references/flywheel.md), "Stage cards").
-Show the **review table**, one row per rule, in the design's words:
+Show the whole **review table**, one row per rule, in the design's words:
 
 | State type | State ID | Rule | Method | Kind | Who may call | Scenario |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -306,10 +321,9 @@ or a brand or a site to read. Then the decision box
 (`references/flywheel.md`, "A box around the decision").
 
 **Stop and wait.** No answer is not acceptance. A change sends you back
-to the design (or the feature skill), then here again. Only when the
-user said up front to build without stopping ("just build it", "don't
-check with me"): show the table and continue, and the handoff says the
-design was not accepted.
+to the slice it belongs to (the feature skill, or the design), then
+here again. Building without stopping, said up front: show the table
+and continue, and the handoff says the design was not accepted.
 
 Once accepted, Step 2 records it in the repository (its item 5): the
 design in `design/design.md`, the review table in `design/review.md`,
@@ -322,16 +336,12 @@ from that commit.
 
 Read "Before the project shell". Copy `templates/<front-door>/` with
 its `copy.sh --merge` (see [`templates/README.md`](templates/README.md));
-never retype a scaffold file from memory or a reference. `--merge`
-fills `__project__` / `__app__` / `__Title__`, renames paths, keeps
-every file the project already has (step 1's API file, a `CLAUDE.md`)
-and lists them, and replaces the dashboard's stub `.rbtrc`,
-`pyproject.toml` and `.python-version` with the template's (the
-dashboard keeps running: both name the same directories). The sample
-servicer, feature, test module and UI (a counter) are replaced in steps
-3, 5 and 6; a dual-frontend app copies `templates/both/` (MCP UIs in
-`frontend/mcp/`, the SPA in `frontend/web/`, one Vite server and one
-generated client). Then:
+never retype a scaffold file from memory. `--merge` fills the
+placeholders, renames paths, keeps every file the project already has
+(step 1's API file, a `CLAUDE.md`) and replaces the dashboard's three
+stubs (the dashboard keeps running). The sample servicer, feature, test
+module and UI are replaced in steps 3, 5 and 6; a dual-frontend app
+copies `templates/both/`. Then:
 
 1. `uv sync`.
 2. `uv run rbt generate`. Don't read the output; the servicer signature
@@ -350,7 +360,7 @@ generated client). Then:
    `@AGENTS.md` as its only line. Keep `AGENTS.md` current as you go:
    each new state type, UI, route or script adds its row.
 5. **Record the acceptance.** `design/design.md` is the design as
-   accepted (Design Phase, item 4). Write `design/review.md` (the
+   accepted (Design Phase, item 5). Write `design/review.md` (the
    review table as shown, the feature files by path) and add the first
    entry to `design/decisions.md` (below). Run
    `python3 scripts/model_diff.py --accept`, and commit `api/`,
@@ -568,7 +578,7 @@ prototype card ([`references/flywheel.md`](references/flywheel.md),
    clean, each route's load against the thresholds (Step 5) with any
    still over and its cause.
 3. Every deviation from the brief or from the plan's own specs, with
-   its reason (Design Phase, Step 5).
+   its reason (Design Phase, item 2).
 4. The state types and methods as built, one line each (Step 1), when
    they changed after the design; and whether the design was accepted
    ("Accept the Design"), as `python3 scripts/model_diff.py` says. A
@@ -593,7 +603,8 @@ prototype card ([`references/flywheel.md`](references/flywheel.md),
 2. Assess state model changes; with persisted state or a deploy, follow
    `python/references/api-schema-evolution.md`.
 3. Agree on the feature in English and write its `@wip` feature file
-   before the API changes ([`feature` skill](../feature/SKILL.md)).
+   before the API changes ([`feature` skill](../feature/SKILL.md)),
+   then show the slice of the model it adds, as review-table rows.
 4. Update the API (every new property with `description=`) →
    `uv run rbt generate`. Tell the user any state type or method added
    or changed, one line each (Step 1). Run

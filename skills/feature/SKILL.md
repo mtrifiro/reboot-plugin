@@ -61,10 +61,12 @@ an API:
   flow, if that is how the feature is used.
 
 Ask whether that is the feature; iterate on the English until they
-agree — the file follows the words. In a build, this agreement feeds
-the build's "Accept the Design", where the user accepts the rules,
-their scenarios and the domain model together, before any
-implementation.
+agree — the file follows the words. In a build, this is one slice of
+the design conversation: once the file is written (Step 2), the build
+shows the slice of the domain model the feature adds and asks for the
+next; "Accept the Design" closes that conversation, where the user
+accepts the rules, their scenarios and the domain model together,
+before any implementation.
 
 ## Step 2 — Write it down, tagged `@wip`
 
