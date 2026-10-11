@@ -7,7 +7,7 @@ each test module drifts without a word. Add a new servicer here, once.
 """
 
 from reboot.aio.servicers import Servicer
-from servicers.__app__ import UserServicer
+from servicers.user import UserServicer
 
 SERVICERS: list[type[Servicer]] = [UserServicer]
 

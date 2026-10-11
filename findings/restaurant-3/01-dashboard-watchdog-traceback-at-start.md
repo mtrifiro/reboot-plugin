@@ -10,8 +10,9 @@ names:
 tags: [operations, error-text]
 cluster: ""
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "dashboard/references/known-issues.md § Do this"
+mechanism: row
 ---
 # `rbt dashboard` logs a watchdog traceback at start but serves fine
 

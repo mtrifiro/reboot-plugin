@@ -12,8 +12,9 @@ names:
 tags: [negative-space, frontend, pattern]
 cluster: ""
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "build/SKILL.md § Design Phase"
+mechanism: prose
 ---
 # The scope round never asks how people move things, so drag and drop is never offered
 

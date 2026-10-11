@@ -44,7 +44,7 @@ DIFFERS = {
     "AGENTS.md": "each front door's own instructions",
     "api/__app__/v1/__app__.py": "the sample API",
     "backend/src/main.py": "the sample application",
-    "backend/src/servicers/__app__.py": "the sample servicer",
+    "backend/src/servicers/user.py": "the sample User servicer",
     "backend/src/servicers/registry.py": "registers the sample servicer",
     "deploy/config": "the web front doors publish a site",
     "frontend/mcp/styles.css": "style-check.py: both's imports the shared sheet",

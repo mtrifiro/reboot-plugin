@@ -10,8 +10,9 @@ names:
 tags: [negative-space, testing]
 cluster: ""
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/testing-features.md § Never"
+mechanism: prose
 ---
 # A decorated step that awaits another decorated step deadlocks
 

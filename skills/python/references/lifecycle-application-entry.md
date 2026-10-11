@@ -100,7 +100,8 @@ from reboot.std.collections.ordered_map.v1.ordered_map import (
     ordered_map_library,
 )
 from reboot.aio.servicers import Servicer
-from servicers.bank import AccountServicer, BankServicer
+from servicers.account import AccountServicer
+from servicers.bank import BankServicer
 
 # Typed: a one-servicer list would otherwise fail mypy against Application.
 SERVICERS: list[type[Servicer]] = [AccountServicer, BankServicer]

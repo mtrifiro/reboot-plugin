@@ -190,8 +190,12 @@ waits.
    Recommended: which parts of the domain the first version covers
    (multi-select, in the user's nouns: reservations, housekeeping,
    rates); who uses it and in which roles; the one thing it must never
-   get wrong. A question the brief
-   already answers is skipped. Nothing is asked after this round. With
+   get wrong; and how people move things, asked only when the primary
+   view is positional (a board, a timeline, a floor plan), its main
+   action changes an item's position, and that action is frequent:
+   drag recommended, with the panel kept for the keyboard. Not asked
+   for a phone-first app, a move that needs extra fields, or a rare or
+   costly move. A question the brief already answers is skipped. Nothing is asked after this round. With
    no one to answer, take the recommended options and say so. The
    answers go into `design/design.md` under "Scope", the rest under
    "Assumed" (defaults: the web app, the `Development()` sign-in).
@@ -529,11 +533,12 @@ time, each scenario going green.
 
 ### Step 3: Servicer
 
-Read "Before the servicer". Write `backend/src/servicers/<app>.py`: an
-`async def` per method, context type matching the factory. Writers
-mutate one actor; cross-actor and external calls go in a `Transaction`
-or `Workflow`. Add each new servicer class to `servicers/registry.py`,
-the one list `main.py` and every test module take. Seed in `initialize` per
+Read "Before the servicer". Write one module per state type,
+`backend/src/servicers/<type>.py`, each servicer registered once in
+`servicers/registry.py`, the one list `main.py` and every test module
+take. An `async def` per method, context type matching the factory.
+Writers mutate one actor; cross-actor and external calls go in a
+`Transaction` or `Workflow`. Seed in `initialize` per
 `python/references/lifecycle-seeding.md` (aliased, batched, sequential).
 mcp-ui: `UserServicer` and `<X>.create(context)` in
 `mcp-ui/references/servicer-patterns.md`.

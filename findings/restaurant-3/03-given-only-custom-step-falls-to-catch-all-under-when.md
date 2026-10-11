@@ -10,8 +10,9 @@ names:
 tags: [negative-space, testing, error-text]
 cluster: ""
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/testing-features.md § Never; python/references/testing-features.md § Errors you will see"
+mechanism: row
 ---
 # A custom step registered only with `@given` falls to a catch-all under `When`
 

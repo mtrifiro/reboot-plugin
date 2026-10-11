@@ -476,6 +476,8 @@ section. Add or change a trap in its owning reference, not here. -->
 - A stand-in that answers from a counter or a popped list
 - Subclassing a servicer to weaken its authorizer
 - `World.call` / `World.request` in a custom step
+- A decorated step awaiting another decorated step
+- A custom step registered only with `@given`
 
 **`testing-harness.md`**
 - Calling servicer instances directly

@@ -7,15 +7,16 @@ severity: yellow
 target: plugin
 names:
   - build/SKILL.md
-  - build/templates/web-app/backend/src/servicers/__app__.py
+  - build/templates/web-app/backend/src/servicers/user.py
   - build/templates/web-app/backend/src/servicers/registry.py
   - build/templates/README.md
   - python/references/lifecycle-application-entry.md
 tags: [scaffold, pattern]
 cluster: ""
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "build/SKILL.md § Step 3: Servicer"
+mechanism: template
 ---
 # The build puts every servicer in one file; nothing says to split by state type
 

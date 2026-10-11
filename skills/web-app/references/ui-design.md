@@ -71,7 +71,7 @@ UIs keep the colors and use the system fonts
 | Task | Primary view | Template classes |
 | --- | --- | --- |
 | Triage, lookup, review of many items | Grouped list or table with filters | `filter-panel`, `list-card`, `group-band`, `row` (`row-grid` for many columns), `dot`; `table-wrap` |
-| A few items moving through stages | Board | `board`, `board-col`, `card` |
+| A few items moving through stages | Board | `board`, `board-col`, `card`. With drag chosen, one existing method per drop, the free or taken target lit before the drop, a refused drop snapping back, the panel kept for the keyboard |
 | Amounts over time | Chart | `chart` (an `<svg>`, `--series-1..4`) |
 | Events over time | Timeline | `feed` |
 | Places, dates | A floor plan, a map, a calendar | none; build on the tokens. A spatial hero takes the width, lists beside it `density-compact`; geometry from data (footprints in the seed, non-overlap checked in code); status per 05, with a legend; solid strokes, no glow or gradient, legible across a room; a seed geometry change needs the expunge cycle (restaurant-app-2, 1.6.0) |

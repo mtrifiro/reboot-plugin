@@ -10,8 +10,9 @@ names:
 tags: [negative-space, testing]
 cluster: ""
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/testing-features.md § Layout and the test module"
+mechanism: prose
 ---
 # pytest-bdd drops hyphens from scenario names, so `-k` on the hyphenated word selects nothing
 

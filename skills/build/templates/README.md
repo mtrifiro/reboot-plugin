@@ -58,7 +58,7 @@ heap its pyright needs.
 | Placeholder | Form | Example | Used in |
 | --- | --- | --- | --- |
 | `__project__` | kebab-case project name | `todo-list` | `pyproject.toml` `name`, `.rbtrc` `--application-name`, `package.json` `name` (`__project__-web`) |
-| `__app__` | snake_case API package and module | `todo_list` | `api/__app__/v1/__app__.py`, `servicers/__app__.py`, `tests/__app___test.py`, imports (`__app__.v1.__app___rbt`), the `.mypy.ini` ignore stanza, the React import path |
+| `__app__` | snake_case API package and module | `todo_list` | `api/__app__/v1/__app__.py`, `tests/__app___test.py`, imports (`__app__.v1.__app___rbt`), the `.mypy.ini` ignore stanza, the React import path |
 | `__Title__` | human-readable title | `Todo List` | `Application(title=...)`, `<title>`, docstrings |
 | `__Initial__` | the title's first letter, capitalized | `T` | the placeholder favicon in the web app's `index.html` |
 
@@ -85,7 +85,7 @@ Both front doors share the Python shell:
 | `CLAUDE.md` | `@AGENTS.md`, so Claude Code reads the same file as every other agent | Never; put everything in `AGENTS.md` |
 | `FINDINGS.md` | The agent's log of surprises in a skill or the framework; the `report` skill files them upstream | Append items; never delete them |
 | `api/__app__/v1/__app__.py` | Sample pydantic API | Always: the app's own types |
-| `backend/src/servicers/__app__.py` | Sample servicers | Always |
+| `backend/src/servicers/<type>.py` | One servicer module per state type: `user.py` (web-app), `user.py` and `counter.py` (mcp-ui, both) | Always: one module per state type, each registered once in `registry.py` |
 | `backend/src/main.py` | `Application(...)` with `oauth=OAuth(provider=OAuthProviderByEnvironment(dev=Development(), prod=None), allowed_origins=[])` | Production provider and origins before deploy |
 | `tests/counting.feature` | One `@wip` sample feature | Replace with the app's features (`feature` skill) |
 | `tests/__app___test.py` | `application` fixture and `scenarios(...)` | Servicer list; one module per application configuration |

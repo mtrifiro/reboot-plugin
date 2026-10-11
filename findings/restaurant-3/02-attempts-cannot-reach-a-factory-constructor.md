@@ -10,8 +10,9 @@ names:
 tags: [negative-space, testing]
 cluster: ""
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/testing-features.md § Attempts, aborts, tasks"
+mechanism: prose
 ---
 # The built-in `attempts` step cannot reach a factory constructor
 

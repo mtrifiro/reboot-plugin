@@ -70,7 +70,9 @@ scenarios('deposits.feature', 'withdrawals.feature')
 - `Given the "proxy" application is up` runs a `proxy_application`
   fixture's return.
 - Run `uv run pytest`, or narrow: `uv run pytest tests/full_bank_test.py`,
-  `-k "transfer between two"`, `-m wip`, `-m "not wip"`.
+  `-k "transfer between two"`, `-m wip`, `-m "not wip"`. Test names drop
+  punctuation (`fix-owner` becomes `fixowner`), so check what `-k`
+  selects with `--collect-only -q`.
 
 ### Feature, rule, scenario
 
@@ -189,6 +191,10 @@ And the result has `updated_balance=15`
   with `Unknown`; declare an error and assert that instead.
 - `spawns` runs a call as a task; a task id from a response is saved
   and awaited the same way.
+- `attempts` cannot reach a `factory=True` constructor (1.6.0): it calls
+  the method on `Type.ref(id)`, where constructors are not defined. To
+  assert a constructor's declared error, a custom step calls
+  `Type.<ctor>(context, id, ...)` and catches `<Ctor>Aborted`.
 
 ### Tags: `@wip` and `@blocked`
 
@@ -294,6 +300,12 @@ not waited for:
   calls with `is an authenticated user`.
 - **`World.call` / `World.request` in a custom step** built-in
   internals; call the generated clients.
+- **A decorated step awaiting another decorated step** hangs until the
+  test timeout: both run on the harness loop. Share a plain helper
+  function between them instead.
+- **A custom step registered only with `@given`** is not found after a
+  `When` as `And`; stack `@given` and `@when` on a step that may follow
+  either.
 
 ## Limits
 
@@ -327,7 +339,7 @@ not waited for:
 | `Almost: a Given or When 'has' saves what it reads now; 'eventually has' asserts, under a Then` | `eventually has` under `Given`/`When` | Move it under `Then` |
 | `Almost: a Given or When 'has' saves, e.g. `path` saved as `name`` | An assertion under `Given`/`When` | Assert under `Then` |
 | `Almost: say a saved value as <name>, not $name` | `$name` / `${name}` spelling | `<name>` |
-| `Almost: each clause goes in backticks` | A `with` / `has` clause without backticks | `` `amount=50` `` |
+| `Almost: each clause goes in backticks` | A `with` / `has` clause without backticks, or a custom step registered under the other keyword (only `@given` and used after a `When`) whose text holds ` with ` | `` `amount=50` ``; register the custom step under both keywords |
 | `Nothing saved as "...";` | Recall before the save, or a misspelled name | Check the list of saved names it prints |
 | `StateNotConstructed` (from `eventually has`) | The actor does not exist yet | Custom polling step (Limits) |
 | `Step definition is not found` for a step whose quoted value holds a backtick | The clause parser splits on the inner backticks | Assert with `containing` on a backtick-free part of the value |

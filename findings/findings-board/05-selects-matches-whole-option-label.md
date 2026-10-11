@@ -10,8 +10,9 @@ names:
 tags: [testing, frontend]
 cluster: ""
 still_applies: yes
-status: Open
-resolved_by: ""
+status: Resolved
+resolved_by: "python/references/testing-web-app.md § The steps"
+mechanism: prose
 ---
 # The `selects` web step matches an option's whole label, so options showing counts can't be picked by value
 

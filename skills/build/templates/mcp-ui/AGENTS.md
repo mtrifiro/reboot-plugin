@@ -10,7 +10,7 @@ change it here in the same commit.
 | What | Where |
 |---|---|
 | API (the schema): state types, methods, errors | `api/__app__/v1/__app__.py` |
-| Servicers (the behavior) | `backend/src/servicers/__app__.py` |
+| Servicers (the behavior) | One module per state type, `backend/src/servicers/<type>.py` (snake_case, `gate_schedule.py` for `GateSchedule`) |
 | **The one servicer list** | `backend/src/servicers/registry.py`: `main.py` and every test module take `SERVICERS` and `libraries()` from it. A new state type is added there, once |
 | The application, OAuth, boot | `backend/src/main.py` |
 | Generated code (not tracked, never edited) | `backend/api/`, `frontend/api/`; rebuilt by `uv run rbt generate` |

@@ -136,7 +136,10 @@ Every step names a declared user. **Each user gets their own browser.**
 - **Two ways of naming**: `clicks` and `sees the ... button` match the
   accessible name exactly (an `aria-hidden` glyph inside is excluded);
   `fills`, `checks`, `selects` match the label's text exactly with
-  `get_by_label` (the glyph is included).
+  `get_by_label` (the glyph is included). `selects` also matches the
+  option's whole visible text, never its value: an option shown as
+  "Reboot (1)" is picked by that text, so keep counts and units out of
+  option labels or put them in a separate element.
 - **Quoted text may say `<name>`** for a saved value, in every step
   except the path of `opens the web app at`.
 - `eventually sees` takes `within`; `sees` takes none. A change shown

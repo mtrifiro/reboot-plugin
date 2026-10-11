@@ -26,6 +26,7 @@ and the fix that worked.
 
 | Error / symptom | Meaning | Fix |
 | --- | --- | --- |
+| `RuntimeError: Cannot add watch ... it is already scheduled` from watchdog at start, then the dashboard URL | The dashboard schedules its file watch twice on macOS (restaurant-3, 1.6.0) | Harmless when the URL follows; nothing to do |
 | Call Graph shows `0 calls` and "Your application imports generated code that does not exist yet ... Run `rbt generate`" although the generated code exists; one orphaned `node .../langserver.index.js` per analysis | Orphaned pyright child, hung shutdown (1.5.0); the 1.6.0 source kills pyright's process group on shutdown, so it should not recur | `pkill -f langserver.index.js`; the graph then publishes. The plugin's session-start report names such an orphan |
 | Call Graph never publishes; the dashboard's Node sits at its heap limit, retrying | pyright out of Node's default heap on a mid-sized app (reboot-crm, 1.6.0) | The shims set `NODE_OPTIONS=--max-old-space-size=12288` for `rbt dashboard`; set a larger one yourself if it recurs |
 | Same banner, status `CODE NOT CHECKED YET`, and the dashboard log shows `RuntimeError: pyright exited` / `WatchCode' failed with SystemAborted` | Pyright out of Node heap on a large generated tree; the banner wrongly blames generated code (reboot-crm, 1.6.0) | Start with `NODE_OPTIONS="--max-old-space-size=12288" uv run rbt dashboard` |

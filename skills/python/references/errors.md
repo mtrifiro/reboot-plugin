@@ -61,7 +61,7 @@ here. -->
 | `"alice" has not opened the web app;` | A web step before `opens the web app` | Open it first | `python/references/testing-web-app.md` |
 | `Almost: a Given or When 'has' saves, e.g. `path` saved as `name`` | An assertion under `Given`/`When` | Assert under `Then` | `python/references/testing-features.md` |
 | `Almost: a Given or When 'has' saves what it reads now; 'eventually has' asserts, under a Then` | `eventually has` under `Given`/`When` | Move it under `Then` | `python/references/testing-features.md` |
-| `Almost: each clause goes in backticks` | A `with` / `has` clause without backticks | `` `amount=50` `` | `python/references/testing-features.md` |
+| `Almost: each clause goes in backticks` | A `with` / `has` clause without backticks, or a custom step registered under the other keyword (only `@given` and used after a `When`) whose text holds ` with ` | `` `amount=50` ``; register the custom step under both keywords | `python/references/testing-features.md` |
 | `Almost: each clause goes in backticks` from a web step | Web text containing ` has ` / ` with ` hit the catch-all | Change the label | `python/references/testing-web-app.md` |
 | `Almost: say a saved value as <name>, not $name` | `$name` / `${name}` spelling | `<name>` | `python/references/testing-features.md` |
 | `` An agent needs to have a unique `name` in order to be used with Reboot `` | Constructed without `name=` | Add a stable `name=` | `python/references/agent-pydantic-ai.md` |
