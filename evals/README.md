@@ -72,7 +72,36 @@ has its own scored grader.
 tools/run-evals.sh                        # every case, 3 runs per arm
 tools/run-evals.sh --tag routing --runs 1 # a quick pass
 tools/run-evals.sh --case design-ready-for-both
+tools/run-evals.sh --smoke --case route-mcp  # 1 run, no ablation, Haiku judging
+tools/run-evals.sh --fresh --case route-mcp  # run even when a result is cached
 ```
+
+**Smoke mode.** `--smoke` is one run per case, `--ablation none` and a
+Haiku judge (a flag you give yourself wins): a quick, cheap read on
+whether a change broke a case, not a score to quote. The full run
+stays three runs per arm with Sonnet judging. `tools/check.sh
+--run-evals` runs the behavior stage with `--smoke` unless given
+`--full-evals`.
+
+**The result cache.** Before a case runs, the script hashes what can
+change its result: every file in the case's directory (prompt, graders,
+fixture), each skill its `tool: Skill` graders name with its
+`references/` (python's with build's, which reads them),
+`hooks-handlers/remind.sh`, the templates' `AGENTS.md`, and the flags
+that change a score (`--runs`, `--ablation`, `--judge-model`,
+`--model`, `--scaffold`, `--mocks`, `--allow-tools`). When a result
+under `evals/results/` has that key, the script prints it and skips the
+run (seconds, no model calls); `--fresh` runs it anyway. Each result
+directory keeps its keys in `cache-keys.json`, written only for cases
+whose every run finished without an error. A selection that is partly
+cached runs the rest one case at a time. What the key leaves out: the
+Claude Code version and the session's default model; pass `--model`,
+or `--fresh` after an upgrade. `tools/evals_cache.py` holds the key.
+
+**The spread.** After a run, and for a cached case, each grader's votes
+are printed per run (`PPF`: three judges, two passed), with each run's
+score and their range. A case whose runs range over 0.18 on their own
+cannot tell 0.73 from 0.79: that gap is noise, not a regression.
 
 The script wraps the working tree as a plugin (the copies of the
 skills and the hooks need a plugin of their own; the mods are not under
@@ -93,3 +122,10 @@ here: `prompt.md` (front matter: `runs`, `max_turns`, `timeout_seconds`,
 `allowed_tools`, `append_system_prompt`; quote any value with a colon)
 and one file per grader in `graders/`. Reference:
 https://code.claude.com/docs/en/plugin-evals.md
+
+The planning-only cases squeeze a build into one final message, so they
+judge the proposed model's content, not the rhythm of a real session.
+`welcome` reads the whole session (`target: trace`); an `llm` judge
+sees only the first and last 12 messages. The rhythm, three reports and
+quiet between them, is read from a real session's transcript with
+`tools/check-transcript.py <project dir or session.jsonl>`.
