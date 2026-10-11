@@ -46,3 +46,5 @@ full original note; the originals are not part of this repo.
 | restaurant-app-2 | 1.6.0 | `restaurant-app-2/FINDINGS.md` |
 | gardening | 1.6.0 | `gardening/FINDINGS.md` |
 | restaurant-app-3 | 1.6.0 | `restaurant-app-3/FINDINGS.md` (the narrative field report is `restaurant-app-3/docs/2026-10-10 Crudo Skills Field Report.md`) |
+| airport-1 | 1.6.0 | `airport-1/FINDINGS.md` |
+| restaurant-3 | 1.6.0 | `restaurant-3/FINDINGS.md` (Crudo 3; a separate project from restaurant-app-3) |
