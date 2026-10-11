@@ -7,6 +7,7 @@ summary: "Production flags belong in `.rbtrc` `serve run` lines, not the Dockerf
 step: deploy
 applies: [mcp-ui, web-app, backend-only]
 always: false
+when: "the deploy builds a container image, or the image build fails"
 verified: 1.6.0
 docs: ""
 ---

@@ -149,8 +149,8 @@ on an in-system actor that schedules the HTTP send in a workflow, then
   about 10 sequential participants took about 10 s in the dev harness,
   about 4 took 2-3 s; `asyncio.gather` does not lower the floor (reboot-bluesky-04, 1.4.1). A transaction is roughly
   5-10x a writer.
-- N independent creations: 216 seats took 54 s as a transaction chain,
-  15.7 s as a workflow of writer calls (theater-network-14, 1.4.0).
+- N independent creations run about 3.5x faster as a workflow of writer
+  calls (`patterns-load-and-benchmarking.md`, "Scales as").
 - A transaction on a hot actor stalls every user writer on it: bound
   background per-tick work (showtime-42).
 - Full numbers and how to measure: `patterns-load-and-benchmarking.md`.

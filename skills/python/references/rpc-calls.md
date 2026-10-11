@@ -110,7 +110,7 @@ await asyncio.gather(
 | `TypeError: reboot.aio.contexts.WriterContext is not an instance or subclass of one of the expected type(s): ['reboot.aio.contexts.TransactionContext', 'reboot.aio.contexts.WorkflowContext', 'reboot.aio.external.ExternalContext']` | A writer called a writer or transaction (any actor) | Make the caller a `Transaction` |
 | `AssertionError` (empty) | A dict or the wrong model passed where the request goes | Pass kwargs |
 | `TypeError: Unexpected use of request type` | A request object passed in the context or options slot | `ref.method(context, field=value)` |
-| `is a workflow and must be scheduled from a` | A workflow method called directly | `await ref.schedule().method(context, ...)` |
+| `is a workflow and must be scheduled from a` | A workflow method awaited from a writer or transaction | `await ref.schedule().method(context, ...)` |
 | `List item 0 has incompatible type "dict[str, Any]"` | mypy: dicts for a `list[Model]` kwarg | Build the API module's `Model` |
 
 ## See also

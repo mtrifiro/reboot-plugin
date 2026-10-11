@@ -4,9 +4,10 @@ impact: HIGH
 impactDescription: A fresh id or timestamp that something later re-derives or addresses splits into two values on retry or replay; a wall-clock read in a workflow diverges on every replay
 tags: patterns, time, now, clock, random, uuid, uuid4, uuid7, determinism, effect validation, replay, deadline
 summary: "A timestamp or id later addressed splits on retry or replay; pass it in, derive it, use `at_least_once`."
-step: any
+step: servicer
 applies: [mcp-ui, web-app, backend-only]
 always: false
+when: "a method reads the clock or random values"
 verified: 1.6.0
 docs: "https://docs.reboot.dev/learn_more/side_effects/"
 ---

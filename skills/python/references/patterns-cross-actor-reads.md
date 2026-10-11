@@ -4,9 +4,10 @@ impact: HIGH
 impactDescription: Wrong actor boundaries turn one click into a distributed transaction; wrong reader shapes stream N full payloads to every list page or leak other users' data
 tags: patterns, reader, reactive, fan-out, summary reader, view model, derived state, decomposition, cohesion
 summary: "Run the cohesion test before splitting; derived projections, summary/detail readers, one-level server-side aggregation, per-caller views."
-step: any
+step: servicer
 applies: [mcp-ui, web-app, backend-only]
 always: false
+when: "a reader composes data from other actors, or a page waits on a slow reader"
 verified: 1.6.0
 docs: ""
 ---

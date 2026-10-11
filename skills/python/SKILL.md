@@ -135,9 +135,9 @@ _Design_ — until the user accepts the domain model and feature files
 - `references/api-pydantic.md` — A non-zero `Field` default is rejected at import; tags, zero defaults, `API(...)` wiring, Request/Response naming.
 - `references/state-actor-decomposition.md` — A Type with unrelated field clusters serializes writers and grows a God `User`; split it into separate Types.
 - `references/state-collections.md` — Never `list[Entity]` on parents; decide if each item is its own Type, then `list[Sub]`, ID list or `OrderedMap`.
-- `references/state-nested-models.md` — Never a state `Model` inside another; group related fields in nested non-state `Model`s, mutated in place.
 - `references/api-schema-evolution.md` — only when changing an API that is deployed or has persisted state.
 - `references/api-errors.md` — only when the API declares typed errors.
+- `references/state-nested-models.md` — only when a state type has groups of fields that belong together.
 - `references/state-scalar-fields.md` — only when a field holds a secret, token or PII, or you want a non-zero default.
 <!-- generated:end -->
 
@@ -150,6 +150,7 @@ _Prove_ — building to the accepted design:
 - `references/lifecycle-project-setup.md` — Never add `__init__.py` or edit `*_rbt.py`; copy `build/templates/<front-door>/`; mypy sees `self.state` as `Any`: typed locals.
 - `references/lifecycle-rbtrc.md` — `.rbtrc` is line-based, not YAML; `--application-name` not `--name`; `--env-file` for secrets; `serve run` lines; named configs.
 - `references/lifecycle-secrets.md` — only when the app needs secrets (API keys, OAuth client secrets).
+- `references/lifecycle-dev-loop.md` — only when the dev loop misses an edit, restarts in a loop, or runs beside the test suite.
 <!-- generated:end -->
 
 ### Implementing a Servicer
@@ -167,11 +168,15 @@ _Prove_ — building to the accepted design:
 - `references/agent-pydantic-ai.md` — only when the backend calls an LLM.
 - `references/agent-tools.md` — only when an LLM agent needs tools that read or change Reboot state.
 - `references/crypto-root-keys.md` — only when building your own key-derivation feature.
+- `references/patterns-cross-actor-reads.md` — only when a reader composes data from other actors, or a page waits on a slow reader.
+- `references/patterns-time-and-randomness.md` — only when a method reads the clock or random values.
 - `references/scheduling-basic.md` — only when deferring work with `schedule()` or `spawn(when=…)`.
 - `references/servicer-transaction.md` — only when you declared a `Transaction`.
 - `references/stdlib-ciphertext.md` — only when storing secrets or PII encrypted at rest.
 - `references/stdlib-ordered-map.md` — only when the design uses an `OrderedMap`.
 - `references/stdlib-queue.md` — only when the design uses a work `Queue`.
+- `references/patterns-error-handling.md` — only when a method declares, raises or translates errors.
+- `references/patterns-idempotency.md` — only when a workflow or `initialize` repeats calls, or an outside call must not run twice.
 - `references/rpc-forall.md` — only when fanning one call out to many actors.
 - `references/scheduling-recurring.md` — only when the app needs a recurring or cron job.
 - `references/stdlib-presence.md` — only when tracking who is connected (presence).
@@ -229,6 +234,7 @@ work (agree in English, tag `@wip`, iterate on scenarios) is the
 <!-- generated:start reading-list front-door=backend-only step=tests -->
 - `references/testing-features.md` — Built-in steps match their exact spelling; who calls, `creates` / `does`, saved values, `eventually`, aborts, `@wip`, custom steps.
 - `references/testing-project-setup.md` — Missing `pytest.ini` paths break `_rbt` imports; no `pytest-asyncio`; `tests/` layout, fixture with `allowed_origins=[]`, `reboot[dev]`.
+- `references/patterns-load-and-benchmarking.md` — only when you measure load, or a page or method is slow.
 - `references/testing-external-context.md` — only when writing custom steps or harness tests.
 - `references/testing-failure-recovery.md` — only when the app has a spawned task, a `Workflow`, or scheduled work.
 - `references/testing-harness.md` — only when a `unittest` test boots the harness directly, for what a scenario cannot say.

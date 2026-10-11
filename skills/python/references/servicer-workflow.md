@@ -36,7 +36,7 @@ results. Read each part below when you reach its moment.
 - `self` or `self.state` in a workflow — it is a `@classmethod`.
 - A plain `await` on anything with effects — every `await` takes the
   primitive for what it calls (calls part).
-- `schedule(...)` from a workflow — use `spawn(...)` (declare part).
+- `schedule(...)` from a workflow (`servicer-workflow-declare.md`, "Never").
 - A wall-clock or random value read directly in the body — capture it
   with `at_least_once` (external part).
 - Driving the phase after a commit from a plan rebuilt locally — after

@@ -7,6 +7,7 @@ summary: "Dev lets through calls Cloud denies (`PermissionDenied`); `rbt cloud u
 step: deploy
 applies: [mcp-ui, web-app, backend-only]
 always: false
+when: "you deploy to Reboot Cloud or read a deployed app's logs"
 verified: 1.6.0
 docs: ""
 ---

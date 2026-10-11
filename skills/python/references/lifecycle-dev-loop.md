@@ -4,9 +4,10 @@ impact: MEDIUM
 impactDescription: A Reboot failure usually looks like a hang or a silent pass, and an agent that misreads one burns whole test runs chasing the wrong cause
 tags: pytest, hang, faulthandler, exit-code, pipefail, retry, timeout, watch, dev-loop, debugging
 summary: "Failures look like hangs or silent passes; `pytest -s`, stack dumps, exit codes; never test under the watcher."
-step: any
+step: shell
 applies: [mcp-ui, web-app, backend-only]
 always: false
+when: "the dev loop misses an edit, restarts in a loop, or runs beside the test suite"
 verified: 1.6.0
 docs: ""
 ---

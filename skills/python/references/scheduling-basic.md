@@ -88,7 +88,8 @@ while it runs.
 
 ## Limits
 
-- Constructors cannot be scheduled or spawned.
+- `schedule()` and `spawn()` reach every method but constructors and
+  streaming readers, transactions included (1.6.0 generated client).
 - No delivery order between scheduled tasks: stamp each note with a
   per-entity generation and drop notes below the high-water mark
   (observed at 1.4.0).
@@ -100,9 +101,6 @@ while it runs.
   framework issue). Keep an actor's timers few and coarse; never hold a
   lock across a cross-actor round-trip.
 - An undeclared exception in a scheduled method is retried with backoff; a declared `<Method>Aborted` is not (marquee-control, 1.4.1).
-- Whether `schedule()` can target a `Transaction` method is
-  undocumented (team-memo, 1.4.1; not verified at 1.6.0): schedule a
-  writer, or a workflow that calls the guarded transaction.
 
 ## Scales as
 

@@ -7,6 +7,7 @@ summary: "Never a state `Model` inside another; group related fields in nested n
 step: api
 applies: [mcp-ui, web-app, backend-only]
 always: false
+when: "a state type has groups of fields that belong together"
 verified: 1.6.0
 docs: ""
 ---

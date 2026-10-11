@@ -232,7 +232,7 @@ section. Add or change a trap in its owning reference, not here. -->
 **`servicer-workflow.md`**
 - `self` or `self.state` in a workflow
 - A plain `await` on anything with effects
-- `schedule(...)` from a workflow
+- `schedule(...)` from a workflow (`servicer-workflow-declare.md`, "Never")
 - A wall-clock or random value read directly in the body
 - Driving the phase after a commit from a plan rebuilt locally
 

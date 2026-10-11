@@ -39,9 +39,8 @@ await account.deposit(context, amount=request.initial_deposit)
   named `create`; there is no built-in `create`.
 - A type with **no** `factory=True` method has no constructor: its
   first writer or transaction call constructs it implicitly.
-- A bare constructor call in `initialize` is safe to leave: its
-  persisted idempotency key replays the stored result every later boot
-  and the body does not rerun (`lifecycle-initialize-hook.md`).
+- A bare constructor call in `initialize` is safe to leave
+  (`lifecycle-initialize-hook.md`, "Do this").
 
 ## Never
 

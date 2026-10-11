@@ -4,9 +4,10 @@ impact: HIGH
 impactDescription: Without these idioms a Reboot UI ships round-trip-gated clicks, spinners that never stop, hook-order crashes, and pages that mount sixty subscriptions
 tags: react, patterns, optimistic, hooks, subscription, deadline, useEffect, newId, frontend
 summary: "Hooks in loops or derived-array deps break; one reactive hook per component, summaries, optimistic overrides, mutation deadlines, `newId()`."
-step: any
+step: frontend
 applies: [mcp-ui, web-app]
 always: false
+when: "a page keeps local state beside live readers"
 verified: 1.6.0
 docs: ""
 ---

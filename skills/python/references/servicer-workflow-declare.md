@@ -118,8 +118,8 @@ than once.
 
 - "Do this to N things" in one transaction makes all N actors
   two-phase-commit participants; fan out from a workflow with one small
-  call each. 216 seat creations: 54 s as a transaction chain, 15.7 s as
-  a workflow (measured at 1.4.0). Scheduling onto N actors from a
+  call each, about 3.5x faster (`patterns-load-and-benchmarking.md`,
+  "Scales as"). Scheduling onto N actors from a
   transaction crashed the dev database worker under contention
   ([`scheduling-basic.md`](scheduling-basic.md)).
 

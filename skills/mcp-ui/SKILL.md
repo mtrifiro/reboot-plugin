@@ -187,9 +187,9 @@ _Design_ — until the user accepts the domain model and feature files
 - `references/api-state-shapes.md` — Never nest state Models; `list[Item]` only for bounded identity-less sub-records; a nested `Model` is `Optional`, hydrated in `create`.
 - `python/references/state-actor-decomposition.md` — A Type with unrelated field clusters serializes writers and grows a God `User`; split it into separate Types.
 - `python/references/state-collections.md` — Never `list[Entity]` on parents; decide if each item is its own Type, then `list[Sub]`, ID list or `OrderedMap`.
-- `python/references/state-nested-models.md` — Never a state `Model` inside another; group related fields in nested non-state `Model`s, mutated in place.
 - `python/references/api-schema-evolution.md` — only when changing an API that is deployed or has persisted state.
 - `python/references/api-errors.md` — only when the API declares typed errors.
+- `python/references/state-nested-models.md` — only when a state type has groups of fields that belong together.
 - `python/references/state-scalar-fields.md` — only when a field holds a secret, token or PII, or you want a non-zero default.
 <!-- generated:end -->
 
@@ -204,6 +204,7 @@ _Prove_ — building to the accepted design:
 - `python/references/lifecycle-rbtrc.md` — `.rbtrc` is line-based, not YAML; `--application-name` not `--name`; `--env-file` for secrets; `serve run` lines; named configs.
 - `references/project-shell.md` — Dropping `oauth=` fails startup; copy `build/templates/mcp-ui/`: `.rbtrc` with `--default-config=hmr`, `:hmr`/`:dist` configs, `example_prompts=`.
 - `python/references/lifecycle-secrets.md` — only when the app needs secrets (API keys, OAuth client secrets).
+- `python/references/lifecycle-dev-loop.md` — only when the dev loop misses an edit, restarts in a loop, or runs beside the test suite.
 <!-- generated:end -->
 
 **Before the servicer:**
@@ -222,11 +223,15 @@ _Prove_ — building to the accepted design:
 - `python/references/agent-pydantic-ai.md` — only when the backend calls an LLM.
 - `python/references/agent-tools.md` — only when an LLM agent needs tools that read or change Reboot state.
 - `python/references/crypto-root-keys.md` — only when building your own key-derivation feature.
+- `python/references/patterns-cross-actor-reads.md` — only when a reader composes data from other actors, or a page waits on a slow reader.
+- `python/references/patterns-time-and-randomness.md` — only when a method reads the clock or random values.
 - `python/references/scheduling-basic.md` — only when deferring work with `schedule()` or `spawn(when=…)`.
 - `python/references/servicer-transaction.md` — only when you declared a `Transaction`.
 - `python/references/stdlib-ciphertext.md` — only when storing secrets or PII encrypted at rest.
 - `python/references/stdlib-ordered-map.md` — only when the design uses an `OrderedMap`.
 - `python/references/stdlib-queue.md` — only when the design uses a work `Queue`.
+- `python/references/patterns-error-handling.md` — only when a method declares, raises or translates errors.
+- `python/references/patterns-idempotency.md` — only when a workflow or `initialize` repeats calls, or an outside call must not run twice.
 - `python/references/rpc-forall.md` — only when fanning one call out to many actors.
 - `python/references/scheduling-recurring.md` — only when the app needs a recurring or cron job.
 - `python/references/stdlib-presence.md` — only when tracking who is connected (presence).
@@ -260,6 +265,7 @@ servicer before the first test):
 - `python/references/react-generated-client.md` — Mutations resolve to `{ response, aborted }`, never throw; `rbt generate --react=` output: `use<Type>()` overloads, reader returns, naming.
 - `references/ui-design.md` — The web app's principles inside a host: shared `frontend/mcp/styles.css`, `useHostTheme()` (the host owns light/dark), one focused view, skeletons.
 - `web-app/references/ui-design.md` — Brief, Reboot's brand by default (a user's brand replaces it), primary view by task, page anatomy, labeled controls, light/dark toggle, restyle by token values, screenshot review.
+- `python/references/patterns-react-state.md` — only when a page keeps local state beside live readers.
 - `references/pop-out-to-web-app.md` — only when a widget needs a "pop out into the web app" button.
 - `web-app/references/ui-restyle.md` — only when the user asks to change the look of an app that already runs.
 <!-- generated:end -->
@@ -269,6 +275,7 @@ servicer before the first test):
 <!-- generated:start reading-list front-door=mcp-ui step=tests -->
 - `python/references/testing-features.md` — Built-in steps match their exact spelling; who calls, `creates` / `does`, saved values, `eventually`, aborts, `@wip`, custom steps.
 - `python/references/testing-project-setup.md` — Missing `pytest.ini` paths break `_rbt` imports; no `pytest-asyncio`; `tests/` layout, fixture with `allowed_origins=[]`, `reboot[dev]`.
+- `python/references/patterns-load-and-benchmarking.md` — only when you measure load, or a page or method is slow.
 - `python/references/testing-external-context.md` — only when writing custom steps or harness tests.
 - `python/references/testing-failure-recovery.md` — only when the app has a spawned task, a `Workflow`, or scheduled work.
 - `python/references/testing-harness.md` — only when a `unittest` test boots the harness directly, for what a scenario cannot say.

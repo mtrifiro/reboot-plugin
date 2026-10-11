@@ -4,9 +4,10 @@ impact: MEDIUM
 impactDescription: Non-idempotent setup duplicates state on restart; a replayed call's response describes its first run; one uncertain mutation blocks every later bare mutation from that context
 tags: patterns, idempotency, initialize, constructor, restart, IdempotencyUncertainError, idempotently, alias, replay, memoized
 summary: "Replayed calls return the first run's response; what `IdempotencyUncertainError` means, when retries need keys, idempotent `create`/`initialize`."
-step: any
+step: servicer
 applies: [mcp-ui, web-app, backend-only]
 always: false
+when: "a workflow or `initialize` repeats calls, or an outside call must not run twice"
 verified: 1.6.0
 docs: ""
 ---
@@ -31,9 +32,8 @@ async def initialize(context: InitializeContext):
     await Bank.create(context, SINGLETON_BANK_ID)
 ```
 
-Each call in `initialize` has a persisted idempotency key: the first
-boot executes it, later boots get the stored result. Outside such a
-key, an explicit constructor on an existing actor raises
+A call in `initialize` replays on later boots
+(`lifecycle-initialize-hook.md`, "Do this"). Outside it, an explicit constructor on an existing actor raises
 `StateAlreadyConstructed` (`servicer-constructor.md`).
 
 ### First-write setup in a type with no factory

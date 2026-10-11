@@ -4,9 +4,10 @@ impact: MEDIUM
 impactDescription: Inconsistent error handling makes failures opaque to callers
 tags: patterns, errors, MethodAborted, catch, propagate, SystemAborted, timeout
 summary: "`<Method>Aborted` also carries timeouts and system errors: inspect `.error`, re-raise the rest; typed errors across actors."
-step: any
+step: servicer
 applies: [mcp-ui, web-app, backend-only]
 always: false
+when: "a method declares, raises or translates errors"
 verified: 1.6.0
 docs: ""
 ---

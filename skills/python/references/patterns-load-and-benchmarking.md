@@ -4,9 +4,10 @@ impact: HIGH
 impactDescription: Unmeasured designs put a transaction or a fan-out on a click path and ship a page that takes seconds
 tags: patterns, cost, performance, benchmark, load test, effect validation, transaction, forall, subscriptions
 summary: "An actor is a lock; transactions cost per participant; dev writes ~150-200 ms; benchmark with effect validation off."
-step: any
+step: tests
 applies: [mcp-ui, web-app, backend-only]
 always: false
+when: "you measure load, or a page or method is slow"
 verified: 1.6.0
 docs: ""
 ---
