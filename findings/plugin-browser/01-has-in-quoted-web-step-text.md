@@ -1,7 +1,7 @@
 ---
 id: plugin-browser-01
 project: plugin-browser
-source: "plugin-browser/FINDINGS.md § reboot.bdd, item 1"
+source: "plugin-browser/FINDINGS.md § reboot.bdd, item 2"
 reboot_version: 1.6.0
 severity: yellow
 target: bdd
