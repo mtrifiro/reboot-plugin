@@ -240,7 +240,7 @@ section. Add or change a trap in its owning reference, not here. -->
 - Calling another actor's writer, transaction or constructor (`await Account.ref("audit-log").record(context, ...) # WRONG`)
 - `Other.ref(id).schedule(...)`
 - An external call (SMS, email, payment, LLM, network, filesystem), **even an idempotent one**. An enclosing transaction can abort and roll state back after the call happened, and the body re-runs on retries and under effect validation, firing it twice (real bug
-- Persisting a fresh `uuid4()` or clock value that is later re-derived or addressed (an actor id, an idempotency key)
+- Minting a `uuid4()` or clock value again in a later call instead of reading back the one stored
 
 **`agent-pydantic-ai.md`**
 - `anthropic.Anthropic().messages.create(...)` or a bare `pydantic_ai.Agent` in a workflow
@@ -541,7 +541,6 @@ section. Add or change a trap in its owning reference, not here. -->
 - A refetch library or a poll alongside reader hooks
 
 **`patterns-time-and-randomness.md`**
-- `seat.hold_id = str(uuid4())` in a writer when a later call addresses the hold by that id across a client retry
 - `datetime.now()` or `uuid4()` read directly in a workflow body
 - Building an `at_least_once` / `.per_workflow` alias from a timestamp or fresh uuid
 - A test double inside `at_least_once` that pops answers off a list

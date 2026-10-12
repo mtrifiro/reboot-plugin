@@ -176,7 +176,6 @@ _Prove_: building to the accepted design:
 - `python/references/agent-tools.md`: only when an LLM agent needs tools that read or change Reboot state.
 - `python/references/crypto-root-keys.md`: only when building your own key-derivation feature.
 - `python/references/patterns-cross-actor-reads.md`: only when a reader composes data from other actors, or a page waits on a slow reader.
-- `python/references/patterns-time-and-randomness.md`: only when a method reads the clock or random values.
 - `python/references/scheduling-basic.md`: only when deferring work with `schedule()` or `spawn(when=…)`.
 - `python/references/servicer-transaction.md`: only when you declared a `Transaction`.
 - `python/references/stdlib-ciphertext.md`: only when storing secrets or PII encrypted at rest.
@@ -184,6 +183,7 @@ _Prove_: building to the accepted design:
 - `python/references/stdlib-queue.md`: only when the design uses a work `Queue`.
 - `python/references/patterns-error-handling.md`: only when a method declares, raises or translates errors.
 - `python/references/patterns-idempotency.md`: only when a workflow or `initialize` repeats calls, or an outside call must not run twice.
+- `python/references/patterns-time-and-randomness.md`: only when a method reads the clock or random values.
 - `python/references/rpc-forall.md`: only when fanning one call out to many actors.
 - `python/references/scheduling-recurring.md`: only when the app needs a recurring or cron job.
 - `python/references/stdlib-presence.md`: only when tracking who is connected (presence).

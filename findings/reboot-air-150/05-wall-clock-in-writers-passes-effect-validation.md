@@ -28,3 +28,5 @@ resolved_by: "python/references/servicer-writer.md § Limits; python/references/
 **Where in the skills.** `servicer-writer.md`, `scheduling-recurring.md`, `state-collections.md`.
 
 **Checked at 1.6.0.** `python/references/servicer-writer.md` (lines ~28-31, "re-runs the body and asserts the state mutations match") and `scheduling-recurring.md` (lines ~198-203) still carry the determinism claim; `state-collections.md` still shows `uuid4()` in a constructor.
+
+**Resolution (2026-10-12).** The rule this item describes is gone. It rested on effect validation comparing two runs, which the 1.6.0 source does not do: the first run is discarded and the second committed. A caller's retry is covered by idempotency, since the same key returns the first response. `patterns-time-and-randomness.md` § The rule now says a writer or transaction may read and store the clock or `uuid4()`, keeping only the workflow rule (read them inside `at_least_once`). Reboot's own skills say the same on `main` (reboot-dev/reboot f7a687be).

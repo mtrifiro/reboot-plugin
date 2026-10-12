@@ -12,7 +12,7 @@ cluster: ""
 duplicate_of: meridian-circuit-08
 still_applies: no
 status: Resolved
-resolved_by: "python/references/patterns-time-and-randomness.md § Three escape routes for addressed values, in order of preference"
+resolved_by: "python/references/patterns-time-and-randomness.md § The rule"
 ---
 
 # Client-supplied display deadlines; the scheduled timer is the enforcement

@@ -11,7 +11,7 @@ tags: [pattern]
 cluster: ""
 still_applies: no
 status: Resolved
-resolved_by: "python/references/patterns-time-and-randomness.md § Three escape routes for addressed values, in order of preference"
+resolved_by: "python/references/patterns-time-and-randomness.md § The rule"
 ---
 
 # Writers never read the clock, including simulated ones: caller deadlines, relative timers, crc32, a virtual clock

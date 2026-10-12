@@ -28,3 +28,5 @@ resolved_by: "python/references/servicer-writer.md § Limits; python/references/
 **Where in the skills.** `servicer-workflow.md` (workflow-only capture), `state-collections.md` (uuid4/uuid7 in write bodies).
 
 **Checked at 1.6.0.** python/references/servicer-workflow.md:658-678 still documents only the workflow-side `at_least_once` capture and says there is no clock on the context; state-collections.md:188-222 still allocates ids with `uuid7()` in write bodies with no explanation.
+
+**Resolution (2026-10-12).** The rule this item describes is gone. It rested on effect validation comparing two runs, which the 1.6.0 source does not do: the first run is discarded and the second committed. A caller's retry is covered by idempotency, since the same key returns the first response. `patterns-time-and-randomness.md` § The rule now says a writer or transaction may read and store the clock or `uuid4()`, keeping only the workflow rule (read them inside `at_least_once`). Reboot's own skills say the same on `main` (reboot-dev/reboot f7a687be).

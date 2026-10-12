@@ -72,8 +72,8 @@ class AccountServicer(Account.Servicer):
   SMS login code sent twice, the first invalidated). Have the writer
   `schedule()` a `Workflow`; the primitive is chosen in
   `servicer-workflow-external.md`.
-- Persisting a fresh `uuid4()` or clock value that is later re-derived
-  or addressed (an actor id, an idempotency key); display-only is fine
+- Minting a `uuid4()` or clock value again in a later call instead of
+  reading back the one stored; storing it in the writer is fine
   (`patterns-time-and-randomness.md`).
 
 ## Limits
