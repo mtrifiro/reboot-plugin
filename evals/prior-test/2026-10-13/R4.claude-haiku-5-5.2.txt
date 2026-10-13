@@ -1,0 +1,10 @@
+These are from memory, so check them against the current Reboot docs before relying on exact signatures.
+
+- **`.per_workflow(alias)`**: Scopes an idempotency key to the whole workflow run. A side effect tagged this way runs once per workflow, and its recorded result is reused if the workflow replays or retries.
+- **`.per_iteration(alias)`**: Scopes the key to a single iteration of a loop, such as inside an `until(...)` loop. Each iteration gets its own key, so each one runs its effect once.
+- **`.always()`**: Applies no memoization. The effect re-executes every time the workflow replays or retries, so it should be idempotent itself or safe to repeat.
+- **`at_least_once(...)`**: Runs the callable and retries it until it succeeds, so it may execute more than once but its result is eventually recorded. Use it for idempotent operations.
+- **`at_most_once(...)`**: Runs the callable at most one time. If it fails partway, the failure is surfaced rather than retried, so it suits non-idempotent operations.
+- **`until(...)`**: Repeats a callable until a condition is satisfied, typically combined with `per_iteration` so each attempt is tracked separately.
+
+Confidence: medium

@@ -1,0 +1,60 @@
+# Reboot (reboot.dev): CLI and project layout
+
+Reboot is a framework for building reactive, durable backends. You write an API definition, Reboot generates typed code from it, and you implement servicers for your state types.
+
+## `rbt generate`
+
+`rbt generate` is the code-generation step.
+
+- It reads your API definitions. Historically these were `.proto` files with Reboot annotations that declare state types and method kinds (reader, writer, transaction, workflow). Newer versions also support schema-style definitions (Pydantic in Python, Zod in TypeScript).
+- From those it produces language-specific code:
+  - **Backend:** base servicer classes to subclass, and typed client stubs or references for calling state.
+  - **Frontend:** TypeScript and React code, such as hooks for calling methods and subscribing to reactive readers.
+- Output locations are set by flags, usually stored in `.rbtrc`. Examples:
+  - `generate api/` names the input directory.
+  - `generate --python=backend/api` sets the Python output.
+  - `generate --react=web/src/api` sets the React output.
+  - A `--nodejs` or `--typescript` option exists for TypeScript backends.
+
+## `rbt dev run`
+
+`rbt dev run` is the local development loop.
+
+- It starts your application locally from an entry point, for example `--python --application=backend/src/main.py`, or a TypeScript/Node equivalent.
+- It runs `rbt generate` first, so the generated code is up to date.
+- It watches files (configured with `--watch=...` globs) and re-generates and restarts on changes, giving you hot reload.
+- It brings up the local Reboot runtime: the sidecar/state storage and a local ingress your frontend talks to (by default on `localhost:9991`).
+- State persists across restarts by default. You can name or clear the application's state with flags.
+
+## Typical project layout
+
+```
+my-app/
+├── .rbtrc                 # default flags for rbt subcommands (generate, dev run, ...)
+├── api/                   # API definitions (source of truth)
+│   └── hello/v1/hello.proto   # or Pydantic/Zod schema files
+├── backend/
+│   ├── api/               # GENERATED Python code (usually gitignored)
+│   └── src/
+│       ├── main.py        # entry point: creates Application, registers servicers
+│       └── hello_servicer.py  # your implementation of the generated base class
+└── web/                   # optional React frontend
+    └── src/
+        ├── api/           # GENERATED TS/React hooks & clients
+        └── App.tsx
+```
+
+An example `.rbtrc`:
+
+```
+generate api/
+generate --python=backend/api/
+generate --react=web/src/api/
+dev run --python
+dev run --application=backend/src/main.py
+dev run --watch=backend/src/**/*.py
+```
+
+To summarize the layout: definitions live in `api/`, generated code goes into `backend/api/` and `web/src/api/`, your logic lives in `backend/src/`, and `.rbtrc` ties it together. Exact flag names and default paths may differ between Reboot versions.
+
+Confidence: medium

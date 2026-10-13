@@ -1,0 +1,43 @@
+React code talks to a Reboot backend through **generated, type-safe React hooks**. You define a state type and its methods (`reader`, `writer`, `transaction`) in your API definition. Reboot then generates a `use<StateType>` hook that targets one state instance by ID.
+
+- **Reads:** reader methods are exposed as `use<Method>()` hooks, and they are reactive. The hook keeps a subscription to the backend, so the component re-renders whenever that state changes, whoever changed it. You don't poll or refetch.
+- **Writes:** writer and transaction methods are exposed as async functions. You call them, they run on the backend with idempotency built in, and any reactive readers watching that state update on their own. The mutators also expose pending mutations, so you can show optimistic or loading UI.
+
+Example (counter):
+
+```tsx
+// main.tsx
+import { RebootClientProvider } from "@reboot-dev/reboot-react";
+
+root.render(
+  <RebootClientProvider url="http://localhost:9991">
+    <App />
+  </RebootClientProvider>
+);
+
+// Counter.tsx
+import { useCounter } from "../api/counter/v1/counter_rbt_react";
+
+export function Counter() {
+  const { useGet, increment } = useCounter({ id: "my-counter" });
+
+  // Reactive read: re-renders whenever the counter changes on the server.
+  const { response, isLoading } = useGet();
+
+  if (isLoading) return <p>Loading…</p>;
+
+  return (
+    <div>
+      <p>Count: {response?.value}</p>
+      <button onClick={() => increment({ amount: 1 })}>+1</button>
+      {increment.pending.length > 0 && <span>saving…</span>}
+    </div>
+  );
+}
+```
+
+If two browser tabs render this component, a click in one updates the count in both.
+
+Exact package names, file paths, and fields such as `.pending` may differ by version.
+
+Confidence: medium

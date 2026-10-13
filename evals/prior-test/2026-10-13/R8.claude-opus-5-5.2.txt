@@ -1,0 +1,64 @@
+A Reboot frontend reads and changes backend state through **generated React hooks**. You define a state type and its methods in the API definition, either `.proto` or the newer Pydantic/Zod-style schemas. Each method is marked as a `reader`, `writer`, `transaction` or `workflow`. Reboot's codegen then produces a `*_rbt_react` module with a hook per state type.
+
+**Reading:** For each reader method, the hook gives you a `use<Method>()` hook. Reads are **live/reactive**. The client keeps a streaming subscription to the backend. When the state changes (from this client, another client or a backend workflow), the reader re-runs and your component re-renders with the new `response`. You don't poll or invalidate caches by hand.
+
+**Changing:** Writers and transactions show up as plain async functions on the same object. Calls from a client are ordered and idempotent, so retries are safe. They also expose pending state (e.g. `send.pending`), which you can use for optimistic UI.
+
+**Setup:** Wrap the app once in the provider:
+
+```tsx
+// main.tsx
+import { RebootClientProvider } from "@reboot-dev/reboot-react";
+
+root.render(
+  <RebootClientProvider url="http://localhost:9991">
+    <App />
+  </RebootClientProvider>
+);
+```
+
+**Example component:**
+
+```tsx
+// App.tsx
+import { useState } from "react";
+import { useChatRoom } from "../api/chat/v1/chat_room_rbt_react";
+
+export default function App() {
+  const { useMessages, send } = useChatRoom({ id: "lobby" });
+
+  // Reactive read: re-renders whenever the ChatRoom state changes.
+  const { response, isLoading } = useMessages();
+
+  const [text, setText] = useState("");
+
+  const onSend = async () => {
+    // Mutation: calls the `Send` writer on the backend.
+    const { aborted } = await send({ message: text });
+    if (aborted) console.error(aborted.error);
+    else setText("");
+  };
+
+  if (isLoading) return <p>Loading…</p>;
+
+  return (
+    <div>
+      <ul>
+        {response?.messages.map((m, i) => <li key={i}>{m}</li>)}
+        {/* Optimistic rendering of in-flight sends */}
+        {send.pending.map(({ request, idempotencyKey }) => (
+          <li key={idempotencyKey} style={{ opacity: 0.5 }}>{request.message}</li>
+        ))}
+      </ul>
+      <input value={text} onChange={(e) => setText(e.target.value)} />
+      <button onClick={onSend}>Send</button>
+    </div>
+  );
+}
+```
+
+The backend side is a servicer class implementing `messages` (reader) and `send` (writer). Reboot persists the state and pushes changes to subscribed readers.
+
+Exact names like the generated module path, `.pending` and the shape of `aborted` may differ by version.
+
+Confidence: medium

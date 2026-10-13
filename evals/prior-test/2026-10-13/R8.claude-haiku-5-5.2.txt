@@ -1,0 +1,38 @@
+Reboot keeps application state in durable, typed objects on the backend. The React side reads that state through generated client code and changes it by calling the object's methods. I'm recalling this from memory and haven't checked the current API, so treat the names below as illustrative.
+
+**Backend (Python, sketch):** You declare state and methods, typically with a protobuf schema. Reader methods only read. Writer methods mutate state.
+
+```python
+class CounterServicer(Counter.Servicer):
+    async def increment(self, context, state, request):
+        state.value += request.amount
+        return IncrementResponse(value=state.value)
+
+    async def get(self, context, state, request):
+        return GetResponse(value=state.value)
+```
+
+**Frontend (React, sketch):** Reboot generates a client for each state type. You use hooks to read and call writers.
+
+```tsx
+import { useQuery, useMutation } from "@reboot-dev/reboot-react"; // name may differ
+import { Counter } from "../api/counter_rbt";
+
+function CounterView({ id }: { id: string }) {
+  const counter = Counter.ref(id);
+  const { response } = useQuery(counter.get, {});       // re-renders on change
+  const [increment] = useMutation(counter.increment);
+
+  return (
+    <button onClick={() => increment({ amount: 1 })}>
+      {response?.value ?? 0}
+    </button>
+  );
+}
+```
+
+**Are reads live?** As I understand it, yes. Reader hooks subscribe to the underlying state, so when a writer changes it, the component re-renders with the new value without polling. Writes go through the backend as method calls, so they stay durable and consistent.
+
+For the exact hook names, generated module paths, and whether subscriptions are fully automatic, check the reboot.dev docs or the `reboot-react` package before you build on this.
+
+Confidence: low

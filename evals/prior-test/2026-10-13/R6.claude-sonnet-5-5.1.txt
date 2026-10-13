@@ -1,0 +1,45 @@
+## `rbt generate`
+This runs Reboot's code generator over your API definition and writes out typed client and server code. In the Protobuf-based flow, it takes your `.proto` files, which carry Reboot-specific options that mark messages as stateful types, and generates:
+- Python servicer base classes and typed `Ref`/`WeakReference` helpers, which you subclass to implement your logic.
+- Optionally TypeScript or React bindings, if you request them (e.g. `--react=...`, `--nodejs=...`).
+
+You normally don't need to run it by hand during development, because `rbt dev run` triggers it for you.
+
+## `rbt dev run`
+This starts your application in development mode. It:
+- Runs a local Reboot instance (the "application") with your servicers.
+- Watches the files you list (via `--watch`) and automatically regenerates code, then restarts the app on changes.
+- Persists state between restarts, keyed by the application `--name`. Changing the name or expunging gives you a fresh state.
+- Is configured mostly through flags, which are usually stored in `.rbtrc`.
+
+## Typical project layout
+```
+my-app/
+├── .rbtrc                 # rbt flags, per-subcommand
+├── api/
+│   └── <package>/v1/foo.proto   # API definition (source of truth)
+├── backend/
+│   ├── src/main.py        # entrypoint: creates Application(servicers=[...])
+│   └── api/               # generated Python code (output of `rbt generate`)
+├── web/                   # optional frontend
+│   └── src/api/           # generated React/TS code
+└── requirements.txt / pyproject
+```
+
+- **API definition:** in `api/`, as `.proto` files. Newer Reboot versions also support defining the API in Python (Pydantic-style) instead of Protobuf.
+- **Generated code:** goes to whatever output directories you set in `.rbtrc`, e.g. `generate api/ --python=backend/api` or `--react=web/src/api`. It is conventionally kept out of hand-edited code and is often gitignored or committed, depending on your preference.
+- **Implementation:** servicer classes live under `backend/src/`, and `main.py` registers them with `Application(...)`.
+
+An example `.rbtrc`:
+```
+generate api/
+generate --python=backend/api
+dev run --name=my-app
+dev run --application=backend/src/main.py
+dev run --python
+dev run --watch=backend/src/**/*.py
+```
+
+The exact flag names and the newer Python-native API definition style may have changed since I last saw the docs, so check reboot.dev for the current syntax.
+
+Confidence: medium

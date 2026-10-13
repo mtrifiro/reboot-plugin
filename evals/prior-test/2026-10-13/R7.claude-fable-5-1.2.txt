@@ -1,0 +1,45 @@
+In Reboot, tests are plain Python async tests (typically `unittest.IsolatedAsyncioTestCase` or pytest-asyncio) that spin up an in-process Reboot instance using the `Reboot` test harness from `reboot.aio.tests`. The pattern is:
+
+1. Generate code first with `rbt protoc` (so the `*_rbt` modules exist).
+2. Create a `Reboot()` instance and `start()` it (per-test or per-class).
+3. Call `rbt.up(servicers=[...])` to bring up your servicers in a consul/local sandbox.
+4. Create an `ExternalContext` via `rbt.create_external_context(...)` and call your services through generated clients, just like a real client would.
+5. `stop()` the instance in teardown.
+
+Short example (for a `Hello` state with `Send` and `Messages` methods):
+
+```python
+import unittest
+from reboot.aio.tests import Reboot
+from hello.v1.hello_rbt import Hello
+from hello_servicer import HelloServicer
+
+
+class TestHello(unittest.IsolatedAsyncioTestCase):
+
+    async def asyncSetUp(self) -> None:
+        self.rbt = Reboot()
+        await self.rbt.start()
+
+    async def asyncTearDown(self) -> None:
+        await self.rbt.stop()
+
+    async def test_send_and_read_messages(self) -> None:
+        await self.rbt.up(servicers=[HelloServicer])
+
+        context = self.rbt.create_external_context(name=f"test-{self.id()}")
+
+        hello = Hello.ref("test-hello")
+        await hello.send(context, message="Hello, World!")
+
+        response = await hello.messages(context)
+        self.assertEqual(response.messages, ["Hello, World!"])
+```
+
+Run it with `pytest` (or `python -m unittest`) after `rbt protoc`. A few extra notes:
+
+- `rbt.up(...)` can be called again mid-test to simulate a restart/upgrade, which is handy for verifying durability of state and scheduled tasks.
+- Because Reboot replays/persists state locally in the test harness, you can assert on state across "restarts" without any external infrastructure.
+- Use the same generated clients (`Hello.ref(...)`, `.send(...)`, `.messages(...)`) that production callers use, so tests exercise the real serialization and transaction paths.
+
+Confidence: medium

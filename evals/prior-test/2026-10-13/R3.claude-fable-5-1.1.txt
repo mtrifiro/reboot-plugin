@@ -1,0 +1,30 @@
+**What a workflow method is**
+
+In Reboot, a state type exposes methods of several kinds: *readers* (read state), *writers* (mutate state atomically), *transactions* (mutate across multiple states), and *workflows*. A workflow method is a long‑running, durable method that runs with a `WorkflowContext`. Unlike a writer, it doesn't get a single atomic lock on the state for its whole lifetime; instead it orchestrates other calls — invoking readers/writers/transactions on this or other states, sleeping, waiting on conditions (`until`), calling external services — over seconds, hours, or days. Workflows are usually kicked off as *tasks* (e.g., `.schedule()` from a writer/transaction), and Reboot persists their progress.
+
+**What happens on a crash**
+
+Reboot's durability model is re‑execution with memoization. The workflow's *progress* (results of the memoized steps and of calls it made to other Reboot methods) is persisted. If the process dies partway through, Reboot restarts the workflow method from the top on recovery; steps that already completed return their recorded results instead of running again, and execution continues from where it left off. For this to be correct the workflow body must be deterministic (same inputs → same sequence of steps), and every effectful step must be memoized via Reboot's helpers. Calls to other Reboot state methods inside a workflow are made idempotent automatically (context‑derived idempotency keys / aliases), so re‑running the workflow doesn't double‑apply writers.
+
+**How to make a side‑effecting external call (e.g., Stripe) safe**
+
+Don't call Stripe "naked" inside the workflow — on replay it would run again. Wrap it:
+
+- `at_least_once("charge card", context, fn)`: Reboot records the result once `fn` succeeds; on a crash before the record is written, `fn` is run again. Use this when the external call is itself idempotent — which is the recommended pattern for Stripe: derive a stable idempotency key from the workflow (e.g., `context.idempotency_key` / state ID + step name) and pass it as Stripe's `Idempotency-Key`, so retries produce one charge.
+- `at_most_once("charge card", context, fn)`: Reboot records that it's *about* to run `fn` before executing; if a crash happens mid‑flight it will *not* re‑run it and instead surfaces an error/unknown outcome you must handle, guaranteeing the call never executes twice. Use this when the external API can't be made idempotent.
+
+Both helpers are keyed by a string name plus the context, which is what lets replay skip or short‑circuit the step. Typical shape:
+
+```python
+charge = await at_least_once(
+    "stripe charge",
+    context,
+    lambda: stripe.PaymentIntent.create(
+        amount=..., idempotency_key=context.idempotency_key,
+    ),
+)
+```
+
+Also keep randomness/time out of the workflow body (use memoized steps for those) so replays are deterministic.
+
+Confidence: medium

@@ -1,0 +1,59 @@
+# Reboot (reboot.dev): `rbt` commands and project layout
+
+## `rbt generate`
+
+- It compiles your API definitions into code. Classically these are `.proto` files with Reboot-specific annotations, such as state types and method kinds like `reader`, `writer`, `transaction` and `workflow`.
+- It wraps `protoc` with Reboot's plugins and outputs:
+  - Standard protobuf/gRPC stubs, for example `*_pb2.py` and `*_pb2_grpc.py`.
+  - Reboot-specific code, for example `*_rbt.py` for Python backends. This includes servicer base classes you subclass, typed client references (`Foo.ref(id)`, `Foo.create(...)`), and state types.
+  - Frontend bindings, for example `*_rbt_react.ts` with React hooks like `useFoo(...)`, plus TypeScript/Node.js backend bindings if you use those.
+- Flags specify the proto/API root and output directories, for example `--python=backend/api`, `--react=web/src/api` and `--nodejs=...`. You usually don't type these yourself; they live in `.rbtrc`.
+
+## `rbt dev run`
+
+- It runs your application locally in development mode.
+- It starts the Reboot runtime and your application entrypoint, for example `--python --application=backend/src/main.py`, with local durable state storage.
+- It watches files (`--watch=...` globs). On changes it re-runs code generation and restarts the app (hot reload), so the edit/generate/run loop is automatic.
+- Typical options include:
+  - `--name` for the app/state namespace, so state persists across restarts.
+  - Flags to expose the app on a local port, which also serves the Envoy/gRPC-Web endpoint the React frontend talks to.
+  - A way to wipe or "nuke" local state.
+- Related commands: `rbt dev expunge` clears local state, `rbt serve` is the production-style run, and `rbt cloud ...` deploys.
+
+## `.rbtrc`
+
+This file sits at the project root. Each line is a command prefix plus flags, for example:
+
+```
+generate api/
+generate --python=backend/api/
+generate --react=web/src/api/
+dev run --python
+dev run --application=backend/src/main.py
+dev run --watch=backend/src/**/*.py
+dev run --name=hello
+```
+
+These flags are applied automatically, so you can just run `rbt generate` or `rbt dev run`.
+
+## Typical project layout
+
+```
+my-app/
+├── .rbtrc
+├── api/                      # API definitions (source of truth)
+│   └── hello/v1/hello.proto  # versioned package dirs
+├── backend/
+│   ├── api/                  # generated Python code (don't edit; often gitignored)
+│   │   └── hello/v1/hello_pb2.py, hello_rbt.py, ...
+│   ├── src/
+│   │   ├── main.py           # Application(servicers=[...]) entrypoint
+│   │   └── servicer.py       # your servicer implementations
+│   └── tests/
+└── web/                      # optional React frontend
+    └── src/api/              # generated React/TS bindings (hello_rbt_react.ts, ...)
+```
+
+In summary, the API is defined in `api/` and generated code goes to the language-specific output directories (`backend/api/` and `web/src/api/`). Hand-written logic lives in `backend/src/`. Newer Reboot versions also support defining APIs in code (Pydantic/Zod-style schemas) as well as `.proto`, but the generate → implement servicer → `dev run` workflow is the same.
+
+Confidence: medium

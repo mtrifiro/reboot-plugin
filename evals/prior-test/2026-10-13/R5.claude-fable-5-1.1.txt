@@ -1,0 +1,39 @@
+A `.rbtrc` file is a plain-text configuration file that the Reboot CLI (`rbt`) reads from the project root (it searches up the directory tree, and `rbt` also lets you point at one explicitly with `--config`). It is **not** YAML/JSON — it's essentially a list of command-line arguments, one line per entry, where each line is prefixed by the `rbt` subcommand it applies to. Key points:
+
+- Each line is `<subcommand> <arg-or-flag>`, e.g. `dev run --python` or `generate api/`.
+- Lines starting with `#` are comments; blank lines are ignored.
+- The subcommand prefix can be a nested command (`dev run`, `dev expunge`, `cloud up`) so flags only apply to that command.
+- Flags use the same spelling as on the command line (`--flag=value` or `--flag value`), and positional arguments (like the proto directory for `generate`) are given as plain tokens.
+- Anything you pass directly on the command line is merged with / overrides what's in `.rbtrc`.
+
+Example `.rbtrc`:
+
+```text
+# Where to find .proto files for code generation.
+generate api/
+
+# Generate Python code for the backend...
+generate --python=backend/api
+
+# ...and TypeScript/React code for the frontend.
+generate --react=web/src/api
+
+# Settings for `rbt dev run`.
+dev run --name=hello-world
+dev run --python
+dev run --application=backend/src/main.py
+dev run --watch=backend/src/**/*.py
+dev run --generate
+
+# Settings for `rbt dev expunge`.
+dev expunge --name=hello-world
+
+# Settings for `rbt serve run` (production-style serving).
+serve run --name=hello-world
+serve run --python
+serve run --application=backend/src/main.py
+```
+
+With this in place, running `rbt dev run` or `rbt generate` with no extra arguments picks up these settings automatically.
+
+Confidence: medium

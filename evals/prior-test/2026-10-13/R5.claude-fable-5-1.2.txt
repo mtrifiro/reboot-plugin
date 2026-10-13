@@ -1,0 +1,46 @@
+**Format**
+
+`.rbtrc` is a plain-text "rc" file read by the `rbt` CLI (Reboot's command-line tool). It lives at the root of your project and lets you pin default command-line flags so you don't have to retype them. The rules are simple:
+
+- One flag per line.
+- Each line is prefixed with the `rbt` (sub)command the flag applies to, e.g. `generate ...`, `dev run ...`, `serve run ...`, `dev expunge ...`.
+- A special `common` prefix applies a flag to every subcommand that accepts it.
+- Flags are written exactly as you would on the command line (`--flag=value` or `--flag value`); boolean flags are bare (`--python`).
+- Blank lines are ignored; `#` starts a comment.
+- Paths are relative to the directory containing the `.rbtrc`.
+- Flags given explicitly on the command line override the values in `.rbtrc`.
+
+**Example** (typical Python "hello" project)
+
+```
+# .rbtrc — default flags for the `rbt` CLI.
+
+# Flags shared by all subcommands.
+common --api=api/
+common --python
+
+# `rbt generate` — where to emit generated code.
+generate --output-directory=backend/api
+
+# `rbt dev run` — local development server.
+dev run --name=hello
+dev run --application=backend/src/main.py
+dev run --working-directory=.
+dev run --watch=backend/src/**/*.py
+dev run --watch=api/**/*.proto
+dev run --local-envoy
+dev run --local-envoy-port=9991
+dev run --secrets-directory=backend/secrets
+
+# `rbt dev expunge` — same application name so state can be wiped.
+dev expunge --name=hello
+
+# `rbt serve run` — production-style serving.
+serve run --name=hello
+serve run --application=backend/src/main.py
+serve run --working-directory=.
+```
+
+With this file in place, `rbt generate`, `rbt dev run`, and `rbt serve run` can be invoked with no extra arguments.
+
+Confidence: medium

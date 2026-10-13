@@ -1,0 +1,31 @@
+Key concepts I associate with "Reboot" in software development:
+
+**System / operational**
+- Restarting a machine, VM, container, or process to restore a clean state
+- Warm reboot vs. cold reboot (soft/hard restart)
+- Graceful shutdown and restart (draining connections, flushing buffers)
+- Reboot-required updates (kernel patches, OS updates, driver installs)
+- Watchdog timers that auto-reboot on hangs
+- "Turn it off and on again" as a troubleshooting first step
+- Boot sequence, bootloader, init systems (systemd, launchd), startup scripts
+- Reboot persistence: what survives (disk) vs. what's lost (memory, ephemeral state)
+- Crash recovery and resumption after unexpected reboot
+- Rolling restarts in clusters/orchestration (Kubernetes pod restarts, restart policies)
+- Hot reload / live reload as the alternative to full restart in dev tooling
+
+**Project / codebase**
+- Rewriting or restarting a project from scratch ("reboot the project")
+- Greenfield rewrite vs. incremental refactor (and the "never rewrite" cautionary tale)
+- Rebranding or relaunching a product/version (v2.0 reboot)
+- Resetting technical direction, architecture, or team after a failed effort
+
+**State / data**
+- Resetting application state to defaults
+- Clearing caches, sessions, or in-memory data
+- Idempotency and recoverability after restart
+- Checkpointing to make reboots cheap
+
+**Tools / names**
+- Reboot (the company/platform by Ian Lance Taylor's... actually the "Reboot" distributed systems framework for durable state in TypeScript/Python)
+- `shutdown -r`, `reboot` CLI commands on Unix/Linux
+- Restart loops / crash loops (CrashLoopBackOff)

@@ -1,0 +1,12 @@
+I don't have a reliable memory of a `.rbtrc` file format for Reboot, so I can't give you its exact syntax. The name suggests a dotfile of default CLI options, similar to `.bazelrc`, but I'd be guessing beyond that. Check the Reboot docs or run `rbt --help` in your project to confirm whether the CLI reads such a file and how it's structured.
+
+If it works like other `rc` files, a hypothetical example might look like this, but treat it as illustrative only:
+
+```
+# .rbtrc (hypothetical, unverified)
+dev --port=9991
+dev --python
+generate --language=python
+```
+
+Confidence: low

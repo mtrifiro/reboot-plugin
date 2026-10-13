@@ -1,0 +1,31 @@
+In Reboot, a state (declared as a protobuf message with `rbt.v1alpha1.state`) exposes a gRPC service whose methods are each annotated with one of four *kinds*. The kind determines what the method may do and what the runtime guarantees about it.
+
+**1. `reader`**
+- Gets read-only access to the current state of the instance; cannot mutate it (attempting to return/modify state is rejected).
+- Runs concurrently with other readers and doesn't block writers much — it observes a consistent snapshot of the state (never a partially-applied write).
+- Can call readers on other states, but cannot call writers/transactions or schedule tasks (it has no side effects to commit).
+- Can be invoked "reactively" (server-streaming): the client gets re-notified whenever the underlying state changes, which is the basis for Reboot's reactive frontends.
+- Doesn't require idempotency keys, since it has no effects.
+
+**2. `writer`**
+- Can read and modify the instance's state. The modified state is persisted atomically when the method returns successfully; if it raises/aborts, nothing is persisted.
+- Writers for a given state instance are serialized — one at a time, so you never have races on that instance (effectively single-writer, linearizable).
+- "Effects" (scheduling tasks, calling other writers) are recorded as part of the same atomic commit, so a task is enqueued exactly when (and only when) the state change commits — no lost or dangling side effects.
+- Within a writer you can call *readers* on other states; to atomically call another state's *writer* you need a transaction.
+- Callers must supply idempotency (alias / idempotency key, e.g. `.idempotently()`) so that retries are safe; the runtime dedupes repeated calls with the same key.
+- A writer can also be a `constructor`, meaning it creates the state instance.
+
+**3. `transaction`**
+- A writer that may additionally call writers (or transactions) on *other* state instances, of any type.
+- Guarantee: all participating state updates commit together or all abort (two-phase commit under the hood); participants are locked for the duration, so other writers see either the before or the after.
+- Otherwise same rules as writer (atomic commit, idempotency, can schedule tasks, can be a constructor).
+
+**4. `workflow`**
+- A long-running, durably executed method (think orchestration/saga): it can call readers, writers and transactions on any state, wait, loop, sleep, etc.
+- It does *not* mutate its own state directly — changes go through calls to the state's writers.
+- Guarantee: execution is durable and automatically retried on failure until it completes; completed steps are recorded so re-execution doesn't redo them. Helpers like `at_most_once` / `at_least_once` / `until` / `idempotently` let you control the exactly-once vs. at-least-once semantics of individual steps.
+- Typically launched as a scheduled task.
+
+**Cross-cutting:** any writer, transaction, or workflow can be `schedule()`d as a *task* (asynchronous, durable, retried, with the schedule itself committed atomically with the scheduling writer's state change); readers cannot be tasks. Methods can declare typed `errors`, and readers can be unary or streaming.
+
+Confidence: medium

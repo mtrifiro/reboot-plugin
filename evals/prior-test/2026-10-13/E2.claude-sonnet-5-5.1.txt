@@ -1,0 +1,106 @@
+```python
+# api/order.py (Reboot Pydantic API)
+from reboot.api import API, Field, Methods, Model, Type, Writer, Workflow
+
+class OrderState(Model):
+    customer_email: str = Field(tag=1)
+    amount_cents: int = Field(tag=2)
+    payment_method_id: str = Field(tag=3)
+    shipped: bool = Field(tag=4, default=False)
+
+class PlaceRequest(Model):
+    customer_email: str = Field(tag=1)
+    amount_cents: int = Field(tag=2)
+    payment_method_id: str = Field(tag=3)
+
+class Empty(Model):
+    pass
+
+api = API(
+    Order=Type(
+        state=OrderState,
+        methods=Methods(
+            place=Writer(request=PlaceRequest, response=Empty, factory=True),
+            mark_shipped=Writer(request=Empty, response=Empty),
+            fulfill=Workflow(request=Empty, response=Empty),
+        ),
+    ),
+)
+```
+
+```python
+# servicers/order.py
+import stripe
+from api.order.v1.order_rbt import Order  # generated code
+from reboot.aio.contexts import WorkflowContext, WriterContext
+from reboot.aio.workflows import at_least_once, until
+
+class OrderServicer(Order.Servicer):
+
+    async def place(self, context: WriterContext, state: Order.State,
+                    request: Order.PlaceRequest) -> Order.Empty:
+        state.customer_email = request.customer_email
+        state.amount_cents = request.amount_cents
+        state.payment_method_id = request.payment_method_id
+        state.shipped = False
+        # Kick off the durable workflow once this write commits.
+        await self.ref().schedule().fulfill(context)
+        return Order.Empty()
+
+    async def mark_shipped(self, context: WriterContext, state: Order.State,
+                           request: Order.Empty) -> Order.Empty:
+        # Called by the warehouse.
+        state.shipped = True
+        return Order.Empty()
+
+    async def fulfill(self, context: WorkflowContext,
+                      request: Order.Empty) -> Order.Empty:
+        order = await self.ref().read(context)
+        order_id = context.state_id
+
+        # 1. Charge exactly once: the workflow step is durable and the
+        #    Stripe idempotency key (stable per order) makes any retry a no-op.
+        async def charge():
+            await stripe.PaymentIntent.create_async(
+                amount=order.amount_cents,
+                currency="usd",
+                payment_method=order.payment_method_id,
+                confirm=True,
+                automatic_payment_methods={
+                    "enabled": True,
+                    "allow_redirects": "never",
+                },
+                idempotency_key=f"order-charge-{order_id}",
+            )
+
+        await at_least_once("charge_card", context, charge)
+
+        # 2. Wait durably until the warehouse sets shipped = True.
+        async def is_shipped():
+            current = await Order.ref(order_id).read(context)
+            return current.shipped  # truthy ends the wait
+
+        await until("order_shipped", context, is_shipped)
+
+        # 3. Notify the customer.
+        async def notify():
+            await send_email(
+                to=order.customer_email,
+                subject="Your order has shipped",
+                body=f"Order {order_id} is on its way!",
+            )
+
+        await at_least_once("send_shipped_email", context, notify)
+        return Order.Empty()
+
+async def send_email(to: str, subject: str, body: str) -> None:
+    ...  # plug in your email provider
+```
+
+Notes:
+- The charge uses `at_least_once` plus a Stripe idempotency key, so it is effectively exactly once even if the workflow replays after a crash. `at_most_once` would instead fail permanently if a crash hit mid-charge.
+- The email step can rarely send twice after a crash. Use `at_most_once` instead if you prefer a missed email to a duplicate.
+- Set `stripe.api_key` at startup, ideally from a secret.
+- I wrote this from memory of the Reboot API. Check the import paths, the `until` and `at_least_once` signatures, and the generated module names against your installed version.
+
+Confidence: medium

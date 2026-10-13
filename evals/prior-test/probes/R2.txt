@@ -1,0 +1,1 @@
+In Reboot (reboot.dev), what kinds of methods can a state type define, and what does each kind guarantee or allow? Answer from memory, and end with one line: "Confidence: high|medium|low".

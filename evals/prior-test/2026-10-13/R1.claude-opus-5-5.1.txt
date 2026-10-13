@@ -1,0 +1,46 @@
+# Reboot (reboot.dev)
+
+Reboot is a framework for building **stateful, reactive, durable backends** in Python and TypeScript. It comes from the team behind Apache Mesos, including Benjamin Hindman, and was previously called "Resemble." Its main idea is that you shouldn't have to glue together an API server, a database, a cache, a queue, and a workflow engine. Instead, you write your backend as **typed, durable state plus methods**, and Reboot handles persistence, replication, transactions, retries, and reactivity.
+
+## Programming model
+
+**1. Define your API and state schema.**
+You declare *state types* and their methods in a schema. Historically this was Protocol Buffers with Reboot-specific annotations. Newer versions also support Python- and TypeScript-native schemas, roughly Pydantic- and Zod-style. Reboot then **generates code**: server-side base classes, typed client stubs, and React hooks for the frontend.
+
+**2. Implement servicers.**
+For each state type you write a class that implements its methods. Each method receives a **context** and the **state of one specific instance**.
+
+**3. State instances, addressed by ID.**
+A state type is like a class, and each instance is identified by an ID, much like an actor or a durable object. Examples are `Account("alice")` or `ChatRoom("general")`. Each instance's state is:
+- automatically persisted,
+- colocated with the code that operates on it,
+- sharded and replicated across the cluster.
+
+You never write SQL or manage a database directly.
+
+## Method kinds
+
+Each method is declared with a kind that determines its guarantees:
+
+| Kind | What it does |
+|---|---|
+| **Reader** | Read-only access to state. Can run concurrently and can be reactive. |
+| **Writer** | Atomically mutates a single instance's state. |
+| **Transaction** | Atomically reads and writes across *multiple* state instances, with ACID semantics, by calling other readers and writers inside it. If anything fails, everything rolls back. |
+| **Workflow** | Long-running, durable logic that survives crashes and restarts. It can loop, wait, schedule, and call other methods. |
+
+## Key concepts
+
+- **Durability by default.** State changes are persisted before acknowledgement, and workflows resume after failures.
+- **Idempotency.** Calls can be made idempotent, e.g. `.idempotently()` with a key. This makes retries safe, which matters inside workflows and for at-least-once delivery.
+- **Scheduling.** Methods can be scheduled to run later, e.g. `.schedule(when=...)`. This is useful for timers, reminders, and periodic tasks without a separate cron or queue.
+- **Reactivity end to end.** Readers can be subscribed to. The generated React hooks, such as `useAccount(id).useBalance()`, update the UI automatically whenever the underlying state changes. No manual websockets or cache invalidation are needed.
+- **Generated, typed clients.** You call other state instances like local objects, e.g. `Account.ref("bob").deposit(context, amount=10)`. Reboot handles routing to the right shard.
+- **Infrastructure.** Under the hood it uses gRPC/HTTP with Envoy for routing. It runs locally with a CLI (`rbt dev run`, `rbt generate`) and deploys to Kubernetes or Reboot Cloud.
+- **AI and agents.** More recently Reboot has positioned itself for durable AI agents and MCP servers. Long-lived agent sessions map naturally onto durable state instances and workflows.
+
+## Mental model
+
+Think of each state instance as a **durable, transactional actor with a typed API**. Transactions can span actors, workflows act as crash-proof orchestration, and the frontend subscribes reactively to backend reads. It is "the database is the backend" taken to its logical conclusion.
+
+Confidence: medium

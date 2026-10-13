@@ -1,0 +1,17 @@
+From memory, so treat the details as approximate. These are the building blocks for making side effects safe in a Reboot workflow method. A workflow can be re-executed after a crash or restart, so each operation needs a rule for what happens on replay.
+
+**Idempotency scoping.** These are called on the workflow context, e.g. `context.per_workflow("alias")`. They return a context that controls how long an operation's memoized result lives.
+
+- **`.per_workflow(alias)`**: The operation runs once per workflow instance. On re-execution, even in a later loop iteration, the stored result for that alias is reused. `alias` identifies the operation.
+- **`.per_iteration(alias)`**: The operation runs once per iteration of the workflow's loop (`async for ... in context.loop(...)`). Each iteration gets a fresh memoization, but replays within the same iteration reuse the result.
+- **`.always()`**: No memoization. The operation runs every time the code is reached, including on replay.
+
+**Operations.** These take a name or alias, a context, and a callable.
+
+- **`at_least_once(alias, context, callable, ...)`**: Runs the callable and memoizes its result once it completes. If the workflow crashes before the result is recorded, the callable runs again on retry, so it must be idempotent or tolerate duplicates. Use it for things that are safe to repeat.
+- **`at_most_once(alias, context, callable, ...)`**: Runs the callable and guarantees it is never executed twice. If a crash happens mid-execution, the retry does not re-run it and typically raises an error instead, so you can decide how to handle the ambiguity. Use it for non-idempotent effects such as charging a card or sending an email.
+- **`until(alias, context, callable)`**: Re-evaluates a condition callable until it returns a truthy or non-`False` value, then memoizes and returns that value. It is how a workflow waits for some state to become true, for example by reading another state. It is a durable wait, not a busy loop.
+
+I'm unsure about exact signatures, such as parameter order, the `type=` argument for result types, and how `until` re-evaluates (polling vs. reactive). Check the docs for those.
+
+Confidence: medium

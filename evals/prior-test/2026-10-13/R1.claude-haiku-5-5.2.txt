@@ -1,0 +1,12 @@
+I know little about Reboot specifically, and I can't check its docs from here, so treat this as a low-reliability sketch rather than a reference.
+
+As I understand it, Reboot is a backend framework for Python and TypeScript built around durable, stateful objects, similar in spirit to virtual actors. The rough programming model:
+
+- **Typed objects with persistent state.** Each object type has a schema, which I believe is defined with Protocol Buffers, and an instance is addressed by an ID. The framework persists its state automatically.
+- **Methods with declared semantics.** I think methods are categorized by what they may do, such as reading state, writing state, or running transactional or multi-step workflow logic. I'm unsure of the exact names and rules.
+- **Durable execution.** Long-running or multi-step logic is meant to survive crashes and retries, so work resumes instead of being lost.
+- **Code generation and tooling.** A CLI (`rbt`, I believe) generates client and server stubs from the schemas and runs a local dev environment.
+
+I'm least certain about the specific concept names, the method taxonomy, and how the Python and TypeScript APIs look in practice. The official docs at reboot.dev would be the authoritative source.
+
+Confidence: low

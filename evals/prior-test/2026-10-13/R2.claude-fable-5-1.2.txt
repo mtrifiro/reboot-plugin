@@ -1,0 +1,31 @@
+In Reboot, a state type is a protobuf message annotated as a `state`, and each RPC on its service is annotated with a *method kind* (`option (rbt.v1alpha1.method) = { reader: {} }`, etc.). The kind determines what the method can touch and what consistency/execution guarantees it gets:
+
+**1. `reader`**
+- Receives a `ReaderContext`; gets a read-only view of the state (modifying the state object has no effect / isn't allowed).
+- Multiple readers on the same state can run concurrently, and they see a consistent snapshot of the state (not a partially-applied write).
+- Can call readers on other states, but cannot call writers/transactions (nothing that mutates).
+- Cheap and side-effect free, intended to be safe to call from anywhere (UI, other states, workflows).
+
+**2. `writer`**
+- Receives a `WriterContext`; may mutate the state object, and the mutation is persisted atomically when the method returns successfully (if it raises/fails, no change is persisted).
+- Writers on a single state instance are serialized — only one writer runs at a time per state, so there are no races on that state's data.
+- Can call readers on other states and can *schedule* tasks (which run after the write commits), but cannot call writers/transactions on *other* states — cross-state mutation requires a transaction.
+- Writers can be made idempotent via idempotency keys (`idempotency_key` / `Idempotency`) so retries don't double-apply.
+- A writer (or transaction) can be flagged as a `constructor`, meaning it's allowed/required to be the call that creates the state instance.
+
+**3. `transaction`**
+- Receives a `TransactionContext`; can mutate its own state *and* call writers/transactions on other state instances (possibly different state types).
+- All participating mutations commit or abort atomically (Reboot uses a distributed two-phase-commit style protocol), giving ACID-ish all-or-nothing semantics across multiple states.
+- Heavier-weight than a writer; readers used inside see transaction-consistent data; nested transactions join the enclosing one.
+
+**4. `workflow`**
+- Receives a `WorkflowContext`; intended for long-running, multi-step, possibly indefinitely-looping logic ("durable execution"). A workflow runs as a task and is automatically retried on failure until it completes.
+- It does *not* mutate its own state directly; instead it reads via readers and mutates by calling writers/transactions. To make retries safe, the body is written with helpers like `at_least_once(...)`, `at_most_once(...)`, and `until(...)`, which memoize/idempotently record step results so re-executions skip already-completed steps.
+- Can sleep/wait, loop forever (e.g., poll or react), and spawn or await other tasks.
+
+**Cross-cutting bits**
+- Any method kind can declare `errors` (typed, declared failure messages) that callers can match on.
+- Writers, transactions, and workflows can be invoked immediately (`.call`/direct), or as a scheduled **task** (`.schedule()` / `.spawn()`), optionally with a delay; the task runs durably and can be awaited later via its task id.
+- Readers are callable from browser/React clients (with live/reactive updates); writers/transactions are callable but go through the serialized/atomic path.
+
+Confidence: medium

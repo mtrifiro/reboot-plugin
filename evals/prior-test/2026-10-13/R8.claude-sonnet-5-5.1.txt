@@ -1,0 +1,52 @@
+## Short answer
+
+Reboot generates typed React bindings from your state/API definition (protobuf, or the newer Pydantic/Zod schemas). The frontend gets a hook per state type:
+
+- **Reads** are generated `useXxx()` hooks that **subscribe** to the backend. They are live and reactive.
+- **Writes** (writers and transactions) are generated async methods on the same handle. After one commits, every subscribed reader re-renders with the new value.
+
+## Are reads reactive?
+
+Yes. A reader hook opens a streaming subscription to that state instance. When any writer changes the state, whether from this browser, another client, or the backend itself, the server pushes the new result and the component re-renders. There's no manual refetching, polling, or cache invalidation. This is also why Reboot readers need to be side-effect-free: the server may re-run them whenever the state changes.
+
+## Example
+
+Assume a `Counter` state with a `Get` reader and an `Increment` writer.
+
+```tsx
+import { RebootClientProvider } from "@reboot-dev/reboot-react";
+import { useCounter } from "./api/counter/v1/counter_rbt_react";
+
+function App() {
+  return (
+    <RebootClientProvider url="http://localhost:9991">
+      <CounterView />
+    </RebootClientProvider>
+  );
+}
+
+function CounterView() {
+  const counter = useCounter({ id: "my-counter" });
+
+  // Reactive read: re-renders whenever the backend state changes.
+  const { response, isLoading } = counter.useGet();
+
+  if (isLoading) return <p>Loading…</p>;
+
+  return (
+    <button onClick={() => counter.increment({ amount: 1 })}>
+      Count: {response?.value}
+    </button>
+  );
+}
+```
+
+Clicking calls the `Increment` writer on the backend. When it commits, `useGet()` pushes the new value and the button text updates. Any other browser tab viewing `my-counter` updates too.
+
+## Caveats
+
+- Hook and method names are derived from your schema, such as `useCounter`, `useGet`, and `increment`. The exact casing and return shape (`response`, `isLoading`, and so on) may differ by Reboot version.
+- The generated module path depends on your config. Here it's `./api/<pkg>/<version>/<name>_rbt_react`.
+- Newer versions may offer extras such as optimistic updates (pending mutations). I'm less sure of those details.
+
+Confidence: medium

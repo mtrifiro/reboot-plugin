@@ -67,6 +67,13 @@ class ApiLintTest(unittest.TestCase):
                                capture_output=True, text=True)
             self.assertEqual(r.returncode, 0, f"{template}: {r.stdout}{r.stderr}")
 
+    def test_a_proto_file(self) -> None:
+        self.lint(CLEAN)
+        (self.api / "hotel" / "v1" / "hotel.proto").write_text('syntax = "proto3";\n')
+        r = subprocess.run([sys.executable, str(LINT), str(self.api)], capture_output=True, text=True)
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("hotel.proto:1: a .proto API", r.stdout)
+
     def test_a_reserved_method_name(self) -> None:
         r = self.lint(CLEAN.replace("book=Writer", "read=Writer"))
         self.assertEqual(r.returncode, 1)

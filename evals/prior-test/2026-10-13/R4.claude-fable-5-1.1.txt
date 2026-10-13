@@ -1,0 +1,15 @@
+In Reboot's Python workflow API (methods declared as `kind: workflow`), the core idea is that workflow code may be re-executed (on retry, restart, or when a reactive `until` re-runs), so every side effect needs an explicit "how many times may this happen?" designation. Here's what each does:
+
+**Idempotency scoping on stub calls** (`SomeState.ref(id).<scope>(...).method(context, ...)`):
+
+- **`.per_workflow(alias)`** — The call is idempotent for the whole workflow execution. The alias (plus the workflow's identity) forms the idempotency key, so no matter how many times the workflow body is replayed, that call is performed exactly once and later replays reuse the recorded outcome.
+- **`.per_iteration(alias)`** — Same idea, but the idempotency key is additionally scoped to the current iteration of a workflow loop (`until`/looping constructs). So the call happens once *per iteration*, and replays within the same iteration dedupe, but a new iteration performs it again.
+- **`.always()`** — Opt out of idempotency/memoization: the call is made every time the code runs, including on replays. Appropriate for reads or for writes you've made idempotent yourself; it's the explicit "yes, I know this will repeat" switch.
+
+**Helpers for arbitrary (non-Reboot) side effects** (`from reboot.aio.workflows import ...`):
+
+- **`at_least_once(alias, context, callable, type=...)`** — Runs the callable and durably records its result under the alias. If the workflow is retried *before* the result is recorded, the callable runs again (so it may execute more than once); once recorded, replays return the memoized value. Use for retry-safe effects.
+- **`at_most_once(alias, context, callable, type=...)`** — Records that it is *about* to run the callable before running it, then stores the result. If the workflow is retried after it started but before completion, Reboot refuses to run it again and raises (e.g. an "at most once failed before completing" error) so you can handle it. Use for non-retryable effects like charging a card.
+- **`until(alias, context, condition)`** — Reactive wait: evaluates the condition callable (which can read state via `context`), and if it's falsy, suspends the workflow and re-runs it whenever any state it read changes, until it returns truthy (returning that value). Each evaluation counts as an "iteration," which is what `.per_iteration` keys against.
+
+Confidence: medium

@@ -1,0 +1,42 @@
+From memory, here's what I recall about Reboot's `.rbtrc`:
+
+**Format**
+
+- A plain text file at the project root (the directory where you run `rbt`).
+- Each line is a command-line flag (or argument) that `rbt` would otherwise take on the command line.
+- Lines are grouped by **subcommand**, with the form `<subcommand> --flag=value`, e.g. `dev run --python`.
+- A bare `<subcommand>` prefix like `dev` applies to all `dev ...` subcommands, and `dev run` applies only to `rbt dev run`.
+- A line starting with `#` is a comment.
+- Each line holds one flag. The same prefix can appear on many lines, and the flags accumulate.
+- Besides subcommand prefixes, there can be a `...` shared prefix applying to all commands (e.g. `--state-directory`), but I'm less sure of the exact syntax for this.
+- Named configs: a prefix like `dev:name` or `run:name` appears to be selectable with `--config=name`. I'm moderately unsure about this part.
+
+**Example**
+
+```
+# Find the .proto files under api/ (and the Reboot protos).
+protoc --include=api/
+
+# Tell `rbt protoc` where to generate code.
+protoc --python=backend/api
+
+# Run the app in `rbt dev run`.
+dev run --python
+dev run --application=backend/src/main.py
+
+# Persist state across restarts in dev.
+dev run --name=my-app
+
+# Files to watch for changes.
+dev run --watch=backend/src/**/*.py
+
+# Settings for `rbt serve`/`rbt cloud` (non-dev).
+serve run --python
+serve run --application=backend/src/main.py
+```
+
+Notes:
+- Exact flag names (`--python`, `--application`, `--name`, `--watch`, `--include`) are what I remember, but they vary by version, so check `rbt <subcommand> --help` against your installed version.
+- Running `rbt dev run` with no extra args picks up everything from the `.rbtrc`, which is the point of the file.
+
+Confidence: medium

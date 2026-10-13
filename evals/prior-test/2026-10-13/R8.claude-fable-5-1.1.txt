@@ -1,0 +1,59 @@
+**Short version**
+
+- You define your backend state and its methods in protobuf, marking each RPC as a `reader`, `writer`, `transaction`, or `workflow` (`rbt.v1alpha1.method` option).
+- `rbt generate`/`rbt protoc` emits a React package (`*_rbt_react.ts`) with one hook per state type, e.g. `useHello(...)`.
+- Wrap your app in `RebootClientProvider` (from `@reboot-dev/reboot-react`) with the backend URL.
+- **Reads** (reader methods) become nested hooks like `useMessages()`. These are **live/reactive**: the client opens a streaming subscription and the server re-runs the reader whenever the underlying state changes, so the component re-renders automatically with fresh `response`. You get `response`, `isLoading`, `error`, `aborted`.
+- **Writes** (writer/transaction methods) become async functions like `send({...})` that return a promise with `{ response, aborted }`; the client also tracks in-flight mutations so you can show pending state (and reactive readers pick up the new state once committed). Writers can also be called with an `idempotencyKey`.
+
+**Example**
+
+```proto
+// hello.proto
+message Hello { repeated string messages = 1; }
+
+service HelloMethods {
+  rpc Messages(MessagesRequest) returns (MessagesResponse) {
+    option (rbt.v1alpha1.method).reader = {};
+  }
+  rpc Send(SendRequest) returns (SendResponse) {
+    option (rbt.v1alpha1.method).writer = {};
+  }
+}
+```
+
+```tsx
+// index.tsx
+import { RebootClientProvider } from "@reboot-dev/reboot-react";
+
+root.render(
+  <RebootClientProvider url="http://localhost:9991">
+    <App />
+  </RebootClientProvider>
+);
+```
+
+```tsx
+// App.tsx
+import { useHello } from "./api/hello/v1/hello_rbt_react";
+
+function App() {
+  const { useMessages, send } = useHello({ id: "greeter" });
+  const { response, isLoading } = useMessages(); // reactive read
+
+  if (isLoading) return <p>Loading…</p>;
+
+  return (
+    <>
+      <ul>{response?.messages.map((m, i) => <li key={i}>{m}</li>)}</ul>
+      <button onClick={() => send({ message: "Hello from React" })}>
+        Send
+      </button>
+    </>
+  );
+}
+```
+
+After `send(...)` commits on the backend, `useMessages()` receives the updated state over its stream and the list re-renders with no manual refetch.
+
+Confidence: medium

@@ -1,0 +1,44 @@
+# Workflow methods in Reboot and how they survive crashes
+
+## What a workflow method is
+
+Reboot methods on a state type come in a few kinds:
+
+- **reader**: read-only access to the state.
+- **writer**: atomic mutation of a single state.
+- **transaction**: atomic across multiple states.
+- **workflow**: long-running, asynchronous, multi-step logic.
+
+A workflow does not get a locked snapshot of the state. Instead it reads and writes state through the `context`, using inline reader and writer calls. It can call other Reboot methods and external services. Workflows can run for a long time, including control loops via `context.loop(...)`. They are usually started in the background, for example with `.schedule()` or `.spawn()`, rather than awaited inline.
+
+## What happens on a crash
+
+Workflows are **durable**. If the process crashes or the workflow raises a retryable error partway through, Reboot re-executes the workflow **from the beginning**. This is replay-style execution, not resuming at the exact line where it stopped.
+
+That only works if each step is safe to repeat:
+
+- **Calls to other Reboot methods** are made idempotent, either automatically or via `.idempotently("alias")`. On replay, writes that already committed are not applied twice; their recorded results are returned instead.
+- **Arbitrary code with side effects** (network calls, emails, payments) must be wrapped in Reboot's memoization helpers. Otherwise it will run again on every retry.
+
+## Making an external call like a Stripe charge safe
+
+Use the memoization helpers and give each one a stable alias:
+
+- **`at_least_once("alias", context, fn)`**
+  - Retries `fn` until it succeeds, then durably records the result.
+  - On later replays the stored result is returned and `fn` is not called again.
+  - Because a crash can happen after Stripe charged but before Reboot recorded success, `fn` may run more than once. It therefore **must be idempotent**.
+- **`at_most_once("alias", context, fn)`**
+  - Guarantees `fn` is never re-run.
+  - If a previous attempt started but didn't record completion, the replay raises an error, I believe `AtMostOnceFailedBeforeCompleting`, instead of retrying.
+  - Use this only when the external API cannot be made idempotent and you'd rather fail and reconcile manually than risk a double effect.
+
+For Stripe, the right pattern is **`at_least_once` plus a Stripe idempotency key**:
+
+1. Derive the key deterministically so it is identical on every replay. Base it on the workflow or state ID and the step alias. Reboot's context offers a helper for generating idempotency keys, though I'm not certain of the exact name. Never use a fresh random UUID per attempt.
+2. Pass that key as Stripe's `Idempotency-Key` on `PaymentIntent.create` or the charge call.
+3. Persist the returned charge ID into state via a writer. The rest of the workflow then uses the memoized result.
+
+A retry then hits Stripe with the same key and gets back the original charge instead of creating a second one. Reboot's memoization ensures that once the step has completed, it isn't repeated at all.
+
+Confidence: medium

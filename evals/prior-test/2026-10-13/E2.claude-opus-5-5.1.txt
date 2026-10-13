@@ -1,0 +1,92 @@
+```python
+# order_servicer.py
+import stripe
+from reboot.aio.contexts import WorkflowContext, WriterContext
+from reboot.aio.workflows import at_least_once, until
+
+from order.v1.order_rbt import (
+    Order, PlaceRequest, PlaceResponse,
+    MarkShippedRequest, MarkShippedResponse,
+    FulfillRequest, FulfillResponse,
+)
+from my_app.email import send_email  # your email client
+
+
+class OrderServicer(Order.Servicer):
+
+    # Writer: records the order and kicks off the durable workflow.
+    async def place(
+        self, context: WriterContext, state: Order.State, request: PlaceRequest
+    ) -> PlaceResponse:
+        state.customer_email = request.customer_email
+        state.amount_cents = request.amount_cents
+        state.payment_method_id = request.payment_method_id
+        state.shipped = False
+        # Scheduled atomically with this write; runs (and resumes) durably.
+        await self.ref().schedule().fulfill(context)
+        return PlaceResponse()
+
+    # Writer called by the warehouse.
+    async def mark_shipped(
+        self, context: WriterContext, state: Order.State, request: MarkShippedRequest
+    ) -> MarkShippedResponse:
+        state.shipped = True
+        state.tracking_number = request.tracking_number
+        return MarkShippedResponse()
+
+    # Workflow: may be re-executed after crashes; side effects are guarded.
+    async def fulfill(
+        self, context: WorkflowContext, request: FulfillRequest
+    ) -> FulfillResponse:
+        order = await self.ref().read(context)
+
+        # Exactly once = at_least_once retries + Stripe idempotency key
+        # (Stripe dedupes repeats; result memoized by Reboot once it succeeds).
+        async def charge() -> str:
+            intent = await stripe.PaymentIntent.create_async(
+                amount=order.amount_cents,
+                currency="usd",
+                payment_method=order.payment_method_id,
+                confirm=True,
+                off_session=True,
+                idempotency_key=f"order-{context.state_id}-charge",
+            )
+            return intent.id
+
+        payment_intent_id = await at_least_once("charge", context, charge, type=str)
+
+        # Reactively waits; re-evaluated whenever Order state changes.
+        async def shipped() -> bool:
+            return (await self.ref().read(context)).shipped
+
+        await until("shipped", context, shipped)
+
+        # Memoized after success; pass an idempotency key if your provider supports it.
+        async def email() -> None:
+            latest = await self.ref().read(context)
+            await send_email(
+                to=latest.customer_email,
+                subject="Your order has shipped",
+                body=f"Tracking: {latest.tracking_number}",
+                idempotency_key=f"order-{context.state_id}-shipped-email",
+            )
+
+        await at_least_once("email", context, email)
+
+        return FulfillResponse(payment_intent_id=payment_intent_id)
+```
+
+```proto
+// order/v1/order.proto (relevant parts)
+service OrderMethods {
+  rpc Place(PlaceRequest) returns (PlaceResponse) { option (rbt.v1alpha1.method).writer = {}; }
+  rpc MarkShipped(MarkShippedRequest) returns (MarkShippedResponse) { option (rbt.v1alpha1.method).writer = {}; }
+  rpc Fulfill(FulfillRequest) returns (FulfillResponse) { option (rbt.v1alpha1.method).workflow = {}; }
+}
+```
+
+Notes:
+- Stripe idempotency keys expire after about 24 hours. If a retry could happen later than that, first check for an existing PaymentIntent, for example by searching on metadata.
+- Exact Reboot signatures have shifted between releases. Check these against your installed version: how the workflow reads state, `self.ref()` vs. `Order.ref(...)`, `schedule()`, and the `until` and `at_least_once` signatures.
+
+Confidence: medium

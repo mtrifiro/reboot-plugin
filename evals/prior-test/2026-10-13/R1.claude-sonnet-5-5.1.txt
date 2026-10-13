@@ -1,0 +1,43 @@
+# Reboot (reboot.dev)
+
+Reboot is an open-source framework for building backends in Python and TypeScript. It aims to make them durable, scalable, and reactive without you assembling a database, queue, cache, and workflow engine yourself. This is from memory, and the API details have changed across versions, so check the docs for exact syntax.
+
+## Core programming model
+
+Reboot is close to a **virtual actor** model (like Orleans or Dapr actors), with strong consistency guarantees added.
+
+- **State types:** You declare a type, such as `Account`, `User`, or `Chat`, with a typed data schema. Early versions used Protobuf. Newer versions let you define schemas in Pydantic (Python) or Zod (TypeScript).
+- **Instances:** Each instance has an ID and is addressed like an object, for example `Account.ref("alice")`. Instances are created on demand, persisted durably, and sharded across machines. Each instance handles its calls serially, so you rarely need locks.
+- **Servicers:** You implement the methods of each type in a servicer class. Reboot generates the client and server scaffolding.
+
+## Method kinds
+
+Each method has a kind that determines its guarantees and its context object.
+
+- **Reader:** Read-only access to state. Readers can be cached and **subscribed to**.
+- **Writer:** Atomically updates one instance's state, and can also schedule tasks or call other methods.
+- **Transaction:** Atomically reads and writes across multiple state instances, with automatic rollback on failure or error.
+- **Workflow:** Long-running, durable control flow that survives crashes and restarts. It uses constructs like `at_least_once`, `at_most_once`, and `until` to make side effects safe and replayable.
+
+## Key concepts
+
+- **Reactivity:** Because readers are declared, clients, including generated React hooks, can subscribe to them and get live updates when the underlying state changes. This removes most hand-written polling, cache invalidation, and websocket code.
+- **Durable tasks:** You can schedule a method to run later or in the background (`.schedule()`), and it survives restarts.
+- **Idempotency:** Mutating calls are made idempotent, either through explicit idempotency keys or automatically within a workflow or transaction. Retries are therefore safe.
+- **Typed errors:** Methods declare the errors they can return, and these appear in generated client types.
+- **Libraries:** Reusable building blocks, such as a standard library with things like ordered maps, pub/sub, and presence, are implemented as Reboot state types themselves.
+- **Application:** You assemble servicers and libraries into an `Application(...)` and run it.
+
+## Tooling and deployment
+
+- **`rbt` CLI:** Code generation (`rbt generate`), dev mode with hot reload (`rbt dev run`), and config via `.rbtrc`.
+- **Local development:** The same programming model works on a laptop, with local persistent storage.
+- **Production:** Runs on a Kubernetes-based setup or the managed Reboot Cloud.
+- **Clients:** Generated backend, web (React), and external clients all call the same typed API.
+- **AI uses:** More recent material emphasizes agents and tool servers (such as MCP) built on the durable-state-plus-workflow model.
+
+## Why it exists
+
+The pitch is that the hard parts of backends, such as consistency, retries, failure recovery, and scaling out, come from the programming model. You write ordinary-looking code against typed objects instead of coordinating many separate infrastructure pieces.
+
+Confidence: medium

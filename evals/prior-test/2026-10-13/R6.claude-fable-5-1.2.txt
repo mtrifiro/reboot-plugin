@@ -1,0 +1,29 @@
+**Reboot (`rbt` CLI) — from memory**
+
+**`rbt generate`**
+- Runs Reboot's protoc-based code generation over your `.proto` API definitions.
+- Produces the normal protobuf outputs (`*_pb2.py`, `*_pb2_grpc.py`) plus Reboot-specific code (`*_rbt.py`, previously `*_rsm.py` in the Resemble days) containing the servicer base classes, state/`Context` helpers, and typed clients (`WeakReference`/`.ref()`-style handles). With `--react`/`--nodejs` it also emits TypeScript/React hooks and clients.
+- Typical invocation (usually driven from `.rbtrc`): `rbt generate --python=backend/api --react=web/src/api api/`.
+
+**`rbt dev run`**
+- Starts your application locally in development mode: it spins up a local Reboot runtime (consensus/sidecar, state store under a `.rbt/` state directory), imports your `main.py`, and serves your servicers.
+- Watches source files (`--watch=...`) and hot-restarts on change; in recent versions it also (re)runs `rbt generate` automatically before/while running, so editing a `.proto` regenerates code without a separate step.
+- Common flags: `--name=<app>`, `--python`, `--application=backend/src/main.py`, `--local-envoy` / `--local-envoy-port=8080` (so a browser/React frontend can hit the backend), `--state-directory`. Companion commands: `rbt dev expunge` (wipe local state), `rbt serve` (production), `rbt cloud ...` (deploy).
+
+**Project layout (hello-world style)**
+```
+.rbtrc                      # CLI config: default flags per subcommand (generate, dev run, ...)
+api/
+  hello/v1/hello.proto      # API/state definitions (messages + Reboot-annotated services)
+backend/
+  api/                      # generated Python output of `rbt generate` (hello_pb2.py, hello_rbt.py, ...)
+  src/
+    main.py                 # creates Application(servicers=[...]) and runs it
+    hello_servicer.py       # your servicer implementations
+web/
+  src/api/                  # generated React/TS client (if --react is used)
+pyproject.toml / requirements.txt
+```
+The `.rbtrc` file lets you write flags once per subcommand, e.g. `generate --python=backend/api`, `generate api/`, `dev run --application=backend/src/main.py`, `dev run --watch=backend/src/**/*.py`, so you can just run `rbt generate` and `rbt dev run` with no arguments.
+
+Confidence: medium

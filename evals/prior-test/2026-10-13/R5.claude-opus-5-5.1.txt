@@ -1,0 +1,52 @@
+# Reboot `.rbtrc` format
+
+An `.rbtrc` file sets default command-line flags for the `rbt` CLI. It works much like a `.bazelrc` file. You normally place it at the root of your project, and `rbt` finds it by searching upward from the current directory.
+
+## Format rules
+
+- **One entry per line:** `<subcommand> <flags/args>`. The subcommand can have several words, such as `dev run`, `generate` (older releases used `protoc`), `serve run`, or `cloud up`.
+- **Lines add up:** when you run that subcommand, `rbt` combines the flags from every matching line, in order, as if you had typed them all on the command line.
+- **Comments:** lines that start with `#` are ignored.
+- **Named configs:** you can write `subcommand:configname`, for example `dev run:fullstack ...`. Those flags apply only when you pass `--config=configname`.
+- **Command-line flags still apply:** flags you type explicitly are added alongside the `.rbtrc` defaults, and for single-value flags they usually override them.
+
+## Example
+
+```
+# Find '.proto' files in 'api/'.
+generate api/
+
+# Tell `rbt generate` where to put generated Python code.
+generate --python=backend/api/
+
+# Also generate a React/TypeScript client.
+generate --react=web/src/api
+
+# Tell `rbt dev run` this is a Python application.
+dev run --python
+
+# Watch source files and restart when they change.
+dev run --watch=backend/**/*.py
+
+# Name the application so state persists across restarts.
+dev run --name=hello
+
+# The application entry point.
+dev run --application=backend/src/main.py
+
+# Optional named config: `rbt dev run --config=fullstack`
+dev run:fullstack --terminal-ui
+
+# Production-style serving.
+serve run --application=backend/src/main.py
+```
+
+With this file in place, running `rbt dev run` behaves like:
+
+```
+rbt dev run --python --watch=backend/**/*.py --name=hello --application=backend/src/main.py
+```
+
+Flag names have changed between Reboot versions, for example `protoc` became `generate`, and options like `--python` vs. `--nodejs`. Check `rbt <subcommand> --help` for your installed version.
+
+Confidence: medium

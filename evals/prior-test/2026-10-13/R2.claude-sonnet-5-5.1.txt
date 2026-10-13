@@ -1,0 +1,34 @@
+A Reboot state type can define four kinds of methods, plus an optional constructor form. This is from memory, so details such as option names may differ in the current version.
+
+**1. Reader**
+- It gets read-only access to the state, and any attempt to mutate state is disallowed.
+- Multiple readers on the same state instance can run concurrently.
+- It sees a consistent view of the state.
+- It is the cheapest kind, and it can be scaled and cached more freely.
+
+**2. Writer**
+- It can read and modify the state of the instance it runs on.
+- Writers on one state instance are serialized, so there are no races on that instance.
+- It is atomic. The state change is persisted only if the method returns successfully, and if it raises an error the changes are discarded.
+- It can schedule follow-up work (tasks) that runs after the write commits.
+- It can't call other state instances inline, which is what transactions are for.
+
+**3. Transaction**
+- It can call readers, writers, and other transactions across multiple state instances and types.
+- It gives atomicity and isolation across all of those calls. Either every effect commits, or if it fails or raises, none do.
+- This is the tool for cross-actor invariants, such as moving money between two accounts.
+
+**4. Workflow**
+- It is a long-running, durable method for orchestration, such as loops, waiting, and calling external systems.
+- It is retried and resumed after crashes or restarts, and it replays deterministically from memoized results.
+- It has no direct, implicit state access. It reads or writes through explicit inline reader/writer blocks.
+- Control-flow helpers such as `at_least_once`, `at_most_once`, `per_workflow`, `per_iteration`, and `until` make side effects and conditions durable and memoized.
+- It is not atomic as a whole, and each inline write is atomic on its own.
+
+**Constructors (factories)**
+- A writer or transaction can be marked as a constructor, meaning it creates the state instance.
+- It is the only method that can be called on an instance that doesn't yet exist.
+
+**Cross-cutting:** Calls can be made idempotent, using an idempotency key or `.idempotently()`, so retries don't re-execute effects.
+
+Confidence: medium

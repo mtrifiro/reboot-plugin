@@ -1,0 +1,156 @@
+Reboot's API and codegen details change between versions, so check the names below against your installed version.
+
+**`api/bank/v1/account.proto`**
+```proto
+syntax = "proto3";
+
+package bank.v1;
+
+import "rbt/v1alpha1/options.proto";
+
+// State: one instance per account ID.
+message Account {
+  option (rbt.v1alpha1.state) = {};
+  uint64 balance = 1;  // unsigned, so it can never be negative
+}
+
+message OverdraftError {
+  uint64 balance = 1;
+  uint64 requested = 2;
+}
+
+message OpenRequest {}
+message OpenResponse {}
+
+message BalanceRequest {}
+message BalanceResponse { uint64 balance = 1; }
+
+message DepositRequest { uint64 amount = 1; }
+message DepositResponse {}
+
+message WithdrawRequest { uint64 amount = 1; }
+message WithdrawResponse {}
+
+message TransferRequest {
+  string to_account_id = 1;
+  uint64 amount = 2;
+}
+message TransferResponse {}
+
+service AccountMethods {
+  rpc Open(OpenRequest) returns (OpenResponse) {
+    option (rbt.v1alpha1.method) = { writer: { constructor: {} } };
+  }
+  rpc Balance(BalanceRequest) returns (BalanceResponse) {
+    option (rbt.v1alpha1.method) = { reader: {} };
+  }
+  rpc Deposit(DepositRequest) returns (DepositResponse) {
+    option (rbt.v1alpha1.method) = { writer: {} };
+  }
+  rpc Withdraw(WithdrawRequest) returns (WithdrawResponse) {
+    option (rbt.v1alpha1.method) = {
+      writer: {},
+      errors: ["OverdraftError"],
+    };
+  }
+  // Atomic: runs as a Reboot transaction across two accounts.
+  rpc Transfer(TransferRequest) returns (TransferResponse) {
+    option (rbt.v1alpha1.method) = {
+      transaction: {},
+      errors: ["OverdraftError"],
+    };
+  }
+}
+```
+
+**`backend/src/account_servicer.py`**
+```python
+from bank.v1.account_pb2 import (
+    BalanceRequest, BalanceResponse,
+    DepositRequest, DepositResponse,
+    OpenRequest, OpenResponse,
+    OverdraftError,
+    TransferRequest, TransferResponse,
+    WithdrawRequest, WithdrawResponse,
+)
+from bank.v1.account_rbt import Account
+from reboot.aio.auth.authorizers import allow
+from reboot.aio.contexts import ReaderContext, TransactionContext, WriterContext
+
+
+class AccountServicer(Account.Servicer):
+
+    def authorizer(self):
+        # Demo only: allow everything. Lock this down in production.
+        return allow()
+
+    async def open(
+        self, context: WriterContext, state: Account.State, request: OpenRequest
+    ) -> OpenResponse:
+        state.balance = 0
+        return OpenResponse()
+
+    async def balance(
+        self, context: ReaderContext, state: Account.State, request: BalanceRequest
+    ) -> BalanceResponse:
+        return BalanceResponse(balance=state.balance)
+
+    async def deposit(
+        self, context: WriterContext, state: Account.State, request: DepositRequest
+    ) -> DepositResponse:
+        state.balance += request.amount
+        return DepositResponse()
+
+    async def withdraw(
+        self, context: WriterContext, state: Account.State, request: WithdrawRequest
+    ) -> WithdrawResponse:
+        # Reject overdrafts; aborting leaves state unchanged.
+        if request.amount > state.balance:
+            raise Account.WithdrawAborted(
+                OverdraftError(balance=state.balance, requested=request.amount)
+            )
+        state.balance -= request.amount
+        return WithdrawResponse()
+
+    async def transfer(
+        self, context: TransactionContext, request: TransferRequest
+    ) -> TransferResponse:
+        # Both calls commit together, or neither does.
+        try:
+            await self.ref().withdraw(context, amount=request.amount)
+        except Account.WithdrawAborted as aborted:
+            # Surface the overdraft; the transaction rolls back.
+            raise Account.TransferAborted(aborted.error)
+        await Account.ref(request.to_account_id).deposit(
+            context, amount=request.amount
+        )
+        return TransferResponse()
+```
+
+**`backend/src/main.py`**
+```python
+import asyncio
+from account_servicer import AccountServicer
+from reboot.aio.applications import Application
+
+
+async def main():
+    application = Application(servicers=[AccountServicer])
+    await application.run()
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
+```
+
+**`.rbtrc`**
+```
+generate api/ --python=backend/api
+dev run --python --application=backend/src/main.py
+```
+
+Notes:
+- Run `rbt generate`, then `rbt dev run`.
+- `transfer` is called on the source account's ID. If the destination was never opened, the deposit fails and the whole transfer rolls back.
+
+Confidence: medium

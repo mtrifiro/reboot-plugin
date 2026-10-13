@@ -1,0 +1,1 @@
+In Reboot (reboot.dev), what is a workflow method, and what happens to one when the process crashes partway through? How should a workflow make an external side-effecting call, such as charging a card with Stripe, so it is safe? Answer from memory, and end with one line: "Confidence: high|medium|low".

@@ -1,0 +1,1 @@
+For Reboot (reboot.dev): what do the `rbt dev run` and `rbt generate` commands do, and how is a Reboot project laid out (where the API definition lives, where generated code goes)? Answer from memory, and end with one line: "Confidence: high|medium|low".

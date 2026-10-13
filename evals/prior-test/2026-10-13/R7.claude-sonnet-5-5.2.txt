@@ -1,0 +1,50 @@
+Reboot ships an in-process test harness, `reboot.aio.tests.Reboot`. You start it, bring up your `Application` with your servicers, and call your generated state types through an external context. Tests are usually plain `unittest.IsolatedAsyncioTestCase` (pytest works too).
+
+```python
+import unittest
+from reboot.aio.applications import Application
+from reboot.aio.tests import Reboot
+
+from bank.v1.bank_rbt import Account          # generated from your .proto
+from bank_servicer import AccountServicer     # your implementation
+
+
+class AccountTest(unittest.IsolatedAsyncioTestCase):
+
+    async def asyncSetUp(self) -> None:
+        self.rbt = Reboot()
+        await self.rbt.start()
+
+    async def asyncTearDown(self) -> None:
+        await self.rbt.stop()
+
+    async def test_deposit(self) -> None:
+        # Bring up the app with the servicers under test.
+        await self.rbt.up(Application(servicers=[AccountServicer]))
+
+        # Context for calling in from "outside" the app.
+        context = self.rbt.create_external_context(name=f"test-{self.id()}")
+
+        # Construct a state instance and call methods on it.
+        account, _ = await Account.Open(context, "alice")
+        await account.Deposit(context, amount=100)
+
+        response = await account.Balance(context)
+        self.assertEqual(response.balance, 100)
+
+
+if __name__ == "__main__":
+    unittest.main()
+```
+
+Notes:
+
+- **Real code paths:** Tests run your actual servicers, with the real Reboot runtime and in-memory storage, so no mocks are needed. Reactive reads, transactions, workflows, and error aborts all behave as in production.
+- **Errors:** Use `with self.assertRaises(Account.DepositAborted)` (generated per-method `Aborted` types) to check declared errors.
+- **Isolation:** Each test creates its own `Reboot()` and calls `up`, so state doesn't leak between tests. Use unique state IDs where it matters.
+- **Running:** Run with `python -m unittest` or `pytest`. Projects typically also run tests through `rbt` (e.g., `rbt dev run` for the app, plain test runners for tests).
+- **Multiple servicers:** Pass all the servicers your test touches to `Application(servicers=[...])`, including any that your code calls internally.
+
+Exact module paths and method signatures (e.g., `create_external_context`, the constructor/`Open` call shape, and the generated `_rbt` module names) vary by Reboot version and your proto definitions. Check the docs or examples in the reboot-dev GitHub repo if something doesn't match.
+
+Confidence: medium

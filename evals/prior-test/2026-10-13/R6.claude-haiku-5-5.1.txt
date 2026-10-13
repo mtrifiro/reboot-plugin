@@ -1,0 +1,14 @@
+Reboot is a framework for stateful backend apps, and I'm working from memory, so verify details against the docs at reboot.dev.
+
+**`rbt generate`** reads the API definition (Protocol Buffer `.proto` files that describe your stateful types and their methods) and generates language-specific code, such as Python or TypeScript stubs and types, that your backend implementation and clients use. You rerun it whenever you change the API definition.
+
+**`rbt dev run`** starts a local development environment. As I recall, it runs a local Reboot runtime and your application together, so you can test stateful behavior without deploying. It's the usual entry point during development.
+
+**Project layout (less certain):**
+- **API definition:** `.proto` files in an `api/` directory, organized by package and version.
+- **Generated code:** written alongside the source in the language tree, typically as `*_rbt.py` or `*_rbt.ts` files. These are generated and shouldn't be edited by hand.
+- **Implementation:** your application logic, in a backend directory, that implements the generated base classes for each state type.
+
+I'm not certain of the exact directory names or the generated file suffixes, so check them against `rbt create` output or the quickstart.
+
+Confidence: low

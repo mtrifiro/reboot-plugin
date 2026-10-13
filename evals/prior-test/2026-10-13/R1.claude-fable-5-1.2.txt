@@ -1,0 +1,34 @@
+**Reboot** (reboot.dev) is a framework—originally released under the name *Resemble* and later rebranded—created by a team led by Benjamin Hindman (co-creator of Apache Mesos / co-founder of Mesosphere). Its pitch is that you should be able to write backends where **state is a first-class part of the application**, rather than something you shove into a separate database and reason about with ad-hoc caching, retries, and queues. It offers Python and TypeScript (Node) SDKs, with generated React bindings for frontends.
+
+## Core programming model
+
+**State-centric "actors" defined in Protobuf.**
+You describe your domain in `.proto` files. A state type is a protobuf message annotated as a Reboot *state* (e.g. `option (rbt.v1alpha1.state) = {...}`), and alongside it you declare a service whose RPC methods operate on that state. Each *instance* of a state type is identified by an ID (like a key or an actor ID), e.g. `Account("alice")`. Reboot persists the state for you—there's no separate ORM or database layer in your code; the framework owns durability (it ships a storage sidecar and manages consensus/replication of state).
+
+**Method kinds.** Every method is tagged with a kind that defines its concurrency and consistency semantics:
+
+- **Readers** – read-only; may execute concurrently on the same state. They can also be *reactive*: a client can subscribe and get re-executed results whenever the underlying state changes (this is what powers the generated React hooks).
+- **Writers** – mutate the state of a single instance. Writers to the same instance are serialized, and each one is atomic: the state change plus any *effects* (scheduled tasks, calls to other states) are committed together or not at all.
+- **Transactions** – like writers, but may span *multiple* state instances (and types) with ACID semantics; Reboot coordinates the commit across participants (two-phase-commit style) so you don't write distributed-transaction logic yourself.
+- **Workflows** – long-running, durable methods for orchestration (sagas, multi-step jobs, loops that wait for conditions). They survive restarts and are re-executed deterministically; side effects inside them are wrapped in helpers such as `at_most_once` / `at_least_once` to make re-execution safe.
+
+**Servicers and contexts.** You implement the generated base class (a *servicer*) in Python or TypeScript. Every method receives a typed `context` (`ReaderContext`, `WriterContext`, `TransactionContext`, `WorkflowContext`) plus the current `state` object and the request message. Writers return a response and simply mutate `state`; the framework persists it. From a context you can obtain references to other state instances (`Other.ref("id")` / lookup / construct) and call their methods, with the type system preventing illegal combinations (e.g. a reader can't invoke a writer).
+
+**Idempotency is mandatory for mutations.** Because Reboot retries, every writer/transaction call from a client is tied to an idempotency key or "alias" (e.g. `context.idempotently(...)` or `Account.ref(id).idempotently("key").deposit(...)`), so retries don't double-apply. This is a recurring theme in the design: at-least-once delivery plus idempotent handlers gives exactly-once *effect*.
+
+**Constructors and errors.** State instances are created via designated constructor methods; methods can declare typed error messages in the proto that surface as structured exceptions (`aborted` with a specific error type) on the caller side.
+
+**Scheduling / tasks.** Writers and workflows can *schedule* calls on themselves or other states to run later or at a given time (`schedule(...)`), and those scheduled tasks are durable—committed as part of the same write.
+
+## Tooling and deployment
+
+- `rbt` CLI: `rbt generate`/`rbt protoc` to produce Python/TypeScript/React code from protos; `rbt dev run` for local development with hot reload and a local persistent store; `rbt serve` for production.
+- An `Application` object wires servicers together and is started with `run()`.
+- Transport is gRPC, with HTTP/JSON access available; the generated frontend library talks to the backend directly, including reactive subscriptions.
+- Deployment targets include Kubernetes and the hosted **Reboot Cloud**; the framework partitions state instances across nodes (consistent hashing over IDs) and handles replication so individual "actors" can be scaled out.
+
+## Why it's interesting
+
+It resembles a blend of the virtual-actor model (Orleans/Dapr), durable-execution systems (Temporal), and reactive backends, but with the key distinction that **state, transactions, and reactivity are unified in one typed, proto-defined model** so a developer writes plain methods against in-memory-looking state and gets durability, consistency, and live-updating clients for free.
+
+Confidence: medium

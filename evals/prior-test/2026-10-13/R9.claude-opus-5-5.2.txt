@@ -1,0 +1,29 @@
+Key concepts I associate with "Reboot" in software development:
+
+**System/operational sense**
+- **Restart / power cycle**: stopping and restarting a machine, OS, or process
+- **Cold vs. warm boot**: full hardware reset vs. a software-initiated restart
+- **State reset**: clearing in-memory state, caches, and leaked resources
+- **"Have you tried turning it off and on again?"**: rebooting as a first-line fix
+- **Uptime and availability**: rebooting as downtime to minimize or schedule
+- **Rolling restarts**: restarting nodes in a cluster one at a time to avoid an outage
+- **Kernel/patch updates**: changes that require a reboot to take effect, and live-patching to avoid that
+- **Crash recovery and watchdogs**: automatic restarts after failure (systemd, supervisors, Kubernetes restart policies)
+- **Crash-only software**: designing systems so that restarting is always safe
+- **Bootloaders and init**: BIOS/UEFI, GRUB, init systems, boot sequence
+- **Idempotent startup**: services that come back up cleanly regardless of prior state
+
+**Project/product sense**
+- **Rewrite from scratch**: abandoning a legacy codebase for a fresh implementation
+- **Second-system effect**: the risk of overengineering the replacement
+- **Spolsky's warning**: "Things You Should Never Do" (rewriting loses accumulated bug fixes and knowledge)
+- **Strangler fig pattern**: incrementally replacing a system instead of a big-bang reboot
+- **Greenfield vs. brownfield**: starting fresh vs. working within existing constraints
+- **Project reset**: re-scoping, re-planning, or restaffing a failing initiative
+- **Technical debt bankruptcy**: declaring the old code unsalvageable
+- **Version 2.0 / re-architecture**: major breaking redesigns
+
+**Adjacent ideas**
+- **Ephemeral/immutable infrastructure**: replacing servers instead of restarting them ("cattle, not pets")
+- **Hot reload / hot swap**: updating code without a full restart
+- **Reboot (the framework)**: the durable, stateful app framework (reboot.dev) built around reliable state across restarts

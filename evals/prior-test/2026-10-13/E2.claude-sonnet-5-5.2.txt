@@ -1,0 +1,69 @@
+```python
+import stripe
+from reboot.aio.contexts import ReaderContext, WorkflowContext, WriterContext
+from reboot.aio.workflows import at_least_once, at_most_once, until
+
+# order_rbt.py is generated from the API definition (api: Order with state
+# order_id, amount_cents, payment_method, email, shipped, charged)
+
+class OrderServicer(Order.Servicer):
+
+    async def place(self, context: WriterContext, request: PlaceRequest) -> None:
+        self.state.order_id = request.order_id
+        self.state.amount_cents = request.amount_cents
+        self.state.payment_method = request.payment_method
+        self.state.email = request.email
+        self.state.shipped = False
+        # Kick off the durable workflow as part of placing the order.
+        await self.ref().schedule().fulfill(context)
+
+    async def mark_shipped(self, context: WriterContext) -> None:
+        # Called by the warehouse.
+        self.state.shipped = True
+
+    async def get(self, context: ReaderContext) -> OrderState:
+        return self.state
+
+    async def fulfill(self, context: WorkflowContext) -> None:
+        order = await self.ref().get(context)
+
+        # Charge once: Stripe's idempotency key makes retries safe, and
+        # at_least_once memoizes the result so it isn't repeated on replay.
+        async def charge():
+            intent = await stripe.PaymentIntent.create_async(
+                amount=order.amount_cents,
+                currency="usd",
+                payment_method=order.payment_method,
+                confirm=True,
+                automatic_payment_methods={
+                    "enabled": True,
+                    "allow_redirects": "never",
+                },
+                idempotency_key=f"order-charge-{order.order_id}",
+            )
+            return intent.id
+
+        await at_least_once("charge", context, charge, type=str)
+
+        # Durably wait until the warehouse sets shipped = True.
+        async def is_shipped() -> bool:
+            return (await self.ref().get(context)).shipped
+
+        await until("shipped", context, is_shipped)
+
+        # Send the email at most once (no duplicate emails on retry).
+        async def notify():
+            await send_email(
+                to=order.email,
+                subject=f"Order {order.order_id} has shipped",
+                body="Your order is on its way!",
+            )
+
+        await at_most_once("send_email", context, notify)
+```
+
+Notes:
+- `send_email` is a placeholder for your email provider.
+- I wrote this from memory of the Reboot API, so check exact import paths and `until`/`at_least_once` signatures against your installed version.
+
+Confidence: medium

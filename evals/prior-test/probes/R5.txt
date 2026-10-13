@@ -1,0 +1,1 @@
+What is the format of a Reboot (reboot.dev) `.rbtrc` file? Show an example file. Answer from memory, and end with one line: "Confidence: high|medium|low".

@@ -8,6 +8,9 @@ later, with a worse message, before either runs:
 Each check is one thing a build lost time to (the Reboot plugin's
 findings, by number):
 
+- a `.proto` file: older Reboot's API form, which every model wrote
+  when asked for a Reboot API from memory (the plugin's prior test,
+  2026-10-13);
 - a reserved method name: `read`, `write`, `delete`, `state`, `schedule`
   and `spawn` on any type, `create` and `set_claims` on `User`
   (`rbt generate` says only "protoc failed" or "<Name> is reserved";
@@ -250,7 +253,12 @@ def main(argv: list[str]) -> int:
         return 2
     files = sorted(p for p in api_dir.rglob("*.py") if "__pycache__" not in p.parts)
     packages = {p.name for p in api_dir.iterdir() if p.is_dir() and not p.name.startswith((".", "_"))}
-    problems: list[Problem] = []
+    problems: list[Problem] = [
+        Problem(path, 1, "a .proto API, the older Reboot form models default to; "
+                "write the API as pydantic `reboot.api` in a .py file and delete this one",
+                "python/references/api-pydantic.md")
+        for path in sorted(api_dir.rglob("*.proto"))
+    ]
     for path in files:
         problems += lint_file(path, api_dir, packages)
     cwd = Path.cwd()

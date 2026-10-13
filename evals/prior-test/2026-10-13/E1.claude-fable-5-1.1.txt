@@ -1,0 +1,157 @@
+**`backend/api/bank/v1/bank.proto`**
+
+```proto
+syntax = "proto3";
+
+package bank.v1;
+
+import "rbt/v1alpha1/options.proto";
+
+// ---- Account state ----
+message Account {
+  option (rbt.v1alpha1.state) = {};
+  uint64 balance = 1;
+}
+
+message OpenRequest {}
+message OpenResponse {}
+
+message BalanceRequest {}
+message BalanceResponse { uint64 amount = 1; }
+
+message DepositRequest { uint64 amount = 1; }
+message DepositResponse {}
+
+message WithdrawRequest { uint64 amount = 1; }
+message WithdrawResponse {}
+
+// Declared error: raised when a withdrawal would overdraw the account.
+message OverdraftError { uint64 shortfall = 1; }
+
+service AccountMethods {
+  // Constructor: creates the account with a zero balance.
+  rpc Open(OpenRequest) returns (OpenResponse) {
+    option (rbt.v1alpha1.method) = { writer: { constructor: true } };
+  }
+  rpc Balance(BalanceRequest) returns (BalanceResponse) {
+    option (rbt.v1alpha1.method).reader = {};
+  }
+  rpc Deposit(DepositRequest) returns (DepositResponse) {
+    option (rbt.v1alpha1.method).writer = {};
+  }
+  rpc Withdraw(WithdrawRequest) returns (WithdrawResponse) {
+    option (rbt.v1alpha1.method) = {
+      writer: {},
+      errors: [ "OverdraftError" ],
+    };
+  }
+}
+
+// ---- Bank state (coordinates transfers) ----
+message Bank {
+  option (rbt.v1alpha1.state) = {};
+}
+
+message TransferRequest {
+  string from_account_id = 1;
+  string to_account_id = 2;
+  uint64 amount = 3;
+}
+message TransferResponse {}
+
+service BankMethods {
+  // Transaction: both account writes commit or neither does.
+  rpc Transfer(TransferRequest) returns (TransferResponse) {
+    option (rbt.v1alpha1.method) = {
+      transaction: {},
+      errors: [ "OverdraftError" ],
+    };
+  }
+}
+```
+
+**`backend/src/account_servicer.py`**
+
+```python
+from bank.v1.bank_pb2 import (
+    BalanceRequest, BalanceResponse, DepositRequest, DepositResponse,
+    OpenRequest, OpenResponse, OverdraftError, WithdrawRequest, WithdrawResponse,
+)
+from bank.v1.bank_rbt import Account
+from reboot.aio.contexts import ReaderContext, WriterContext
+
+
+class AccountServicer(Account.Servicer):
+
+    async def Open(self, context: WriterContext, state: Account.State, request: OpenRequest) -> OpenResponse:
+        state.balance = 0  # new accounts start empty
+        return OpenResponse()
+
+    async def Balance(self, context: ReaderContext, state: Account.State, request: BalanceRequest) -> BalanceResponse:
+        return BalanceResponse(amount=state.balance)
+
+    async def Deposit(self, context: WriterContext, state: Account.State, request: DepositRequest) -> DepositResponse:
+        state.balance += request.amount
+        return DepositResponse()
+
+    async def Withdraw(self, context: WriterContext, state: Account.State, request: WithdrawRequest) -> WithdrawResponse:
+        # Balance may never go below zero; abort the writer (state untouched).
+        if request.amount > state.balance:
+            raise Account.WithdrawAborted(
+                OverdraftError(shortfall=request.amount - state.balance)
+            )
+        state.balance -= request.amount
+        return WithdrawResponse()
+```
+
+**`backend/src/bank_servicer.py`**
+
+```python
+from bank.v1.bank_pb2 import TransferRequest, TransferResponse
+from bank.v1.bank_rbt import Account, Bank
+from reboot.aio.contexts import TransactionContext
+
+
+class BankServicer(Bank.Servicer):
+
+    async def Transfer(self, context: TransactionContext, state: Bank.State, request: TransferRequest) -> TransferResponse:
+        source = Account.ref(request.from_account_id)
+        target = Account.ref(request.to_account_id)
+
+        # Both calls run inside this transaction; if Withdraw aborts
+        # (overdraft), the whole transaction rolls back and nothing is deposited.
+        await source.Withdraw(context, amount=request.amount)
+        await target.Deposit(context, amount=request.amount)
+
+        return TransferResponse()
+```
+
+**`backend/src/main.py`**
+
+```python
+import asyncio
+from account_servicer import AccountServicer
+from bank_servicer import BankServicer
+from reboot.aio.applications import Application
+
+
+async def main():
+    # Registers all servicers and serves them (`rbt dev run` or `rbt serve`).
+    await Application(servicers=[AccountServicer, BankServicer]).run()
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
+```
+
+**`.rbtrc`**
+
+```
+generate --python=backend/api
+dev run --name=bank --application=backend/src/main.py --python
+dev run --watch=backend/src/**/*.py
+```
+
+Usage sketch: `await Account.Open(context, "alice")`, then `await Bank.ref("bank").Transfer(context, from_account_id="alice", to_account_id="bob", amount=50)`; an insufficient balance raises `Account.WithdrawAborted` carrying `OverdraftError`.
+
+Confidence: medium

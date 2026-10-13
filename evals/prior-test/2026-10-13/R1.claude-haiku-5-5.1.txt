@@ -1,0 +1,16 @@
+I have only limited, uncertain knowledge of Reboot, so treat the following as a rough sketch and verify details at reboot.dev.
+
+**What it appears to be:** Reboot is a framework for building backend applications in Python and TypeScript. It aims to simplify building stateful, distributed, fault-tolerant services by handling persistence and reliability concerns for you.
+
+**Programming model (as I understand it):**
+- **Actors / stateful objects:** Application logic is organized around named, durable objects. Each has an identity (an ID), its own state, and methods. State persists across requests and restarts, so you don't wire up a database for each entity yourself.
+- **Typed API definitions:** Services and their state are typically declared with a schema, which generates client and server code shared across languages.
+- **Method kinds:** Methods are generally distinguished by whether they only read state or can write it. Writes are applied consistently, and some methods may be transactional.
+- **Workflows / durable execution:** Long-running or multi-step processes can be written as code that survives crashes and retries, resuming where it left off rather than losing progress.
+- **Local development:** A dev mode runs the whole system locally with a CLI, so you can iterate before deploying.
+
+**Key concepts to verify:** actors/objects and their IDs, schema-defined APIs, reader vs. writer methods, transactions, durable workflows, and how deployment works.
+
+I can't confirm the exact API names, guarantees, or deployment model, so please check the official docs before relying on any of this.
+
+Confidence: low

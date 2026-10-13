@@ -1,0 +1,32 @@
+Key concepts associated with "Reboot" in software development:
+
+**System / Operational**
+- **Restart**: shutting down and starting a system, service, or process again
+- **Cold vs. warm boot**: full power cycle vs. software-initiated restart
+- **State reset**: clearing memory, caches, and transient state to recover from errors
+- **Bootloader / boot sequence**: firmware (BIOS/UEFI), kernel loading, init systems (systemd, launchd)
+- **Graceful shutdown**: draining connections and flushing data before restarting
+- **Uptime and downtime**: availability impact, maintenance windows
+- **Rolling restarts**: restarting nodes in a cluster one at a time to avoid outages
+- **Crash recovery and watchdogs**: automatic restarts after failures (supervisors, Kubernetes liveness probes)
+- **Persistence**: what survives a reboot (disk, config, durable queues) vs. what doesn't (RAM, ephemeral containers)
+- **Kernel patching**: updates that require a reboot vs. live patching
+- **"Have you tried turning it off and on again?"**: the classic first troubleshooting step
+
+**Project / Product**
+- **Rewrite from scratch**: replacing a legacy codebase rather than refactoring it
+- **Second-system effect**: the risk of over-engineering a replacement
+- **Technical debt reset**: starting fresh to escape accumulated cruft
+- **Re-architecture**: rethinking the core design, such as moving from a monolith to microservices
+- **Project relaunch**: restarting a stalled or failed initiative with a new scope, team, or approach
+- **Brand or product reboot**: reimagining an existing product for new users or markets
+
+**Design Principles**
+- **Idempotency**: systems that behave correctly when restarted mid-operation
+- **Stateless services**: designed so restarts are cheap and safe
+- **Immutable infrastructure**: replace rather than repair ("cattle, not pets")
+- **Fail-fast / crash-only software**: designs where restarting is the normal recovery path
+
+**Other**
+- **Reboot (framework)**: an open-source framework for building durable, transactional distributed applications
+- **Hot reload vs. full restart**: in development tooling, applying changes without restarting vs. needing a full restart

@@ -31,6 +31,7 @@ EXEMPT = (
     # GitHub renders front matter as a table on a directory's landing page.
     "README.md",
     "evals/README.md",
+    "evals/prior-test/README.md",
     "findings/README.md",
     "mods/README.md",
     "tools/README.md",

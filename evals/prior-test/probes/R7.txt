@@ -1,0 +1,1 @@
+How do you write automated tests for a Reboot (reboot.dev) Python application? Show a short example. Answer from memory, and end with one line: "Confidence: high|medium|low".

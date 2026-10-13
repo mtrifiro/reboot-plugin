@@ -1,0 +1,18 @@
+**What a workflow method is**
+
+In Reboot, a state's methods are declared in the `.proto` with a *kind*: `reader`, `writer`, `transaction`, or `workflow`. A workflow is the long-running/orchestration kind: it gets a `WorkflowContext`, can `await` calls to other states' readers/writers/transactions (and other workflows), can loop, sleep, wait on conditions (`until(...)`-style helpers), and run for seconds to days. Workflows aren't invoked synchronously like a reader/writer; they're typically kicked off as tasks (`.schedule()` / `.spawn()` from a writer or externally) and Reboot persists the fact that the task exists in the same durable store as your state.
+
+**What happens on a crash**
+
+Reboot guarantees the workflow *finishes*: if the process dies partway, the task is still durably recorded, so a (new) consensus/replica picks it up and re-executes the workflow method from the beginning. It does **not** resume at the exact line it stopped. What makes re-running safe is that calls made through the `context` to other Reboot states are automatically idempotent — Reboot derives idempotency keys from the workflow context (and you can name them with an alias), so a writer the first run already completed is not applied twice; the second run just gets the already-committed result. Anything *outside* Reboot (HTTP calls, Stripe, email) is not covered by that, so without extra care a crash would cause the side effect to happen again.
+
+**Making an external side-effecting call safe**
+
+Reboot gives you durable "effect" helpers in the workflow API, roughly:
+
+- `at_most_once(name, context, callable)` – records in Reboot's store that the effect was *started* before running it; if the process crashes mid-call, replay sees the marker and refuses to run it again (you get an error/need to reconcile instead of a double charge).
+- `at_least_once(name, context, callable)` – runs the callable, retrying until success, and *memoizes the return value* durably so subsequent re-executions skip it and return the stored result. The callable itself must therefore be idempotent/safe to retry.
+
+The recommended Stripe pattern is to combine them: first use `at_most_once`/`at_least_once` (or the context's idempotency facility) to generate and durably record a **stable idempotency key** for this particular charge, then call Stripe with that key as its `Idempotency-Key`, wrapped in `at_least_once` so transient failures retry. Because Stripe dedupes on the key and Reboot memoizes the successful result, a crash before, during, or after the HTTP call yields exactly one charge, and the workflow can then safely `await` a writer to record "paid" on the order state. The general rule: never do a bare side effect inside a workflow body; always go through one of these helpers (or an idempotent Reboot writer).
+
+Confidence: medium

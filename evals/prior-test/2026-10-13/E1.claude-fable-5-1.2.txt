@@ -1,0 +1,144 @@
+**`api/bank/v1/bank.proto`** — API definition
+
+```proto
+syntax = "proto3";
+
+package bank.v1;
+
+import "rbt/v1alpha1/options.proto";
+
+// ---- Account state ----
+message Account {
+  option (rbt.v1alpha1.state) = {};
+  uint64 balance = 1;  // unsigned: can never be negative
+}
+
+message OpenRequest {}
+message OpenResponse {}
+
+message BalanceRequest {}
+message BalanceResponse { uint64 amount = 1; }
+
+message DepositRequest { uint64 amount = 1; }
+message DepositResponse { uint64 updated_balance = 1; }
+
+message WithdrawRequest { uint64 amount = 1; }
+message WithdrawResponse { uint64 updated_balance = 1; }
+
+// Declared error: withdrawal exceeds balance.
+message OverdraftError { uint64 shortfall = 1; }
+
+service AccountMethods {
+  rpc Open(OpenRequest) returns (OpenResponse) {
+    option (rbt.v1alpha1.method).writer = { constructor: {} };
+  }
+  rpc Balance(BalanceRequest) returns (BalanceResponse) {
+    option (rbt.v1alpha1.method).reader = {};
+  }
+  rpc Deposit(DepositRequest) returns (DepositResponse) {
+    option (rbt.v1alpha1.method).writer = {};
+  }
+  rpc Withdraw(WithdrawRequest) returns (WithdrawResponse) {
+    option (rbt.v1alpha1.method).writer = { errors: [ "OverdraftError" ] };
+  }
+}
+
+// ---- Bank state: coordinates cross-account transfers ----
+message Bank {
+  option (rbt.v1alpha1.state) = {};
+}
+
+message TransferRequest {
+  string from_account_id = 1;
+  string to_account_id = 2;
+  uint64 amount = 3;
+}
+message TransferResponse {}
+
+service BankMethods {
+  // Transaction: withdraw + deposit commit together or not at all.
+  rpc Transfer(TransferRequest) returns (TransferResponse) {
+    option (rbt.v1alpha1.method).transaction = { errors: [ "OverdraftError" ] };
+  }
+}
+```
+
+**`backend/src/bank_servicers.py`** — servicer implementation
+
+```python
+from bank.v1.bank_rbt import Account, Bank, OverdraftError
+from reboot.aio.contexts import ReaderContext, TransactionContext, WriterContext
+
+
+class AccountServicer(Account.Servicer):
+
+    async def Open(
+        self, context: WriterContext, request: Account.OpenRequest
+    ) -> Account.OpenResponse:
+        self.state.balance = 0  # constructor: initial state
+        return Account.OpenResponse()
+
+    async def Balance(
+        self, context: ReaderContext, request: Account.BalanceRequest
+    ) -> Account.BalanceResponse:
+        return Account.BalanceResponse(amount=self.state.balance)
+
+    async def Deposit(
+        self, context: WriterContext, request: Account.DepositRequest
+    ) -> Account.DepositResponse:
+        self.state.balance += request.amount
+        return Account.DepositResponse(updated_balance=self.state.balance)
+
+    async def Withdraw(
+        self, context: WriterContext, request: Account.WithdrawRequest
+    ) -> Account.WithdrawResponse:
+        # Reject rather than let the balance go below zero.
+        if request.amount > self.state.balance:
+            raise Account.WithdrawAborted(
+                OverdraftError(shortfall=request.amount - self.state.balance)
+            )
+        self.state.balance -= request.amount
+        return Account.WithdrawResponse(updated_balance=self.state.balance)
+
+
+class BankServicer(Bank.Servicer):
+
+    async def Transfer(
+        self, context: TransactionContext, request: Bank.TransferRequest
+    ) -> Bank.TransferResponse:
+        source = Account.ref(request.from_account_id)
+        target = Account.ref(request.to_account_id)
+        try:
+            # Both calls run inside this transaction; an abort rolls back both.
+            await source.withdraw(context, amount=request.amount)
+            await target.deposit(context, amount=request.amount)
+        except Account.WithdrawAborted as aborted:
+            raise Bank.TransferAborted(aborted.error) from None
+        return Bank.TransferResponse()
+```
+
+**`backend/src/main.py`** — application entry point
+
+```python
+import asyncio
+
+from bank_servicers import AccountServicer, BankServicer
+from reboot.aio.applications import Application
+
+
+async def main() -> None:
+    await Application(servicers=[AccountServicer, BankServicer]).run()
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
+```
+
+**`.rbtrc`** — dev config (run with `rbt dev run`)
+
+```
+dev run --name=bank --python --application=backend/src/main.py --watch=backend/src/**/*.py
+generate --python=backend/api api/
+```
+
+Confidence: medium

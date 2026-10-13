@@ -1,0 +1,35 @@
+Reboot state types can define four kinds of methods: **readers**, **writers**, **transactions**, and **workflows**. Each kind trades flexibility for guarantees differently.
+
+**1. Reader**
+- Gets read-only access to the state. It cannot mutate anything.
+- Many readers can run concurrently on the same instance.
+- Readers are reactive. Clients, such as the React hooks, can subscribe to a reader and get updates pushed when the underlying state changes.
+- A reader can call other readers, but nothing that mutates.
+
+**2. Writer**
+- Mutates the state of a single instance.
+- Changes are atomic and durable: either all of them are persisted or none are.
+- Writers are serialized per instance, so you don't manage locks yourself.
+- Writers are meant to be fast and local. They cannot call methods on other state instances.
+- A writer can schedule a workflow or task to run after it commits successfully.
+
+**3. Transaction**
+- Can read and write multiple state instances, including instances of different types, by calling their readers, writers, and other transactions.
+- Has ACID semantics across all those instances. If anything fails or throws, every change is rolled back.
+- It is the most powerful kind for multi-entity consistency, such as transferring money between two accounts. It also costs more in coordination and contention.
+
+**4. Workflow** (earlier called "tasks")
+- A long-running, durable background method, typically started with `.schedule()`. It survives crashes and restarts.
+- On failure it is retried and re-executed from the top. The code should therefore be written idempotently.
+- Reboot provides helpers for this:
+  - `at_most_once` / `at_least_once` wrap side effects such as calling an external API.
+  - `until` and similar helpers support waiting reactively on conditions.
+  - Calls to other Reboot methods are made idempotent automatically.
+- A workflow doesn't mutate state directly. Instead, it calls writers or transactions, on its own instance or others.
+- Workflows can call any kind of method and can run indefinitely, for example as loops or control processes.
+
+**Constructors/factories:** A writer or transaction can also be marked as a constructor (`factory`). Such a method must be the one used to create a new state instance, and it initializes that state. Calling a non-constructor on an instance that doesn't exist yet is an error when the type requires construction.
+
+**Summary:** The kinds form a ladder. Readers are safe and concurrent. Writers are atomic within one instance. Transactions are atomic across many instances. Workflows are durable and retried, which lets them handle the outside world.
+
+Confidence: medium

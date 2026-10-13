@@ -1,0 +1,45 @@
+These are from Reboot's Python workflow APIs. Reboot workflows can be re-executed after crashes or retries, so these primitives control how often an effect actually happens across re-runs.
+
+### Idempotency scoping on calls
+
+These are modifiers on a state reference, roughly `SomeType.ref(id).<modifier>.Method(context, ...)`. They decide how the idempotency key for an outgoing call is derived.
+
+- **`.per_workflow(alias)`**
+  - The call is idempotent across the whole workflow run.
+  - The key comes from the workflow's identity plus `alias`.
+  - If the workflow is re-executed, the call with that alias happens once and later attempts return the memoized result.
+  - Use it for one-time steps, such as "create the account" or "send the welcome email".
+
+- **`.per_iteration(alias)`**
+  - The call is idempotent within the current loop iteration, inside `async for iteration in context.loop(...)`.
+  - The key includes the iteration number.
+  - On retry or replay it happens once per iteration, and the next iteration gets a fresh key.
+  - Use it for recurring work, such as "charge the subscription this cycle".
+
+- **`.always()`**
+  - Opts out of idempotency, so the call is made on every execution and replay.
+  - Use it when re-running is harmless or desired, such as reads or naturally idempotent operations.
+  - It is the explicit escape hatch, since the framework otherwise wants you to choose an idempotency scope for mutations in a workflow.
+
+### Memoized blocks for arbitrary code (e.g. external side effects)
+
+These are functions called like `await at_least_once(alias, context, callable, ...)`.
+
+- **`at_least_once(alias, context, callable)`**
+  - Runs the callable and retries it until it completes successfully.
+  - Then it durably stores the result, so later re-executions return the stored value instead of calling again.
+  - A crash between "effect happened" and "result recorded" can cause the effect to run more than once. The callable should therefore be idempotent or safe to repeat, for example by passing an idempotency key to Stripe.
+
+- **`at_most_once(alias, context, callable)`**
+  - Guarantees the callable is never started more than once.
+  - If a previous attempt started but its completion wasn't recorded, it does not retry. Instead it raises an error, something like `AtMostOnceFailedBeforeCompleting`, which your code must handle or escalate.
+  - Use it for non-idempotent effects where a duplicate is worse than a failure.
+
+- **`until(alias, context, condition)`**
+  - Repeatedly or reactively evaluates `condition` until it returns a truthy value, then memoizes that value.
+  - Replays return the stored value immediately.
+  - Use it for durable waiting, such as waiting until some state reports "approved" or a field is set.
+
+The `alias` names the memoized step, so it must be unique and stable for each logical step. For the function forms, it can also be scoped per-workflow or per-iteration.
+
+Confidence: medium

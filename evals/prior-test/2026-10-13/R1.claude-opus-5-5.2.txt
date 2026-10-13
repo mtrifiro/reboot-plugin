@@ -1,0 +1,40 @@
+# Reboot (reboot.dev)
+
+Reboot is a framework for building **reactive, durable backends** in Python and TypeScript, aimed especially at apps with React frontends. It comes from a team that includes people from the Apache Mesos world, such as Benjamin Hindman. The core idea is to put **state and the code that operates on it together**, so you don't have to wire up a separate database, cache, queue, and workflow engine. In return you get transactional guarantees, durability, and reactivity largely for free.
+
+## Programming model
+
+**1. Define state types and their APIs in a schema.**
+You declare a *state type* (for example `Counter`, `Account`, or `ChatRoom`) along with the methods that operate on it. Originally this was done in Protocol Buffers. Newer versions also support schema definitions in Python (Pydantic-style) and TypeScript (Zod-style). Code generation (`rbt generate`) then produces typed server base classes and client stubs, including React hooks.
+
+**2. Implement servicers.**
+For each state type you write a *servicer* class that implements its methods. Every method runs against **one specific instance** of that state, addressed by a state ID. You can think of these instances as durable actors or objects. Reboot stores each instance's state durably and shards instances across the cluster, so compute runs next to the data.
+
+**3. Choose a method kind for each method.** Each kind has its own guarantees and its own context type:
+- **Reader** (`ReaderContext`): read-only access to state. Readers can be called concurrently, and clients can subscribe to them reactively.
+- **Writer** (`WriterContext`): atomically mutates a single instance's state. It either commits or does nothing.
+- **Transaction** (`TransactionContext`): can call writers and readers on *multiple* state instances, possibly of different types, with ACID semantics across all of them. Failures roll everything back.
+- **Workflow** (`WorkflowContext`): long-running, durable, retryable logic that survives crashes and restarts. Workflows are typically scheduled as tasks.
+
+**4. Use tasks and scheduling.**
+Methods can be scheduled to run later or in the background, for example via something like `.schedule(when=...)`. Scheduled tasks are durable and are guaranteed to eventually run.
+
+**5. Use idempotency primitives.**
+Calls can be made idempotent using idempotency keys or helpers such as `.idempotently()`. Inside workflows there are constructs for "at most once" and "at least once" side effects, along with control-flow helpers like looping or waiting "until" a condition holds. These let you safely call external APIs, such as Stripe, from code that may be retried.
+
+**6. Reactive frontends.**
+The generated React (TypeScript) client exposes hooks for each state type. Readers used through these hooks automatically **push updates** to the UI when the underlying state changes, so you don't need hand-rolled websockets or polling.
+
+## Other key pieces
+
+- **Application object:** you register your servicers, plus optional initialization logic, in an `Application` and run it.
+- **CLI (`rbt`):** handles code generation and local development (`rbt dev run`, with hot reload). Under the hood the framework is built on gRPC, and there are hooks for HTTP and auth (authorizers per method).
+- **Standard library:** reusable state types such as sorted maps and pub/sub-style primitives.
+- **Deployment:** Reboot Cloud (their managed offering) or self-hosting on Kubernetes.
+- **AI and agents angle:** more recently they've positioned durable, reactive state as a good fit for AI chat apps and agents, including MCP-server-style use cases. I'm less sure of the specifics here.
+
+## Mental model
+
+Reboot is roughly "durable actors with typed APIs, plus cross-actor ACID transactions, plus durable workflows, plus auto-generated reactive React hooks." You write ordinary-looking methods, and the framework handles persistence, sharding, retries, exactly-once effects, and live UI updates.
+
+Confidence: medium

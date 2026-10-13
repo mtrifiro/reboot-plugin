@@ -1,0 +1,70 @@
+```python
+# order_servicer.py
+import stripe
+from rbt.aio.contexts import WorkflowContext, WriterContext
+from rbt.aio.workflows import at_most_once, at_least_once, until
+from order.v1.order_rbt import Order  # generated from order.proto (see below)
+
+
+class OrderServicer(Order.Servicer):
+
+    # Writer: records the order and kicks off the durable workflow.
+    async def Place(self, context: WriterContext, request: Order.PlaceRequest) -> Order.PlaceResponse:
+        self.state.customer_email = request.customer_email
+        self.state.amount_cents = request.amount_cents
+        self.state.payment_method = request.payment_method
+        self.state.shipped = False
+        # Schedule the workflow as a side effect of this write (runs once, durably).
+        await self.ref().schedule().Fulfill(context)
+        return Order.PlaceResponse()
+
+    # Writer: called by the warehouse system when the order ships.
+    async def MarkShipped(self, context: WriterContext, request: Order.MarkShippedRequest) -> Order.MarkShippedResponse:
+        self.state.shipped = True
+        return Order.MarkShippedResponse()
+
+    # Workflow: may be re-executed after failures, so every effect is guarded.
+    async def Fulfill(self, context: WorkflowContext, request: Order.FulfillRequest) -> Order.FulfillResponse:
+        state = await self.state.read(context)
+
+        # Charge exactly once: `at_most_once` persists the result under its name
+        # and never re-runs the function on workflow replay.
+        async def charge() -> str:
+            intent = stripe.PaymentIntent.create(
+                amount=state.amount_cents,
+                currency="usd",
+                payment_method=state.payment_method,
+                confirm=True,
+                idempotency_key=f"order-{context.state_id}",  # belt and suspenders
+            )
+            return intent.id
+
+        payment_id = await at_most_once("charge card", context, charge, type=str)
+
+        # Durably block until another method flips `shipped` on this Order's state.
+        await until("shipped", context, lambda state: state.shipped)
+
+        # Sending email is safe to retry, so at-least-once is fine.
+        async def send_email() -> None:
+            await send_shipped_email(state.customer_email, payment_id)
+
+        await at_least_once("send shipped email", context, send_email)
+
+        return Order.FulfillResponse(payment_id=payment_id)
+```
+
+```proto
+// order.proto (relevant bits)
+service OrderMethods {
+  rpc Place(PlaceRequest) returns (PlaceResponse)
+    { option (rbt.v1alpha1.method).writer = {}; }
+  rpc MarkShipped(MarkShippedRequest) returns (MarkShippedResponse)
+    { option (rbt.v1alpha1.method).writer = {}; }
+  rpc Fulfill(FulfillRequest) returns (FulfillResponse)
+    { option (rbt.v1alpha1.method).workflow = {}; }
+}
+```
+
+Notes: `self.state.read`/`until` signatures have shifted across Reboot releases—if your version lacks `until`, replace it with `async for s in self.ref().reactively().Get(context): if s.shipped: break`.
+
+Confidence: medium

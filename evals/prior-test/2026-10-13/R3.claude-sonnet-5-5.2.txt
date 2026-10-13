@@ -1,0 +1,35 @@
+## What a workflow method is
+
+In Reboot, a workflow method is one of the method kinds on a state type, alongside reader, writer, and transaction. It's for long-running, multi-step, or looping logic that has to interact with the outside world. Key properties:
+
+- It does **not** hold a lock on the state while it runs. It reads and modifies state by calling the type's readers and writers (or other types' methods) through a context, and each of those calls is its own atomic operation.
+- It is **durable and retried**. You start it (for example with `spawn`/schedule, or by calling it), and Reboot guarantees it runs to completion even across failures.
+- It can run for a long time, loop, and wait on things.
+
+## What happens on a crash
+
+The workflow is **re-executed from the beginning** after the process restarts, possibly on another machine. It doesn't resume from the middle of your code. Reboot makes this tolerable by memoizing the results of the idempotent steps:
+
+- Calls to writers and other Reboot methods made with the workflow's context are idempotent, so on replay they don't apply twice.
+- Anything you wrap in Reboot's idempotency helpers is recorded once it completes, and on replay the stored result is returned instead of re-running it.
+
+Plain code you write in the workflow body, such as a raw HTTP call or a random number, runs again on every replay. It is not safe unless you wrap it.
+
+## Making a Stripe charge safe
+
+Don't call Stripe bare in the workflow body. Wrap it in one of Reboot's idempotency helpers, which take a unique name within the workflow and the context:
+
+- **`at_least_once`** runs the function and memoizes the result. If the process crashes after the charge but before the result is recorded, the function may run again. This is only safe if the call is itself idempotent. For Stripe, pass an **idempotency key** that is stable across retries, such as one derived from the workflow's or order's ID. Stripe then dedupes the charge and returns the original result. This is the usual best choice for payments.
+- **`at_most_once`** guarantees the function is never re-executed. If a crash happens mid-call, the outcome is unknown, so it surfaces an error rather than risking a double charge. Use it when the operation can't be made idempotent, and be prepared to reconcile manually or compensate.
+- Use per-iteration variants inside loops, so each iteration gets its own memoization key.
+
+Recommended pattern:
+
+1. Use `at_least_once("charge_card", context, ...)`.
+2. Inside it, call Stripe with `idempotency_key=<stable ID>`.
+3. Return only a small serializable result, such as the charge ID.
+4. Record the outcome by calling a writer, for example `mark_paid`, afterward.
+
+I'm less sure about exact signatures, such as parameter order, the `type=` argument, and the loop helpers, so check the current docs before copying code.
+
+Confidence: medium

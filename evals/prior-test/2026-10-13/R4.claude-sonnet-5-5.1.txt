@@ -1,0 +1,15 @@
+These are from memory, so details may be off.
+
+**Idempotency scoping.** These are methods on a call's idempotency options, used like `Foo.ref(id).per_workflow("alias").SomeMethod(context, ...)`. They control how long a call counts as "the same call", so it isn't repeated when the workflow is retried or resumed.
+
+- **`.per_workflow(alias)`** makes the call idempotent across the whole workflow execution. With the same alias, it runs once and later re-executions of the workflow reuse the recorded result. This is true even inside a loop, so every iteration sees the same one-time call.
+- **`.per_iteration(alias)`** makes the call idempotent within the current loop iteration (`async for iteration in context.loop("name")`). It runs once per iteration and is re-run fresh on the next one. Retries within the same iteration reuse the result.
+- **`.always()`** turns idempotency off for the call. It executes every time the workflow code reaches it, including on replays after a crash or retry. Use it only when the call is safe to repeat or you want it repeated.
+
+**Workflow helper functions.** These wrap arbitrary async code (not just Reboot method calls) so it behaves correctly across workflow re-executions. The result is memoized under an alias.
+
+- **`at_least_once("alias", context, callable, type=...)`** runs the callable and durably records its result. If the workflow crashes or restarts before the result is recorded, it runs again, so the callable must be idempotent or tolerate duplicates. Once recorded, the stored value is returned without re-running.
+- **`at_most_once("alias", context, callable, type=...)`** is for side effects that must not be duplicated. It records that it is starting the callable before running it. If a crash happens mid-execution, it does not re-run silently and instead surfaces an error, which you handle explicitly. Once it completes, the recorded result is reused.
+- **`until("alias", context, callable)`** waits for a condition. It re-evaluates the callable, with retries and backoff, until it returns a truthy (non-`False`) value. It then memoizes and returns that value. The callable is the "condition", so it is suited to polling and waiting on external state.
+
+Confidence: medium

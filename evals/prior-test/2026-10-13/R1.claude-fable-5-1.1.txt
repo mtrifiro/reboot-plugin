@@ -1,0 +1,20 @@
+**Reboot** (reboot.dev, formerly "Resemble") is a framework from Reboot Dev — a company co-founded by Benjamin Hindman, one of the creators of Apache Mesos — for building durable, stateful backends in Python and TypeScript. Its pitch is that application state and the code that operates on it live together in the framework, so you don't separately manage a database, queue, cache, and workflow engine; Reboot provides transactions, durable execution, scheduling, and reactivity as first-class primitives.
+
+**Programming model**
+
+- **States as the unit of design.** You define your domain as *states* (think actors / aggregates). Each state type has a schema and a set of methods, historically declared in Protocol Buffers: a `message` for the persisted state plus a `service` whose RPCs are annotated with Reboot options. Each state *instance* is identified by a string ID (e.g., `Counter` with ID `"user-123"`), and Reboot persists it durably and routes calls to it.
+- **Method kinds.** Every method is categorized:
+  - **readers** — read state, may run concurrently;
+  - **writers** — mutate a single state instance, serialized per instance so there are no races;
+  - **transactions** — read/write across multiple states (even different types) with ACID semantics; Reboot coordinates commit/rollback across instances;
+  - **workflows** — long-running, durable code that can call other states, sleep, loop ("control loops"), and survives crashes by replaying/resuming.
+- **Generated servicers and clients.** The `rbt` CLI (`rbt protoc`, `rbt dev run`, `rbt serve`) generates a servicer base class you subclass (`class Counter(CounterServicer)`), with async methods receiving a `context`, the current `state`, and the `request`, plus typed clients for calling other states from backend code or from the front end.
+- **Idempotency everywhere.** Mutating calls carry idempotency keys (`idempotency(alias=...)`/generated per call), so retries by the framework or clients are safe. Inside workflows, side effects are wrapped in helpers like `at_least_once` / `at_most_once` so non-deterministic or external actions aren't repeated incorrectly on replay.
+- **Tasks / scheduling.** A method can `schedule()` another call to run asynchronously, later, or periodically, durably — replacing a job queue.
+- **Reactivity.** Readers can be subscribed to; clients (notably generated React hooks, e.g. `useCounter(...)`) automatically receive updated results when the underlying state changes, giving live UIs without manual websockets/polling.
+- **Local dev and testing.** `rbt dev run` hot-reloads a full local Reboot, with optional chaos (random restarts) to prove your code handles failures; there's also a Python test harness (`Reboot` fixture) for unit/integration tests.
+- **Deployment.** Apps run on Reboot Cloud or self-hosted on Kubernetes; the runtime shards and replicates state and co-locates compute with it.
+
+In short: Reboot = actor-style stateful services + cross-state ACID transactions + durable workflows/scheduling + idempotent RPC + reactive clients, generated from a schema, for Python and TypeScript.
+
+Confidence: medium

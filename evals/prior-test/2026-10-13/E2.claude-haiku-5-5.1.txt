@@ -1,0 +1,55 @@
+```python
+import asyncio
+import stripe
+from reboot.aio.workflows import WorkflowContext
+from order_rbt.v1.order_rbt import Order, PlaceRequest, PlaceResponse
+
+stripe.api_key = "sk_test_..."  # load from a secret store in real code
+
+
+class OrderServicer(Order.Servicer):
+
+    async def place(self, context: WorkflowContext, request: PlaceRequest) -> PlaceResponse:
+        # Read the current order state
+        state = await self.read(context)
+        order_id = self.ref().id
+
+        async def charge() -> str:
+            # Stripe idempotency key ensures retries never create a second charge
+            intent = await asyncio.to_thread(
+                stripe.PaymentIntent.create,
+                amount=state.amount_cents,
+                currency=state.currency,
+                customer=state.stripe_customer_id,
+                payment_method=state.stripe_payment_method_id,
+                confirm=True,
+                off_session=True,
+                idempotency_key=f"order-charge-{order_id}",
+            )
+            return intent.id
+
+        # Retry until success; the idempotency key makes this effectively exactly-once
+        payment_intent_id = await context.at_least_once("charge card", charge, type=str)
+
+        async def is_shipped() -> bool:
+            # Set by the warehouse via the Order's ship method
+            current = await self.read(context)
+            return current.shipped
+
+        # Block durably until the warehouse marks the order shipped
+        await context.until("wait for shipped", is_shipped, type=bool)
+
+        async def send_shipped_email() -> None:
+            # Email helper assumed to exist in your codebase
+            await asyncio.to_thread(
+                send_email,
+                to=state.email,
+                subject="Your order has shipped",
+                body=f"Order {order_id} is on its way.",
+            )
+
+        await context.at_least_once("email customer", send_shipped_email)
+
+        return PlaceResponse(payment_intent_id=payment_intent_id)
+
+Confidence: medium

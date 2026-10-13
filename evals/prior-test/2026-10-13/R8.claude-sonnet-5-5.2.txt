@@ -1,0 +1,47 @@
+In Reboot, you define your state types and their methods in the backend API schema (protobuf or Pydantic). Code generation then produces typed React hooks for each state type, so the frontend never talks to the backend through hand-written fetch calls.
+
+**Reading**
+- Each *reader* method becomes a `useXxx()` hook on the generated state handle, for example `counter.useGet()`.
+- It returns something like `{ response, isLoading, aborted }`.
+
+**Changing**
+- *Writer* and *transaction* methods become plain async functions on the same handle, for example `counter.increment({ amount: 1 })`.
+- They return promises, and the backend runs them with its usual consistency guarantees.
+
+**Reactivity**
+- Yes, reads are live. A reader hook subscribes to the backend over a streaming connection, and the server pushes a new response whenever the underlying state changes.
+- This works across clients too. If one browser tab or user calls `increment`, every component reading that state re-renders, without manual refetching, polling, or cache invalidation.
+
+**Example** (the names are approximate):
+
+```tsx
+import { RebootClientProvider } from "@reboot-dev/reboot-react";
+import { useCounter } from "./api/counter/v1/counter_rbt_react";
+
+function Counter() {
+  const counter = useCounter({ id: "my-counter" });
+  const { response, isLoading } = counter.useGet(); // live subscription
+
+  if (isLoading) return <p>Loading…</p>;
+
+  return (
+    <button onClick={() => counter.increment({ amount: 1 })}>
+      Count: {response?.value}
+    </button>
+  );
+}
+
+export default function App() {
+  return (
+    <RebootClientProvider url="http://localhost:9991">
+      <Counter />
+    </RebootClientProvider>
+  );
+}
+```
+
+The `id` picks which state instance you're talking to. The provider points at the Reboot backend URL.
+
+I'm working from memory, so the exact import paths, generated file names, hook names, and the provider's props may differ from the current docs. The overall model (generated hooks, reactive readers, promise-returning writers) is the part I'm most sure of.
+
+Confidence: medium

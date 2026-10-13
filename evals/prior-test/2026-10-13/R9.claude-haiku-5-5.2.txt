@@ -1,0 +1,12 @@
+- **Restart**: stopping and starting a system, process, or service
+- **Cold vs. warm reboot**: full power cycle vs. restart without cutting power
+- **System initialization**: bootloader, kernel load, and init/service startup
+- **State reset**: clearing memory and returning to a known-good baseline
+- **Recovery**: fixing hangs, crashes, or corrupted runtime state
+- **Configuration reload**: applying changed settings that require a restart
+- **Downtime**: the service interruption a reboot causes
+- **Rolling reboot**: restarting nodes in sequence to avoid full outage
+- **Persistence**: whether data and configuration survive the restart
+- **Watchdog/auto-restart**: automatic recovery of crashed processes
+- **Reboot loop**: a boot failure that repeats endlessly
+- **Rewrite or redesign**: "reboot" as a project that restarts a codebase or product from scratch

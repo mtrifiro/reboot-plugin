@@ -1,0 +1,10 @@
+From memory, these are the Reboot Python workflow helpers. I may have some details wrong, so check the reboot.dev docs before relying on exact signatures.
+
+- **`.per_workflow(alias)`**: A modifier that scopes an idempotency key to the whole workflow run. The wrapped side effect runs once for that run, even if the workflow is retried or replayed.
+- **`.per_iteration(alias)`**: Like `per_workflow`, but the key is scoped to each iteration of a loop, so every iteration gets its own execution of the side effect.
+- **`.always()`**: Opts out of idempotency. The wrapped call runs every time the workflow code executes, including on replay.
+- **`at_least_once(...)`**: Retries the callable until it succeeds. It can run more than once if a failure happens after the side effect, so the callable should be idempotent.
+- **`at_most_once(...)`**: Runs the callable at most once. If it fails, the failure is surfaced instead of retried, which avoids duplicate side effects but can leave work incomplete.
+- **`until(...)`**: Repeats the callable until a condition is satisfied, which is useful for polling or waiting on external state.
+
+Confidence: low

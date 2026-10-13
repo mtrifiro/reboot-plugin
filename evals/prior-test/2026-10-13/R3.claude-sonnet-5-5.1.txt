@@ -1,0 +1,28 @@
+## What a workflow method is
+
+In Reboot, a state type's methods come in several kinds: reader, writer, transaction, and **workflow**. A workflow is the long-running, possibly looping kind of method. It can run for a long time, make many calls, and wait on external events. Unlike a writer or transaction, it is not one atomic unit. It reads and writes state through separate calls, and each of those calls is its own atomic step. Workflows are usually started by a writer or transaction that schedules them, so being scheduled is durable. Only after that does the workflow run in the background.
+
+## What happens on a crash
+
+Reboot guarantees a scheduled workflow runs to completion. If the process dies partway through, the workflow is **re-executed from the beginning** after restart. It does not resume at the line where it died. Anything already committed, such as writer calls and state changes, stays committed. Any ordinary code in the workflow body simply runs again. So:
+
+- Code in the body must tolerate being run more than once.
+- Side effects need explicit control, or they will repeat.
+
+## Making an external call like a Stripe charge safe
+
+Reboot provides memoization primitives for this. The names below are from memory.
+
+- **`at_least_once("name", context, fn, type=...)`**: runs `fn`, durably records its result, and on re-execution returns the recorded result instead of calling it again. If a crash happens after the call but before the result is recorded, `fn` may run again. So the call itself must be idempotent. This fits Stripe, because Stripe supports **idempotency keys**. You derive a stable key, for example from the order or workflow ID, and pass it to the charge request. A retry then returns the original charge instead of billing twice.
+- **`at_most_once("name", context, fn, ...)`**: for side effects that are not idempotent. It runs the call at most once. If a crash happens mid-call, the retry does not silently re-run it. It raises an error, and you must reconcile, for example by querying Stripe to see whether the charge exists. Use this when you can't supply an idempotency key.
+
+Related tools include `until` (wait on a condition), `per_workflow` and `per_iteration` (idempotency scoping inside loops), and `.idempotently(...)` on calls to other Reboot methods.
+
+**Recommended pattern for Stripe:**
+
+1. Wrap the charge in `at_least_once`.
+2. Pass a deterministic idempotency key, scoped per workflow or per loop iteration.
+3. Record the outcome by calling a writer on your state, such as marking the order paid, using `.idempotently()`.
+4. Don't put the Stripe call bare in the workflow body, and don't use random or time-based keys, because they change on re-execution.
+
+Confidence: medium

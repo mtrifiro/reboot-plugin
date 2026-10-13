@@ -1,0 +1,1 @@
+How does a React frontend read and change state in a Reboot (reboot.dev) backend? Are reads live/reactive? Show a short example. Answer from memory, and end with one line: "Confidence: high|medium|low".

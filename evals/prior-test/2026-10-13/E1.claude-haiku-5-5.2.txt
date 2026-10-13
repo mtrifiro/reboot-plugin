@@ -1,0 +1,124 @@
+```proto
+// bank/v1/account.proto
+syntax = "proto3";
+
+package bank.v1;
+
+import "rbt/v1alpha1/options.proto";
+
+// Account state: balance in cents, never negative.
+message Account {
+  option (rbt.v1alpha1.state) = {};
+  int64 balance = 1;
+}
+
+message DepositRequest { int64 amount = 1; }
+message DepositResponse { int64 balance = 1; }
+
+message WithdrawRequest { int64 amount = 1; }
+message WithdrawResponse { int64 balance = 1; }
+
+message TransferRequest {
+  string to_account_id = 1;
+  int64 amount = 2;
+}
+message TransferResponse {
+  int64 from_balance = 1;
+  int64 to_balance = 2;
+}
+
+// Returned when a withdrawal or transfer would overdraw the account.
+message InsufficientFunds {
+  int64 balance = 1;
+  int64 requested = 2;
+}
+
+service AccountMethods {
+  rpc Deposit(DepositRequest) returns (DepositResponse) {
+    option (rbt.v1alpha1.method).writer = {};
+  }
+  rpc Withdraw(WithdrawRequest) returns (WithdrawResponse) {
+    option (rbt.v1alpha1.method).writer = {};
+  }
+  // Transactional: withdraw and deposit commit together or not at all.
+  rpc Transfer(TransferRequest) returns (TransferResponse) {
+    option (rbt.v1alpha1.method).transaction = {};
+  }
+}
+```
+
+```python
+# servicer.py
+from bank.v1.account_rbt import Account
+from bank.v1.account_pb2 import (
+    DepositRequest, DepositResponse,
+    WithdrawRequest, WithdrawResponse,
+    TransferRequest, TransferResponse,
+    InsufficientFunds,
+)
+
+
+class AccountServicer(Account.Servicer):
+
+    async def Deposit(self, context, request: DepositRequest) -> DepositResponse:
+        # Deposits must be positive.
+        if request.amount <= 0:
+            raise ValueError("deposit amount must be positive")
+        self.state.balance += request.amount
+        return DepositResponse(balance=self.state.balance)
+
+    async def Withdraw(self, context, request: WithdrawRequest) -> WithdrawResponse:
+        if request.amount <= 0:
+            raise ValueError("withdraw amount must be positive")
+        # Reject overdrafts so the balance never goes below zero.
+        if request.amount > self.state.balance:
+            raise Account.WithdrawAborted(
+                InsufficientFunds(balance=self.state.balance, requested=request.amount)
+            )
+        self.state.balance -= request.amount
+        return WithdrawResponse(balance=self.state.balance)
+
+    async def Transfer(self, context, request: TransferRequest) -> TransferResponse:
+        if request.amount <= 0:
+            raise ValueError("transfer amount must be positive")
+        if request.to_account_id == context.state_id:
+            raise ValueError("cannot transfer to the same account")
+        if request.amount > self.state.balance:
+            raise Account.TransferAborted(
+                InsufficientFunds(balance=self.state.balance, requested=request.amount)
+            )
+
+        # Debit source locally.
+        self.state.balance -= request.amount
+
+        # Credit destination; if this fails, the whole transaction rolls back.
+        dest = Account.ref(request.to_account_id)
+        dest_resp = await dest.Deposit(context, amount=request.amount)
+
+        return TransferResponse(
+            from_balance=self.state.balance,
+            to_balance=dest_resp.balance,
+        )
+```
+
+```python
+# main.py
+import asyncio
+
+from reboot.aio.applications import Application
+from servicer import AccountServicer
+
+
+async def main():
+    # Serve all Account actors; run with `rbt dev run` during development.
+    application = Application(servicers=[AccountServicer])
+    await application.run()
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
+```
+
+Generate the Python stubs from the proto with the Reboot CLI (`rbt generate`) before running. Check the generated module paths, error-raising helpers, and transaction semantics against your installed Reboot version, since I'm not certain of the exact names.
+
+Confidence: low

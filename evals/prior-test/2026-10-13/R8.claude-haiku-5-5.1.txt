@@ -1,0 +1,30 @@
+Reboot's React bindings should let a component read actor state reactively and change it through generated methods. I'm answering from memory and haven't checked the current docs, so verify the hook and package names before using them.
+
+**Model:** State lives in durable actors (for example, a `Counter` with ID `"my-counter"`). Each actor defines methods in a Protobuf schema, and Reboot generates typed clients.
+
+- **Reads:** A query hook like `useQuery` subscribes the component to an actor's state. When a mutation changes that state on the backend, the subscribed component re-renders with the new value. As I recall, reads are live by design, not polled.
+- **Writes:** A mutation hook like `useMutation`, or a direct call on a generated client, invokes a writer method. The backend applies it durably and updates subscribers.
+
+**Example (sketch):**
+
+```tsx
+import { useQuery, useMutation } from "@reboot-dev/reboot-react";
+import { Counter } from "../api/counter_rbt";
+
+function CounterView({ id }: { id: string }) {
+  // Live subscription: re-renders when the actor's state changes
+  const { response } = useQuery(Counter, id, "get", {});
+  const increment = useMutation(Counter, id, "increment");
+
+  return (
+    <div>
+      <p>Count: {response?.value ?? 0}</p>
+      <button onClick={() => increment({ amount: 1 })}>+1</button>
+    </div>
+  );
+}
+```
+
+The backend side would be a Python or TypeScript class implementing `get` (reader) and `increment` (writer) for the `Counter` actor, with the state persisted by the runtime.
+
+Confidence: low

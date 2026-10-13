@@ -1,0 +1,48 @@
+```python
+import stripe
+from reboot.aio.workflows import WorkflowContext  # verify import path for your Reboot version
+
+from api.orders.v1.orders_rbt import Order, PlaceRequest, PlaceResponse, Status
+from app.email import send_order_shipped_email  # your email helper, idempotent on order id
+
+stripe.api_key = "sk_..."  # load from env/secrets in real code
+
+
+class OrderServicer(Order.Servicer):
+
+    async def place(self, context: WorkflowContext, request: PlaceRequest) -> PlaceResponse:
+        order_id = context.state_id
+
+        def charge() -> str:
+            # Stripe idempotency key ensures one charge even if this call is retried.
+            intent = stripe.PaymentIntent.create(
+                amount=self.state.total_cents,
+                currency="usd",
+                customer=self.state.stripe_customer_id,
+                payment_method=self.state.payment_method_id,
+                confirm=True,
+                idempotency_key=f"order-{order_id}-charge",
+            )
+            return intent.id
+
+        # Run the charge once; Reboot records the result and won't re-run it on replay.
+        await context.idempotently(f"charge-{order_id}").run(charge)
+
+        # Block durably until the warehouse method sets status to SHIPPED.
+        await context.until(
+            f"wait-shipped-{order_id}",
+            lambda: self.state.status == Status.SHIPPED,
+        )
+
+        # Send the shipped email once.
+        await context.idempotently(f"email-shipped-{order_id}").run(
+            lambda: send_order_shipped_email(
+                to=self.state.customer_email,
+                order_id=order_id,
+            )
+        )
+
+        return PlaceResponse()
+```
+
+Confidence: low

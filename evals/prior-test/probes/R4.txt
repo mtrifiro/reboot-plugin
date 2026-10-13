@@ -1,0 +1,1 @@
+In Reboot (reboot.dev) Python workflows, what do each of these do: `.per_workflow(alias)`, `.per_iteration(alias)`, `.always()`, `at_least_once(...)`, `at_most_once(...)`, `until(...)`? Answer from memory, and end with one line: "Confidence: high|medium|low".

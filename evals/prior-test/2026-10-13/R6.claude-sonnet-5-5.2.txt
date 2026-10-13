@@ -1,0 +1,31 @@
+## `rbt generate`
+This is the code generator. It reads your API definition and writes typed client and server code for it. The API is defined in Protobuf (`.proto`) files that use Reboot's custom options. You declare state types (data models) and their methods, and each method has a kind such as reader, writer, transaction, or workflow. `rbt generate` produces language-specific base classes and stubs, such as Python `*_rbt.py` modules and TypeScript `*_rbt.ts` / `*_rbt_web.ts` / `*_rbt_react.ts` files. You then subclass the generated servicer/base classes to implement your logic, and use the generated typed references (`Foo.ref(id)`) to call it.
+
+## `rbt dev run`
+This is the local development runner. It starts your Reboot application, which is the entrypoint you specify, typically a Python `main.py` that calls `Application(servicers=[...]).run()`, along with a local Reboot runtime. It watches your source and API files and restarts the app when they change, and it can re-run code generation. State is persisted locally under an application `--name`, so it survives restarts. `rbt dev expunge` wipes that state. Related commands include `rbt serve` for production-style runs and `rbt cloud` for deployment.
+
+## Typical layout
+```
+my-app/
+├── .rbtrc                 # flags for rbt commands
+├── api/
+│   └── myapp/v1/
+│       └── myapp.proto    # API definition (state + methods)
+├── backend/
+│   ├── api/               # generated Python code lands here
+│   │   └── myapp/v1/myapp_rbt.py
+│   └── src/
+│       ├── main.py        # Application(...) entrypoint
+│       └── myapp_servicer.py   # your implementations
+└── web/                   # optional frontend
+    └── src/api/           # generated TS / React code
+```
+
+Notes:
+- `.rbtrc` holds per-command flags, one per line. Examples are `generate api/` plus `--python=backend/api`, and `dev run --name=myapp --python --application=backend/src/main.py`. This is why you can usually type just `rbt generate` or `rbt dev run`.
+- The `.proto` files live in a directory you choose, conventionally `api/`. The generated output directories are set by the `--python=`, `--react=`, and `--nodejs=` style flags.
+- Newer Reboot versions also support defining the API in Python with Pydantic instead of Protobuf. I'm less sure of the exact file conventions there.
+
+I'm sure of the general workflow: define the API, run `rbt generate`, implement the servicers, then run `rbt dev run`. Exact directory names and flag spellings vary by version and example, so check the docs or a template project.
+
+Confidence: medium

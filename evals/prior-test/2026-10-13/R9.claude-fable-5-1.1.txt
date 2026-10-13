@@ -1,0 +1,35 @@
+Key concepts I associate with "Reboot" in software development:
+
+**System / Operations**
+- Restarting a machine, VM, container, or service to clear state
+- Warm vs. cold reboot; soft vs. hard reset
+- Scheduled reboots, maintenance windows, graceful shutdown/restart
+- "Turn it off and on again" as a legitimate first-line fix for leaked memory, stuck threads, or corrupted in-memory state
+- Watchdog timers and automatic reboot on hang
+- Rolling restarts in clusters to avoid downtime
+- Boot sequence, bootloader, init systems (systemd, launchd), startup order and dependencies
+- Reboot-required flags after kernel/driver/OS updates
+- Crash recovery, persistence, and idempotent startup
+
+**Project / Codebase**
+- Rebooting a project: restarting from a clean slate rather than iterating
+- The "big rewrite" and its risks (Joel Spolsky's "things you should never do")
+- Greenfield vs. brownfield; rewrite vs. refactor vs. strangler-fig migration
+- Reviving a dormant or abandoned project (new maintainers, new roadmap)
+- Reset of scope, architecture, or tech stack; v2.0 / "next-gen" branding
+- Deleting technical debt by starting over; loss of accumulated bug fixes and domain knowledge
+
+**Team / Process**
+- Rebooting a team, sprint, or process after failure (retrospectives, reset meetings)
+- Resetting priorities or a backlog
+- Re-onboarding after a reorg or leadership change
+
+**Testing / Reliability**
+- Reboot testing: verifying a system comes up cleanly and consistently
+- Chaos engineering: killing instances to test resilience
+- Fault injection and recovery-time measurement
+
+**Related terms**
+- Reset, restart, reload, re-initialize, reinstall, refresh, respawn
+- Hot reload / live reload (the opposite of a full reboot)
+- Reboot in gaming/media (franchise reboot) borrowed into product naming

@@ -1,0 +1,69 @@
+# Testing a Reboot Python Application
+
+Reboot provides an in-process test harness, `reboot.aio.tests.Reboot`. It starts a real Reboot runtime locally, including state storage and transactions. Your tests call your servicers through the generated client stubs, the same way production code does. You don't mock the framework.
+
+## The usual pattern
+
+1. Create and start a `Reboot()` instance in `asyncSetUp`.
+2. Bring up your `Application` with the servicers under test using `rbt.up(...)`.
+3. Create an external context with `rbt.create_external_context(...)` so the test can act as a client.
+4. Get a reference to a state instance (`MyState.ref("id")`) and call its methods.
+5. Stop the harness in `asyncTearDown`.
+
+## Example
+
+The example assumes a `hello.proto` that defines a `Hello` state with `Send` (a writer) and `Messages` (a reader). The `hello_rbt` module is generated from it.
+
+```python
+# tests/test_hello.py
+import unittest
+
+from reboot.aio.applications import Application
+from reboot.aio.tests import Reboot
+
+from hello.v1.hello_rbt import Hello          # generated code
+from hello_servicer import HelloServicer      # your implementation
+
+
+class TestHello(unittest.IsolatedAsyncioTestCase):
+
+    async def asyncSetUp(self) -> None:
+        self.rbt = Reboot()
+        await self.rbt.start()
+
+    async def asyncTearDown(self) -> None:
+        await self.rbt.stop()
+
+    async def test_send_and_read(self) -> None:
+        await self.rbt.up(Application(servicers=[HelloServicer]))
+
+        context = self.rbt.create_external_context(name=f"test-{self.id()}")
+
+        hello = Hello.ref("test-hello")
+
+        await hello.send(context, message="Hello, World")
+        await hello.send(context, message="Hello again")
+
+        response = await hello.messages(context)
+        self.assertEqual(
+            list(response.messages),
+            ["Hello, World", "Hello again"],
+        )
+
+
+if __name__ == "__main__":
+    unittest.main()
+```
+
+Run it with `pytest tests/` or `python -m unittest`.
+
+## Useful details
+
+- **Effect validation:** in tests and in dev mode, Reboot re-runs your methods to check they are safe to retry and free of hidden side effects. A non-idempotent servicer may therefore fail tests that would otherwise look fine. This is intentional.
+- **Restart testing:** you can call `await self.rbt.down()` and then `up(...)` again to check that state survives a restart.
+- **Workflows and tasks:** you can schedule a task, then await its result in the test to check it ran to completion.
+- **Isolation:** create a fresh `Reboot()` instance per test, as in the example, so tests don't share state.
+
+Exact method names (`create_external_context`, `up`/`down`, and the generated `ref` and `create` helpers) may differ slightly between Reboot versions. Check them against the docs for your version.
+
+Confidence: medium

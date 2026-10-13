@@ -1,0 +1,40 @@
+**Workflow methods in Reboot**
+
+Reboot methods on a state type come in a few kinds:
+
+- **reader**: read-only.
+- **writer**: mutates a single state atomically.
+- **transaction**: atomic across multiple states.
+- **workflow**: long-running, multi-step orchestration logic.
+
+A workflow does not hold a lock on the state or run inside one atomic unit. Instead, it calls other methods (writers, transactions, and methods on other states) step by step. It is typically launched with `.schedule()` or spawned as a task rather than called inline, and it runs with a `WorkflowContext`.
+
+**What happens on a crash**
+
+Workflows are durable. If the process or machine dies partway through, Reboot restarts the workflow and **re-executes the function from the top**. It does not resume mid-function. The model is replay, not checkpointing the stack.
+
+Re-running is safe because the side effects of steps that already finished are not repeated:
+
+- **Calls to other Reboot methods** made from a workflow are automatically given idempotency keys derived from the workflow and call. On replay, a write that already committed is not applied again, and its result is returned.
+- **Your own non-deterministic or external work** has to be wrapped explicitly so replay doesn't redo it.
+
+Because of replay, the workflow body should be deterministic apart from the wrapped steps. Avoid raw `random`, raw `time.now()`, and unwrapped network calls that steer control flow.
+
+**Making an external call such as a Stripe charge**
+
+Wrap the call in one of Reboot's memoization helpers, keyed by a stable alias. In the Python SDK these are roughly:
+
+- **`at_least_once("alias", context, fn)`**: retries `fn` until it succeeds once, then records the result. On any later replay, the recorded result is returned and `fn` is not called. The call may run more than once if a crash happens after Stripe acted but before Reboot recorded the result. So pair it with an idempotent external API.
+- **`at_most_once("alias", context, fn)`**: guarantees `fn` is never invoked twice. If a crash leaves the outcome unknown, it raises instead of retrying, and you handle that case explicitly. Use this when the external system offers no idempotency.
+
+For Stripe, the right pattern is:
+
+1. Use `at_least_once`.
+2. Pass Stripe an **idempotency key** that is stable across replays. Derive it from the workflow or context (for example, from the context's idempotency key or an alias-scoped key), not from a freshly generated UUID.
+3. Return the charge ID or result from the wrapped function, so later replays get the memoized value.
+
+Then do any follow-up state updates through a writer or transaction call, which Reboot already makes idempotent. With this setup, a retry hits Stripe again with the same key and Stripe dedupes the charge, while Reboot dedupes everything after it.
+
+Exact helper names and signatures (such as `until`, or `context.idempotently(...)`) may differ slightly between SDK versions and between the TypeScript and Python SDKs, so check the current docs.
+
+Confidence: medium

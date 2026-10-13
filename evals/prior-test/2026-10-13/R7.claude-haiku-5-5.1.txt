@@ -1,0 +1,36 @@
+Reboot's Python SDK provides a test harness in `reboot.aio.tests` that runs your application in-process against an embedded Reboot instance. You typically wrap it in a pytest fixture, register your servicers, and call your generated stubs through an external context. I'm working from memory, so check the exact names against the current docs at reboot.dev.
+
+```python
+# tests/test_counter.py
+import pytest
+from reboot.aio.applications import Application
+from reboot.aio.tests import Reboot
+
+from my_app.api.counter_rbt import Counter          # generated stubs
+from my_app.servicers.counter import CounterServicer
+
+
+@pytest.fixture
+async def rbt():
+    rbt = Reboot()
+    await rbt.start()
+    yield rbt
+    await rbt.stop()
+
+
+@pytest.mark.asyncio
+async def test_increment(rbt: Reboot) -> None:
+    await rbt.up(Application(servicers=[CounterServicer]))
+
+    context = rbt.create_external_context(name="test")
+    counter = Counter.ref("my-counter")
+
+    await counter.create(context)
+    response = await counter.increment(context, amount=2)
+
+    assert response.value == 2
+```
+
+Run it with `pytest` as usual. Each test gets a fresh Reboot instance, so state from one test doesn't leak into another.
+
+Confidence: medium

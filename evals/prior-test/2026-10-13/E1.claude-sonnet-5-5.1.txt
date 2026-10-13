@@ -1,0 +1,190 @@
+Files below. I wrote this from memory of the Reboot protobuf-based API and haven't run it, so check option names against your installed `reboot` version.
+
+**`.rbtrc`**
+```
+generate --python=backend/api
+generate api/
+```
+
+**`api/bank/v1/account.proto`**
+```proto
+syntax = "proto3";
+
+package bank.v1;
+
+import "rbt/v1alpha1/options.proto";
+
+// Persistent state; uint64 means the balance can't be negative by type.
+message Account {
+  option (rbt.v1alpha1.state) = {};
+  uint64 balance = 1;
+}
+
+// Declared error, raised when a withdrawal exceeds the balance.
+message InsufficientFunds {
+  uint64 balance = 1;
+  uint64 requested = 2;
+}
+
+message OpenRequest {}
+message OpenResponse {}
+
+message BalanceRequest {}
+message BalanceResponse { uint64 balance = 1; }
+
+message DepositRequest { uint64 amount = 1; }
+message DepositResponse { uint64 balance = 1; }
+
+message WithdrawRequest { uint64 amount = 1; }
+message WithdrawResponse { uint64 balance = 1; }
+
+message TransferRequest {
+  string to_account_id = 1;
+  uint64 amount = 2;
+}
+message TransferResponse {}
+
+service AccountMethods {
+  // Creates the account with a zero balance.
+  rpc Open(OpenRequest) returns (OpenResponse) {
+    option (rbt.v1alpha1.method).writer = { constructor: {} };
+  }
+
+  rpc Balance(BalanceRequest) returns (BalanceResponse) {
+    option (rbt.v1alpha1.method).reader = {};
+  }
+
+  rpc Deposit(DepositRequest) returns (DepositResponse) {
+    option (rbt.v1alpha1.method).writer = {};
+  }
+
+  rpc Withdraw(WithdrawRequest) returns (WithdrawResponse) {
+    option (rbt.v1alpha1.method).writer = {
+      errors: ["InsufficientFunds"]
+    };
+  }
+
+  // Atomic: runs as a transaction, so both sides commit or neither does.
+  rpc Transfer(TransferRequest) returns (TransferResponse) {
+    option (rbt.v1alpha1.method).transaction = {
+      errors: ["InsufficientFunds"]
+    };
+  }
+}
+```
+
+**`backend/src/account_servicer.py`**
+```python
+from bank.v1.account_pb2 import (
+    BalanceRequest,
+    BalanceResponse,
+    DepositRequest,
+    DepositResponse,
+    InsufficientFunds,
+    OpenRequest,
+    OpenResponse,
+    TransferRequest,
+    TransferResponse,
+    WithdrawRequest,
+    WithdrawResponse,
+)
+from bank.v1.account_rbt import Account
+from reboot.aio.auth.authorizers import allow
+from reboot.aio.contexts import ReaderContext, TransactionContext, WriterContext
+
+
+class AccountServicer(Account.Servicer):
+
+    def authorizer(self):
+        # Demo only: allow everything. Lock this down in production.
+        return allow()
+
+    async def open(
+        self,
+        context: WriterContext,
+        state: Account.State,
+        request: OpenRequest,
+    ) -> OpenResponse:
+        state.balance = 0
+        return OpenResponse()
+
+    async def balance(
+        self,
+        context: ReaderContext,
+        state: Account.State,
+        request: BalanceRequest,
+    ) -> BalanceResponse:
+        return BalanceResponse(balance=state.balance)
+
+    async def deposit(
+        self,
+        context: WriterContext,
+        state: Account.State,
+        request: DepositRequest,
+    ) -> DepositResponse:
+        state.balance += request.amount
+        return DepositResponse(balance=state.balance)
+
+    async def withdraw(
+        self,
+        context: WriterContext,
+        state: Account.State,
+        request: WithdrawRequest,
+    ) -> WithdrawResponse:
+        # Reject overdrafts; raising aborts the call without changing state.
+        if request.amount > state.balance:
+            raise Account.WithdrawAborted(
+                InsufficientFunds(
+                    balance=state.balance,
+                    requested=request.amount,
+                )
+            )
+        state.balance -= request.amount
+        return WithdrawResponse(balance=state.balance)
+
+    async def transfer(
+        self,
+        context: TransactionContext,
+        request: TransferRequest,
+    ) -> TransferResponse:
+        if request.to_account_id == context.state_id:
+            raise ValueError("Cannot transfer to the same account")
+
+        # If either call fails, the whole transaction is rolled back.
+        await self.ref().withdraw(context, amount=request.amount)
+        await Account.ref(request.to_account_id).deposit(
+            context, amount=request.amount
+        )
+        return TransferResponse()
+```
+
+**`backend/src/main.py`**
+```python
+import asyncio
+
+from account_servicer import AccountServicer
+from reboot.aio.applications import Application
+
+
+async def main():
+    # Register servicers and start the Reboot application.
+    application = Application(servicers=[AccountServicer])
+    await application.run()
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
+```
+
+**Run**
+```
+rbt generate
+rbt dev run --python --application=backend/src/main.py
+```
+
+Notes:
+- `Transfer` is called on the source account, for example `Account.ref("alice").transfer(context, to_account_id="bob", amount=50)`.
+- The destination account must exist. Open it first with `Account.open(context, "bob")`.
+- If you hit import-path issues, the generated module paths follow the `generate --python=` directory in `.rbtrc`.
+
+Confidence: medium

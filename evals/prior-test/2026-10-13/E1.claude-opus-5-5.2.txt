@@ -1,0 +1,208 @@
+**`api/bank/v1/bank.proto`**
+```proto
+syntax = "proto3";
+
+package bank.v1;
+
+import "rbt/v1alpha1/options.proto";
+
+// Amounts are integer cents to avoid floating-point errors.
+
+message Account {
+  option (rbt.v1alpha1.state) = {};
+  uint64 balance = 1;
+}
+
+message Bank {
+  option (rbt.v1alpha1.state) = {};
+}
+
+service AccountMethods {
+  rpc Open(OpenRequest) returns (OpenResponse) {
+    option (rbt.v1alpha1.method).writer = { constructor: {} };
+  }
+  rpc Balance(BalanceRequest) returns (BalanceResponse) {
+    option (rbt.v1alpha1.method).reader = {};
+  }
+  rpc Deposit(DepositRequest) returns (DepositResponse) {
+    option (rbt.v1alpha1.method).writer = {};
+  }
+  rpc Withdraw(WithdrawRequest) returns (WithdrawResponse) {
+    option (rbt.v1alpha1.method) = {
+      writer: {},
+      errors: [ "OverdraftError" ],
+    };
+  }
+}
+
+service BankMethods {
+  rpc Create(CreateRequest) returns (CreateResponse) {
+    option (rbt.v1alpha1.method).writer = { constructor: {} };
+  }
+  rpc Transfer(TransferRequest) returns (TransferResponse) {
+    option (rbt.v1alpha1.method) = {
+      transaction: {},
+      errors: [ "OverdraftError" ],
+    };
+  }
+}
+
+message OpenRequest {}
+message OpenResponse {}
+
+message BalanceRequest {}
+message BalanceResponse { uint64 balance = 1; }
+
+message DepositRequest { uint64 amount = 1; }
+message DepositResponse { uint64 balance = 1; }
+
+message WithdrawRequest { uint64 amount = 1; }
+message WithdrawResponse { uint64 balance = 1; }
+
+message OverdraftError {
+  uint64 balance = 1;    // Balance at time of attempt.
+  uint64 requested = 2;  // Amount requested.
+}
+
+message CreateRequest {}
+message CreateResponse {}
+
+message TransferRequest {
+  string from_account_id = 1;
+  string to_account_id = 2;
+  uint64 amount = 3;
+}
+message TransferResponse {}
+```
+
+**`backend/src/account_servicer.py`**
+```python
+from bank.v1.bank_rbt import (
+    Account,
+    BalanceRequest,
+    BalanceResponse,
+    DepositRequest,
+    DepositResponse,
+    OpenRequest,
+    OpenResponse,
+    OverdraftError,
+    WithdrawRequest,
+    WithdrawResponse,
+)
+from reboot.aio.auth.authorizers import allow
+from reboot.aio.contexts import ReaderContext, WriterContext
+
+
+class AccountServicer(Account.Servicer):
+
+    def authorizer(self):
+        # Demo only: replace with real authorization.
+        return allow()
+
+    async def open(
+        self, context: WriterContext, request: OpenRequest
+    ) -> OpenResponse:
+        self.state.balance = 0
+        return OpenResponse()
+
+    async def balance(
+        self, context: ReaderContext, request: BalanceRequest
+    ) -> BalanceResponse:
+        return BalanceResponse(balance=self.state.balance)
+
+    async def deposit(
+        self, context: WriterContext, request: DepositRequest
+    ) -> DepositResponse:
+        self.state.balance += request.amount
+        return DepositResponse(balance=self.state.balance)
+
+    async def withdraw(
+        self, context: WriterContext, request: WithdrawRequest
+    ) -> WithdrawResponse:
+        # Reject (no state change) if it would go negative.
+        if request.amount > self.state.balance:
+            raise Account.WithdrawAborted(
+                OverdraftError(
+                    balance=self.state.balance,
+                    requested=request.amount,
+                )
+            )
+        self.state.balance -= request.amount
+        return WithdrawResponse(balance=self.state.balance)
+```
+
+**`backend/src/bank_servicer.py`**
+```python
+from bank.v1.bank_rbt import (
+    Account,
+    Bank,
+    CreateRequest,
+    CreateResponse,
+    OverdraftError,
+    TransferRequest,
+    TransferResponse,
+)
+from reboot.aio.auth.authorizers import allow
+from reboot.aio.contexts import TransactionContext, WriterContext
+
+
+class BankServicer(Bank.Servicer):
+
+    def authorizer(self):
+        # Demo only: replace with real authorization.
+        return allow()
+
+    async def create(
+        self, context: WriterContext, request: CreateRequest
+    ) -> CreateResponse:
+        return CreateResponse()
+
+    async def transfer(
+        self, context: TransactionContext, request: TransferRequest
+    ) -> TransferResponse:
+        # Both calls commit together or not at all.
+        source = Account.ref(request.from_account_id)
+        destination = Account.ref(request.to_account_id)
+
+        try:
+            await source.withdraw(context, amount=request.amount)
+        except Account.WithdrawAborted as aborted:
+            if isinstance(aborted.error, OverdraftError):
+                # Re-raise as this method's declared error; aborts the transaction.
+                raise Bank.TransferAborted(aborted.error)
+            raise
+
+        await destination.deposit(context, amount=request.amount)
+        return TransferResponse()
+```
+
+**`backend/src/main.py`**
+```python
+import asyncio
+
+from account_servicer import AccountServicer
+from bank.v1.bank_rbt import Bank
+from bank_servicer import BankServicer
+from reboot.aio.applications import Application
+from reboot.aio.external import InitializeContext
+
+SINGLETON_BANK_ID = "reboot-bank"
+
+
+async def initialize(context: InitializeContext):
+    # Ensure the singleton Bank exists (idempotent across restarts).
+    await Bank.create(context, SINGLETON_BANK_ID)
+
+
+async def main():
+    await Application(
+        servicers=[AccountServicer, BankServicer],
+        initialize=initialize,
+    ).run()
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
+```
+
+Confidence: medium

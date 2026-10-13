@@ -1,0 +1,21 @@
+**Short version (from memory of Reboot's workflow API):**
+
+**Idempotency helpers on `WorkflowContext`** — these return a context whose outgoing call gets an idempotency key, so the call is safe to replay when the workflow is re-executed (after a crash/restart, or on the next iteration of a "loop" workflow):
+
+- **`context.per_workflow(alias)`** – Idempotency key derived from the workflow's ID + the alias. The call happens once for the *entire lifetime of the workflow*; on any re-execution or later loop iteration, the stored result is returned instead of re-performing the call. Use for "do this exactly once in this workflow" side effects (e.g., create a record, send one email).
+
+- **`context.per_iteration(alias)`** – Key derived from workflow ID + current iteration number + alias. The call is deduplicated *within one iteration* (so a crash/retry mid-iteration won't redo it), but it *is* performed again on each new iteration of a loop workflow. Use for "do this once per tick/iteration" work.
+
+- **`context.always()`** – No deduplication; a fresh key every time, so the call is re-performed on every execution/replay. Appropriate for calls that are safe to repeat (typically readers or idempotent-by-nature operations).
+
+**Function helpers from `reboot.aio.workflows`** (`await helper(alias, context, callable, type=...)`) — for wrapping arbitrary Python code (not just Reboot RPCs) with durable semantics:
+
+- **`at_least_once(alias, context, fn, type=...)`** – Runs `fn`; once it completes, the result is durably memoized under the alias so replays return the stored value instead of re-running. If the workflow crashes *during* `fn`, it will run again on retry → at-least-once. Use when `fn` is idempotent/safe to repeat.
+
+- **`at_most_once(alias, context, fn, type=...)`** – Records "started" durably *before* running `fn`, then memoizes the result after. If a crash happens between start and completion, the replay does **not** re-run `fn` and instead raises an error (the workflow must handle that it may or may not have happened) → at-most-once. Use for non-idempotent side effects you can't afford to duplicate.
+
+- **`until(alias, context, fn, type=...)`** – Durable, reactive wait: `fn` is a (reader-style) callable; it's evaluated and re-evaluated whenever the state it read changes, until it returns a truthy / non-`None` value, which is then memoized under the alias and returned. Use to block a workflow until some condition on state holds, without polling.
+
+The `type=` argument is the Python type of the return value so it can be serialized/stored (and so replays can deserialize it).
+
+Confidence: medium

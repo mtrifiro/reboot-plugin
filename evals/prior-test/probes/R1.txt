@@ -1,0 +1,1 @@
+What is Reboot (reboot.dev), the framework for building backends in Python and TypeScript? Describe its programming model and key concepts. Answer without looking anything up, and end with one line: "Confidence: high|medium|low".

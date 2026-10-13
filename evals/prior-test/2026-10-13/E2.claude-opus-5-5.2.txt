@@ -1,0 +1,133 @@
+Below is a Reboot workflow for this. One note on "exactly once": Reboot's `at_least_once` stops re-running the charge after it has succeeded. If a crash happens mid-call, the retry reuses a deterministic Stripe idempotency key, so Stripe treats it as the same charge.
+
+**`shop/v1/order.proto`**
+```proto
+syntax = "proto3";
+package shop.v1;
+import "rbt/v1alpha1/options.proto";
+
+message Order {
+  option (rbt.v1alpha1.state) = {};
+  string customer_email = 1;
+  int64 amount_cents = 2;
+  string currency = 3;
+  string stripe_customer_id = 4;
+  string payment_method_id = 5;
+  string payment_intent_id = 6;
+  bool shipped = 7;
+}
+
+message PlaceRequest {
+  string customer_email = 1;
+  int64 amount_cents = 2;
+  string currency = 3;
+  string stripe_customer_id = 4;
+  string payment_method_id = 5;
+}
+message PlaceResponse {}
+message MarkShippedRequest {}
+message MarkShippedResponse {}
+message FulfillRequest {}
+message FulfillResponse {}
+
+service OrderMethods {
+  rpc Place(PlaceRequest) returns (PlaceResponse) {
+    option (rbt.v1alpha1.method).writer = { constructor: {} };
+  }
+  rpc MarkShipped(MarkShippedRequest) returns (MarkShippedResponse) {
+    option (rbt.v1alpha1.method).writer = {};
+  }
+  rpc Fulfill(FulfillRequest) returns (FulfillResponse) {
+    option (rbt.v1alpha1.method).workflow = {};
+  }
+}
+```
+
+**`backend/src/order_servicer.py`**
+```python
+import os
+import httpx
+import stripe
+from reboot.aio.contexts import WorkflowContext, WriterContext
+from reboot.aio.workflows import at_least_once, until
+from shop.v1.order_rbt import Order
+
+stripe.api_key = os.environ["STRIPE_SECRET_KEY"]
+
+
+class OrderServicer(Order.Servicer):
+
+    async def place(self, context: WriterContext, request):
+        self.state.customer_email = request.customer_email
+        self.state.amount_cents = request.amount_cents
+        self.state.currency = request.currency
+        self.state.stripe_customer_id = request.stripe_customer_id
+        self.state.payment_method_id = request.payment_method_id
+        # Scheduled atomically with this write: the workflow runs iff the order is placed.
+        await self.ref().schedule().fulfill(context)
+        return Order.PlaceResponse()
+
+    async def mark_shipped(self, context: WriterContext, request):
+        # Called by the warehouse; this write wakes up `until` below.
+        self.state.shipped = True
+        return Order.MarkShippedResponse()
+
+    async def fulfill(self, context: WorkflowContext, request):
+        order = await self.state.read(context)
+
+        # 1. Charge once. Reboot memoizes the result after success.
+        #    The deterministic Stripe idempotency key covers a crash mid-call.
+        async def charge() -> str:
+            intent = await stripe.PaymentIntent.create_async(
+                amount=order.amount_cents,
+                currency=order.currency,
+                customer=order.stripe_customer_id,
+                payment_method=order.payment_method_id,
+                confirm=True,
+                off_session=True,
+                idempotency_key=f"order-{context.state_id}-charge",
+            )
+            return intent.id
+
+        intent_id = await at_least_once("Charge", context, charge, type=str)
+
+        async def record(state):
+            state.payment_intent_id = intent_id
+
+        await self.state.write("RecordCharge", context, record)
+
+        # 2. Durably wait (reactively, no polling) until MarkShipped sets the flag.
+        async def is_shipped() -> bool:
+            return (await self.state.read(context)).shipped
+
+        await until("Shipped", context, is_shipped)
+
+        # 3. Email. Also pass an idempotency key if your provider supports one.
+        async def send_email():
+            async with httpx.AsyncClient() as client:
+                resp = await client.post(
+                    "https://api.resend.com/emails",
+                    headers={
+                        "Authorization": f"Bearer {os.environ['RESEND_API_KEY']}",
+                        "Idempotency-Key": f"order-{context.state_id}-shipped",
+                    },
+                    json={
+                        "from": "orders@example.com",
+                        "to": order.customer_email,
+                        "subject": "Your order has shipped",
+                        "text": "Good news, your order is on its way!",
+                    },
+                )
+                resp.raise_for_status()
+
+        await at_least_once("ShippedEmail", context, send_email)
+
+        return Order.FulfillResponse()
+```
+
+**Limitations to check:**
+- **Stripe key expiry.** Stripe keeps idempotency keys for about 24 hours. A retry after that could charge again, so if the charge step could stall that long, have `charge()` first look up an existing PaymentIntent by order ID (using metadata).
+- **Email delivery.** If your email provider doesn't support idempotency keys, rare duplicate emails are possible. Switching to `at_most_once` prevents duplicates but risks sending no email at all.
+- **API names.** Some Reboot API names vary between versions, such as `self.state.read/write` in workflows, `schedule().fulfill`, and the `until` signature. Check them against the version you have installed.
+
+Confidence: medium

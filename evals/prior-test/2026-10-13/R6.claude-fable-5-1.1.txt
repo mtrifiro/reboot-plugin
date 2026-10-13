@@ -1,0 +1,35 @@
+**Reboot (reboot.dev) — CLI and project layout, from memory**
+
+Reboot is a framework for building distributed apps with durable "state" types (actors) defined in Protobuf. The CLI is `rbt` (formerly `rsm`, when the project was called Resemble).
+
+**`rbt generate`**
+- Runs protoc plus Reboot's code generator over your `.proto` API definitions.
+- Emits the standard protobuf outputs (`*_pb2.py`, `*_pb2_grpc.py` / `*_pb.js`, `*_pb.d.ts`) and Reboot-specific files: `*_rbt.py` (Python servicer base classes + clients/weak references), `*_rbt.ts` (Node.js), and `*_rbt_react.ts` (React hooks for the web frontend).
+- Output locations are given by flags such as `--python=backend/api`, `--nodejs=backend/api`, `--react=web/src/api`, with the source dir passed as the proto include path (e.g. `api/`).
+- Defaults for these flags normally live in a `.rbtrc` file at the project root, so you can just run `rbt generate`.
+
+**`rbt dev run`**
+- Starts your application against a local, single-node Reboot runtime for development.
+- Watches the `.proto` files and source files (`--watch=...` patterns), automatically re-runs `rbt generate` when the API changes, and hot-restarts the application when code changes.
+- Key flags: `--application=backend/src/main.py` (entry point), `--python` / `--nodejs`, `--name=<app name>`, `--working-directory`, optional `--state-directory` (defaults to a local `.rbt/` dir so durable state survives restarts; `rbt dev expunge` wipes it). Also usually configured via `.rbtrc` under a `dev run` section.
+- Its production counterpart is `rbt serve run` (and `rbt cloud ...` for the hosted cloud).
+
+**Typical project layout (e.g. the hello-world template)**
+```
+.rbtrc                 # default flags for `rbt generate` and `rbt dev run`
+api/
+  hello_world/v1/
+    greeter.proto      # API: messages + a `service` annotated with Reboot options (state type, readers/writers/transactions)
+backend/
+  src/
+    main.py            # creates `Application(servicers=[...])` and runs it
+    servicers.py       # your servicer implementing the generated base class
+  api/                 # GENERATED (gitignored): hello_world/v1/greeter_pb2.py, greeter_pb2_grpc.py, greeter_rbt.py
+web/
+  src/
+    api/               # GENERATED: greeter_pb.ts, greeter_rbt_react.ts (React hooks)
+    App.tsx
+```
+Convention: hand-written protos in `api/`, generated code written next to the code that consumes it (`backend/api`, `web/src/api`) and excluded from version control; `rbt dev run` keeps them in sync so you rarely call `rbt generate` by hand.
+
+Confidence: medium

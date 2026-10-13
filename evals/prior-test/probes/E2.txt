@@ -1,0 +1,1 @@
+Write a Reboot (reboot.dev) Python workflow method for an Order: when the order is placed, charge the card through Stripe exactly once, then wait until the warehouse marks the order shipped (another method sets that on the Order's state), then send the customer an email. Code with brief comments only. End with one line: "Confidence: high|medium|low".

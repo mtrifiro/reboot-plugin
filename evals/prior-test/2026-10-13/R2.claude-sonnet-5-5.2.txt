@@ -1,0 +1,39 @@
+In Reboot, a state type's methods fall into four kinds: reader, writer, transaction, and workflow. Any of them can be marked as a constructor.
+
+**Reader**
+- Gives read-only access to the state, so it cannot modify it.
+- Many readers can run concurrently on the same state instance.
+- It sees a consistent snapshot of the state.
+- It can call other readers, but it can't call anything that mutates.
+
+**Writer**
+- Can read and modify the state of its own instance.
+- Writes are atomic and are serialized per state instance, so there are no races within one instance.
+- State changes are durably persisted when the method returns successfully. If it raises an error, the changes are discarded.
+- It can schedule tasks, such as running a method later, which are dispatched only if the writer commits.
+- It is meant to be fast and local, and it doesn't make arbitrary calls across other state instances.
+
+**Transaction**
+- Can read and write across multiple state instances, including different state types.
+- It is all-or-nothing: either every change commits, or none do if there's an error or abort.
+- It gives serializable isolation.
+- It can call readers, writers, and other transactions.
+- It is the tool for cross-actor invariants, such as transferring money between two accounts.
+
+**Workflow**
+- Is a long-running, durable, background-style method.
+- It doesn't hold the state lock for its whole duration. It reads and writes state by calling other methods, which are typically inline writers.
+- It is retried or resumed after a crash or restart, so it must be deterministic and idempotent.
+- Control-flow helpers such as `at_least_once`, `at_most_once`, `until`, and `loop` make side effects and waiting safe under re-execution.
+- It is typically used for orchestration, polling, timers, and external calls.
+
+**Constructors**
+- A writer or transaction can be marked as a constructor (a "factory" in some APIs).
+- It creates a new state instance and initializes it.
+- It can be called when the instance doesn't exist yet.
+
+Common to all kinds, each method takes a context object matching its kind, such as a reader, writer, transaction, or workflow context. That context determines what the method may do, and the methods have typed requests, responses, and declared errors.
+
+I'm less sure of the exact names and signatures in the current SDK, and the Python/Pydantic and TypeScript APIs may differ in details.
+
+Confidence: medium

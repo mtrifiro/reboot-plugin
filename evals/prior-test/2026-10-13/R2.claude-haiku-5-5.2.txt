@@ -1,0 +1,10 @@
+From memory, a Reboot state type (defined with Protocol Buffers and implemented in Python or TypeScript) can declare these method kinds:
+
+- **Reader**: Read-only access to the state. Readers can run concurrently with each other and do not modify state, so they don't commit writes.
+- **Writer**: Can read and modify the state. Calls to the same state ID are serialized, and each writer runs atomically, so its changes are either fully applied or not applied.
+- **Transaction**: Can atomically coordinate changes across multiple state instances, including calls to other states. The effects commit all together or not at all.
+- **Workflow**: Long-running, durable orchestration logic. It doesn't directly touch state. It can call other methods and is resumed and retried after failures until it completes, with its effects applied exactly once.
+
+Some method kinds also support constructors, which create a new state instance. I'm less sure of the exact names and the precise guarantees, such as the exact isolation level or the retry details, so check the current reboot.dev docs before relying on this.
+
+Confidence: medium

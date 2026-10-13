@@ -1,0 +1,36 @@
+Key concepts I associate with "Reboot" in software development:
+
+**System/Operations**
+- Restart of an OS, server, or device (soft/warm vs. hard/cold reboot)
+- Boot sequence: BIOS/UEFI, bootloader, kernel init, init/systemd
+- Reboot after updates, kernel patches, or config changes
+- Graceful shutdown vs. forced restart (signals, SIGTERM, `shutdown -r`, `reboot` command)
+- Rolling restarts, zero-downtime deploys, blue/green deployments
+- Watchdog timers and automatic recovery
+- Uptime, downtime windows, maintenance windows
+- Persistent state vs. volatile state (what survives a reboot)
+- Idempotent startup, boot-time services, cron `@reboot`
+
+**Troubleshooting**
+- "Have you tried turning it off and on again?"
+- Clearing transient state, memory leaks, hung processes
+- Boot loops, failed boots, recovery mode, safe mode
+- Crash recovery, state restoration
+
+**Mobile/Embedded/Firmware**
+- Device restarts, OTA updates requiring reboot
+- Bootloaders, A/B partitions, rollback on failed boot
+
+**Project/Product Meaning**
+- Reboot of a codebase or project: a fresh start, rewrite from scratch
+- Rewrite vs. refactor debate, second-system effect
+- Legacy modernization, "big bang" rewrites
+- Franchise-style reboots of products or frameworks (new version, same name)
+
+**Related Tools & Terms**
+- Reboot as a framework or library name (e.g., Reboot, a backend framework)
+- Hot reload, live reload, hot-swapping (avoiding reboots)
+- Live patching (kpatch, ksplice)
+- Containers and ephemeral infrastructure (restart policies, immutable infrastructure)
+- Kubernetes pod restarts, CrashLoopBackOff
+- Chaos engineering (intentional restarts/failures)

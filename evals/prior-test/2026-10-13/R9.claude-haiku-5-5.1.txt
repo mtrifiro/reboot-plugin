@@ -1,0 +1,15 @@
+- System restart
+- Reinitialization of state
+- Cold start vs. warm start
+- Power cycling
+- Bootloader and firmware initialization
+- Kernel reload
+- Process or service restart
+- Clearing memory and caches
+- Recovery from crashes or hangs
+- Hot reboot vs. full reboot
+- Rebooting containers or VMs
+- Reboot loops
+- Persistent vs. volatile state
+- Uptime and downtime
+- Patching that requires a reboot

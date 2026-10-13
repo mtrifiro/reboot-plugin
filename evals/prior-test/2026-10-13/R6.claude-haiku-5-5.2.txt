@@ -1,0 +1,14 @@
+From memory, so verify against the current Reboot docs, since the CLI and layout may have changed.
+
+**`rbt dev run`** starts a local development environment for a Reboot app. It launches your backend server, which hosts the application's durable state and methods, along with the local infrastructure it needs (a state store and proxy). It also reloads when your code changes, so you can iterate without redeploying.
+
+**`rbt generate`** reads your API definitions (Protocol Buffer `.proto` files that declare states and their methods) and generates language-specific bindings (Python and/or TypeScript). Your backend and clients call these generated stubs rather than hand-writing the plumbing. You rerun it whenever the API definition changes.
+
+**Project layout (approximate):**
+- **API definition:** `.proto` files in an `api/` directory, organized by package and version (for example, `api/<name>/v1/<name>.proto`).
+- **Generated code:** written next to the definitions, typically with a `_rbt` suffix (for example, `<name>_rbt.py` or `<name>_rbt.ts`). Treat these as build output and don't edit them by hand.
+- **Implementation:** a backend directory (often `backend/`) containing the servicers or classes that implement the generated base classes, plus a main entry point that `rbt dev run` launches.
+
+I'm least sure of the exact directory names and file suffixes, so check the generated output from a fresh `rbt` project or the quickstart before relying on them.
+
+Confidence: low

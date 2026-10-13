@@ -1,0 +1,1 @@
+Write a Reboot (reboot.dev) Python backend for a bank: an Account state type with a balance, deposit and withdraw (a balance never goes below zero), and an atomic transfer between two accounts. Include the API definition, the servicer implementation, and the application entry point. Code with brief comments only. End with one line: "Confidence: high|medium|low".

@@ -1,0 +1,51 @@
+```python
+import stripe
+from reboot.aio.contexts import WorkflowContext
+from reboot.aio.workflows import at_least_once
+
+from order.v1.order_rbt import Order, FulfillRequest, FulfillResponse
+
+
+class OrderServicer(Order.Servicer):
+
+    @Order.workflow
+    async def Fulfill(
+        self, context: WorkflowContext, request: FulfillRequest
+    ) -> FulfillResponse:
+        order = await self.ref().Get(context)  # reader: amount, customer, etc.
+
+        # Step 1: charge exactly once. `at_least_once` durably records the result
+        # so the step never re-runs after completion; the Stripe idempotency key
+        # (stable per order) makes any retry mid-call a no-op on Stripe's side.
+        async def charge() -> str:
+            intent = stripe.PaymentIntent.create(
+                amount=order.amount_cents,
+                currency="usd",
+                customer=order.stripe_customer_id,
+                confirm=True,
+                idempotency_key=f"order-{context.state_id}-charge",
+            )
+            return intent.id
+
+        charge_id = await at_least_once("charge card", context, charge, type=str)
+
+        # Step 2: wait for the warehouse. `MarkShipped` (a separate writer) sets
+        # `shipped=True`; reactively re-runs the reader whenever state changes.
+        async for state in self.ref().reactively().Get(context):
+            if state.shipped:
+                break
+
+        # Step 3: notify the customer. Durable; safe if email provider retries.
+        async def send_email() -> None:
+            await email_client.send(
+                to=order.customer_email,
+                subject=f"Order {context.state_id} shipped",
+                body=f"Charge {charge_id} completed; your order is on the way.",
+            )
+
+        await at_least_once("send shipped email", context, send_email)
+
+        return FulfillResponse(charge_id=charge_id)
+```
+
+Confidence: medium

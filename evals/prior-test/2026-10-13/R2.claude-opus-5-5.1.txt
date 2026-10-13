@@ -1,0 +1,38 @@
+# Method kinds on a Reboot state type
+
+In Reboot you declare a state type and its methods in an API definition, either Protobuf or the newer Python/TypeScript API schema. Each method is annotated with a kind, and the kind determines what the method may do and what Reboot guarantees.
+
+### 1. Reader
+- Gets **read-only** access to the state of one instance and cannot modify it.
+- Can run **concurrently** with other readers.
+- Readers are **reactive**. From the React and TypeScript clients you can subscribe to a reader, and the result re-renders automatically when the underlying state changes.
+- They can call other readers but should not have side effects.
+
+### 2. Writer
+- **Atomically mutates** the state of a **single** instance. The change is persisted durably before the response is returned.
+- Writers are serialized per instance, so you never see torn or partial updates.
+- Writers cannot call other state methods synchronously, because they must stay atomic and local. They can **schedule** tasks or workflows to run after the write commits.
+- A writer can be marked as a **factory/constructor**, meaning it is the method that creates a new instance.
+
+### 3. Transaction
+- Like a writer, but can **read and write multiple state instances**, including other types, by calling their readers, writers, and other transactions.
+- Provides **ACID semantics across all instances touched**: either everything commits or nothing does.
+- Concurrent transactions touching the same state are serialized or aborted and retried as needed.
+- A transaction can also be a factory.
+
+### 4. Workflow (earlier called "task")
+- **Long-running, durable** logic that can call any other methods, wait, loop, and talk to external systems.
+- Typically **scheduled**, possibly with a delay, from writers or transactions, or invoked directly.
+- Reboot **retries the workflow from the start** on failure or restart, so the code must be safe to re-execute.
+- Reboot supplies idempotency helpers so steps run safely under retry:
+  - `at_most_once`
+  - `at_least_once`
+  - `until`
+  - idempotent calls via idempotency keys
+- Workflows don't hold a lock on the state. They read and write state through calls, or through the state accessors on their context, which run as their own atomic operations.
+
+### Cross-cutting guarantees
+- Mutations (writers and transactions) can be made **idempotent** with idempotency keys. The React client does this automatically for mutations, so retries are safe.
+- All state is **durably persisted** and survives restarts.
+
+Confidence: medium

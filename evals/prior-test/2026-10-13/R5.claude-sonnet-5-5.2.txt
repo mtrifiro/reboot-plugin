@@ -1,0 +1,42 @@
+A Reboot `.rbtrc` is a plain-text file at the project root (where you run `rbt`). It holds default command-line flags for `rbt`, and it works much like Bazel's `.bazelrc`.
+
+**Format**
+- Each line is a subcommand, or a subcommand path, followed by a flag or argument. For example, `dev run` or `generate`.
+- When you run that `rbt` subcommand, the flags are added to your command line as if you had typed them.
+- You can repeat a subcommand on as many lines as you like, one flag or argument per line.
+- Lines starting with `#` are comments, and blank lines are ignored.
+- Flags can be written as `--flag=value` or `--flag value`.
+- A `common` prefix applies the flag to all subcommands.
+
+**Example**
+```
+# Where the .proto files live.
+generate api/
+
+# Where to put generated code.
+generate --python=backend/api/
+generate --react=web/src/api/
+
+# Flags for `rbt dev run`.
+dev run --python
+dev run --application=backend/src/main.py
+dev run --name=my-app
+
+# Watch these paths for changes and restart.
+dev run --watch=backend/src/**/*.py
+
+# Flags for `rbt dev expunge`.
+dev expunge --name=my-app
+
+# Flags for tests.
+test --python
+
+# Flags applied to every subcommand.
+common --python
+```
+
+With this file, running `rbt dev run` behaves as if you had typed all the `dev run` flags yourself, and `rbt generate` picks up the proto directory and output locations. Flags you pass explicitly on the command line are added alongside the file's flags.
+
+I'm not sure about the exact set of flag names, which have changed across Reboot versions. I'm also not sure about advanced features such as named configs. Check `rbt --help` or the docs for the current ones.
+
+Confidence: medium

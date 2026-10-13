@@ -1,0 +1,10 @@
+Reboot state types, as I recall them, define methods of four kinds: **Readers**, **Writers**, **Transactions**, and **Workflows**. I'm working from memory, so check the current docs for exact names and semantics.
+
+- **Reader**: Read-only access to an actor's state. Readers don't modify state, so they can run concurrently with each other, and they see a consistent snapshot.
+- **Writer**: Can read and modify the state of a single actor. Writes are committed atomically when the method completes, and calls to the same actor are serialized, so each one sees the effects of earlier writers.
+- **Transaction**: Can read and modify state across multiple actors as one atomic unit, all-or-nothing, so cross-actor changes don't leave partial updates behind. It costs more coordination than a Writer, so it's for cases that need multi-actor atomicity.
+- **Workflow**: A long-running, durable method that can perform side effects and survive process crashes by resuming from its recorded progress. Side effects are wrapped in helpers that choose the delivery guarantee (at-least-once or at-most-once), and the method can loop or wait.
+
+Constructors are also part of this picture: a Writer or Transaction can be marked as a constructor that creates the actor, and other methods are expected to run after it.
+
+Confidence: medium

@@ -1,0 +1,60 @@
+A Reboot `.rbtrc` file stores default command-line flags for the `rbt` CLI. You place it in your project root, usually next to `pyproject.toml` or `package.json`. `rbt` looks for it in the current directory and its parents.
+
+## Format
+
+- **Plain text, one directive per line.** Each line starts with an `rbt` subcommand, such as `generate`, `dev run` or `serve run`. The flags that follow on that line are added whenever you run that subcommand.
+- **Flags accumulate.** You can repeat the same subcommand on several lines, and all their flags are combined. This is handy for grouping flags with comments.
+- **`#` starts a comment.** Blank lines are ignored.
+- **Command-line flags still apply.** Flags you pass explicitly are used together with, or override, the defaults from `.rbtrc`.
+- **Config-style subcommands are supported.** For example, `dev run --config=NAME` lets you define named variants that are activated with `rbt dev run --config=NAME`. I'm less sure of the exact syntax for this one.
+
+## Example `.rbtrc` (Python app)
+
+```
+# This file will aggregate all of the command line args
+# into a single command line that will be run when you
+# use `rbt`.
+#
+# For example, to add args for running `rbt generate`
+# you can add lines that start with `generate`.
+
+# Find '.proto' files in 'api/'.
+generate api/
+
+# Generate Python code into 'backend/api/'.
+generate --python=backend/api/
+
+# Watch if any generated or source files are modified.
+dev run --watch=backend/api/**/*.py
+dev run --watch=backend/src/**/*.py
+
+# Tell `rbt` that this is a Python application.
+dev run --python
+
+# Save state between chaos restarts.
+dev run --name=hello
+
+# Run the application!
+dev run --application=backend/src/main.py
+
+# Production-style serving uses the same pattern.
+serve run --python
+serve run --application=backend/src/main.py
+```
+
+## Example (TypeScript/Node app)
+
+```
+generate api/
+generate --nodejs=backend/api/
+generate --react=web/src/api/
+
+dev run --nodejs
+dev run --name=counter
+dev run --application=backend/src/main.ts
+dev run --watch=backend/src/**/*.ts
+```
+
+With this file in place, running just `rbt generate` or `rbt dev run` picks up all those flags automatically.
+
+Confidence: medium

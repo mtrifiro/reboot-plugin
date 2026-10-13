@@ -1,0 +1,25 @@
+These are from memory, so exact signatures may differ by version.
+
+**Idempotency modifiers on calls inside a workflow**
+
+These go on a call to another Reboot method, e.g. `await Foo.ref(id).per_workflow("charge").Charge(context, ...)`.
+
+- **`.per_workflow(alias)`**: The call is idempotent for the whole workflow run, keyed by `alias`. On retry or replay, Reboot does not perform the call again. It returns the recorded result from the first time. Use it for "do this exactly once in this workflow."
+- **`.per_iteration(alias)`**: Like `per_workflow`, but scoped to the current iteration of a durable workflow loop (e.g. `async for iteration in context.loop("name")`). The call happens once per iteration, and each new iteration gets a fresh idempotency key under the same alias.
+- **`.always()`**: Opts out of idempotency. The call is made every time the code runs, including retries. This mainly suits reads or calls that are safe to repeat, such as reactive readers or polling state.
+
+**Helpers for side effects and waiting**
+
+These are typically `await at_least_once("alias", context, fn, type=...)`.
+
+- **`at_least_once(alias, context, callable)`**: Runs an arbitrary side-effecting function, such as an external API call, and retries it until it succeeds. The successful result is then memoized, so it is not re-run on later retries or replays. If a crash happens between execution and recording, it may run more than once. The callable should therefore be idempotent or tolerate duplicates.
+- **`at_most_once(alias, context, callable)`**: Runs the function no more than once. Suppose a previous attempt started but its completion was never recorded, for example because of a crash. In that case it does not retry. It raises an error instead (something like `AtMostOnceFailedBeforeCompleting`), and your code decides how to handle the uncertainty. Use it for non-idempotent effects where a duplicate is worse than a failure.
+- **`until(alias, context, condition)`**: Durably waits until the callable returns a truthy value. The condition is typically reads of Reboot state. It re-evaluates reactively when the underlying state changes, rather than busy-polling. Once satisfied, the result is memoized, so replays don't wait again. Use it for "block until the order is approved" and similar cases.
+
+**How they relate**
+
+- The `.per_*` and `.always()` modifiers control the idempotency of Reboot-to-Reboot method calls.
+- `at_least_once` and `at_most_once` give you explicit delivery semantics for arbitrary code, especially non-Reboot side effects.
+- `until` is a durable, reactive wait.
+
+Confidence: medium

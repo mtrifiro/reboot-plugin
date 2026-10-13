@@ -1,0 +1,12 @@
+**Workflow method:** In Reboot, a workflow is a durable method on an actor that can run for a long time, across failures, and that is expected to finish its job even if the process running it dies. Reboot describes its model as durable execution, but I don't remember the exact decorator and context API, so check the current docs for those details.
+
+**After a crash:** Under durable execution, a crashed workflow isn't lost. Reboot resumes it, typically on another process, by replaying it from its recorded progress. Steps that already completed are not re-run; their recorded results are reused. The workflow code must therefore be deterministic, and anything nondeterministic (random values, current time, network calls) must go through the framework's wrappers so that replay sees the same results.
+
+**Making a Stripe charge safe:** A crash can happen after Stripe has charged the card but before the workflow records that it did. On resume, the call could run again. To prevent a double charge:
+
+1. Wrap the external call in a durable step, so its result is recorded once it succeeds and is not re-executed on replay (use the framework's mechanism for this, which in Reboot may be a dedicated side-effect or step primitive).
+2. Pass a stable idempotency key to Stripe, derived from something fixed for that business operation, such as an order ID. Stripe's `Idempotency-Key` header makes retries of the same request return the original result instead of charging again. Keys are retained for about 24 hours, so they don't protect against duplicates arriving later.
+3. Reuse the same key on every retry of that operation. Never generate a fresh key per attempt.
+4. Persist the Stripe charge ID in the actor's state after the call returns, and check it before charging again.
+
+Confidence: low

@@ -1,0 +1,14 @@
+I don't have a reliable memory of Reboot's `.rbtrc` format, so treat this as a guess. I believe it follows the Bazel-style rc convention: one entry per line, an optional command prefix, and `--flag=value` or bare `--flag` options. Lines starting with `#` are comments. Check the reboot.dev docs or `rbt --help` before relying on it.
+
+```
+# .rbtrc (illustrative, not verified)
+
+# Applies to all rbt commands
+--verbose
+
+# Applies only to `rbt dev` commands
+dev --python
+dev --name=my-app
+```
+
+Confidence: low

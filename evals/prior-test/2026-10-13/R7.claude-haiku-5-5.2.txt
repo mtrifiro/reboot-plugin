@@ -1,0 +1,45 @@
+Reboot apps are usually tested with pytest and an async test harness that starts a local Reboot runtime, so your servicers run for real. I'm working from memory, so the import paths and helper names below may be off. Check them against the current reboot.dev docs.
+
+The usual pattern is:
+
+1. Define your application's servicers and state in your `.proto` and Python code as usual.
+2. In a test, start a Reboot test instance (in memory, no cloud deployment) and register your application with it.
+3. Create an external context, call your methods through generated client classes, and assert on the results.
+4. Use `pytest-asyncio` for async tests.
+
+```python
+# tests/test_counter.py
+import pytest
+from reboot.aio.tests import Reboot
+
+from counter_app.api.counter_rbt import Counter  # generated client
+from counter_app.application import application   # your Application(...)
+
+@pytest.fixture
+async def rbt():
+    rbt = Reboot()
+    await rbt.start()
+    await rbt.up(application)
+    yield rbt
+    await rbt.stop()
+
+@pytest.mark.asyncio
+async def test_increment_counts_up(rbt):
+    context = rbt.create_external_context(name="test")
+
+    counter = Counter.ref("my-counter")
+    await counter.create(context)
+
+    response = await counter.increment(context, amount=2)
+    response = await counter.increment(context, amount=3)
+
+    assert response.value == 5
+```
+
+Key points:
+
+- Each test should use its own state IDs (or a fresh runtime) so tests don't leak state into each other.
+- Test your business logic directly where possible, and use the in-process harness for end-to-end behavior like durability and retries.
+- Run with `pytest` from the project root, after generating code with the Reboot CLI.
+
+Confidence: low

@@ -1,0 +1,59 @@
+Here's how it works in Reboot, from memory:
+
+**The model.** You define state and methods in a `.proto` file; each method is annotated as a `reader`, `writer`, `transaction`, or `workflow`. The Reboot codegen (`rbt generate`) emits, alongside the Python/TypeScript backend code, a React client module (`*_rbt_react.ts`) built on `@reboot-dev/reboot-react`. That module exports a `use<StateName>()` hook per state type.
+
+**Reads are live.** Calling a reader through the generated hook (e.g. `hello.useMessages()`) doesn't just fetch once — it opens a streaming subscription (gRPC-web/HTTP streaming to the Reboot server). Whenever a writer/transaction changes that state, the server pushes the new reader result and the component re-renders. So reads are reactive without polling or manual cache invalidation.
+
+**Writes are mutations.** Writers are exposed as async functions on the same hook object (e.g. `hello.send({...})`). They return a promise; the hook also exposes pending/in-flight info so you can show optimistic UI.
+
+**Short example** (the canonical "Hello" app):
+
+```proto
+// hello.proto
+message Hello { repeated string messages = 1; }
+
+service HelloMethods {
+  rpc Messages(MessagesRequest) returns (MessagesResponse) {
+    option (rbt.v1alpha1.method).reader = {};
+  }
+  rpc Send(SendRequest) returns (SendResponse) {
+    option (rbt.v1alpha1.method).writer = {};
+  }
+}
+```
+
+```tsx
+// App.tsx
+import { RebootClientProvider } from "@reboot-dev/reboot-react";
+import { useHello } from "./api/hello/v1/hello_rbt_react";
+
+function Messages() {
+  const hello = useHello({ id: "my-hello" });          // addresses one state instance
+  const { response, isLoading } = hello.useMessages(); // reactive reader: auto-updates
+
+  if (isLoading) return <p>Loading…</p>;
+
+  return (
+    <>
+      <ul>{response?.messages.map((m, i) => <li key={i}>{m}</li>)}</ul>
+      <button onClick={() => hello.send({ message: "Hi from React" })}>
+        Send
+      </button>
+    </>
+  );
+}
+
+export default function App() {
+  return (
+    <RebootClientProvider url="http://localhost:9991">
+      <Messages />
+    </RebootClientProvider>
+  );
+}
+```
+
+Clicking **Send** calls the `Send` writer on the backend; the `useMessages` subscription receives the updated state and the list re-renders — no refetch logic needed. Multiple browser tabs/clients watching the same state ID all update together.
+
+Caveats: exact hook/field names (`response`, `isLoading`, `exception`, `pending`) and the provider name may differ slightly across Reboot versions.
+
+Confidence: medium

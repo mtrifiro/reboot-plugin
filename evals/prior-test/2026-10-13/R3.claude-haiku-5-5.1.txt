@@ -1,0 +1,11 @@
+In Reboot, a **workflow method** is a durable, long-running method on a state (actor). Unlike a reader, writer, or transaction, it can run for a long time, sleep, and coordinate several steps, and Reboot keeps its progress across failures. I'm working from memory here, so check the exact API names against the current Reboot docs.
+
+**On a crash:** Reboot doesn't simply lose the workflow. It resumes it, typically on another process, by re-executing the workflow body from the start. Steps that already completed are not run again. Their recorded results are returned from the durable log instead. This means the workflow body itself must be deterministic: avoid direct clock reads, randomness, or raw network I/O in the body, and put those inside steps.
+
+**Making a Stripe charge safe:**
+
+- Put the side effect inside a step, not directly in the workflow body, so its result is recorded once it succeeds.
+- Pass a stable idempotency key to Stripe, such as one derived from the workflow ID and the step's identity (for example, `f"charge-{order_id}"`). Stripe deduplicates requests with the same key, so a retry after a crash doesn't double-charge. Reuse the same key on every retry, and don't generate a new one per attempt.
+- Use an at-least-once retry policy for the step, since it's safe to repeat when the call is idempotent. If a call can't be made idempotent, use at-most-once semantics and handle the uncertain outcome explicitly.
+
+Confidence: medium
